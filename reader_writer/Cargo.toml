@@ -1,0 +1,9 @@
+[package]
+name = "reader_writer"
+version = "0.1.0"
+authors = ["Tyler Wade <wayedt@gmail.com>"]
+
+[dependencies]
+byteorder = "0.5"
+generic-array = "0.5"
+num = "0.1"

@@ -1,0 +1,8 @@
+[package]
+name = "auto_struct_macros"
+version = "0.1.0"
+authors = ["Tyler Wade <wayedt@gmail.com>"]
+
+[dependencies]
+syntex = "0.43.0"
+syntex_syntax = "0.43.0"

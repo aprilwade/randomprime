@@ -1,0 +1,14 @@
+[package]
+name = "configurer"
+version = "0.1.0"
+authors = ["Tyler Wade <wayedt@gmail.com>"]
+
+[dependencies]
+memmap = "0.4"
+#rust-crypto = "*"
+
+structs = { path = "../structs" }
+
+[profile.release]
+lto = true
+
