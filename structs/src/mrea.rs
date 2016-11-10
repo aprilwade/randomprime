@@ -46,7 +46,7 @@ auto_struct! {
         #[derivable = pad_bytes(32, offset)]
         _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
 
-        // TODO: A more efficient representation would be nice
+        // TODO: A more efficient representation might be nice
         //       (We don't actually care about any of the sections except for scripting
         //        section, so we could treat them as raw bytes. Similarly the indicies
         //        for all the other sections.)
@@ -54,19 +54,6 @@ auto_struct! {
     }
 }
 
-
-/*
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct MreaSection<'a>
-    {
-        #[args]
-        args: u32,
-        data: Array<'a, u8> = (args as usize, ()),
-    }
-}
-*/
 
 #[derive(Debug, Clone)]
 pub enum MreaSection<'a>
@@ -102,5 +89,3 @@ impl<'a> Writable for MreaSection<'a>
         }
     }
 }
-
-// TODO: Implement a way to fetch the offset...

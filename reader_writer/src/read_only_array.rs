@@ -65,26 +65,6 @@ impl<'a, T> RoArray<'a, T>
             Some(self.data_start.offset(at * fixed_size).read(self.t_args.clone()))
         }
     }
-
-    /*
-    pub fn as_mut_vec(&mut self) -> &mut Vec<T>
-    {
-        *self = match *self {
-            Array::Borrowed(ref mut reader, size, ref args) => {
-                let mut vec = Vec::with_capacity(size);
-                for _ in 0..size {
-                    vec.push(reader.read(args.clone()));
-                };
-                Array::Owned(vec)
-            },
-            Array::Owned(ref mut vec) => return vec,
-        };
-        match *self {
-            Array::Owned(ref mut vec) => vec,
-            Array::Borrowed(_, _, _) => unreachable!(),
-        }
-    }
-    */
 }
 
 impl<'a, T> Readable<'a> for RoArray<'a, T>

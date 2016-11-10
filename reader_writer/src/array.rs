@@ -80,20 +80,6 @@ impl<'a, T> LazyArray<'a, T>
         self.as_mut_vec().iter_mut()
     }
 
-    /*#[inline]
-    pub fn borrowed_iter(&self) -> Option<ArrayBorrowedIterator<'a, T>>
-    {
-        match *self {
-            Array::Borrowed(ref reader, len, ref args) => 
-                Some(ArrayBorrowedIterator {
-                    reader: reader.clone(),
-                    len: len,
-                    args: args.clone(),
-                }),
-            _ => None,
-        }
-    }*/
-
     #[inline]
     pub fn get(&self, index: usize) -> Option<ImmCow<T>>
     {
