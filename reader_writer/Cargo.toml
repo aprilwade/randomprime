@@ -7,3 +7,4 @@ authors = ["Tyler Wade <wayedt@gmail.com>"]
 byteorder = "0.5"
 generic-array = "0.5"
 num = "0.1"
+linked-list = { git = "https://github.com/contain-rs/linked-list.git", rev = "8c1931c74cf4cb4ad829593965e3b5101cfb4672" }

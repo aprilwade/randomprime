@@ -1,19 +1,15 @@
-use reader_writer::{Array, ArrayIterator, Dap, FourCC, ImmCow, Readable, Reader, Writable,
-                    pad_bytes_count, pad_bytes, pad_bytes_ff};
+use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, FourCC, Readable,
+                    Reader, RoArray, Writable,
+                    align_byte_count, pad_bytes_count, pad_bytes, pad_bytes_ff};
 
-use linked_list::{Cursor as LinkedListCursor, Iter as LinkedListIter, LinkedList};
 
-use std::mem;
-use std::iter;
-use std::iter::FromIterator;
-use std::borrow::Borrow;
 use std::io::Write;
 
 use mrea::Mrea;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     pub struct Pak<'a>
     {
         start: Reader<'a>,
@@ -23,24 +19,26 @@ auto_struct! {
 
         #[derivable = named_resources.len() as u32]
         named_resources_count: u32,
-        named_resources: Array<'a, NamedResource<'a>> = (named_resources_count as usize, ()),
+        named_resources: RoArray<'a, NamedResource<'a>> = (named_resources_count as usize, ()),
 
         #[derivable = resources.len() as u32]
         resources_count: u32,
-        #[derivable: Dap<_, _> = &resources.info_iter(named_resources.size()).into()]
-        resource_info: Array<'a, ResourceInfo> = (resources_count as usize, ()),
+
+        #[derivable: ResourceInfoProxy = ResourceInfoProxy(&resources, named_resources.size())]
+        resource_info: RoArray<'a, ResourceInfo> = (resources_count as usize, ()),
 
         #[offset]
         offset: usize,
         #[derivable = pad_bytes(32, offset)]
-        _padding: Array<'a, u8> = (pad_bytes_count(32, offset), ()),
+        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
 
-        resources: ResourceTable<'a> = (start.clone(), resource_info),
+        resources: DiffList<'a, ResourceSource<'a>> = ResourceSource(start.clone(),
+                                                                     resource_info.clone()),
 
         #[offset]
         offset_after: usize,
         #[derivable = pad_bytes_ff(32, offset_after)]
-        _padding_after: Array<'a, u8> = (pad_bytes_count(32, offset_after), ()),
+        _padding_after: RoArray<'a, u8> = (pad_bytes_count(32, offset_after), ()),
     }
 }
 
@@ -53,7 +51,7 @@ auto_struct! {
         fourcc: FourCC,
         file_id: u32,
         name_length: u32,
-        name: Array<'a, u8> = (name_length as usize, ()),
+        name: RoArray<'a, u8> = (name_length as usize, ()),
     }
 }
 
@@ -71,322 +69,132 @@ auto_struct! {
     }
 }
 
-fn make_resource<'a, B: Borrow<ResourceInfo>>(info: B, pak_start: &Reader<'a>) -> Resource_<'a>
+
+#[derive(Debug, Clone)]
+pub struct ResourceSource<'a>(Reader<'a>, RoArray<'a, ResourceInfo>);
+#[derive(Debug, Clone)]
+pub struct ResourceSourceCursor<'a>
 {
-    pak_start.offset(info.borrow().offset as usize).read(info.borrow().clone())
+    pak_start: Reader<'a>,
+    info_array: RoArray<'a, ResourceInfo>,
+    index: usize,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Resource<'a>
+impl<'a> AsDiffListSourceCursor for ResourceSource<'a>
+{
+    type Cursor = ResourceSourceCursor<'a>;
+    #[inline]
+    fn as_cursor(&self) -> Self::Cursor
     {
-        #[args]
-        info: ResourceInfo,
-
-        #[literal]
-        info: ResourceInfo = info,
-        data: Array<'a, u8> = (info.size as usize, ()),
-    }
-}
-
-#[derive(Debug)]
-pub struct ResourceTable<'a>
-{
-    data_start: Reader<'a>,
-    list: LinkedList<DiffListElem<'a>>,
-}
-
-impl<'a> ResourceTable<'a>
-{
-    pub fn cursor<'s>(&'s mut self) -> ResourceTableCursor<'a, 's>
-    {
-        ResourceTableCursor {
-            cursor: self.list.cursor(),
+        ResourceSourceCursor {
+            pak_start: self.0.clone(),
+            info_array: self.1.clone(),
             index: 0,
-            reader: self.data_start.clone(),
         }
     }
 
-    pub fn iter<'s>(&'s self) -> ResourceTableIterator<'a, 's>
+    #[inline]
+    fn len(&self) -> usize
     {
-        ResourceTableIterator {
-            list_iter: self.list.iter(),
-            info_iter: None,
-            pak_start: self.data_start.clone()
-        }
-    }
-
-    pub fn info_iter<'s>(&'s self, named_resources_size: usize) -> ResourceTableInfoIter<'a, 's>
-    {
-        let offset = 4 * u32::fixed_size().unwrap() + named_resources_size +
-                    ResourceInfo::fixed_size().unwrap() * self.len();
-        let offset = (offset + 31) & (usize::max_value() - 31);
-        ResourceTableInfoIter {
-            iter: self.iter(),
-            offset: offset,
-        }
-    }
-
-    pub fn len(&self) -> usize
-    {
-        // TODO: It might make sense to cache this...
-        self.list.iter().map(|elem| elem.len()).sum()
+        self.1.len()
     }
 }
 
-type InfoArray<'a> = Array<'a, ResourceInfo>;
-impl<'a> Readable<'a> for ResourceTable<'a>
+impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
 {
-    type Args = (Reader<'a>, InfoArray<'a>);
-    fn read(reader: Reader<'a>, (pak_start, info): Self::Args) -> (Self, Reader<'a>)
+    type Item = Resource<'a>;
+    type Source = ResourceSource<'a>;
+    #[inline]
+    fn next(&mut self) -> bool
     {
-        use std::iter::FromIterator;
-        let table = ResourceTable {
-            data_start: pak_start,
-            list: LinkedList::from_iter(iter::once(DiffListElem::Array(info))),
-        };
-        let reader = reader.offset(table.size());
-        (table, reader)
+        if self.index == self.info_array.len() - 1 {
+            false
+        } else {
+            self.index += 1;
+            true
+        }
     }
 
+    #[inline]
+    fn get(&self) -> Self::Item
+    {
+        let info = self.info_array.get(self.index).unwrap();
+        self.pak_start.offset(info.offset as usize).read(info.clone())
+    }
+
+    #[inline]
+    fn split(mut self) -> (Option<Self::Source>, Self::Source)
+    {
+        let pak_start = self.pak_start;
+        let f = |a| ResourceSource(pak_start.clone(), a);
+        if self.index == 0 {
+            (None, f(self.info_array))
+        } else {
+            let left = self.info_array.split_off(self.index);
+            (Some(f(left)), f(self.info_array))
+        }
+   }
+
+    #[inline]
+    fn split_around(mut self) -> (Option<Self::Source>, Self::Item, Option<Self::Source>)
+    {
+        let item = self.get();
+        let pak_start = self.pak_start;
+        let f = |a| Some(ResourceSource(pak_start.clone(), a));
+        if self.info_array.len() == 1 {
+            (None, item, None)
+        } else if self.index == 0 {
+            let right = self.info_array.split_off(1);
+            (None, item, f(right))
+        } else if self.index == self.info_array.len() - 1 {
+            let _ = self.info_array.split_off(self.index);
+            (f(self.info_array), item, None)
+        } else {
+            let mut right = self.info_array.split_off(self.index);
+            let right = right.split_off(1);
+            (f(self.info_array), item, f(right))
+        }
+    }
+}
+
+struct ResourceInfoProxy<'a, 'list>(&'list DiffList<'a, ResourceSource<'a>>, usize)
+    where 'a: 'list;
+impl<'a, 'list> Readable<'a> for ResourceInfoProxy<'a, 'list>
+    where 'a: 'list
+{
+    type Args = ();
+    fn read(_: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    {
+        panic!("This proxy shouldn't be read.")
+    }
+
+    #[inline]
     fn size(&self) -> usize
     {
-        self.iter().map(|res| res.size()).sum()
+        ResourceInfo::fixed_size().unwrap() * self.0.len()
     }
 }
 
-impl<'a> Writable for ResourceTable<'a>
+impl<'a, 'list> Writable for ResourceInfoProxy<'a, 'list>
+    where 'a: 'list
 {
     fn write<W: Write>(&self, writer: &mut W)
     {
-        for elem in self.list.iter() {
-            match *elem {
-                DiffListElem::Array(ref array) => {
-                    let start = array.get(0).unwrap().offset as usize;
-                    let final_info = array.get(array.len() - 1).unwrap();
-                    let end = (final_info.offset + final_info.size) as usize;
-                    writer.write_all(&(*self.data_start)[start..end]).unwrap();
-                },
-                DiffListElem::Inst(ref inst) => inst.write(writer),
-            }
+        let mut offset = align_byte_count(32,
+                self.1 +
+                u32::fixed_size().unwrap() * 4 +
+                ResourceInfo::fixed_size().unwrap() * self.0.len()
+            ) as u32;
+        for res in self.0.iter() {
+            let info = res.resource_info(offset);
+            info.write(writer);
+            offset += info.size;
         }
     }
 }
 
-
-pub struct ResourceTableCursor<'a, 'list>
-    where 'a: 'list,
-{
-    cursor: LinkedListCursor<'list, DiffListElem<'a>>,
-    index: usize,
-    reader: Reader<'a>,
-}
-
-impl<'a, 'list> ResourceTableCursor<'a, 'list>
-    where 'a: 'list
-{
-    // TODO: Return value?
-    pub fn next(&mut self)
-    {
-        let advance_cursor = match self.cursor.peek_next() {
-            Some(&mut DiffListElem::Array(ref info)) => {
-                if self.index == info.len() - 1 {
-                    self.index = 0;
-                    true
-                } else {
-                    self.index += 1;
-                    false
-                }
-            },
-            Some(&mut DiffListElem::Inst(_)) => {
-                self.index = 0;
-                true
-            },
-            None => false,
-        };
-        if advance_cursor {
-            self.cursor.next();
-        };
-    }
-
-    // TODO: prev?
-
-    /// Inserts the items yielded by `iter` into the list. The cursor will be
-    /// positioned at the first inserted item.
-    pub fn insert_before<I>(&mut self, iter: I)
-        where I: Iterator<Item = Resource_<'a>>
-    {
-        // If we're sitting inside an array, split it
-        let before = match self.cursor.peek_next() {
-            Some(&mut DiffListElem::Array(ref mut info_array)) => {
-                if self.index == 0 {
-                    None
-                } else if self.index == info_array.len() - 1 {
-                    let info = info_array.get(self.index).unwrap().clone();
-                    info_array.split_off(self.index);
-                    Some(DiffListElem::Inst(make_resource(info, &self.reader)))
-                } else {
-                    let mut after = info_array.split_off(self.index);
-                    mem::swap(&mut after, info_array);
-                    Some(DiffListElem::Array(after))
-                }
-            },
-            _ => None,
-        };
-        if let Some(before) = before {
-            self.cursor.insert(before);
-        };
-        self.cursor.splice(&mut LinkedList::from_iter(iter.map(|i| DiffListElem::Inst(i))));
-    }
-
-    pub fn peek(&mut self) -> Option<ImmCow<Resource_<'a>>>
-    {
-        match self.cursor.peek_next() {
-            Some(&mut DiffListElem::Array(ref info)) => {
-                let info = info.get(self.index).unwrap();
-                Some(ImmCow::new_owned(make_resource(info, &self.reader)))
-            },
-            Some(&mut DiffListElem::Inst(ref res)) => Some(ImmCow::new_borrowed(res)),
-            None => None,
-        }
-    }
-
-    // XXX This potentially allocates memory; use with caution
-    pub fn value(&mut self) -> Option<&mut Resource_<'a>>
-    {
-        // This looks a little ridiculous; its a silly hack to acheive pseudo-gotos...
-        loop {
-            let mut info_array = match self.cursor.peek_next() {
-                Some(&mut DiffListElem::Array(ref info)) => info.clone(),
-                Some(_) => break,
-                None => return None,
-            };
-
-            // 4 cases
-            if info_array.len() == 1 {
-                let info = info_array.get(0).unwrap();
-                *self.cursor.peek_next().unwrap() = DiffListElem::Inst(
-                    make_resource(info, &self.reader));
-            } else if self.index == 0 {
-                let info = info_array.get(0).unwrap().clone();
-                let remaining_info = info_array.split_off(1);
-                *self.cursor.peek_next().unwrap() = DiffListElem::Array(remaining_info);
-                self.cursor.insert(DiffListElem::Inst(make_resource(info, &self.reader)));
-            } else if self.index == info_array.len() - 1 {
-                let info = info_array.get(self.index).unwrap().clone();
-
-                info_array.split_off(self.index);
-                *self.cursor.peek_next().unwrap() = DiffListElem::Inst(
-                    make_resource(info, &self.reader));
-
-                self.cursor.insert(DiffListElem::Array(info_array));
-
-                self.cursor.next();
-            } else {
-                let info = info_array.get(self.index).unwrap().clone();
-                let info_after = info_array.split_off(self.index).split_off(1);
-                let info_before = info_array;
-                
-                *self.cursor.peek_next().unwrap() = DiffListElem::Array(info_after);
-                self.cursor.insert(DiffListElem::Inst(make_resource(info, &self.reader)));
-                self.cursor.insert(DiffListElem::Array(info_before));
-
-                self.cursor.next();
-            }
-            break;
-        }
-
-        match self.cursor.peek_next() {
-            Some(&mut DiffListElem::Inst(ref mut res)) => Some(res),
-            _ => unreachable!(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct ResourceTableIterator<'a, 'list>
-    where 'a: 'list
-{
-    list_iter: LinkedListIter<'list, DiffListElem<'a>>,
-    info_iter: Option<ArrayIterator<'list, 'a, ResourceInfo>>,
-    pak_start: Reader<'a>,
-}
-
-impl<'a, 'list> Iterator for ResourceTableIterator<'a, 'list>
-    where 'a: 'list
-{
-    type Item = ImmCow<'list, Resource_<'a>>;
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        loop {
-            if let Some(ref mut iter) = self.info_iter {
-                if let Some(info) = iter.next() {
-                    return Some(ImmCow::new_owned(make_resource(info, &self.pak_start)))
-                }
-            };
-            match self.list_iter.next() {
-                Some(&DiffListElem::Array(ref array)) => {
-                    self.info_iter = Some(array.iter());
-                },
-                Some(&DiffListElem::Inst(ref inst)) => {
-                    self.info_iter = None;
-                    return Some(ImmCow::new_borrowed(inst))
-                },
-                None => {
-                    self.info_iter = None;
-                    return None
-                },
-            };
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct ResourceTableInfoIter<'a, 'list>
-    where 'a: 'list
-{
-    iter: ResourceTableIterator<'a, 'list>,
-    offset: usize
-}
-
-impl<'a, 'list> Iterator for ResourceTableInfoIter<'a, 'list>
-    where 'a: 'list
-{
-    type Item = ResourceInfo;
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        if let Some(res) = self.iter.next() {
-            let info = res.resource_info(self.offset as u32);
-            self.offset += res.size();
-            Some(info)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug)]
-enum DiffListElem<'a>
-{
-    Array(InfoArray<'a>),
-    Inst(Resource_<'a>), // XXX Box?
-}
-
-impl<'a> DiffListElem<'a>
-{
-    fn len(&self) -> usize
-    {
-        match *self {
-            DiffListElem::Array(ref array) => array.len(),
-            DiffListElem::Inst(_) => 1,
-        }
-    }
-}
-
-//#[derive(Debug, Clone)]
-#[derive(Debug)]
-pub struct Resource_<'a>
+#[derive(Debug, Clone)]
+pub struct Resource<'a>
 {
     pub compressed: bool,
     pub fourcc: FourCC,
@@ -396,7 +204,7 @@ pub struct Resource_<'a>
     pub original_offset: u32,
 }
 
-impl<'a> Resource_<'a>
+impl<'a> Resource<'a>
 {
     pub fn resource_info(&self, offset: u32) -> ResourceInfo
     {
@@ -421,7 +229,7 @@ impl<'a> Resource_<'a>
     }
 }
 
-impl<'a> Readable<'a> for Resource_<'a>
+impl<'a> Readable<'a> for Resource<'a>
 {
     type Args = ResourceInfo;
     #[cfg(debug_assertions)]
@@ -430,7 +238,7 @@ impl<'a> Readable<'a> for Resource_<'a>
         if info.compressed > 1 {
             panic!("Bad info.compressed")
         };
-        let res = Resource_ {
+        let res = Resource {
             compressed: info.compressed == 1,
             fourcc: info.fourcc,
             file_id: info.file_id,
@@ -442,7 +250,7 @@ impl<'a> Readable<'a> for Resource_<'a>
     #[cfg(not(debug_assertions))]
     fn read(reader: Reader<'a>, info: Self::Args) -> (Self, Reader<'a>)
     {
-        let res = Resource_ {
+        let res = Resource {
             compressed: info.compressed == 1,
             fourcc: info.fourcc,
             file_id: info.file_id,
@@ -460,7 +268,7 @@ impl<'a> Readable<'a> for Resource_<'a>
     }
 }
 
-impl<'a> Writable for Resource_<'a>
+impl<'a> Writable for Resource<'a>
 {
     fn write<W: Write>(&self, writer: &mut W)
     {
@@ -471,7 +279,7 @@ impl<'a> Writable for Resource_<'a>
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ResourceKind<'a>
 {
     Unknown(Reader<'a>),

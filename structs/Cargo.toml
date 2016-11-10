@@ -7,7 +7,6 @@ build = "build.rs"
 
 [dependencies]
 reader_writer = { path = "../reader_writer" }
-linked-list = { git = "https://github.com/contain-rs/linked-list.git", rev = "8c1931c74cf4cb4ad829593965e3b5101cfb4672" }
 
 [build-dependencies]
 auto_struct_macros = { path = "../auto_struct_macros" }

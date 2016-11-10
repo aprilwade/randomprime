@@ -1,6 +1,6 @@
 
-use reader_writer::{Array, ArrayBorrowedIterator, Dap, ImmCow, IteratorArray, Readable, Reader,
-                    Writable, pad_bytes_count, pad_bytes};
+use reader_writer::{Dap, ImmCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable,
+                    pad_bytes_count, pad_bytes};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -11,7 +11,7 @@ use scly::Scly;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     pub struct Mrea<'a>
     {
         #[expect = 0xDEADBEEF]
@@ -39,18 +39,18 @@ auto_struct! {
 
         #[derivable: Dap<_, _> = sections.iter()
                                           .map(&|i: ImmCow<MreaSection>| i.size() as u32).into()]
-        section_sizes: Array<'a, u32> = (sections_count as usize, ()),
+        section_sizes: RoArray<'a, u32> = (sections_count as usize, ()),
 
         #[offset]
         offset: usize,
         #[derivable = pad_bytes(32, offset)]
-        _padding: Array<'a, u8> = (pad_bytes_count(32, offset), ()),
+        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
 
         // TODO: A more efficient representation would be nice
         //       (We don't actually care about any of the sections except for scripting
         //        section, so we could treat them as raw bytes. Similarly the indicies
         //        for all the other sections.)
-        sections: IteratorArray<'a, MreaSection<'a>, ArrayBorrowedIterator<'a, u32>> = section_sizes.borrowed_iter().unwrap(),
+        sections: IteratorArray<'a, MreaSection<'a>, RoArrayIter<'a, u32>> = section_sizes.iter(),
     }
 }
 

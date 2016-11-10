@@ -1,5 +1,5 @@
 
-use reader_writer::{Array, CStr, Lazy, LazySized, Reader, Readable, Writable};
+use reader_writer::{CStr, Lazy, LazySized, Reader, Readable, RoArray, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -213,7 +213,7 @@ auto_struct! {
         size: u32,
         trailer_size: u32,
         // TODO: Is this size right?
-        code: Array<'a, u8> = ((size + trailer_size) as usize, ())
+        code: RoArray<'a, u8> = ((size + trailer_size) as usize, ())
     }
 }
 
@@ -285,7 +285,7 @@ impl<'a> FileSystemTable<'a>
 
 pub struct FileSystemTable<'a>
 {
-    pub fst_entries: Array<'a, FstEntry<'a>>,
+    pub fst_entries: Vec<FstEntry<'a>>,
     string_table: Reader<'a>,
 }
 
@@ -306,7 +306,7 @@ impl<'a> Readable<'a> for FileSystemTable<'a>
         let fst_len = root_fst_entry.length as usize;
         let string_table_start = fst_start.offset(fst_len * FstEntry::fixed_size().unwrap());
 
-        let fst_entries: Array<FstEntry> = fst_start.clone()
+        let fst_entries: Vec<FstEntry> = fst_start.clone()
             .read((fst_len, (disc_start, string_table_start.clone())));
         let string_table = string_table_start.truncated(total_size - fst_len);
 

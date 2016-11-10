@@ -1,5 +1,4 @@
 pub extern crate reader_writer;
-extern crate linked_list;
 
 mod pak;
 mod gc_disc;

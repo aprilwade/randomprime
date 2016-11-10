@@ -1,6 +1,6 @@
 
-use reader_writer::{Array, ArrayBorrowedIterator, Dap, FourCC, ImmCow, IteratorArray, Readable,
-                    Reader, Writable, pad_bytes_count, pad_bytes};
+use reader_writer::{Dap, FourCC, ImmCow, RoArray, LazyArray, Readable, Reader, Writable,
+                    pad_bytes_count, pad_bytes};
 
 use std::io::Write;
 
@@ -19,9 +19,9 @@ auto_struct! {
         layer_count: u32,
 
         #[derivable: Dap<_, _> = layers.iter().map(&|i: ImmCow<SclyLayer>| i.size() as u32).into()]
-        _layer_sizes: Array<'a, u32> = (layer_count as usize, ()),
+        _layer_sizes: RoArray<'a, u32> = (layer_count as usize, ()),
 
-        layers: Array<'a, SclyLayer<'a>> = (layer_count as usize, ()),
+        layers: LazyArray<'a, SclyLayer<'a>> = (layer_count as usize, ()),
         // TODO: If we wrap SclyLayer in LazySized, then we can make use of the
         //       layer_sizes field to maybe speed things up. It probably requires
         //       profiling to see if its actually any better.
@@ -38,12 +38,13 @@ auto_struct! {
 
         #[derivable = objects.len() as u32]
         object_count: u32,
-        objects: Array<'a, SclyObject<'a>> = (object_count as usize, ()),
+        // TODO: Consider using DiffList here. Maybe requires profiling to decide...
+        objects: LazyArray<'a, SclyObject<'a>> = (object_count as usize, ()),
 
         #[offset]
         offset: usize,
         #[derivable = pad_bytes(32, offset)]
-        _padding: Array<'a, u8> = (pad_bytes_count(32, offset), ()),
+        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
     }
 }
 
@@ -62,11 +63,11 @@ auto_struct! {
 
         #[derivable = connections.len() as u32]
         connection_count: u32,
-        connections: Array<'a, Connection> = (connection_count as usize, ()),
+        connections: LazyArray<'a, Connection> = (connection_count as usize, ()),
 
         #[derivable = property_data.property_count()]
         property_count: u32,
-        property_data: SclyProperty<'a> = (object_type, property_count, 
+        property_data: SclyProperty<'a> = (object_type, property_count,
                                            (instance_size - 12) as usize - connections.size()),
     }
 }
