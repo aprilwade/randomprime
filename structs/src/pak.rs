@@ -5,6 +5,7 @@ use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, Four
 
 use std::io::Write;
 
+use mlvl::Mlvl;
 use mrea::Mrea;
 
 auto_struct! {
@@ -225,6 +226,8 @@ impl<'a> Resource<'a>
         };
         if self.fourcc == FourCC::from_bytes(b"MREA") {
             self.kind = ResourceKind::Mrea(reader.clone().read(()));
+        } else if self.fourcc == FourCC::from_bytes(b"MLVL") {
+            self.kind = ResourceKind::Mlvl(reader.clone().read(()));
         }
     }
 }
@@ -264,6 +267,7 @@ impl<'a> Readable<'a> for Resource<'a>
         match self.kind {
             ResourceKind::Unknown(ref reader) => reader.len(),
             ResourceKind::Mrea(ref mrea) => mrea.size(),
+            ResourceKind::Mlvl(ref mlvl) => mlvl.size(),
         }
     }
 }
@@ -275,6 +279,7 @@ impl<'a> Writable for Resource<'a>
         match self.kind {
             ResourceKind::Unknown(ref reader) => writer.write_all(&reader).unwrap(),
             ResourceKind::Mrea(ref mrea) => mrea.write(writer),
+            ResourceKind::Mlvl(ref mlvl) => mlvl.write(writer),
         }
     }
 }
@@ -284,6 +289,7 @@ pub enum ResourceKind<'a>
 {
     Unknown(Reader<'a>),
     Mrea(Mrea<'a>),
+    Mlvl(Mlvl<'a>),
     //UnknownCompressed(Reader<'a>),
 }
 
