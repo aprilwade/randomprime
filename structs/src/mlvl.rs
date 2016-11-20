@@ -1,6 +1,8 @@
-use reader_writer::{CStr, RoArray};
+use reader_writer::{CStr, LazyArray, Readable, Reader, RoArray, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
+
+use std::io::Write;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -25,7 +27,7 @@ auto_struct! {
         area_count: u32,
         #[expect = 1]
         unknown0: u32,
-        areas: RoArray<'a, Area<'a>> = (area_count as usize, ()),
+        areas: LazyArray<'a, Area<'a>> = (area_count as usize, ()),
 
         world_map_mapw: u32,
         #[expect = 0]
@@ -43,15 +45,11 @@ auto_struct! {
 
         #[expect = areas.len() as u32]
         area_count2: u32,
-        area_layer_flags: RoArray<'a, AreaLayerFlags> = (area_count as usize, ()),
+        area_layer_flags: LazyArray<'a, AreaLayerFlags> = (area_count as usize, ()),
 
-        #[derivable = layer_names.len() as u32]
-        layer_names_count: u32,
-        layer_names: RoArray<'a, CStr<'a>> = (layer_names_count as usize, ()),
-
-        #[expect = areas.len() as u32]
-        area_count3: u32,
-        layer_names_offsets: RoArray<'a, u32> = (area_count as usize, ()),
+        // TODO: Could this be done lazily? Does it matter? We're basically always going
+        //       to be modifying this structure, so maybe it would just be a waste?
+        area_layer_names: AreaLayerNames<'a> = area_count,
     }
 }
 
@@ -144,5 +142,100 @@ auto_struct! {
     {
         layer_count: u32,
         flags: u64,
+    }
+}
+
+
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Clone, Debug)]
+    struct AreaLayerNamesArgs<'a>
+    {
+        #[derivable = layer_names.len() as u32]
+        layer_names_count: u32,
+        layer_names: RoArray<'a, CStr<'a>> = (layer_names_count as usize, ()),
+
+        #[derivable = layer_names_offsets.len() as u32]
+        area_count: u32,
+        layer_names_offsets: RoArray<'a, u32> = (area_count as usize, ()),
+    }
+}
+
+// TODO: impl Deref(Mut)?
+// TODO: If this were Vec<LazyArray> we could avoid some allocations
+#[derive(Clone, Debug)]
+pub struct AreaLayerNames<'a>(Vec<Vec<CStr<'a>>>);
+
+impl<'a> AreaLayerNames<'a>
+{
+    pub fn new(offsets: RoArray<'a, u32>, names: RoArray<'a, CStr<'a>>) -> AreaLayerNames<'a>
+    {
+        use std::iter::once;
+
+        // XXX We're assuming offsets is ordered
+        let mut names_vec = Vec::with_capacity(offsets.len());
+        let mut offsets_iter = offsets.iter();
+        let mut names_iter = names.iter();
+
+        let mut last_offset = offsets_iter.next().unwrap();
+        assert_eq!(last_offset, 0);
+        for offset in offsets_iter.chain(once(names.len() as u32)) {
+            let count = offset - last_offset;
+            let mut v = Vec::with_capacity(count as usize);
+            for _ in 0..count {
+                v.push(names_iter.next().unwrap())
+            }
+            names_vec.push(v);
+            last_offset = offset;
+        }
+
+        AreaLayerNames(names_vec)
+    }
+
+    pub fn names_for_area(&self, area: usize) -> Option<&Vec<CStr<'a>>>
+    {
+        self.0.get(area)
+    }
+
+    pub fn mut_names_for_area(&mut self, area: usize) -> Option<&mut Vec<CStr<'a>>>
+    {
+        self.0.get_mut(area)
+    }
+}
+
+impl<'a> Readable<'a> for AreaLayerNames<'a>
+{
+    type Args = u32;
+    fn read(mut reader: Reader<'a>, count: u32) -> (Self, Reader<'a>)
+    {
+        let args: AreaLayerNamesArgs = reader.read(());
+        assert_eq!(args.layer_names_offsets.len(), count as usize);
+        (AreaLayerNames::new(args.layer_names_offsets, args.layer_names), reader)
+    }
+
+    fn size(&self) -> usize
+    {
+        // TODO: It might be nice to cache this
+        self.0.len() * u32::fixed_size().unwrap() + 
+            self.0.iter().flat_map(|i| i).map(|s| s.to_bytes_with_nul().len()).sum::<usize>()
+    }
+}
+
+impl<'a> Writable for AreaLayerNames<'a>
+{
+    fn write<W: Write>(&self, writer: &mut W)
+    {
+        (self.0.iter().map(|i| i.len()).sum::<usize>() as u32).write(writer);
+        for name in self.0.iter().flat_map(|i| i) {
+            name.write(writer);
+        }
+
+        (self.0.len() as u32).write(writer);
+
+        let mut offset: u32 = 0;
+        for area in &self.0 {
+            offset.write(writer);
+            offset += area.len() as u32;
+        }
     }
 }
