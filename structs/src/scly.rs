@@ -4,6 +4,8 @@ use reader_writer::{Dap, FourCC, ImmCow, RoArray, LazyArray, Readable, Reader, W
 
 use std::io::Write;
 
+use scly_props;
+
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -72,63 +74,103 @@ auto_struct! {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum SclyProperty<'a>
-{
-    Unknown {
-        object_type: u8,
-        property_count: u32,
-        data: Reader<'a>
-    },
+macro_rules! build_scly_property {
+    ($($name:ident, $obj_type:expr, $prop_count:expr,)*) => {
+
+        #[derive(Clone, Debug)]
+        pub enum SclyProperty<'a>
+        {
+            Unknown {
+                object_type: u8,
+                property_count: u32,
+                data: Reader<'a>
+            },
+
+            $($name(scly_props::$name<'a>),)*
+        }
+
+        impl<'a> SclyProperty<'a>
+        {
+            pub fn object_type(&self) -> u8
+            {
+                match *self {
+                    SclyProperty::Unknown { object_type, .. } => object_type,
+                    $(SclyProperty::$name(_) => $obj_type,)*
+                }
+            }
+
+            fn property_count(&self) -> u32
+            {
+                match *self {
+                    SclyProperty::Unknown { property_count, .. } => property_count,
+                    $(SclyProperty::$name(_) => $prop_count,)*
+                }
+            }
+
+            pub fn guess_kind(&mut self)
+            {
+                let (mut reader, object_type, prop_count) = match *self {
+                    SclyProperty::Unknown { ref data, object_type, property_count }
+                        => (data.clone(), object_type, property_count),
+                    _ => return,
+                };
+                *self = match object_type {
+                    $($obj_type => {
+                        assert_eq!(prop_count, $prop_count);
+                        SclyProperty::$name(reader.read(()))
+                    },)*
+                    _ => return,
+                }
+            }
+        }
+
+        impl<'a> Readable<'a> for SclyProperty<'a>
+        {
+            type Args = (u8, u32, usize);
+            fn read(reader: Reader<'a>, (otype, prop_count, size): Self::Args) -> (Self, Reader<'a>)
+            {
+                let prop = SclyProperty::Unknown {
+                    object_type: otype,
+                    property_count: prop_count,
+                    data: reader.truncated(size),
+                };
+                (prop, reader.offset(size))
+            }
+
+            fn size(&self) -> usize
+            {
+                match *self {
+                    SclyProperty::Unknown { ref data, .. } => data.len(),
+                    $(SclyProperty::$name(ref i) => i.size(),)*
+                }
+            }
+        }
+
+        impl<'a> Writable for SclyProperty<'a>
+        {
+            fn write<W: Write>(&self, writer: &mut W)
+            {
+                match *self {
+                    SclyProperty::Unknown { ref data, .. } => writer.write_all(&data).unwrap(),
+                    $(SclyProperty::$name(ref i) => i.write(writer),)*
+                }
+            }
+        }
+
+            };
 }
 
-impl<'a> SclyProperty<'a>
-{
-    fn object_type(&self) -> u8
-    {
-        match *self {
-            SclyProperty::Unknown { object_type, .. } => object_type,
-        }
-    }
+build_scly_property!(
+    Timer,           0x05, 6,
+    Sound,           0x09, 20,
+    Pickup,          0x11, 18,
+    Relay,           0x15, 2,
+    HudMemo,         0x17, 6,
+    SpecialFunction, 0x3A, 15,
+    PlayerHint,      0x3E, 6,
+    StreamedAudio,   0x61, 9,
+);
 
-    fn property_count(&self) -> u32
-    {
-        match *self {
-            SclyProperty::Unknown { property_count, .. } => property_count,
-        }
-    }
-}
-
-impl<'a> Readable<'a> for SclyProperty<'a>
-{
-    type Args = (u8, u32, usize);
-    fn read(reader: Reader<'a>, (otype, prop_count, size): Self::Args) -> (Self, Reader<'a>)
-    {
-        let prop = SclyProperty::Unknown {
-            object_type: otype,
-            property_count: prop_count,
-            data: reader.truncated(size),
-        };
-        (prop, reader.offset(size))
-    }
-
-    fn size(&self) -> usize
-    {
-        match *self {
-            SclyProperty::Unknown { ref data, .. } => data.len(),
-        }
-    }
-}
-
-impl<'a> Writable for SclyProperty<'a>
-{
-    fn write<W: Write>(&self, writer: &mut W)
-    {
-        match *self {
-            SclyProperty::Unknown { ref data, .. } => writer.write_all(&data).unwrap(),
-        }
-    }
-}
 
 auto_struct! {
     #[auto_struct(Readable, FixedSize, Writable)]

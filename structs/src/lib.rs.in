@@ -6,8 +6,33 @@ mod mlvl;
 mod mrea;
 mod scly;
 
+mod scly_props
+{
+    // http://www.metroid2002.com/retromodding/wiki/User:Parax0/Sandbox
+    mod timer;
+    mod sound;
+    mod pickup;
+    mod relay;
+    mod hud_memo;
+    mod special_function;
+    mod player_hint;
+    mod streamed_audio;
+
+    pub mod structs;
+
+    pub use self::timer::*;
+    pub use self::sound::*;
+    pub use self::pickup::*;
+    pub use self::relay::*;
+    pub use self::hud_memo::*;
+    pub use self::special_function::*;
+    pub use self::player_hint::*;
+    pub use self::streamed_audio::*;
+}
+
 pub use gc_disc::*;
 pub use pak::*;
 pub use mlvl::*;
 pub use mrea::*;
 pub use scly::*;
+pub use scly_props::*;
