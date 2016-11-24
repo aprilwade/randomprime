@@ -156,13 +156,13 @@ impl fmt::Debug for FourCC
 impl<'a, T> Readable<'a> for Option<T>
     where T: Readable<'a>
 {
-    type Args = (bool, T::Args);
+    type Args = Option<T::Args>;
     #[inline]
-    fn read(mut reader: Reader<'a>, args: (bool, T::Args))
+    fn read(mut reader: Reader<'a>, args: Self::Args)
         -> (Option<T>, Reader<'a>)
     {
-        if args.0 {
-            let res = reader.read(args.1);
+        if let Some(args) = args {
+            let res = reader.read(args);
             (Some(res), reader)
         } else {
             (None, reader)
