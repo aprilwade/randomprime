@@ -6,6 +6,7 @@ use reader_writer::generic_array::GenericArray;
 use std::fmt;
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::ascii::AsciiExt;
 
 use ::pak::Pak;
 
@@ -273,6 +274,25 @@ impl<'a> FstEntry<'a>
     pub fn is_folder(&self) -> bool
     {
         self.flags == 1
+    }
+
+    pub fn guess_kind(&mut self)
+    {
+        let name = self.name.to_bytes();
+        let len = name.len();
+
+        // For simplicity's sake, assume all extentions are len 3
+        let mut ext = [name[len - 3], name[len - 2], name[len - 1]];
+        ext.make_ascii_lowercase();
+
+        if ext == *b"pak" { 
+            self.file = match self.file {
+                FstEntryFile::Unknown(ref reader)
+                    => FstEntryFile::Pak(reader.clone().read((reader.len(), ()))),
+                FstEntryFile::Pak(_) => return,
+                _ => panic!("Unexpected fst file type while trying to guess pak."),
+            }
+        }
     }
 }
 

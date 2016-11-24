@@ -62,6 +62,22 @@ pub enum MreaSection<'a>
     Scly(Scly<'a>),
 }
 
+impl<'a> MreaSection<'a>
+{
+    // XXX A nicer/more clear name, maybe?
+    pub fn convert_to_scly(&mut self) -> &mut Scly<'a>
+    {
+        *self = match *self {
+            MreaSection::Unknown(ref reader) => MreaSection::Scly(reader.clone().read((()))),
+            MreaSection::Scly(ref mut scly) => return scly,
+        };
+        match *self {
+            MreaSection::Scly(ref mut scly) => scly,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl<'a> Readable<'a> for MreaSection<'a>
 {
     type Args = u32;
