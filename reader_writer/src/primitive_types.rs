@@ -81,7 +81,7 @@ define_arith_readable!((f32, read_f32, write_f32), (f64, read_f64, write_f64));
 
 
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FourCC([u8; 4]);
 
 impl FourCC
@@ -142,6 +142,16 @@ impl fmt::Display for FourCC
                               self.0[2] as char, self.0[3] as char)
     }
 }
+
+impl fmt::Debug for FourCC
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+    {
+        write!(f, "{}{}{}{}", self.0[0] as char, self.0[1] as char,
+                              self.0[2] as char, self.0[3] as char)
+    }
+}
+
 
 impl<'a, T> Readable<'a> for Option<T>
     where T: Readable<'a>

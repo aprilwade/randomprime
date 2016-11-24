@@ -100,7 +100,7 @@ impl<'a, T> fmt::Debug for RoArray<'a, T>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        write!(f, "{:?}", self.iter().collect::<Vec<_>>())
+        fmt::Debug::fmt(&self.iter().collect::<Vec<_>>(), f)
     }
 }
 
