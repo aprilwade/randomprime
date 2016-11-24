@@ -65,6 +65,12 @@ impl<'a, T> RoArray<'a, T>
             Some(self.data_start.offset(at * fixed_size).read(self.t_args.clone()))
         }
     }
+
+    #[inline]
+    pub fn data_start(&self) -> Reader<'a>
+    {
+        self.data_start.clone()
+    }
 }
 
 impl<'a, T> Readable<'a> for RoArray<'a, T>
@@ -73,24 +79,32 @@ impl<'a, T> Readable<'a> for RoArray<'a, T>
 {
     type Args = (usize, T::Args);
 
+    // TODO: It would be cool to cache the size in the reader's length field.
     #[inline]
-    fn read(reader: Reader<'a>, (size, args): Self::Args) -> (Self, Reader<'a>)
+    fn read(reader: Reader<'a>, (length, args): Self::Args) -> (Self, Reader<'a>)
     {
+        let size = T::fixed_size()
+            .map(|i| i * length)
+            .unwrap_or_else(|| {
+                let iter = RoArrayIter::<T> {
+                    t_args: args.clone(),
+                    length: length,
+                    data_start: reader.clone(),
+                };
+                iter.fold(0, |s, i| s + i.size())
+            });
         let array = RoArray {
             t_args: args,
-            length: size,
-            data_start: reader.clone(),
+            length: length,
+            data_start: reader.truncated(size),
         };
-        let size = array.size();
         (array, reader.offset(size))
     }
 
     #[inline]
     fn size(&self) -> usize
     {
-        T::fixed_size()
-            .map(|i| i * self.len())
-            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()))
+        self.data_start.len()
     }
 }
 
