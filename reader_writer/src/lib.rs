@@ -16,6 +16,7 @@ mod diff_list;
 
 mod imm_cow;
 mod derivable_array_proxy;
+mod uncached;
 
 mod padding;
 
@@ -32,6 +33,7 @@ pub use read_only_array::{RoArray, RoArrayIter};
 pub use fixed_array::FixedArray;
 pub use iterator_array::{IteratorArray, IteratorArrayIterator};
 pub use derivable_array_proxy::Dap;
+pub use uncached::Uncached;
 
 pub use imm_cow::ImmCow;
 
