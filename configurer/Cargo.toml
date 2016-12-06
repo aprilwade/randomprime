@@ -5,7 +5,9 @@ authors = ["Tyler Wade <wayedt@gmail.com>"]
 
 [dependencies]
 memmap = "0.4"
-#rust-crypto = "*"
+rust-crypto = "*"
+rand = "*"
+flate2 = "0.2.14"
 
 structs = { path = "../structs" }
 

@@ -8,6 +8,8 @@ mod scly;
 mod scan;
 mod cmdl;
 mod ancs;
+mod evnt;
+mod part;
 
 mod scly_props
 {
@@ -42,3 +44,5 @@ pub use scly_props::*;
 pub use scan::*;
 pub use cmdl::*;
 pub use ancs::*;
+pub use evnt::*;
+pub use part::*;
