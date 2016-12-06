@@ -81,7 +81,7 @@ define_arith_readable!((f32, read_f32, write_f32), (f64, read_f64, write_f64));
 
 
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FourCC([u8; 4]);
 
 impl FourCC
@@ -98,6 +98,12 @@ impl FourCC
     pub fn from_bytes(bytes: &[u8; 4]) -> FourCC
     {
         FourCC(*bytes)
+    }
+
+    #[inline]
+    pub fn as_bytes(&self) -> &[u8; 4]
+    {
+        &self.0
     }
 
     #[inline]
@@ -149,6 +155,14 @@ impl fmt::Debug for FourCC
     {
         write!(f, "{}{}{}{}", self.0[0] as char, self.0[1] as char,
                               self.0[2] as char, self.0[3] as char)
+    }
+}
+
+impl<'a> From<&'a [u8; 4]> for FourCC
+{
+    fn from(this: &'a [u8; 4]) -> FourCC
+    {
+        FourCC::from_bytes(this)
     }
 }
 
