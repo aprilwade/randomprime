@@ -13,9 +13,10 @@ auto_struct! {
         scan_params: ScannableParameters,
 
         xray_cmdl: u32,
+        xray_cskr: u32,
 
         // 6 unknown parameters
-        unknown0: GenericArray<u8, U21>,
+        unknown0: GenericArray<u8, U17>,
 
         visor_params: VisorParameters,
 
