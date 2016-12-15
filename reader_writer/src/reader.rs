@@ -63,6 +63,11 @@ impl <'a> Reader<'a>
         Reader(self.0.split_at(len).1)
     }
 
+    pub fn truncate(&mut self, len: usize)
+    {
+        *self = Reader(&self.0[0..len])
+    }
+
     pub fn truncated(&self, len: usize) -> Reader<'a>
     {
         Reader(&self.0[0..len])

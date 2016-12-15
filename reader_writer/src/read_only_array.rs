@@ -42,16 +42,21 @@ impl<'a, T> RoArray<'a, T>
         if at > self.length {
             panic!("`at` ({}) cannot be > the array's length ({}).", at, self.length)
         };
-        let new_len = self.length - at;
+        let right_len = self.length - at;
         // Shorten self to the new length
         self.length = at;
         // self is now the new length, so calculate its new size
-        let new_size = self.size();
-        RoArray {
+        let new_size = T::fixed_size()
+            .map(|i| i * self.length)
+            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()));
+
+        let res = RoArray {
             t_args: self.t_args.clone(),
-            length: new_len,
+            length: right_len,
             data_start: self.data_start.offset(new_size),
-        }
+        };
+        self.data_start.truncate(new_size);
+        res
     }
 
     #[inline]
