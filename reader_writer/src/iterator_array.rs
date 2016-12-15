@@ -20,6 +20,7 @@ impl<'a, T, I> IteratorArray<'a, T, I>
     where T: Readable<'a>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
+    #[inline]
     pub fn len(&self) -> usize
     {
         match *self {
@@ -28,6 +29,16 @@ impl<'a, T, I> IteratorArray<'a, T, I>
         }
     }
 
+    #[inline]
+    pub fn linear_get(&self, at: usize) -> Option<ImmCow<T>>
+    {
+        match *self {
+            IteratorArray::Borrowed(_, _) => self.iter().nth(at),
+            IteratorArray::Owned(ref vec) => vec.get(at).map(ImmCow::new_borrowed),
+        }
+    }
+
+    #[inline]
     pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'a, T, I>
     {
         match *self {
@@ -147,7 +158,7 @@ impl<'a, T, I> fmt::Debug for IteratorArray<'a, T, I>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        write!(f, "{:?}", self.iter().collect::<Vec<_>>())
+        fmt::Debug::fmt(&self.iter().collect::<Vec<_>>(), f)
     }
 }
 
