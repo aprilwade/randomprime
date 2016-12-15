@@ -1,8 +1,10 @@
-use reader_writer::{CStr, LazyArray, Readable, Reader, RoArray, Writable};
+use reader_writer::{CStr, FourCC, IteratorArray, LazyArray, Readable, Reader, RoArray,
+                    RoArrayIter, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
 use std::io::Write;
+use std::iter::Peekable;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -84,13 +86,111 @@ auto_struct! {
         // Not actually unknown, length of an array that's always empty...
         _unused0: u32,
 
-        dependencies_count: u32,
-        dependencies: RoArray<'a, Dependency> = (dependencies_count as usize, ()),
-        dependency_offsets_count: u32,
-        dependency_offsets: RoArray<'a, u32> = (dependency_offsets_count as usize, ()),
+        dependencies: AreaDependencies<'a>,
 
         dock_count: u32,
         docks: RoArray<'a, Dock<'a>> = (dock_count as usize, ()),
+    }
+}
+
+auto_struct! {
+    #[auto_struct(Readable, Writable)]
+    #[derive(Clone, Debug)]
+    pub struct AreaDependenciesInner<'a>
+    {
+        #[derivable = dependencies.len() as u32]
+        dependencies_count: u32,
+        dependencies: RoArray<'a, Dependency> = (dependencies_count as usize, ()),
+
+        #[derivable = dependency_offsets.len() as u32]
+        dependency_offsets_count: u32,
+        dependency_offsets: RoArray<'a, u32> = (dependency_offsets_count as usize, ()),
+    }
+}
+
+// Dependencies are implemented as multiple adjacent arrays which are differentiated
+// by an offset array. This is difficult to model, so it uses hand-written reading/
+// writing code.
+#[derive(Clone, Debug)]
+pub struct AreaDependencies<'a>
+{
+    pub deps: IteratorArray<'a, LazyArray<'a, Dependency>, LayerDepCountIter<'a>>
+}
+
+impl<'a> Readable<'a> for AreaDependencies<'a>
+{
+    type Args = ();
+    fn read(mut reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    {
+        let inner: AreaDependenciesInner = reader.read(());
+
+        let mut data_start = inner.dependencies.data_start();
+        let iter = LayerDepCountIter::new(inner);
+        (AreaDependencies { deps: data_start.read(iter), }, reader)
+    }
+
+    fn size(&self) -> usize
+    {
+        let deps_count: usize = self.deps.iter().map(|i| i.len()).sum();
+        (u32::fixed_size().unwrap() * (2 + self.deps.len()) +
+         Dependency::fixed_size().unwrap() * deps_count)
+    }
+}
+
+impl<'a> Writable for AreaDependencies<'a>
+{
+    fn write<W: Write>(&self, writer: &mut W)
+    {
+        let deps_count: u32 = self.deps.clone().iter().map(|i| i.len() as u32).sum();
+        deps_count.write(writer);
+        self.deps.write(writer);
+        (self.deps.len() as u32).write(writer);
+        for array in self.deps.iter() {
+            (array.len() as u32).write(writer);
+        }
+    }
+}
+
+
+#[derive(Clone, Debug)]
+pub struct LayerDepCountIter<'a>
+{
+    deps_len: u32,
+    offsets_iter: Peekable<RoArrayIter<'a, u32>>,
+}
+
+impl<'a> LayerDepCountIter<'a>
+{
+    fn new(inner: AreaDependenciesInner<'a>) -> LayerDepCountIter<'a>
+    {
+        LayerDepCountIter {
+            deps_len: inner.dependencies.len() as u32,
+            offsets_iter: inner.dependency_offsets.iter().peekable(),
+        }
+    }
+}
+
+impl<'a> Iterator for LayerDepCountIter<'a>
+{
+    type Item = (usize, ());
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        let start = self.offsets_iter.next();
+        let end = self.offsets_iter.peek().unwrap_or(&self.deps_len);
+        start.map(|start| ((end - start) as usize, ()))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>)
+    {
+        self.offsets_iter.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for LayerDepCountIter<'a>
+{
+    fn len(&self) -> usize
+    {
+        self.offsets_iter.len()
     }
 }
 
@@ -100,7 +200,7 @@ auto_struct! {
     pub struct Dependency
     {
         asset_id: u32,
-        asset_type: u32,
+        asset_type: FourCC,
     }
 }
 auto_struct! {
