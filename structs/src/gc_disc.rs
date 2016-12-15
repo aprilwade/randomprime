@@ -241,13 +241,13 @@ auto_struct! {
 }
 
 // A wrapper around Box<Read> to make it impl Debug
-pub struct ReadWrapper(RefCell<Box<Read>>);
+pub struct ReadWrapper<'a>(RefCell<Box<Read + 'a>>);
 
 #[derive(Debug)]
 pub enum FstEntryFile<'a>
 {
     Pak(LazySized<'a, Pak<'a>>),
-    ExternalFile(ReadWrapper, usize),
+    ExternalFile(ReadWrapper<'a>, usize),
     Unknown(Reader<'a>),
 }
 
@@ -327,14 +327,14 @@ impl<'a> FstEntryFile<'a>
     }
 }
 
-impl ReadWrapper
+impl<'a> ReadWrapper<'a>
 {
-    pub fn new<R: Read + 'static>(r: R) -> ReadWrapper
+    pub fn new<R: Read + 'static>(r: R) -> ReadWrapper<'a>
     {
         ReadWrapper(RefCell::new(Box::new(r) as Box<Read>))
     }
 }
-impl fmt::Debug for ReadWrapper
+impl<'a> fmt::Debug for ReadWrapper<'a>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
