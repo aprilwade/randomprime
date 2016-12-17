@@ -6,11 +6,11 @@
 //! A few sections of code are commented out, indicating what appear to me to
 //! be dependencies, but don't seem to match Miles' dependency lists.
 
-extern crate structs;
 extern crate memmap;
 extern crate flate2;
+extern crate configurer;
 
-pub use structs::reader_writer;
+pub use configurer::*;
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, SclyProperty, Scan, Resource, ResourceKind};
@@ -233,14 +233,6 @@ impl<'a> ResourceData<'a>
 }
 
 
-fn find_file<'r, 'a: 'r>(gc_disc: &'r mut structs::GcDisc<'a>, name: &str)
-    -> &'r mut structs::FstEntry<'a>
-{
-    let fst = &mut gc_disc.file_system_table;
-    fst.fst_entries.iter_mut()
-        .find(|e| e.name.to_bytes() == name.as_bytes())
-        .unwrap()
-}
 // A map from pickup type -> pickup position
 const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
     (1, "Missile"),
@@ -295,9 +287,9 @@ fn trace_pickup_deps(
 )
 {
     let file_entry = find_file(gc_disc, pak_name);
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
+    let pak = match *file_entry.file().unwrap() {
+        structs::FstEntryFile::Pak(ref pak) => pak.clone(),
+        structs::FstEntryFile::Unknown(ref reader) => reader.clone().read(()),
         _ => panic!(),
     };
 
@@ -389,7 +381,7 @@ fn trace_pickup_deps(
                     locations.last_mut().unwrap().1.push(layer_num);
                 } else {
                     locations.push((res.file_id, vec![layer_num]));
-            }
+                }
             }
 
             *counter += 1;
