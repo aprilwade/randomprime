@@ -2,6 +2,7 @@
 use std::fmt;
 use std::io::Write;
 use std::iter::{once, FromIterator};
+use std::ops::{Deref, DerefMut};
 
 use linked_list::{Cursor as LinkedListCursor, Iter as LinkedListIter, LinkedList};
 
@@ -157,7 +158,7 @@ impl<'list, A> DiffListCursor<'list, A>
     pub fn next(&mut self)
     {
         let advance_cursor = self.inner_cursor.as_mut().map(|ic| !ic.next()).unwrap_or(true);
-        if advance_cursor {
+        if advance_cursor && !self.cursor.peek_next().is_none() {
             self.inner_cursor = None;
             self.cursor.next();
             match self.cursor.peek_next() {
@@ -234,6 +235,11 @@ impl<'list, A> DiffListCursor<'list, A>
         }
     }
 
+
+    pub fn cursor_advancer<'a>(&'a mut self) -> DiffListCursorAdvancer<'a, 'list, A>
+    {
+        DiffListCursorAdvancer { cursor: self }
+    }
 }
 
 #[derive(Clone)]
@@ -300,5 +306,40 @@ impl<'a, A> Writable for DiffList<'a, A>
         for i in self.iter() {
             i.write(writer);
         }
+    }
+}
+
+/// Wraps a DiffListCursor and automatically advances it when it is dropped.
+pub struct DiffListCursorAdvancer<'cursor, 'list: 'cursor, A>
+    where A: AsDiffListSourceCursor + 'list
+{
+    cursor: &'cursor mut DiffListCursor<'list, A>,
+}
+
+impl<'cursor, 'list: 'cursor, A> Drop for DiffListCursorAdvancer<'cursor, 'list, A>
+    where A: AsDiffListSourceCursor + 'list
+{
+    fn drop(&mut self)
+    {
+        self.cursor.next()
+    }
+}
+
+impl<'cursor, 'list: 'cursor, A> Deref for DiffListCursorAdvancer<'cursor, 'list, A>
+    where A: AsDiffListSourceCursor + 'list
+{
+    type Target = DiffListCursor<'list, A>;
+    fn deref(&self) -> &Self::Target
+    {
+        &*self.cursor
+    }
+}
+
+impl<'cursor, 'list: 'cursor, A> DerefMut for DiffListCursorAdvancer<'cursor, 'list, A>
+    where A: AsDiffListSourceCursor + 'list
+{
+    fn deref_mut(&mut self) -> &mut Self::Target
+    {
+        &mut *self.cursor
     }
 }
