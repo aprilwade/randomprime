@@ -12,7 +12,7 @@ extern crate flate2;
 
 pub use structs::reader_writer;
 
-use reader_writer::{FourCC, Reader};
+use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, SclyProperty, Scan, Resource, ResourceKind};
 
 use flate2::{Decompress, Flush};
@@ -241,8 +241,58 @@ fn find_file<'r, 'a: 'r>(gc_disc: &'r mut structs::GcDisc<'a>, name: &str)
         .find(|e| e.name.to_bytes() == name.as_bytes())
         .unwrap()
 }
+// A map from pickup type -> pickup position
+const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
+    (1, "Missile"),
+    (9, "Energy Tank"),
 
-fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
+    (50, "Thermal Visor"),
+    (71, "X-Ray Visor"),
+
+    (20, "Varia Suit"),
+    (54, "Gravity Suit"),
+    (83, "Phazon Suit"),
+
+    (5,  "Morph Ball"),
+    (43, "Boost Ball"),
+    (44, "Spider Ball"),
+
+    (28, "Morph Ball Bomb"),
+    (12, "Power Bomb (small)"),
+    (85, "Power Bomb (large)"),
+
+    (23, "Charge Beam"),
+    (59, "Space Jump Boots"),
+    (75, "Grapple Beam"),
+
+    (47, "Super Missile"),
+    (13, "Wavebuster"),
+    (96, "Ice Spreader"),
+    (76, "Flamethrower"),
+
+    (41, "Wave Beam"),
+    (34, "Ice Beam"),
+    (99, "Plasma Beam"),
+
+    (14, "Artifact of Lifegiver"),
+    (21, "Artifact of Wild"),
+    (33, "Artifact of World"),
+    (37, "Artifact of Sun"),
+    (49, "Artifact of Elder"),
+    (56, "Artifact of Spirit"),
+    (63, "Artifact of Truth"),
+    (73, "Artifact of Chozo"),
+    (77, "Artifact of Warrior"),
+    (89, "Artifact of Newborn"),
+    (91, "Artifact of Nature"),
+    (95, "Artifact of Strength"),
+];
+
+fn trace_pickup_deps(
+    gc_disc: &mut structs::GcDisc, pak_name: &str, counter: &mut usize,
+    pickup_table: &mut HashMap<usize, (&'static str, Vec<u8>, HashSet<ResourceKey>)>,
+    locations: &mut Vec<Vec<(u32, Vec<usize>)>>,
+)
 {
     let file_entry = find_file(gc_disc, pak_name);
     file_entry.guess_kind();
@@ -258,6 +308,9 @@ fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
         res_db.add_resource(res.clone());
     }
 
+
+    locations.push(vec![]);
+    let mut locations = locations.last_mut().unwrap();
 
     for res in resources.iter() {
         if res.fourcc != b"MREA".into() {
@@ -282,7 +335,7 @@ fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
 
         let mut pickups = vec![];
         let mut scly_db = HashMap::new();
-        for scly_layer in scly.layers.iter() {
+        for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
             for obj in scly_layer.objects.iter() {
                 if obj.property_data.object_type() == 0x11 {
                     let mut obj = obj.clone();
@@ -292,7 +345,7 @@ fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
                         _ => panic!(),
                     };
                     if pickup.max_increase > 0 {
-                      pickups.push(obj.clone());
+                        pickups.push((layer_num, obj.clone()));
                     }
                 }
                 // One of the assets for each pickup is an STRG that is not part of the
@@ -303,7 +356,7 @@ fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
             }
         }
 
-        for obj in pickups {
+        for (layer_num, obj) in pickups {
             let pickup = match obj.property_data {
                 structs::SclyProperty::Pickup(pickup) => pickup,
                 _ => panic!(),
@@ -321,20 +374,25 @@ fn trace_pickup_deps(gc_disc: &mut structs::GcDisc, pak_name: &str)
 
             patch_dependencies(pickup.kind, &mut deps);
 
-            println!("// {:?} ({})", pickup.name, pickup.kind);
-            println!("PickupDependency {{");
-            println!("    pak_name: \"{}\",", pak_name);
-            println!("    room_id: 0x{:08X},", res.file_id);
-            println!("    script_obj_id: 0x{:08X},", obj.instance_id);
-            println!("    dependencies: vec![");
-
-            let mut s_deps : Vec<_> = deps.iter().cloned().collect();
-            s_deps.sort();
-            for i in s_deps {
-                println!("        (0x{:08X}, \"{}\"),", i.file_id, i.fourcc);
+            if let Some(type_id) = PICKUP_TYPES.iter().position(|&(pos, _)| *counter == pos) {
+                let mut data = vec![];
+                pickup.write(&mut data);
+                let name = PICKUP_TYPES[type_id].1;
+                pickup_table.insert(type_id, (name, data, deps));
             }
-            println!("    ],");
-            println!("}},");
+
+            // TODO: Find a better way to skip this than checking counter
+            if *counter != 84 {
+                // Skip the extra phazon suit-thing
+                let fid = res.file_id;
+                if locations.last().map(|i| i.0 == fid).unwrap_or(false) {
+                    locations.last_mut().unwrap().1.push(layer_num);
+                } else {
+                    locations.push((res.file_id, vec![layer_num]));
+            }
+            }
+
+            *counter += 1;
         }
     }
 }
@@ -416,7 +474,48 @@ fn main()
         "Metroid6.pak",
     ];
 
+    let mut i = 0;
+    let mut pickup_table = HashMap::new();
+    let mut locations = Vec::new();
     for f in &filenames {
-        trace_pickup_deps(&mut gc_disc, f);
+        trace_pickup_deps(&mut gc_disc, f, &mut i, &mut pickup_table, &mut locations);
     }
+
+
+    println!("pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [u8])]; 5] = [");
+    for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
+        println!("    // {}", fname);
+        println!("    &[");
+        for (room, layers) in locations {
+            println!("        (0x{:08X}, &{:?}),", room, layers);
+        }
+        println!("    ],");
+    }
+    println!("];");
+
+    println!("const PICKUP_RAW_META: [PickupMetaRaw; 35] = [");
+    const BYTES_PER_LINE: usize = 8;
+    for i in 0..pickup_table.len() {
+        let (ref name, ref pickup_bytes, ref deps) = pickup_table[&i];
+        println!("    // {}", name);
+        println!("    PickupMetaRaw {{");
+        println!("        pickup: &[");
+        for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
+            let len = ::std::cmp::min(BYTES_PER_LINE, pickup_bytes.len() - y * BYTES_PER_LINE);
+            print!("           ");
+            for x in 0..len {
+                print!(" 0x{:02X},", pickup_bytes[y * BYTES_PER_LINE + x]);
+            }
+            println!("");
+        }
+        println!("        ],");
+        println!("        deps: &[");
+        for dep in deps {
+            println!("            (0x{:08X}, *b\"{}\"),", dep.file_id, dep.fourcc);
+        }
+        println!("        ],");
+        println!("    }},");
+
+    }
+    println!("];");
 }
