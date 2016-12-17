@@ -231,14 +231,14 @@ impl<'a, T> Writable for LazySized<'a, T>
 #[cfg(test)]
 mod tests
 {
-    use ::{LazySized, Reader, Array, Readable};
+    use ::{LazySized, Reader, LazyArray, Readable};
     #[test]
     fn test_lazy_cell()
     {
         let data = [0xFC, 0xFD, 0xFE, 0xFF];
         let reader = Reader::new(&data);
-        let mut lazy : LazySized<Array<u8>> = LazySized::read(reader, (4, (4, ()))).0;
-        let array = lazy.as_mut_slice();
+        let mut lazy : LazySized<LazyArray<u8>> = LazySized::read(reader, (4, (4, ()))).0;
+        let array = lazy.as_mut_vec();
         assert_eq!(array[0], 0xFC);
         assert_eq!(array[1], 0xFD);
         assert_eq!(array[2], 0xFE);

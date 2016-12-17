@@ -182,3 +182,19 @@ impl<'a, T> Writable for RoArray<'a, T>
         writer.write(&(*self.data_start)[0..len]).unwrap();
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use ::{Reader, RoArray};
+    #[test]
+    fn test_split_off()
+    {
+        let data = [1, 2, 3, 4, 5];
+        let mut reader = Reader::new(&data);
+        let mut array: RoArray<u8> = reader.read((5, ()));
+        let right = array.split_off(2);
+        assert_eq!(array.iter().collect::<Vec<_>>(), [1, 2]);
+        assert_eq!(right.iter().collect::<Vec<_>>(), [3, 4, 5]);
+    }
+}
