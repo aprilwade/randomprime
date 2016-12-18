@@ -1,5 +1,5 @@
 
-use reader_writer::{CStr, Lazy, LazySized, Reader, Readable, RoArray, Writable};
+use reader_writer::{CStr, Lazy, Reader, Readable, RoArray, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -246,7 +246,7 @@ pub struct ReadWrapper<'a>(RefCell<Box<Read + 'a>>);
 #[derive(Debug)]
 pub enum FstEntryFile<'a>
 {
-    Pak(LazySized<'a, Pak<'a>>),
+    Pak(Pak<'a>),
     ExternalFile(ReadWrapper<'a>, usize),
     Unknown(Reader<'a>),
 }
@@ -288,7 +288,7 @@ impl<'a> FstEntry<'a>
         if ext == *b"pak" { 
             self.file = match self.file {
                 FstEntryFile::Unknown(ref reader)
-                    => FstEntryFile::Pak(reader.clone().read((reader.len(), ()))),
+                    => FstEntryFile::Pak(reader.clone().read(())),
                 FstEntryFile::Pak(_) => return,
                 _ => panic!("Unexpected fst file type while trying to guess pak."),
             }
