@@ -50,6 +50,17 @@ auto_struct! {
     }
 }
 
+impl<'a> SclyLayer<'a>
+{
+    pub fn new() -> SclyLayer<'a>
+    {
+        SclyLayer {
+            unknown: 0,
+            objects: LazyArray::Owned(Vec::new()),
+        }
+    }
+}
+
 auto_struct! {
     #[auto_struct(Readable, Writable)]
     #[derive(Debug, Clone)]

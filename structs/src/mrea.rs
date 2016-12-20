@@ -60,6 +60,14 @@ auto_struct! {
 }
 
 
+impl<'a> Mrea<'a>
+{
+    pub fn scly_section_mut(&mut self) -> &mut Scly<'a>
+    {
+        self.sections.as_mut_vec()[self.scly_section_idx as usize].convert_to_scly()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum MreaSection<'a>
 {
