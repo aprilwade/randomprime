@@ -251,9 +251,9 @@ impl<'a> Readable<'a> for CStr<'a>
     type Args = ();
     fn read(reader: Reader<'a>, (): ()) -> (CStr<'a>, Reader<'a>)
     {
-        // TODO: Find a better way to do this
-        let cstr = unsafe { ffi::CStr::from_ptr((reader.as_ptr() as *const i8)) };
-        let cstr = Cow::Borrowed(cstr);
+        // XXX A possible optimization would be to use from_bytes_with_nul_unchecked here
+        let buf = &(*reader)[0..(reader.iter().position(|&i| i == b'\0').unwrap() + 1)];
+        let cstr = Cow::Borrowed(ffi::CStr::from_bytes_with_nul(buf).unwrap());
         let len = cstr.size();
         (cstr, reader.offset(len))
     }
