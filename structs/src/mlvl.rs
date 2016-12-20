@@ -150,12 +150,14 @@ impl<'a> Writable for AreaDependencies<'a>
         deps_count.write(writer);
         self.deps.write(writer);
         (self.deps.len() as u32).write(writer);
+
+        let mut offset_sum: u32 = 0;
         for array in self.deps.iter() {
-            (array.len() as u32).write(writer);
+            offset_sum.write(writer);
+            offset_sum += array.len() as u32;
         }
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct LayerDepCountIter<'a>
@@ -201,7 +203,7 @@ impl<'a> ExactSizeIterator for LayerDepCountIter<'a>
 
 auto_struct! {
     #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq)]
     pub struct Dependency
     {
         asset_id: u32,
@@ -321,7 +323,7 @@ impl<'a> Readable<'a> for AreaLayerNames<'a>
     fn size(&self) -> usize
     {
         // TODO: It might be nice to cache this
-        self.0.len() * u32::fixed_size().unwrap() + 
+        u32::fixed_size().unwrap() * (self.0.len() + 2) +
             self.0.iter().flat_map(|i| i).map(|s| s.to_bytes_with_nul().len()).sum::<usize>()
     }
 }
@@ -330,10 +332,8 @@ impl<'a> Writable for AreaLayerNames<'a>
 {
     fn write<W: Write>(&self, writer: &mut W)
     {
-        (self.0.iter().map(|i| i.len()).sum::<usize>() as u32).write(writer);
-        for name in self.0.iter().flat_map(|i| i) {
-            name.write(writer);
-        }
+        self.0.iter().map(|area| area.len() as u32).sum::<u32>().write(writer);
+        self.0.write(writer);
 
         (self.0.len() as u32).write(writer);
 
