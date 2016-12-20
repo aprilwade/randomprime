@@ -1,5 +1,5 @@
 use reader_writer::{CStr, FourCC, IteratorArray, LazyArray, Readable, Reader, RoArray,
-                    RoArrayIter, Writable};
+                    RoArrayIter, Writable, pad_bytes_count, pad_bytes_ff};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -52,6 +52,11 @@ auto_struct! {
         // TODO: Could this be done lazily? Does it matter? We're basically always going
         //       to be modifying this structure, so maybe it would just be a waste?
         area_layer_names: AreaLayerNames<'a> = area_count,
+
+        #[offset]
+        offset_after: usize,
+        #[derivable = pad_bytes_ff(32, offset_after)]
+        _padding_after: RoArray<'a, u8> = (pad_bytes_count(32, offset_after), ()),
     }
 }
 

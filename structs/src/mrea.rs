@@ -1,6 +1,6 @@
 
 use reader_writer::{Dap, ImmCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable,
-                    pad_bytes_count, pad_bytes};
+                    pad_bytes_count, pad_bytes, pad_bytes_ff};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -51,6 +51,11 @@ auto_struct! {
         //        section, so we could treat them as raw bytes. Similarly the indicies
         //        for all the other sections.)
         sections: IteratorArray<'a, MreaSection<'a>, RoArrayIter<'a, u32>> = section_sizes.iter(),
+
+        #[offset]
+        offset_after: usize,
+        #[derivable = pad_bytes_ff(32, offset_after)]
+        _padding_after: RoArray<'a, u8> = (pad_bytes_count(32, offset_after), ()),
     }
 }
 
