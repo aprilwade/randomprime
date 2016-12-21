@@ -2,6 +2,9 @@ pub extern crate structs;
 
 pub use structs::reader_writer;
 
+pub mod mlvl_wrapper;
+pub mod pickup_meta;
+
 pub fn find_file<'r, 'a: 'r>(gc_disc: &'r structs::GcDisc<'a>, name: &str)
     -> &'r structs::FstEntry<'a>
 {
