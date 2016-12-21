@@ -1,5 +1,8 @@
 extern crate memmap;
+extern crate clap;
 extern crate configurer;
+
+use clap::{Arg, App};
 
 pub use configurer::*;
 
@@ -7,7 +10,6 @@ use reader_writer::{FourCC, Reader};
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::env::args;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Read};
 use std::ffi::CString;
@@ -191,11 +193,31 @@ fn main()
 {
     pickup_meta::setup_pickup_meta_table();
 
-    let pickup_layout_file = File::open(args().nth(2).unwrap()).unwrap();
+    let matches = App::new("Metroid Prime Configuerer")
+        .version("0.0")
+        .arg(Arg::with_name("input iso path")
+            .long("input-iso")
+            .required(true)
+            .takes_value(true))
+        .arg(Arg::with_name("output iso path")
+            .long("output-iso")
+            .required(true)
+            .takes_value(true))
+        .arg(Arg::with_name("pickup layout file path")
+            .long("layout")
+            .required(true)
+            .takes_value(true))
+        .get_matches();
+
+    let input_iso_path = matches.value_of("input iso path").unwrap();
+    let output_iso_path = matches.value_of("output iso path").unwrap();
+    let pickup_layout_path = matches.value_of("pickup layout file path").unwrap();
+
+    let pickup_layout_file = File::open(pickup_layout_path).unwrap();
     let pickup_layout = parse_pickup_layout(pickup_layout_file);
     assert_eq!(pickup_layout.len(), 100);
 
-    let file = File::open(args().nth(1).unwrap()).unwrap();
+    let file = File::open(input_iso_path).unwrap();
     let mmap = memmap::Mmap::open(&file, memmap::Protection::Read).unwrap();
     let mut reader = Reader::new(unsafe { mmap.as_slice() });
     let mut gc_disc: structs::GcDisc = reader.read(());
@@ -208,5 +230,5 @@ fn main()
                      &mut pickup_meta::PICKUP_LOCATIONS[0],
                      &mut pickup_layout.iter().cloned().enumerate());
     }
-    write_gc_disc(&mut gc_disc, &args().nth(3).unwrap());
+    write_gc_disc(&mut gc_disc, output_iso_path);
 }

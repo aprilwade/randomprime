@@ -7,7 +7,8 @@ authors = ["Tyler Wade <wayedt@gmail.com>"]
 memmap = "0.4"
 rust-crypto = "*"
 rand = "*"
-flate2 = "0.2.14"
+flate2 = "0.2"
+clap = "2.9"
 
 structs = { path = "../structs" }
 
