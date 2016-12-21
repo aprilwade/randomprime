@@ -17,6 +17,7 @@ use structs::{Ancs, Cmdl, Evnt, Pickup, SclyProperty, Scan, Resource, ResourceKi
 
 use flate2::{Decompress, Flush};
 
+use std::mem;
 use std::env::args;
 use std::fs::File;
 use std::borrow::Cow;
@@ -284,6 +285,7 @@ fn trace_pickup_deps(
     gc_disc: &mut structs::GcDisc, pak_name: &str, counter: &mut usize,
     pickup_table: &mut HashMap<usize, (&'static str, Vec<u8>, HashSet<ResourceKey>)>,
     locations: &mut Vec<Vec<(u32, Vec<usize>)>>,
+    cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
 )
 {
     let file_entry = find_file(gc_disc, pak_name);
@@ -336,8 +338,23 @@ fn trace_pickup_deps(
                         structs::SclyProperty::Pickup(ref pickup) => pickup,
                         _ => panic!(),
                     };
+
+                    // We're only interested in "real" pickups
                     if pickup.max_increase > 0 {
                         pickups.push((layer_num, obj.clone()));
+
+                        if pickup.cmdl != u32::max_value() {
+                            // Add an aabb entry for this pickup's cmdl
+                            cmdl_aabbs.entry(pickup.cmdl).or_insert_with(|| {
+                                let cmdl_key = ResourceKey::new(pickup.cmdl, b"CMDL".into());
+                                // Cmdls are compressed
+                                let res_data = res_db.map[&cmdl_key].data.decompress();
+                                let cmdl: Cmdl = Reader::new(&res_data).read(());
+                                let aabb = cmdl.maab;
+                                // Convert from GenericArray to [f32; 6]
+                                [aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]]
+                            });
+                        }
                     }
                 }
                 // One of the assets for each pickup is an STRG that is not part of the
@@ -468,11 +485,12 @@ fn main()
 
     let mut i = 0;
     let mut pickup_table = HashMap::new();
+    let mut cmdl_aabbs = HashMap::new();
     let mut locations = Vec::new();
     for f in &filenames {
-        trace_pickup_deps(&mut gc_disc, f, &mut i, &mut pickup_table, &mut locations);
+        trace_pickup_deps(&mut gc_disc, f, &mut i, &mut pickup_table, &mut locations,
+                          &mut cmdl_aabbs);
     }
-
 
     println!("pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [u8])]; 5] = [");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
@@ -508,6 +526,16 @@ fn main()
         println!("        ],");
         println!("    }},");
 
+    }
+    println!("];");
+
+    let mut cmdl_aabbs: Vec<_> = cmdl_aabbs.iter().collect();
+    cmdl_aabbs.sort_by_key(|&(k, _)| k);
+    println!("const PICKUP_CMDL_AABBS: [(u32, [u32; 6]); {}] = [", cmdl_aabbs.len());
+    for (cmdl_id, aabb) in cmdl_aabbs {
+        let aabb: [u32; 6] = unsafe { mem::transmute(*aabb) };
+        println!("    (0x{:08X}, [0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}]),",
+                    cmdl_id, aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]);
     }
     println!("];");
 }
