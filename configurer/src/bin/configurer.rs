@@ -7,6 +7,8 @@ use clap::{Arg, App};
 pub use configurer::*;
 
 use reader_writer::{FourCC, Reader};
+use reader_writer::generic_array::GenericArray;
+use reader_writer::typenum::U3;
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -171,14 +173,74 @@ fn insert_deps<'a, I>(
                 _ => panic!(),
             };
             let original_pickup = pickup.clone();
-            *pickup = pickup_meta.pickup.clone();
-            pickup.position = original_pickup.position;
-            pickup.rotation = original_pickup.rotation;
-            //pickup.scale = original_pickup.scale;
-            pickup.hitbox = original_pickup.hitbox;
-            pickup.scan_offset = original_pickup.scan_offset;
+
+            let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
+            let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_meta.pickup.cmdl).unwrap();
+            let original_center = calculate_center(original_aabb, original_pickup.rotation,
+                                                   original_pickup.scale);
+            let new_center = calculate_center(new_aabb, pickup_meta.pickup.rotation,
+                                              pickup_meta.pickup.scale);
+
+            *pickup = structs::Pickup {
+                position: GenericArray::from_slice(&[
+                    original_pickup.position[0] - (new_center[0] - original_center[0]),
+                    original_pickup.position[1] - (new_center[1] - original_center[1]),
+                    original_pickup.position[2] - (new_center[2] - original_center[2]),
+                ]),
+                rotation: original_pickup.rotation,
+                hitbox: original_pickup.hitbox,
+                scan_offset: GenericArray::from_slice(&[
+                    original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
+                    original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
+                    original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
+                ]),
+
+                fade_in_timer: original_pickup.fade_in_timer,
+                unknown: original_pickup.unknown,
+                active: original_pickup.active,
+
+                ..(pickup_meta.pickup.clone())
+            };
         }
     }
+}
+
+fn calculate_center(aabb: [f32; 6], rotation: GenericArray<f32, U3>, scale: GenericArray<f32, U3>)
+    -> [f32; 3]
+{
+    let start = [aabb[0], aabb[1], aabb[2]];
+    let end = [aabb[3], aabb[4], aabb[5]];
+
+    let mut position = [0.; 3];
+    for i in 0..3 {
+        position[i] = (start[i] + end[i]) / 2. * scale[i];
+    }
+
+    rotate(position, [rotation[0], rotation[1], rotation[2]], [0.; 3])
+}
+
+fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
+    -> [f32; 3]
+{
+    // Shift to the origin
+    for i in 0..3 {
+        coordinate[i] -= center[i];
+        rotation[i] = rotation[i].to_radians();
+    }
+
+    for i in 0..3 {
+        let original = coordinate.clone();
+        let x = (i + 1) % 3;
+        let y = (i + 2) % 3;
+        coordinate[x] = original[x] * rotation[i].cos() - original[y] * rotation[i].sin();
+        coordinate[y] = original[x] * rotation[i].sin() + original[y] * rotation[i].cos();
+    }
+
+    // Shift back to original position
+    for i in 0..3 {
+        coordinate[i] += center[i];
+    }
+    coordinate
 }
 
 fn parse_pickup_layout<R: Read>(r: R)
@@ -224,7 +286,7 @@ fn main()
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
-    for pak_name in (&["Metroid2.pak"]).iter() {
+    for pak_name in METROID_PAK_NAMES.iter() {
         insert_deps(&mut gc_disc, pak_name,
                      &pickup_resources,
                      &mut pickup_meta::PICKUP_LOCATIONS[0],
