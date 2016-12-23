@@ -11,6 +11,7 @@ extern crate flate2;
 extern crate configurer;
 
 pub use configurer::*;
+use configurer::pickup_meta::{PickupLocation, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, SclyProperty, Scan, Resource, ResourceKind};
@@ -281,10 +282,19 @@ const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
     (95, "Artifact of Strength"),
 ];
 
+#[derive(Debug)]
+struct PickupData
+{
+    name: &'static str,
+    bytes: Vec<u8>,
+    deps: HashSet<ResourceKey>,
+    hudmemo_strg: Option<u32>,
+}
+
 fn trace_pickup_deps(
     gc_disc: &mut structs::GcDisc, pak_name: &str, counter: &mut usize,
-    pickup_table: &mut HashMap<usize, (&'static str, Vec<u8>, HashSet<ResourceKey>)>,
-    locations: &mut Vec<Vec<(u32, Vec<usize>)>>,
+    pickup_table: &mut HashMap<usize, PickupData>,
+    locations: &mut Vec<Vec<(u32, Vec<PickupLocation>)>>,
     cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
 )
 {
@@ -361,7 +371,7 @@ fn trace_pickup_deps(
                 // pickup itself, but is displayed when its acquired. To facilitate finding
                 // it, we build a map of all of the scripting objects.
                 // XXX The assert checks for SCLY objects with duplicated ids
-                assert!(scly_db.insert(obj.instance_id, obj.clone()).is_none());
+                assert!(scly_db.insert(obj.instance_id, (layer_num, obj.clone())).is_none());
             }
         }
 
@@ -372,13 +382,18 @@ fn trace_pickup_deps(
             };
             let mut deps = res_db.get_dependencies(&pickup);
 
-            if let Some(mut hudmemo) = search_for_hudmemo(&obj.connections, &scly_db) {
+            let mut hudmemo = search_for_hudmemo(&obj.connections, &scly_db);
+            let hudmemo_strg;
+            if let Some(ref mut hudmemo) = hudmemo {
                 hudmemo.property_data.guess_kind();
                 let strg = match hudmemo.property_data {
                     structs::SclyProperty::HudMemo(ref memo) => memo.strg,
                     _ => panic!(),
                 };
                 deps.insert(ResourceKey::new(strg, b"STRG".into()));
+                hudmemo_strg = Some(strg);
+            } else {
+                hudmemo_strg = None;
             }
 
             patch_dependencies(pickup.kind, &mut deps);
@@ -387,17 +402,32 @@ fn trace_pickup_deps(
                 let mut data = vec![];
                 pickup.write(&mut data);
                 let name = PICKUP_TYPES[type_id].1;
-                pickup_table.insert(type_id, (name, data, deps));
+                pickup_table.insert(type_id, PickupData {
+                    name: name,
+                    bytes: data,
+                    deps: deps,
+                    hudmemo_strg: hudmemo_strg
+                });
             }
 
             // TODO: Find a better way to skip this than checking counter
             if *counter != 84 {
                 // Skip the extra phazon suit-thing
                 let fid = res.file_id;
+                let location = PickupLocation {
+                    location: ScriptObjectLocation {
+                        layer: layer_num as u32,
+                        instance_id: obj.instance_id,
+                    },
+                    hudmemo: hudmemo.map(|obj| ScriptObjectLocation {
+                        layer: scly_db[&obj.instance_id].0 as u32,
+                        instance_id: obj.instance_id,
+                    }),
+                };
                 if locations.last().map(|i| i.0 == fid).unwrap_or(false) {
-                    locations.last_mut().unwrap().1.push(layer_num);
+                    locations.last_mut().unwrap().1.push(location);
                 } else {
-                    locations.push((res.file_id, vec![layer_num]));
+                    locations.push((res.file_id, vec![location]));
                 }
             }
 
@@ -406,9 +436,10 @@ fn trace_pickup_deps(
     }
 }
 
+// TODO: Record HudMemo's layer #
 fn search_for_hudmemo<'a>(
     connections: &reader_writer::LazyArray<'a, structs::Connection>,
-    scly_db: &HashMap<u32, structs::SclyObject<'a>>
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>
 ) -> Option<structs::SclyObject<'a>>
 {
     let mut stack = Vec::new();
@@ -423,7 +454,7 @@ fn search_for_hudmemo<'a>(
     }
 
     while let Some(id) = stack.pop() {
-        let obj = if let Some(obj) = scly_db.get(&id) {
+        let obj = if let Some(&(_, ref obj)) = scly_db.get(&id) {
             obj
         } else {
             continue;
@@ -492,12 +523,19 @@ fn main()
                           &mut cmdl_aabbs);
     }
 
-    println!("pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [u8])]; 5] = [");
+    println!("pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [PickupLocation])]; 5] = [");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         println!("    // {}", fname);
         println!("    &[");
-        for (room, layers) in locations {
-            println!("        (0x{:08X}, &{:?}),", room, layers);
+        for (room, locations) in locations {
+            println!("        (0x{:08X}, &[", room);
+            for location in locations {
+                println!("            PickupLocation {{");
+                println!("                location: {:?},", location.location);
+                println!("                hudmemo: {:?},", location.hudmemo);
+                println!("            }},")
+            }
+            println!("        ]),");
         }
         println!("    ],");
     }
@@ -506,8 +544,9 @@ fn main()
     println!("const PICKUP_RAW_META: [PickupMetaRaw; 35] = [");
     const BYTES_PER_LINE: usize = 8;
     for i in 0..pickup_table.len() {
-        let (ref name, ref pickup_bytes, ref deps) = pickup_table[&i];
-        println!("    // {}", name);
+        let ref pickup_data = pickup_table[&i];
+        let pickup_bytes = &pickup_data.bytes;
+        println!("    // {}", pickup_data.name);
         println!("    PickupMetaRaw {{");
         println!("        pickup: &[");
         for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
@@ -520,10 +559,11 @@ fn main()
         }
         println!("        ],");
         println!("        deps: &[");
-        for dep in deps {
+        for dep in &pickup_data.deps {
             println!("            (0x{:08X}, *b\"{}\"),", dep.file_id, dep.fourcc);
         }
         println!("        ],");
+        println!("        hudmemo_strg: {:?},", pickup_data.hudmemo_strg);
         println!("    }},");
 
     }

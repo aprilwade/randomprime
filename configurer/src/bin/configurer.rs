@@ -67,11 +67,11 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     found
 }
 
-fn insert_deps<'a, I>(
+fn modify_pickups<'a, I>(
     gc_disc: &mut structs::GcDisc<'a>,
     pak_name: &str,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
-    room_list: &'static [(u32, &'static [u8])],
+    room_list: &'static [(u32, &'static [pickup_meta::PickupLocation])],
     pickup_list_iter: &mut I,
 )
     where I: Iterator<Item=(usize, u8)>,
@@ -117,27 +117,19 @@ fn insert_deps<'a, I>(
             Some((file_id, _)) => file_id,
         };
 
-        let pickup_layers = if let Some(&&(file_id, pickup_layers)) = room_list_iter.peek() {
+        let pickup_locations = if let Some(&&(file_id, pickup_locations)) = room_list_iter.peek() {
             if file_id != curr_file_id {
                 continue;
             }
             room_list_iter.next();
-            pickup_layers
+            pickup_locations
         } else {
             continue;
         };
 
         let mut area = editor.get_area(&mut cursor);
 
-        let mut last_layer = 255;
-        let mut nth_pickup = 0;
-        for &layer_num in pickup_layers {
-            if last_layer != layer_num {
-                last_layer = layer_num;
-                nth_pickup = 0;
-            } else {
-                nth_pickup += 1;
-            }
+        for &pickup_location in pickup_locations {
 
             let (i, pickup_num) = pickup_list_iter.next().unwrap();
             let ref pickup_meta = pickup_meta::pickup_meta_table()[pickup_num as usize];
@@ -154,55 +146,71 @@ fn insert_deps<'a, I>(
             area.add_dependencies(pickup_resources, new_layer_idx, iter);
 
             let scly = area.mrea().scly_section_mut();
-            let ref mut layer = scly.layers.as_mut_vec()[layer_num as usize];
-            let pickup = layer.objects.iter_mut()
-                .filter(|obj| obj.property_data.object_type() == 0x11)
-                .filter(|obj| {
-                    let pickup = match obj.property_data {
-                        structs::SclyProperty::Unknown { ref data, .. } => data.clone().read(()),
-                        structs::SclyProperty::Pickup(ref pickup) => pickup.clone(),
-                        _ => panic!(),
-                    };
-                    pickup.max_increase > 0
-                })
-                .nth(nth_pickup as usize)
-                .unwrap();
+            let layers = scly.layers.as_mut_vec();
 
-            pickup.property_data.guess_kind();
-            let pickup = match pickup.property_data {
-                structs::SclyProperty::Pickup(ref mut pickup) => pickup,
-                _ => panic!(),
-            };
-            let original_pickup = pickup.clone();
-
-            let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-            let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_meta.pickup.cmdl).unwrap();
-            let original_center = calculate_center(original_aabb, original_pickup.rotation,
-                                                   original_pickup.scale);
-            let new_center = calculate_center(new_aabb, pickup_meta.pickup.rotation,
-                                              pickup_meta.pickup.scale);
-
-            *pickup = structs::Pickup {
-                position: GenericArray::from_slice(&[
-                    original_pickup.position[0] - (new_center[0] - original_center[0]),
-                    original_pickup.position[1] - (new_center[1] - original_center[1]),
-                    original_pickup.position[2] - (new_center[2] - original_center[2]),
-                ]),
-                rotation: original_pickup.rotation,
-                hitbox: original_pickup.hitbox,
-                scan_offset: GenericArray::from_slice(&[
-                    original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
-                    original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
-                    original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
-                ]),
-
-                fade_in_timer: original_pickup.fade_in_timer,
-                unknown: original_pickup.unknown,
-                active: original_pickup.active,
-
-                ..(pickup_meta.pickup.clone())
-            };
+            {
+                let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
+                    .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
+                    .unwrap();
+                update_pickup(pickup, &pickup_meta);
+            }
+            if let Some(ref hudmemo) = pickup_location.hudmemo {
+                let hudmemo = layers[hudmemo.layer as usize].objects.iter_mut()
+                    .find(|obj| obj.instance_id ==  hudmemo.instance_id)
+                    .unwrap();
+                update_hudmemo(hudmemo, &pickup_meta);
+            }
         }
+    }
+}
+
+fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
+{
+    pickup.property_data.guess_kind();
+    let pickup = match pickup.property_data {
+        structs::SclyProperty::Pickup(ref mut pickup) => pickup,
+        _ => panic!(),
+    };
+    let original_pickup = pickup.clone();
+
+    let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_meta.pickup.cmdl).unwrap();
+    let original_center = calculate_center(original_aabb, original_pickup.rotation,
+                                            original_pickup.scale);
+    let new_center = calculate_center(new_aabb, pickup_meta.pickup.rotation,
+                                        pickup_meta.pickup.scale);
+
+    *pickup = structs::Pickup {
+        position: GenericArray::from_slice(&[
+            original_pickup.position[0] - (new_center[0] - original_center[0]),
+            original_pickup.position[1] - (new_center[1] - original_center[1]),
+            original_pickup.position[2] - (new_center[2] - original_center[2]),
+        ]),
+        rotation: original_pickup.rotation,
+        hitbox: original_pickup.hitbox,
+        scan_offset: GenericArray::from_slice(&[
+            original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
+            original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
+            original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
+        ]),
+
+        fade_in_timer: original_pickup.fade_in_timer,
+        unknown: original_pickup.unknown,
+        active: original_pickup.active,
+
+        ..(pickup_meta.pickup.clone())
+    };
+}
+
+fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
+{
+    hudmemo.property_data.guess_kind();
+    let hudmemo = match hudmemo.property_data {
+        structs::SclyProperty::HudMemo(ref mut hudmemo) => hudmemo,
+        _ => panic!(),
+    };
+    if let Some(strg) = pickup_meta.hudmemo_strg {
+        hudmemo.strg = strg;
     }
 }
 
@@ -333,11 +341,11 @@ fn main_inner() -> Result<(), String>
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
-    for pak_name in METROID_PAK_NAMES.iter() {
-        insert_deps(&mut gc_disc, pak_name,
-                     &pickup_resources,
-                     &mut pickup_meta::PICKUP_LOCATIONS[0],
-                     &mut pickup_layout.iter().cloned().enumerate());
+    for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
+        modify_pickups(&mut gc_disc, pak_name,
+                       &pickup_resources,
+                       &mut pickup_meta::PICKUP_LOCATIONS[i],
+                       &mut pickup_layout.iter().cloned().enumerate());
     }
     write_gc_disc(&mut gc_disc, output_iso_path);
     Ok(())
