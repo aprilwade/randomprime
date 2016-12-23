@@ -329,7 +329,7 @@ impl<'a> FstEntryFile<'a>
 
 impl<'a> ReadWrapper<'a>
 {
-    pub fn new<R: Read + 'static>(r: R) -> ReadWrapper<'a>
+    pub fn new<R: Read + 'a>(r: R) -> ReadWrapper<'a>
     {
         ReadWrapper(RefCell::new(Box::new(r) as Box<Read>))
     }

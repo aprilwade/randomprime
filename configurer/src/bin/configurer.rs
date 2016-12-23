@@ -15,6 +15,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::ffi::CString;
+use std::io::Read;
 use std::ascii::AsciiExt;
 
 const METROID_PAK_NAMES: [&'static str; 5] = [
@@ -306,6 +307,27 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
     Ok(res)
 }
 
+fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let dol = find_file_mut(gc_disc, "default.dol");
+    let file = dol.file_mut().unwrap();
+    let reader = match file {
+        &mut structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
+        _ => panic!(),
+    };
+
+    // Replace 4 of the bytes in the main dol. By using chain() like this, we
+    // can avoid copying the contents of the dol onto the heap.
+    static REPLACEMENT_1: &'static [u8] = &[0x39, 0xF3];
+    static REPLACEMENT_2: &'static [u8] = &[0xDE, 0x28];
+    let data = reader[..0x1FF1E]
+        .chain(REPLACEMENT_1)
+        .chain(&reader[0x1FF20..0x1FF2A])
+        .chain(REPLACEMENT_2)
+        .chain(&reader[0x1FF2C..]);
+    *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
+}
+
 fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
@@ -325,11 +347,14 @@ fn main_inner() -> Result<(), String>
             .long("layout")
             .required(true)
             .takes_value(true))
+        .arg(Arg::with_name("skip frigate")
+            .long("skip-frigate"))
         .get_matches();
 
     let input_iso_path = matches.value_of("input iso path").unwrap();
     let output_iso_path = matches.value_of("output iso path").unwrap();
     let pickup_layout = matches.value_of("pickup layout").unwrap();
+    let skip_frigate = matches.is_present("skip frigate");
 
     let pickup_layout = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
@@ -346,6 +371,10 @@ fn main_inner() -> Result<(), String>
                        &pickup_resources,
                        &mut pickup_meta::PICKUP_LOCATIONS[i],
                        &mut pickup_layout.iter().cloned().enumerate());
+    }
+
+    if skip_frigate {
+        patch_dol_skip_frigate(&mut gc_disc);
     }
     write_gc_disc(&mut gc_disc, output_iso_path);
     Ok(())
