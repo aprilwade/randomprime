@@ -9,12 +9,13 @@ pub use configurer::*;
 use reader_writer::{FourCC, Reader};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
+use reader_writer::num::{BigUint, Integer, ToPrimitive};
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Read};
 use std::ffi::CString;
+use std::ascii::AsciiExt;
 
 const METROID_PAK_NAMES: [&'static str; 5] = [
     "Metroid2.pak",
@@ -243,18 +244,65 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
-fn parse_pickup_layout<R: Read>(r: R)
-    -> Vec<u8>
+fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
 {
-    let reader = BufReader::new(r);
-    reader.lines().into_iter().map(|l| u8::from_str_radix(&l.unwrap(), 10).unwrap()).collect()
+    const LAYOUT_CHAR_TABLE: [u8; 64] =
+        *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
+
+    if !text.is_ascii() {
+        return Err("Pickup layout string contains non-ascii characters.".to_string());
+    }
+    let text = text.as_bytes();
+    if text.len() != 87 {
+        return Err("Pickup layout should be exactly 87 characters".to_string());
+    }
+
+    let mut sum: BigUint = 0u8.into();
+    let mut res = vec![];
+    for c in text.iter().rev() {
+        if let Some(idx) = LAYOUT_CHAR_TABLE.iter().position(|i| i == c) {
+            sum = sum * BigUint::from(64u8) + BigUint::from(idx);
+        } else {
+            return Err(format!("Pickup layout contains invalid character '{}'.", c));
+        }
+    }
+
+    // The upper 5 bits are a checksum, so seperate them from the sum.
+    let checksum_bitmask = BigUint::from(0b11111u8) << 517;
+    let checksum = sum.clone() & checksum_bitmask;
+    sum = sum - checksum.clone();
+    let checksum = (checksum >> 517).to_u8().unwrap();
+
+    let mut computed_checksum = 0;
+    {
+        let mut sum = sum.clone();
+        while sum > 0u8.into() {
+            let remainder = (sum.clone() & BigUint::from(0b11111u8)).to_u8().unwrap();
+            computed_checksum = (computed_checksum + remainder) % 32;
+            sum = sum >> 5;
+        }
+    }
+    if checksum != computed_checksum {
+        return Err("Pickup layout checksum failed.".to_string());
+    }
+
+    for _ in 0..100 {
+        let (quotient, remainder) = sum.div_rem(&36u8.into());
+        res.push(remainder.to_u8().unwrap());
+        sum = quotient;
+    }
+
+    assert!(sum == 0u8.into());
+
+    res.reverse();
+    Ok(res)
 }
 
-
-fn main()
+fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
 
+    // TODO: Use base64 based pickup layout
     let matches = App::new("Metroid Prime Configuerer")
         .version("0.0")
         .arg(Arg::with_name("input iso path")
@@ -265,7 +313,7 @@ fn main()
             .long("output-iso")
             .required(true)
             .takes_value(true))
-        .arg(Arg::with_name("pickup layout file path")
+        .arg(Arg::with_name("pickup layout")
             .long("layout")
             .required(true)
             .takes_value(true))
@@ -273,10 +321,9 @@ fn main()
 
     let input_iso_path = matches.value_of("input iso path").unwrap();
     let output_iso_path = matches.value_of("output iso path").unwrap();
-    let pickup_layout_path = matches.value_of("pickup layout file path").unwrap();
+    let pickup_layout = matches.value_of("pickup layout").unwrap();
 
-    let pickup_layout_file = File::open(pickup_layout_path).unwrap();
-    let pickup_layout = parse_pickup_layout(pickup_layout_file);
+    let pickup_layout = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
 
     let file = File::open(input_iso_path).unwrap();
@@ -293,4 +340,13 @@ fn main()
                      &mut pickup_layout.iter().cloned().enumerate());
     }
     write_gc_disc(&mut gc_disc, output_iso_path);
+    Ok(())
+}
+
+fn main()
+{
+    match main_inner() {
+        Err(s) => println!("{}", s),
+        Ok(()) => (),
+    }
 }

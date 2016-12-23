@@ -1,6 +1,6 @@
 extern crate byteorder;
 pub extern crate generic_array;
-extern crate num;
+pub extern crate num;
 extern crate linked_list;
 
 mod reader;
