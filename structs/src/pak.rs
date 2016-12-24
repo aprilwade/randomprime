@@ -7,6 +7,7 @@ use std::io::Write;
 
 use mlvl::Mlvl;
 use mrea::Mrea;
+use savw::Savw;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -228,6 +229,8 @@ impl<'a> Resource<'a>
             self.kind = ResourceKind::Mrea(reader.clone().read(()));
         } else if self.fourcc == FourCC::from_bytes(b"MLVL") {
             self.kind = ResourceKind::Mlvl(reader.clone().read(()));
+        } else if self.fourcc == FourCC::from_bytes(b"SAVW") {
+            self.kind = ResourceKind::Savw(reader.clone().read(()));
         }
     }
 }
@@ -268,6 +271,7 @@ impl<'a> Readable<'a> for Resource<'a>
             ResourceKind::Unknown(ref reader) => reader.len(),
             ResourceKind::Mrea(ref mrea) => mrea.size(),
             ResourceKind::Mlvl(ref mlvl) => mlvl.size(),
+            ResourceKind::Savw(ref savw) => savw.size(),
         }
     }
 }
@@ -280,6 +284,7 @@ impl<'a> Writable for Resource<'a>
             ResourceKind::Unknown(ref reader) => writer.write_all(&reader).unwrap(),
             ResourceKind::Mrea(ref mrea) => mrea.write(writer),
             ResourceKind::Mlvl(ref mlvl) => mlvl.write(writer),
+            ResourceKind::Savw(ref savw) => savw.write(writer),
         }
     }
 }
@@ -290,6 +295,7 @@ pub enum ResourceKind<'a>
     Unknown(Reader<'a>),
     Mrea(Mrea<'a>),
     Mlvl(Mlvl<'a>),
+    Savw(Savw<'a>),
     //UnknownCompressed(Reader<'a>),
 }
 

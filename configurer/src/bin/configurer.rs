@@ -47,6 +47,12 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
 
     let mut found = HashMap::with_capacity(looking_for.len());
 
+    let extra_assets = pickup_meta::extra_assets();
+    for res in extra_assets {
+        looking_for.remove(&(res.file_id, res.fourcc));
+        assert!(found.insert((res.file_id, res.fourcc), res.clone()).is_none());
+    }
+
     for pak_name in METROID_PAK_NAMES.iter() {
         let file_entry = find_file(gc_disc, pak_name);
         let pak = match *file_entry.file().unwrap() {
@@ -114,10 +120,24 @@ fn modify_pickups<'a, I>(
                 };
                 break;
             },
-            Some((_, fourcc)) if fourcc != b"MREA".into() => continue,
-            Some((file_id, _)) => file_id,
+            Some((_, fourcc)) if fourcc == b"SAVW".into() && pak_name == "metroid5.pak" => {
+                let mut res = cursor.value().unwrap();
+                res.guess_kind();
+                let savw = match res.kind {
+                    structs::ResourceKind::Savw(ref mut savw) => savw,
+                    _ => panic!(),
+                };
+                savw.scan_array.as_mut_vec().push(structs::ScannableObject {
+                    scan: 0x50535343,
+                    logbook_category: 0,
+                });
+                continue
+            },
+            Some((file_id, fourcc)) if fourcc == b"MREA".into() => file_id,
+            _ => continue,
         };
 
+        // The default case is MREA, since its the most complex by far.
         let pickup_locations = if let Some(&&(file_id, pickup_locations)) = room_list_iter.peek() {
             if file_id != curr_file_id {
                 continue;
@@ -210,9 +230,7 @@ fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::
         structs::SclyProperty::HudMemo(ref mut hudmemo) => hudmemo,
         _ => panic!(),
     };
-    if let Some(strg) = pickup_meta.hudmemo_strg {
-        hudmemo.strg = strg;
-    }
+    hudmemo.strg = pickup_meta.hudmemo_strg;
 }
 
 fn calculate_center(aabb: [f32; 6], rotation: GenericArray<f32, U3>, scale: GenericArray<f32, U3>)
@@ -366,11 +384,12 @@ fn main_inner() -> Result<(), String>
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
+    let mut layout_iter = pickup_layout.iter().cloned().enumerate();
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
         modify_pickups(&mut gc_disc, pak_name,
                        &pickup_resources,
                        &mut pickup_meta::PICKUP_LOCATIONS[i],
-                       &mut pickup_layout.iter().cloned().enumerate());
+                       &mut layout_iter);
     }
 
     if skip_frigate {

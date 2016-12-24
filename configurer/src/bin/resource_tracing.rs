@@ -288,7 +288,7 @@ struct PickupData
     name: &'static str,
     bytes: Vec<u8>,
     deps: HashSet<ResourceKey>,
-    hudmemo_strg: Option<u32>,
+    hudmemo_strg: u32,
 }
 
 fn trace_pickup_deps(
@@ -376,7 +376,7 @@ fn trace_pickup_deps(
         }
 
         for (layer_num, obj) in pickups {
-            let pickup = match obj.property_data {
+            let mut pickup = match obj.property_data {
                 structs::SclyProperty::Pickup(pickup) => pickup,
                 _ => panic!(),
             };
@@ -391,9 +391,12 @@ fn trace_pickup_deps(
                     _ => panic!(),
                 };
                 deps.insert(ResourceKey::new(strg, b"STRG".into()));
-                hudmemo_strg = Some(strg);
+                hudmemo_strg = strg;
             } else {
-                hudmemo_strg = None;
+                // Override for the Phazon Suit
+                assert_eq!(pickup.kind, 23);
+                hudmemo_strg = 0x11BEB861;
+                pickup.actor_params.scan_params.scan = 0x50535343;
             }
 
             patch_dependencies(pickup.kind, &mut deps);
@@ -436,7 +439,6 @@ fn trace_pickup_deps(
     }
 }
 
-// TODO: Record HudMemo's layer #
 fn search_for_hudmemo<'a>(
     connections: &reader_writer::LazyArray<'a, structs::Connection>,
     scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>
@@ -494,7 +496,12 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x00656374, b"CSKR".into()));
     } else if pickup_kind == 23 {
         // Phazon suit.
-        // TODO: This needs special treatment
+        deps.insert(ResourceKey::new(0x11BEB861, b"STRG".into())); // HudMemo
+        deps.insert(ResourceKey::new(0x50535343, b"SCAN".into()));
+        deps.insert(ResourceKey::new(0x50535353, b"STRG".into())); // HudMemo
+        // TODO: Miles uses a custom texture so it doesn't different from the
+        //       gravity suit. Either figure out a replacement or get
+        //       permission to use it.
     };
 }
 
