@@ -3,6 +3,7 @@ use reader_writer::{Dap, FourCC, ImmCow, RoArray, LazyArray, Readable, Reader, W
                     pad_bytes_count, pad_bytes};
 
 use std::io::Write;
+use std::borrow::Cow;
 
 use scly_props;
 
@@ -86,7 +87,7 @@ auto_struct! {
 }
 
 macro_rules! build_scly_property {
-    ($($name:ident, $obj_type:expr, $prop_count:expr,)*) => {
+    ($($name:ident, $accessor:ident, $accessor_mut:ident, $obj_type:expr, $prop_count:expr,)*) => {
 
         #[derive(Clone, Debug)]
         pub enum SclyProperty<'a>
@@ -133,6 +134,32 @@ macro_rules! build_scly_property {
                     _ => return,
                 }
             }
+
+            $(
+                pub fn $accessor(&self) -> Option<Cow<scly_props::$name<'a>>>
+                {
+                    match *self {
+                        SclyProperty::$name(ref inst) => Some(Cow::Borrowed(inst)),
+                        SclyProperty::Unknown { ref data, object_type, .. } => {
+                            if object_type == $obj_type {
+                                Some(Cow::Owned(data.clone().read(())))
+                            } else {
+                                None
+                            }
+                        },
+                        _ => None,
+                    }
+                }
+
+                pub fn $accessor_mut(&mut self) -> Option<&mut scly_props::$name<'a>>
+                {
+                    self.guess_kind();
+                    match *self {
+                        SclyProperty::$name(ref mut inst) => Some(inst),
+                        _ => None,
+                    }
+                }
+            )*
         }
 
         impl<'a> Readable<'a> for SclyProperty<'a>
@@ -168,18 +195,18 @@ macro_rules! build_scly_property {
             }
         }
 
-            };
+    };
 }
 
 build_scly_property!(
-    Timer,           0x05, 6,
-    Sound,           0x09, 20,
-    Pickup,          0x11, 18,
-    Relay,           0x15, 2,
-    HudMemo,         0x17, 6,
-    SpecialFunction, 0x3A, 15,
-    PlayerHint,      0x3E, 6,
-    StreamedAudio,   0x61, 9,
+    Timer,           as_timer,            as_timer_mut,              0x05, 6,
+    Sound,           as_sound,            as_sound_mut,              0x09, 20,
+    Pickup,          as_pickup,           as_pickup_mut,             0x11, 18,
+    Relay,           as_relay,            as_relay_mut,              0x15, 2,
+    HudMemo,         as_hud_memo,         as_hud_memo_mut,           0x17, 6,
+    SpecialFunction, as_special_function, as_special_function_mut,   0x3A, 15,
+    PlayerHint,      as_player_hint,      as_player_hint_mut,        0x3E, 6,
+    StreamedAudio,   as_streamed_audio,   as_streamed_audio_mut,     0x61, 9,
 );
 
 

@@ -107,7 +107,7 @@ static EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
 ];
 
 #[cfg(not(debug_assertions))]
-pub fn extra_assets<'a>() -> Resource<'a>
+pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 {
     EXTRA_ASSETS.iter().map(|&(file_id, fourcc, bytes)| {
         Resource {

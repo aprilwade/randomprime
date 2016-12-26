@@ -81,7 +81,7 @@ fn modify_pickups<'a, I>(
     room_list: &'static [(u32, &'static [pickup_meta::PickupLocation])],
     pickup_list_iter: &mut I,
 )
-    where I: Iterator<Item=(usize, u8)>,
+    where I: Iterator<Item=(usize, &'static pickup_meta::PickupMeta)>,
 {
     let file_entry = find_file_mut(gc_disc, pak_name);
     file_entry.guess_kind();
@@ -152,8 +152,7 @@ fn modify_pickups<'a, I>(
 
         for &pickup_location in pickup_locations {
 
-            let (i, pickup_num) = pickup_list_iter.next().unwrap();
-            let ref pickup_meta = pickup_meta::pickup_meta_table()[pickup_num as usize];
+            let (i, pickup_meta) = pickup_list_iter.next().unwrap();
             let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
                     asset_id: file_id,
                     asset_type: fourcc,
@@ -187,11 +186,7 @@ fn modify_pickups<'a, I>(
 
 fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
 {
-    pickup.property_data.guess_kind();
-    let pickup = match pickup.property_data {
-        structs::SclyProperty::Pickup(ref mut pickup) => pickup,
-        _ => panic!(),
-    };
+    let pickup = pickup.property_data.as_pickup_mut().unwrap();
     let original_pickup = pickup.clone();
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
@@ -225,11 +220,7 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
 
 fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
 {
-    hudmemo.property_data.guess_kind();
-    let hudmemo = match hudmemo.property_data {
-        structs::SclyProperty::HudMemo(ref mut hudmemo) => hudmemo,
-        _ => panic!(),
-    };
+    let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     hudmemo.strg = pickup_meta.hudmemo_strg;
 }
 
@@ -350,7 +341,6 @@ fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
 
-    // TODO: Use base64 based pickup layout
     let matches = App::new("Metroid Prime Configuerer")
         .version("0.0")
         .arg(Arg::with_name("input iso path")
@@ -384,7 +374,9 @@ fn main_inner() -> Result<(), String>
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
-    let mut layout_iter = pickup_layout.iter().cloned().enumerate();
+    let mut layout_iter = pickup_layout.iter()
+        .map(|n| &pickup_meta::pickup_meta_table()[*n as usize])
+        .enumerate();
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
         modify_pickups(&mut gc_disc, pak_name,
                        &pickup_resources,

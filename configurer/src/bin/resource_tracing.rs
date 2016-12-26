@@ -14,7 +14,7 @@ pub use configurer::*;
 use configurer::pickup_meta::{PickupLocation, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
-use structs::{Ancs, Cmdl, Evnt, Pickup, SclyProperty, Scan, Resource, ResourceKind};
+use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource, ResourceKind};
 
 use flate2::{Decompress, Flush};
 
@@ -344,10 +344,7 @@ fn trace_pickup_deps(
                 if obj.property_data.object_type() == 0x11 {
                     let mut obj = obj.clone();
                     obj.property_data.guess_kind();
-                    let pickup = match obj.property_data {
-                        structs::SclyProperty::Pickup(ref pickup) => pickup,
-                        _ => panic!(),
-                    };
+                    let pickup = obj.property_data.as_pickup().unwrap();
 
                     // We're only interested in "real" pickups
                     if pickup.max_increase > 0 {
@@ -375,21 +372,14 @@ fn trace_pickup_deps(
             }
         }
 
-        for (layer_num, obj) in pickups {
-            let mut pickup = match obj.property_data {
-                structs::SclyProperty::Pickup(pickup) => pickup,
-                _ => panic!(),
-            };
+        for (layer_num, mut obj) in pickups {
+            let pickup = obj.property_data.as_pickup_mut().unwrap();
             let mut deps = res_db.get_dependencies(&pickup);
 
             let mut hudmemo = search_for_hudmemo(&obj.connections, &scly_db);
             let hudmemo_strg;
             if let Some(ref mut hudmemo) = hudmemo {
-                hudmemo.property_data.guess_kind();
-                let strg = match hudmemo.property_data {
-                    structs::SclyProperty::HudMemo(ref memo) => memo.strg,
-                    _ => panic!(),
-                };
+                let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
                 deps.insert(ResourceKey::new(strg, b"STRG".into()));
                 hudmemo_strg = strg;
             } else {
@@ -462,16 +452,11 @@ fn search_for_hudmemo<'a>(
             continue;
         };
         if obj.property_data.object_type() == 0x17 {
-            let mut obj = obj.clone();
-            obj.property_data.guess_kind();
-            match obj.property_data {
-                SclyProperty::HudMemo(ref hudmemo) => {
-                    if hudmemo.name.to_str().unwrap().contains("Pickup") {
-                        return Some(obj.clone());
-                    }
-                },
-                _ => unreachable!()
-            };
+            if let Some(hudmemo) = obj.property_data.as_hud_memo() {
+                if hudmemo.name.to_str().unwrap().contains("Pickup") {
+                    return Some(obj.clone());
+                }
+            }
         }
         for c in obj.connections.iter() {
             if !seen.contains(&c.target_object_id) {
