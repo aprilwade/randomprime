@@ -109,12 +109,11 @@ static EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
 #[cfg(not(debug_assertions))]
 pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 {
-    EXTRA_ASSETS.iter().map(|&(file_id, fourcc, bytes)| {
+    EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
         Resource {
             compressed: false,
-            fourcc: (&fourcc).into(),
             file_id: file_id,
-            kind: ResourceKind::Unknown(Reader::new(bytes)),
+            kind: ResourceKind::Unknown(Reader::new(bytes), fourcc.into()),
         }
     }).collect()
 }
@@ -122,12 +121,11 @@ pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 #[cfg(debug_assertions)]
 pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 {
-    EXTRA_ASSETS.iter().map(|&(file_id, fourcc, bytes)| {
+    EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
         Resource {
             compressed: false,
-            fourcc: (&fourcc).into(),
             file_id: file_id,
-            kind: ResourceKind::Unknown(Reader::new(bytes)),
+            kind: ResourceKind::Unknown(Reader::new(bytes), fourcc.into()),
             original_offset: 0,
         }
     }).collect()
@@ -178,9 +176,8 @@ pub fn marker_asset<'a>() -> Resource<'a>
 {
     Resource {
         compressed: false,
-        fourcc: b"STRG".into(),
         file_id: 0x53465A4E,
-        kind: ResourceKind::Unknown(Reader::new(MARKER_ASSERT_DATA)),
+        kind: ResourceKind::Unknown(Reader::new(MARKER_ASSERT_DATA), b"STRG".into()),
     }
 }
 
@@ -189,9 +186,8 @@ pub fn marker_asset<'a>() -> Resource<'a>
 {
     Resource {
         compressed: false,
-        fourcc: b"STRG".into(),
         file_id: 0x53465A4E,
-        kind: ResourceKind::Unknown(Reader::new(MARKER_ASSERT_DATA)),
+        kind: ResourceKind::Unknown(Reader::new(MARKER_ASSERT_DATA), b"STRG".into()),
         original_offset: 0,
     }
 }

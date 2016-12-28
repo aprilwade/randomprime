@@ -1,5 +1,4 @@
-use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource, ResourceKind,
-              ResourceSource};
+use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource, ResourceSource};
 use reader_writer::{CStr, DiffListCursor, FourCC, LazyArray};
 
 use pickup_meta::marker_asset;
@@ -38,7 +37,7 @@ impl<'a> MlvlEditor<'a>
     )
         -> MlvlArea<'a, 's, 'cursor, 'list>
     {
-        assert_eq!(mrea_cursor.peek().unwrap().fourcc, b"MREA".into());
+        assert_eq!(mrea_cursor.peek().unwrap().fourcc(), b"MREA".into());
         let file_id = mrea_cursor.peek().unwrap().file_id;
         let (i, area) = self.mlvl.areas.iter_mut()
             .enumerate()
@@ -60,12 +59,7 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
 {
     pub fn mrea(&mut self) -> &mut Mrea<'a>
     {
-        let res = self.mrea_cursor.value().unwrap();
-        res.guess_kind();
-        match res.kind {
-            ResourceKind::Mrea(ref mut mrea) => mrea,
-            _ => panic!()
-        }
+        self.mrea_cursor.value().unwrap().kind.as_mrea_mut().unwrap()
     }
 
     pub fn add_layer(&mut self, name: CString)

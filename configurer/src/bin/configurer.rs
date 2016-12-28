@@ -49,8 +49,8 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
 
     let extra_assets = pickup_meta::extra_assets();
     for res in extra_assets {
-        looking_for.remove(&(res.file_id, res.fourcc));
-        assert!(found.insert((res.file_id, res.fourcc), res.clone()).is_none());
+        looking_for.remove(&(res.file_id, res.fourcc()));
+        assert!(found.insert((res.file_id, res.fourcc()), res.clone()).is_none());
     }
 
     for pak_name in METROID_PAK_NAMES.iter() {
@@ -62,7 +62,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         };
 
         for res in pak.resources.iter() {
-            let key = (res.file_id, res.fourcc);
+            let key = (res.file_id, res.fourcc());
             if looking_for.remove(&key) {
                 assert!(found.insert(key, res.clone()).is_none());
             }
@@ -91,14 +91,9 @@ fn modify_pickups<'a, I>(
     };
 
     let resources = &mut pak.resources;
-    let mut mlvl = resources.iter()
-        .find(|i| i.fourcc == reader_writer::FourCC::from_bytes(b"MLVL"))
-        .unwrap().clone();
-    mlvl.guess_kind();
-    let mlvl = match mlvl.kind {
-        structs::ResourceKind::Mlvl(ref mut mlvl) => mlvl.clone(),
-        _ => panic!(),
-    };
+    let mlvl = resources.iter()
+        .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"))
+        .unwrap().kind.as_mlvl().unwrap().into_owned();
 
     let mut editor = mlvl_wrapper::MlvlEditor::new(mlvl);
 
@@ -108,25 +103,16 @@ fn modify_pickups<'a, I>(
     loop {
         let mut cursor = cursor.cursor_advancer();
 
-        let curr_file_id = match cursor.peek().map(|res| (res.file_id, res.fourcc)) {
+        let curr_file_id = match cursor.peek().map(|res| (res.file_id, res.fourcc())) {
             None => break,
             Some((_, fourcc)) if fourcc == b"MLVL".into() => {
                 // Update the Mlvl in the table with version we've been updating
-                let mut res = cursor.value().unwrap();
-                res.guess_kind();
-                match res.kind {
-                    structs::ResourceKind::Mlvl(ref mut mlvl_ref) => *mlvl_ref = editor.mlvl,
-                    _ => panic!(),
-                };
+                let mut res = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
+                *res = editor.mlvl;
                 break;
             },
             Some((_, fourcc)) if fourcc == b"SAVW".into() && pak_name == "metroid5.pak" => {
-                let mut res = cursor.value().unwrap();
-                res.guess_kind();
-                let savw = match res.kind {
-                    structs::ResourceKind::Savw(ref mut savw) => savw,
-                    _ => panic!(),
-                };
+                let mut savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
                 savw.scan_array.as_mut_vec().push(structs::ScannableObject {
                     scan: 0x50535343,
                     logbook_category: 0,

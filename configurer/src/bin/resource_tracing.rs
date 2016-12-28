@@ -46,12 +46,12 @@ impl<'a> ResourceDb<'a>
 
     fn add_resource(&mut self, res: Resource<'a>)
     {
-        let key = ResourceKey::new(res.file_id, res.fourcc);
+        let key = ResourceKey::new(res.file_id, res.fourcc());
         self.map.entry(key).or_insert_with(move || {
             let data = ResourceData {
                 is_compressed: res.compressed,
                 data: match res.kind {
-                    ResourceKind::Unknown(reader) => reader,
+                    ResourceKind::Unknown(reader, _) => reader,
                     _ => panic!("Only uninitialized (aka Unknown) resources may be added."),
                 },
             };
@@ -317,17 +317,12 @@ fn trace_pickup_deps(
     let mut locations = locations.last_mut().unwrap();
 
     for res in resources.iter() {
-        if res.fourcc != b"MREA".into() {
+        if res.fourcc() != b"MREA".into() {
             continue;
         };
 
         let mut res = res.clone();
-        res.guess_kind();
-
-        let mrea = match res.kind {
-            structs::ResourceKind::Mrea(ref mut mrea) => mrea,
-            _ => panic!(),
-        };
+        let mrea = res.kind.as_mrea_mut().unwrap();
 
         let scly = mrea.sections.iter()
             .nth(mrea.scly_section_idx as usize)
