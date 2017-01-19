@@ -201,6 +201,7 @@ macro_rules! build_scly_property {
 build_scly_property!(
     Timer,           as_timer,            as_timer_mut,              0x05, 6,
     Sound,           as_sound,            as_sound_mut,              0x09, 20,
+    SpawnPoint,      as_spawn_point,      as_spawn_point_mut,        0x0F, 35,
     Pickup,          as_pickup,           as_pickup_mut,             0x11, 18,
     Relay,           as_relay,            as_relay_mut,              0x15, 2,
     HudMemo,         as_hud_memo,         as_hud_memo_mut,           0x17, 6,

@@ -247,7 +247,7 @@ impl<'a> Readable<'a> for Resource<'a>
     {
         let res = Resource {
             compressed: info.compressed == 1,
-            fourcc: info.fourcc,
+            file_id: info.file_id,
             kind: ResourceKind::Unknown(reader.truncated(info.size as usize), info.fourcc),
         };
         (res, reader.offset(info.size as usize))

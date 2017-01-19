@@ -23,6 +23,7 @@ mod scly_props
     mod special_function;
     mod player_hint;
     mod streamed_audio;
+    mod spawn_point;
 
     pub mod structs;
 
@@ -34,6 +35,7 @@ mod scly_props
     pub use self::special_function::*;
     pub use self::player_hint::*;
     pub use self::streamed_audio::*;
+    pub use self::spawn_point::*;
 }
 
 pub use gc_disc::*;
