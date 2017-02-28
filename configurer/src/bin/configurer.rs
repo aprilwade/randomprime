@@ -78,7 +78,7 @@ fn modify_pickups<'a, I>(
     gc_disc: &mut structs::GcDisc<'a>,
     pak_name: &str,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
-    room_list: &'static [(u32, &'static [pickup_meta::PickupLocation])],
+    room_list: &'static [pickup_meta::RoomInfo],
     pickup_list_iter: &mut I,
 )
     where I: Iterator<Item=(usize, &'static pickup_meta::PickupMeta)>,
@@ -124,17 +124,27 @@ fn modify_pickups<'a, I>(
         };
 
         // The default case is MREA, since its the most complex by far.
-        let pickup_locations = if let Some(&&(file_id, pickup_locations)) = room_list_iter.peek() {
-            if file_id != curr_file_id {
+        let (pickup_locations, removals) = if let Some(&&room_info) = room_list_iter.peek() {
+            if room_info.room_id != curr_file_id {
                 continue;
             }
             room_list_iter.next();
-            pickup_locations
+            (room_info.pickup_locations, room_info.objects_to_remove)
         } else {
             continue;
         };
 
         let mut area = editor.get_area(&mut cursor);
+
+        // Remove objects
+        {
+            let scly = area.mrea().scly_section_mut();
+            let layers = scly.layers.as_mut_vec();
+            for otr in removals {
+                layers[otr.layer as usize].objects.as_mut_vec()
+                    .retain(|i| !otr.instance_ids.contains(&i.instance_id));
+            }
+        }
 
         for &pickup_location in pickup_locations {
 
@@ -153,6 +163,7 @@ fn modify_pickups<'a, I>(
 
             let scly = area.mrea().scly_section_mut();
             let layers = scly.layers.as_mut_vec();
+
 
             {
                 let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()

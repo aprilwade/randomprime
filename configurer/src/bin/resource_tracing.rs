@@ -11,7 +11,7 @@ extern crate flate2;
 extern crate configurer;
 
 pub use configurer::*;
-use configurer::pickup_meta::{PickupLocation, ScriptObjectLocation};
+use configurer::pickup_meta::{/*PickupLocation,*/ ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource, ResourceKind};
@@ -23,6 +23,14 @@ use std::env::args;
 use std::fs::File;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+
+// Duplicated from pickup_meta. This version needs owned-lists instead of borrowed.
+#[derive(Clone, Debug)]
+pub struct PickupLocation
+{
+    pub location: ScriptObjectLocation,
+    pub hudmemo: Option<ScriptObjectLocation>,
+}
 
 struct ResourceDb<'a>
 {
@@ -291,10 +299,19 @@ struct PickupData
     hudmemo_strg: u32,
 }
 
+#[derive(Debug)]
+struct RoomInfo
+{
+    room_id: u32,
+    pickups: Vec<PickupLocation>,
+    objects_to_remove: HashMap<u32, Vec<u32>>,
+}
+
+
 fn trace_pickup_deps(
     gc_disc: &mut structs::GcDisc, pak_name: &str, counter: &mut usize,
     pickup_table: &mut HashMap<usize, PickupData>,
-    locations: &mut Vec<Vec<(u32, Vec<PickupLocation>)>>,
+    locations: &mut Vec<Vec<RoomInfo>>,
     cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
 )
 {
@@ -371,7 +388,38 @@ fn trace_pickup_deps(
             let pickup = obj.property_data.as_pickup_mut().unwrap();
             let mut deps = res_db.get_dependencies(&pickup);
 
-            let mut hudmemo = search_for_hudmemo(&obj.connections, &scly_db);
+            let mut hudmemo = search_for_scly_object(&obj.connections, &scly_db,
+                |obj| obj.property_data.as_hud_memo()
+                    .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
+                    .unwrap_or(false)
+            );
+
+            let mut removals = Vec::new();
+            if pickup.kind >= 29 && pickup.kind <= 40 {
+                // If this is an artifact...
+                let layer_switch_function = search_for_scly_object(&obj.connections, &scly_db,
+                        |obj| obj.property_data.as_special_function()
+                            .map(|hm| hm.name.to_str().unwrap()
+                                    == "SpecialFunction ScriptLayerController -- Stonehenge Totem")
+                            .unwrap_or(false),
+                    ).unwrap();
+                removals.push(ScriptObjectLocation {
+                    layer: scly_db[&layer_switch_function.instance_id].0 as u32,
+                    instance_id: layer_switch_function.instance_id,
+                });
+
+                let pause_function = search_for_scly_object(&obj.connections, &scly_db,
+                        |obj| obj.property_data.as_special_function()
+                            .map(|hm| hm.name.to_str().unwrap()
+                                    == "SpecialFunction - Enter Logbook Screen")
+                            .unwrap_or(false),
+                    ).unwrap();
+                removals.push(ScriptObjectLocation {
+                    layer: scly_db[&pause_function.instance_id].0 as u32,
+                    instance_id: pause_function.instance_id,
+                });
+            }
+
             let hudmemo_strg;
             if let Some(ref mut hudmemo) = hudmemo {
                 let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
@@ -412,10 +460,18 @@ fn trace_pickup_deps(
                         instance_id: obj.instance_id,
                     }),
                 };
-                if locations.last().map(|i| i.0 == fid).unwrap_or(false) {
-                    locations.last_mut().unwrap().1.push(location);
+                if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
+                    locations.last_mut().unwrap().pickups.push(location);
                 } else {
-                    locations.push((res.file_id, vec![location]));
+                    locations.push(RoomInfo {
+                        room_id: res.file_id,
+                        pickups: vec![location],
+                        objects_to_remove: HashMap::new(),
+                    });
+                }
+                let mut objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
+                for r in removals {
+                    objects_to_remove.entry(r.layer).or_insert_with(Vec::new).push(r.instance_id);
                 }
             }
 
@@ -424,10 +480,12 @@ fn trace_pickup_deps(
     }
 }
 
-fn search_for_hudmemo<'a>(
+fn search_for_scly_object<'a, F>(
     connections: &reader_writer::LazyArray<'a, structs::Connection>,
-    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+    f: F
 ) -> Option<structs::SclyObject<'a>>
+    where F: Fn(&structs::SclyObject<'a>) -> bool
 {
     let mut stack = Vec::new();
 
@@ -446,12 +504,8 @@ fn search_for_hudmemo<'a>(
         } else {
             continue;
         };
-        if obj.property_data.object_type() == 0x17 {
-            if let Some(hudmemo) = obj.property_data.as_hud_memo() {
-                if hudmemo.name.to_str().unwrap().contains("Pickup") {
-                    return Some(obj.clone());
-                }
-            }
+        if f(&obj) {
+            return Some(obj.clone());
         }
         for c in obj.connections.iter() {
             if !seen.contains(&c.target_object_id) {
@@ -510,19 +564,37 @@ fn main()
                           &mut cmdl_aabbs);
     }
 
-    println!("pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [PickupLocation])]; 5] = [");
+    println!("pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         println!("    // {}", fname);
         println!("    &[");
-        for (room, locations) in locations {
-            println!("        (0x{:08X}, &[", room);
-            for location in locations {
-                println!("            PickupLocation {{");
-                println!("                location: {:?},", location.location);
-                println!("                hudmemo: {:?},", location.hudmemo);
-                println!("            }},")
+        for room_info in locations {
+            println!("        RoomInfo {{");
+            println!("            room_id: 0x{:08X},", room_info.room_id);
+            println!("            pickup_locations: &[");
+            for location in room_info.pickups {
+                println!("                PickupLocation {{");
+                println!("                    location: {:?},", location.location);
+                println!("                    hudmemo: {:?},", location.hudmemo);
+                println!("                }},");
             }
-            println!("        ]),");
+            println!("            ],");
+
+            if room_info.objects_to_remove.len() == 0 {
+                println!("            objects_to_remove: &[],");
+            } else {
+                println!("            objects_to_remove: &[");
+                let mut objects_to_remove: Vec<_> = room_info.objects_to_remove.iter().collect();
+                objects_to_remove.sort_by_key(|&(k, _)| k);
+                for otr in objects_to_remove {
+                    println!("                ObjectsToRemove {{");
+                    println!("                    layer: {},", otr.0);
+                    println!("                    instance_ids: &{:?},", otr.1);
+                    println!("                }},");
+                }
+                println!("            ],");
+            }
+            println!("        }},");
         }
         println!("    ],");
     }

@@ -10,7 +10,7 @@ pub struct PickupMeta
     pub hudmemo_strg: u32,
 }
 
-static mut _pickup_meta: &'static [PickupMeta] = &[];
+static mut _PICKUP_META: &'static [PickupMeta] = &[];
 
 /// Leaks the memory held by a Vec and returns a static lifetime slice with that
 /// data.
@@ -33,14 +33,14 @@ pub fn setup_pickup_meta_table()
             }
         })
         .collect();
-    unsafe { _pickup_meta = leak_vec(vec) };
+    unsafe { _PICKUP_META = leak_vec(vec) };
 }
 
 pub fn pickup_meta_table()
     -> &'static [PickupMeta]
 {
-    debug_assert!(unsafe { _pickup_meta }.len() == 35);
-    unsafe { _pickup_meta }
+    debug_assert!(unsafe { _PICKUP_META }.len() == 35);
+    unsafe { _PICKUP_META }
 }
 
 /// Lookup a pre-computed AABB for a pickup's CMDL
@@ -61,7 +61,8 @@ pub fn aabb_for_pickup_cmdl(cmdl_id: u32) -> Option<[f32; 6]>
 pub struct PickupLocation
 {
     pub location: ScriptObjectLocation,
-    pub hudmemo: Option<ScriptObjectLocation>
+    pub hudmemo: Option<ScriptObjectLocation>,
+    //pub objects_to_remove: &'static [ScriptObjectLocation],
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -71,7 +72,7 @@ pub struct ScriptObjectLocation
     pub instance_id: u32,
 }
 
-static EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
+const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
     (0x50535343, *b"SCAN", &[
         0x00, 0x00, 0x00, 0x05, 0x0B, 0xAD, 0xBE, 0xEF,
         0xFF, 0xFF, 0xFF, 0xFF, 0x50, 0x53, 0x53, 0x53,
@@ -132,7 +133,7 @@ pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 }
 
 
-static MARKER_ASSERT_DATA: &'static [u8] = &[
+const MARKER_ASSERT_DATA: &'static [u8] = &[
     0x87, 0x65, 0x43, 0x21, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
     0x45, 0x4E, 0x47, 0x4C, 0x00, 0x00, 0x00, 0x00,
@@ -199,588 +200,994 @@ struct PickupMetaRaw
     hudmemo_strg: u32,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct RoomInfo
+{
+    pub room_id: u32,
+    pub pickup_locations: &'static [PickupLocation],
+    pub objects_to_remove: &'static [ObjectsToRemove],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ObjectsToRemove
+{
+    pub layer: u32,
+    pub instance_ids: &'static [u32],
+}
+
 
 // The following tables are constructed using bin/resource_tracing.rs
-
-pub const PICKUP_LOCATIONS: [&'static [(u32, &'static [PickupLocation])]; 5] = [
+pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
     // Metroid2.pak
     &[
-        (0xD5CDB809, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131372 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131747 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131377 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131753 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131178 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131759 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131414 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131765 }),
-            },
-        ]),
-        (0x165A4DE9, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 524406 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524516 }),
-            },
-        ]),
-        (0x3C785450, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 589860 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600311 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 589928 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600296 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 589933 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600302 }),
-            },
-        ]),
-        (0xEF069019, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 720957 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 721040 }),
-            },
-        ]),
-        (0x3F04F304, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 787005 }),
-            },
-        ]),
-        (0xC2576E4D, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1048674 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1048876 }),
-            },
-        ]),
-        (0x18D186BB, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1179651 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179744 }),
-            },
-        ]),
-        (0x491BFABA, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1310957 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310977 }),
-            },
-        ]),
-        (0x0D72F1F7, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1377077 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1377153 }),
-            },
-        ]),
-        (0x11BD63B7, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1769497 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769520 }),
-            },
-        ]),
-        (0xE34FD92B, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1835044 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835393 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1835092 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835399 }),
-            },
-        ]),
-        (0x3AD2120F, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1966450 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966460 }),
-            },
-        ]),
-        (0x47E73BC5, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2097239 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2107741 }),
-            },
-        ]),
-        (0xC8309DF6, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2359772 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359780 }),
-            },
-        ]),
-        (0x9A0A03EB, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2435310 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2436929 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 6, instance_id: 405090173 },
-                hudmemo: Some(ScriptObjectLocation { layer: 6, instance_id: 405090182 }),
-            },
-        ]),
-        (0xEEEC837D, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2490376 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2500454 }),
-            },
-        ]),
-        (0x492CBF4A, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2687109 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697713 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2697190 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697725 }),
-            },
-        ]),
-        (0x04D6C285, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2949154 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949292 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2949293 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949305 }),
-            },
-        ]),
-        (0x4148F7B0, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3145782 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156040 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3155850 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156042 }),
-            },
-        ]),
-        (0x2E318473, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3211358 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211962 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3211274 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211968 }),
-            },
-        ]),
-        (0xFB54A0CB, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3408606 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3408618 }),
-            },
-        ]),
-        (0x13FFF119, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3474120 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3474275 }),
-            },
-        ]),
-        (0xE1981EFC, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3735555 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3735582 }),
-            },
-        ]),
-        (0xAFEFE677, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3997699 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3997792 }),
-            },
-        ]),
+        RoomInfo {
+            room_id: 0xD5CDB809,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131372 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131747 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131377 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131753 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131178 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131759 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131414 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131765 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x165A4DE9,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 524406 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524516 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x3C785450,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 589860 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600311 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 589928 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600296 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 589933 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600302 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xEF069019,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 720957 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 721040 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x3F04F304,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 787005 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xC2576E4D,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1048674 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1048876 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x18D186BB,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1179651 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179744 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x491BFABA,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1310957 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310977 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x0D72F1F7,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1377077 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1377153 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x11BD63B7,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1769497 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769520 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1769502, 1769558],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xE34FD92B,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1835044 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835393 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1835092 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835399 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x3AD2120F,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1966450 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966460 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x47E73BC5,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2097239 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2107741 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xC8309DF6,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2359772 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359780 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x9A0A03EB,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2435310 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2436929 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 6, instance_id: 405090173 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 6, instance_id: 405090182 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 6,
+                    instance_ids: &[405090177, 405090261],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xEEEC837D,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2490376 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2500454 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x492CBF4A,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2687109 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697713 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2697190 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697725 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x04D6C285,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2949154 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949292 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2949293 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949305 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x4148F7B0,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3145782 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156040 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3155850 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156042 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x2E318473,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3211358 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211962 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3211274 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211968 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xFB54A0CB,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3408606 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3408618 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x13FFF119,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3474120 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3474275 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xE1981EFC,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3735555 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3735582 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3735560, 3735619],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xAFEFE677,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3997699 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3997792 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
     ],
     // Metroid3.pak
     &[
-        (0xF7285979, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131438 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131625 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131446 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131631 }),
-            },
-        ]),
-        (0x6655F51E, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 524887 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524952 }),
-            },
-        ]),
-        (0xB33A0620, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 600301 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600308 }),
-            },
-        ]),
-        (0xDAFCC26F, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 655531 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655751 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 655761 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655773 }),
-            },
-        ]),
-        (0x40C548E9, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 917592 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 917980 }),
-            },
-        ]),
-        (0x1921876D, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 983596 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983608 }),
-            },
-        ]),
-        (0xA20A7455, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1048801 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1049562 }),
-            },
-        ]),
-        (0x70181194, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1573322 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1573584 }),
-            },
-        ]),
-        (0x43E4CC25, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1639699 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1639827 }),
-            },
-        ]),
-        (0x2191A05D, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1769489 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769501 }),
-            },
-        ]),
-        (0x3FB4A34E, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1966838 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966963 }),
-            },
-        ]),
-        (0xD695B958, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2031781 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2031793 }),
-            },
-        ]),
-        (0xB3C33249, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2557135 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2557235 }),
-            },
-        ]),
-        (0xA49B2544, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 1, instance_id: 69730588 },
-                hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 69731489 }),
-            },
-        ]),
-        (0x4C6F7773, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2687367 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2687509 }),
-            },
-        ]),
-        (0x21B4BFF6, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3343328 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343340 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3343377 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343389 }),
-            },
-        ]),
-        (0x49175472, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3473439 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473771 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3473708 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473781 }),
-            },
-        ]),
-        (0xF7C84340, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3539113 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3539126 }),
-            },
-        ]),
-        (0x3C9490E5, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 3604505 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3604513 }),
-            },
-        ]),
+        RoomInfo {
+            room_id: 0xF7285979,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131438 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131625 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131446 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131631 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x6655F51E,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 524887 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524952 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[524892, 524969],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xB33A0620,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 600301 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600308 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xDAFCC26F,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 655531 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655751 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 655761 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655773 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x40C548E9,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 917592 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 917980 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x1921876D,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 983596 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983608 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xA20A7455,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1048801 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1049562 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x70181194,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1573322 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1573584 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x43E4CC25,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1639699 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1639827 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x2191A05D,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1769489 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769501 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x3FB4A34E,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1966838 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966963 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xD695B958,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2031781 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2031793 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xB3C33249,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2557135 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2557235 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2557140, 2557309],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xA49B2544,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 1, instance_id: 69730588 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 69731489 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x4C6F7773,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2687367 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2687509 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x21B4BFF6,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3343328 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343340 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3343377 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343389 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x49175472,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3473439 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473771 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3473708 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473781 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xF7C84340,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3539113 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3539126 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3539118, 3539164],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0x3C9490E5,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 3604505 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3604513 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
     ],
     // Metroid4.pak
     &[
-        (0xB2701146, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 126 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 587 }),
-            },
-        ]),
-        (0xC44E7A07, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 262151 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 262323 }),
-            },
-        ]),
-        (0xB9ABCD56, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 524795 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524850 }),
-            },
-        ]),
-        (0xCEA263E3, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 852166 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852178 }),
-            },
-        ]),
-        (0xBD8C8625, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 983090 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983375 }),
-            },
-        ]),
-        (0x2398E906, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 1, instance_id: 68157908 },
-                hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 68158264 }),
-            },
-        ]),
-        (0xC7E821BA, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1245494 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1245510 }),
-            },
-        ]),
-        (0x24F8AFF3, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1310741 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310782 }),
-            },
-        ]),
-        (0x37B3AFE6, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1769749 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769761 }),
-            },
-        ]),
-        (0xAC2C58FE, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1966828 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966840 }),
-            },
-        ]),
-        (0xFFB4A966, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2293843 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2293855 }),
-            },
-        ]),
-        (0xC5D6A597, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2424845 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2424862 }),
-            },
-        ]),
-        (0xB4FBBEF5, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2555958 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556180 }),
-            },
-        ]),
-        (0x86EB2E02, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2752545 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753160 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2753076 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753166 }),
-            },
-        ]),
+        RoomInfo {
+            room_id: 0xB2701146,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 126 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 587 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xC44E7A07,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 262151 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 262323 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xB9ABCD56,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 524795 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524850 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xCEA263E3,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 852166 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852178 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xBD8C8625,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 983090 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983375 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x2398E906,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 1, instance_id: 68157908 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 68158264 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1049535],
+                },
+                ObjectsToRemove {
+                    layer: 1,
+                    instance_ids: &[68157913],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xC7E821BA,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1245494 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1245510 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x24F8AFF3,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1310741 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310782 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x37B3AFE6,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1769749 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769761 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xAC2C58FE,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1966828 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966840 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xFFB4A966,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2293843 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2293855 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xC5D6A597,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2424845 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2424862 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xB4FBBEF5,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2555958 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556180 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x86EB2E02,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2752545 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753160 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2753076 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753166 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2753081, 2753188],
+                },
+            ],
+        },
     ],
     // metroid5.pak
     &[
-        (0x643D038F, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 131635 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 132137 }),
-            },
-        ]),
-        (0xC7653A92, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 328071 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 328118 }),
-            },
-        ]),
-        (0xE39C342B, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 589827 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 589905 }),
-            },
-        ]),
-        (0x35C5D736, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786478 }),
-            },
-        ]),
-        (0x8A97BB54, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 852800 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852966 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 853233 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 853243 }),
-            },
-        ]),
-        (0x8988D1CB, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 983181 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983251 }),
-            },
-        ]),
-        (0x90709AAC, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1179916 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179980 }),
-            },
-        ]),
-        (0xAD2E7EB9, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1247078 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1247169 }),
-            },
-        ]),
-        (0xED6DE73B, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1441959 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1441971 }),
-            },
-        ]),
-        (0x3953C353, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1705144 },
-                hudmemo: None,
-            },
-        ]),
-        (0xFEA372E2, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1770673 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1770850 }),
-            },
-        ]),
-        (0xBB3AFC4E, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2032133 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2032240 }),
-            },
-        ]),
-        (0xFB051F5A, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2098666 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2098678 }),
-            },
-        ]),
-        (0xEC47C242, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2359591 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359608 }),
-            },
-        ]),
-        (0xBBFA4AB3, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2556031 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556117 }),
-            },
-        ]),
-        (0xDE9D71F5, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 2621698 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2621708 }),
-            },
-        ]),
+        RoomInfo {
+            room_id: 0x643D038F,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 131635 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 132137 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xC7653A92,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 328071 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 328118 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xE39C342B,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 589827 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 589905 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x35C5D736,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786478 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x8A97BB54,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 852800 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852966 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 853233 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 853243 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[852805, 852988],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0x8988D1CB,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 983181 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983251 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x90709AAC,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1179916 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179980 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xAD2E7EB9,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1247078 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1247169 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xED6DE73B,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1441959 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1441971 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x3953C353,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1705144 },
+                    hudmemo: None,
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xFEA372E2,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1770673 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1770850 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xBB3AFC4E,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2032133 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2032240 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xFB051F5A,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2098666 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2098678 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xEC47C242,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2359591 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359608 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xBBFA4AB3,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2556031 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556117 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2556036, 2556148],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xDE9D71F5,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 2621698 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2621708 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
     ],
     // Metroid6.pak
     &[
-        (0xA4719C6A, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 272508 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 272568 }),
-            },
-        ]),
-        (0xBAD9EDBF, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 393484 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 393779 }),
-            },
-        ]),
-        (0xADEF843E, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 524303 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524336 }),
-            },
-        ]),
-        (0x47F2C087, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 655366 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655641 }),
-            },
-        ]),
-        (0x89A6CB8D, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 720951 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 720965 }),
-            },
-        ]),
-        (0x901040DF, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 786472 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786524 }),
-            },
-        ]),
-        (0xF5EF1862, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 917978 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918000 }),
-            },
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 918079 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918087 }),
-            },
-        ]),
-        (0x4CC18E5A, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1376287 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1376362 }),
-            },
-        ]),
-        (0x8ABEB3C3, &[
-            PickupLocation {
-                location: ScriptObjectLocation { layer: 0, instance_id: 1507982 },
-                hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1507994 }),
-            },
-        ]),
+        RoomInfo {
+            room_id: 0xA4719C6A,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 272508 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 272568 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[272513, 272642],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0xBAD9EDBF,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 393484 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 393779 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xADEF843E,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 524303 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524336 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x47F2C087,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 655366 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655641 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x89A6CB8D,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 720951 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 720965 }),
+                },
+            ],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[720956, 720975],
+                },
+            ],
+        },
+        RoomInfo {
+            room_id: 0x901040DF,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 786472 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786524 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0xF5EF1862,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 917978 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918000 }),
+                },
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 918079 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918087 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x4CC18E5A,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1376287 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1376362 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
+        RoomInfo {
+            room_id: 0x8ABEB3C3,
+            pickup_locations: &[
+                PickupLocation {
+                    location: ScriptObjectLocation { layer: 0, instance_id: 1507982 },
+                    hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1507994 }),
+                },
+            ],
+            objects_to_remove: &[],
+        },
     ],
 ];
 
