@@ -23,6 +23,7 @@ use std::env::args;
 use std::fs::File;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::ffi::CStr;
 
 // Duplicated from pickup_meta. This version needs owned-lists instead of borrowed.
 #[derive(Clone, Debug)]
@@ -564,6 +565,35 @@ fn main()
                           &mut cmdl_aabbs);
     }
 
+    // Special case for Nothing
+    let mut nothing_bytes = Vec::new();
+    {
+        // The Varia Suit is used as a base
+        let mut nothing_pickup = Reader::new(&pickup_table[&4].bytes).read::<Pickup>(()).clone();
+        nothing_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Nothing\0").unwrap());
+        nothing_pickup.kind = 26; // This kind matches an energy refill
+        nothing_pickup.max_increase = 0;
+        nothing_pickup.curr_increase = 0;
+        nothing_pickup.actor_params.scan_params.scan = 0xDEAF0002;
+        // TODO: replace CMDL
+        nothing_pickup.write(&mut nothing_bytes);
+    }
+    let mut nothing_deps: HashSet<_> = pickup_table[&4].deps.iter()
+        .filter(|i| i.fourcc != b"SCAN".into() && i.fourcc != b"STRG".into())
+        .cloned()
+        .collect();
+    nothing_deps.extend(&[
+        ResourceKey::new(0xDEAF0000, b"STRG".into()),
+        ResourceKey::new(0xDEAF0001, b"STRG".into()),
+        ResourceKey::new(0xDEAF0002, b"SCAN".into()),
+    ]);
+    assert!(pickup_table.insert(35, PickupData {
+        name: "Nothing",
+        bytes: nothing_bytes,
+        deps: nothing_deps,
+        hudmemo_strg: 0xDEAF0000,
+    }).is_none());
+
     println!("pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         println!("    // {}", fname);
@@ -600,8 +630,9 @@ fn main()
     }
     println!("];");
 
-    println!("const PICKUP_RAW_META: [PickupMetaRaw; 35] = [");
+    println!("const PICKUP_RAW_META: [PickupMetaRaw; {}] = [", pickup_table.len());
     const BYTES_PER_LINE: usize = 8;
+    // Iterate using an explicit indexer so the output is sorted.
     for i in 0..pickup_table.len() {
         let ref pickup_data = pickup_table[&i];
         let pickup_bytes = &pickup_data.bytes;
