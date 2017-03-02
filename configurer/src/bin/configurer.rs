@@ -300,6 +300,7 @@ fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::
 {
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     hudmemo.strg = pickup_meta.hudmemo_strg;
+    hudmemo.first_message_timer = 1.;
 }
 
 fn calculate_center(aabb: [f32; 6], rotation: GenericArray<f32, U3>, scale: GenericArray<f32, U3>)
