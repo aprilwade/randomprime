@@ -14,7 +14,7 @@ use reader_writer::num::{BigUint, Integer, ToPrimitive};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::io::Read;
 use std::ascii::AsciiExt;
 
@@ -25,6 +25,9 @@ const METROID_PAK_NAMES: [&'static str; 5] = [
     "metroid5.pak",
     "Metroid6.pak",
 ];
+
+const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
+const ARTIFACT_TEMPLE_ID: u32 = 0x2398E906;
 
 fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str)
 {
@@ -38,6 +41,9 @@ fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str)
     gc_disc.write(&mut &out_iso);
 }
 
+// When changing a pickup, we need to give the room a copy of the resources/
+// assests used by the pickup. Create a cache of all the resources needed by
+// any pickup.
 fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     -> HashMap<(u32, FourCC), structs::Resource<'a>>
 {
@@ -74,14 +80,53 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     found
 }
 
-fn modify_pickups<'a, I>(
+fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
+    -> structs::SclyObject<'a>
+{
+    let layer = if pickup_kind > 29 {
+        pickup_kind - 28
+    } else {
+        assert!(pickup_kind == 29);
+        ARTIFACT_OF_TRUTH_REQ_LAYER
+    };
+    structs::SclyObject {
+        instance_id: instance_id,
+        connections: reader_writer::LazyArray::Owned(Vec::new()),
+        property_data: structs::SclyProperty::SpecialFunction(
+            structs::SpecialFunction {
+                name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Artifact Layer Switch\0").unwrap()),
+                position: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                rotation: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                type_: 16,
+                // TODO Working around a compiler bug. Switch this back to being checked later.
+                unknown0: Cow::Borrowed(unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") }),
+                unknown1: 0.,
+                unknown2: 0.,
+                unknown3: 0.,
+                layer_change_room_id: 3442151074,
+                layer_change_layer_id: layer,
+                item_id: 0,
+                unknown4: 1,
+                unknown5: 0.,
+                unknown6: 4294967295,
+                unknown7: 4294967295,
+                unknown8: 4294967295
+            }
+        ),
+    }
+}
+
+
+fn modify_pickups<'a, I, J>(
     gc_disc: &mut structs::GcDisc<'a>,
     pak_name: &str,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
     room_list: &'static [pickup_meta::RoomInfo],
     pickup_list_iter: &mut I,
+    fresh_instance_id_iter: &mut J,
 )
     where I: Iterator<Item=(usize, &'static pickup_meta::PickupMeta)>,
+          J: Iterator<Item=u32>,
 {
     let file_entry = find_file_mut(gc_disc, pak_name);
     file_entry.guess_kind();
@@ -91,6 +136,10 @@ fn modify_pickups<'a, I>(
     };
 
     let resources = &mut pak.resources;
+
+    // To appease the borrow checker, make a copy of the Mlvl on the stack that
+    // we'll update as we go. When we're done manipulating all the other resources
+    // in the pak, we'll write this copy over the one in the pak.
     let mlvl = resources.iter()
         .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"))
         .unwrap().kind.as_mlvl().unwrap().into_owned();
@@ -109,9 +158,11 @@ fn modify_pickups<'a, I>(
                 // Update the Mlvl in the table with version we've been updating
                 let mut res = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
                 *res = editor.mlvl;
+                // The Mlvl is the last entry in the PAK, so break here.
                 break;
             },
             Some((_, fourcc)) if fourcc == b"SAVW".into() && pak_name == "metroid5.pak" => {
+                // Add a scan for the Phazon suit.
                 let mut savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
                 savw.scan_array.as_mut_vec().push(structs::ScannableObject {
                     scan: 0x50535343,
@@ -154,6 +205,8 @@ fn modify_pickups<'a, I>(
                     asset_type: fourcc,
                 });
 
+            // TODO: Re-randomization: reuse the same layer, just clear its contents
+            //       (and remove any connections to any objects contained within it)
             let name = CString::new(format!(
                     "Randomizer - Pickup {} ({:?})", i, pickup_meta.pickup.name)).unwrap();
             area.add_layer(name);
@@ -161,15 +214,39 @@ fn modify_pickups<'a, I>(
             let new_layer_idx = area.layer_flags.layer_count as usize - 1;
             area.add_dependencies(pickup_resources, new_layer_idx, iter);
 
+            if curr_file_id == ARTIFACT_TEMPLE_ID {
+                // If this room is the Artifact Temple, patch it.
+                assert_eq!(pickup_locations.len(), 1, "Sanity check");
+                fix_artifact_of_truth_requirement(&mut area, pickup_meta.pickup.kind,
+                                                  fresh_instance_id_iter);
+            }
+
             let scly = area.mrea().scly_section_mut();
             let layers = scly.layers.as_mut_vec();
 
+            let mut additional_connections = Vec::new();
+
+            // If this is an artifact, insert a layer change function
+            let pickup_kind = pickup_meta.pickup.kind;
+            if pickup_kind >= 29 && pickup_kind <= 40 {
+                let instance_id = fresh_instance_id_iter.next().unwrap();
+                let function = artifact_layer_change_template(instance_id, pickup_kind);
+                layers[new_layer_idx].objects.as_mut_vec().push(function);
+                additional_connections.push(structs::Connection {
+                    state: 1,
+                    message: 7,
+                    target_object_id: instance_id,
+                });
+            }
 
             {
                 let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
                     .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
                     .unwrap();
                 update_pickup(pickup, &pickup_meta);
+                if additional_connections.len() > 0 {
+                    pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
+                }
             }
             if let Some(ref hudmemo) = pickup_location.hudmemo {
                 let hudmemo = layers[hudmemo.layer as usize].objects.iter_mut()
@@ -193,6 +270,8 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     let new_center = calculate_center(new_aabb, pickup_meta.pickup.rotation,
                                         pickup_meta.pickup.scale);
 
+    // The pickup needs to be repositioned so that the center of its model
+    // matches the center of the original.
     *pickup = structs::Pickup {
         position: GenericArray::from_slice(&[
             original_pickup.position[0] - (new_center[0] - original_center[0]),
@@ -311,6 +390,66 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
 
     res.reverse();
     Ok(res)
+}
+
+// Patches the current room to make the Artifact of Truth required to complete
+// the game. This logic is based on the observed behavior of Miles' randomizer.
+// XXX I still don't entirely understand why there needs to be a special case
+//     if an artifact is placed in this room.
+fn fix_artifact_of_truth_requirement<I>(area: &mut mlvl_wrapper::MlvlArea,
+                                        pickup_kind: u32,
+                                        fresh_instance_id_iter: &mut I)
+    where I: Iterator<Item=u32>,
+{
+    let truth_req_layer_id = area.layer_flags.layer_count;
+    assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
+
+    // Create a new layer that will be toggled on when the Artifact of Truth is collected
+    area.add_layer(CString::new("Randomizer - Got Artifact 1".to_string()).unwrap());
+
+    // TODO: Manually verify the correct layers are being toggled
+    if pickup_kind != 29 {
+        // If the item in the Artifact Temple isn't the artifact of truth, mark
+        // the new layer inactive. Note, the layer is active when created.
+        area.layer_flags.flags &= !(1 << truth_req_layer_id);
+    }
+    if pickup_kind >= 30 && pickup_kind <= 40 {
+        // If the item in the Artfact Temple is an artifact (other than Truth)
+        // mark its layer as active.
+        area.layer_flags.flags |= 1 << (pickup_kind - 28);
+    }
+    // TODO: Re-randomizing: the other Got Artifact layers need to be marked inactive
+
+    let scly = area.mrea().scly_section_mut();
+
+    // A relay is created and connected to "Relay Show Progress 1"
+    let new_relay_instance_id = fresh_instance_id_iter.next().unwrap();
+    let new_relay = structs::SclyObject {
+        instance_id: new_relay_instance_id,
+        connections: reader_writer::LazyArray::Owned(vec![
+            structs::Connection {
+                state: 9,
+                message: 13,
+                target_object_id: 1048869,
+            },
+        ]),
+        property_data: structs::SclyProperty::Relay(structs::Relay {
+            name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Relay Show Progress1\0").unwrap()),
+            active: 1,
+        }),
+    };
+    scly.layers.as_mut_vec()[truth_req_layer_id as usize].objects.as_mut_vec().push(new_relay);
+
+    // An existing relay is disconnected from "Relay Show Progress 1" and connected
+    // to the new relay
+    let relay = scly.layers.as_mut_vec()[1].objects.iter_mut()
+        .find(|i| i.instance_id == 68158836).unwrap();
+    relay.connections.as_mut_vec().retain(|i| i.target_object_id != 1048869);
+    relay.connections.as_mut_vec().push(structs::Connection {
+        state: 9,
+        message: 13,
+        target_object_id: new_relay_instance_id,
+    });
 }
 
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_items: u64)
@@ -476,11 +615,13 @@ fn main_inner() -> Result<(), String>
     let mut layout_iter = pickup_layout.iter()
         .map(|n| &pickup_meta::pickup_meta_table()[*n as usize])
         .enumerate();
+    let mut fresh_instance_id_range = 0xDEEF0000..;
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
         modify_pickups(&mut gc_disc, pak_name,
                        &pickup_resources,
                        &mut pickup_meta::PICKUP_LOCATIONS[i],
-                       &mut layout_iter);
+                       &mut layout_iter,
+                       &mut fresh_instance_id_range);
     }
 
     if skip_frigate {

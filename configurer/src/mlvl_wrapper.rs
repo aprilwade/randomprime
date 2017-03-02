@@ -64,6 +64,8 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
 
     pub fn add_layer(&mut self, name: CString)
     {
+        // Mark this layer as active
+        self.layer_flags.flags |= 1 << self.layer_flags.layer_count;
         self.layer_flags.layer_count += 1;
         self.layer_names.push(Cow::Owned(name));
 
