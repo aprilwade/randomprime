@@ -283,7 +283,7 @@ const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
     (49, "Artifact of Elder"),
     (56, "Artifact of Spirit"),
     (63, "Artifact of Truth"),
-    (73, "Artifact of Chozo"),
+    (72, "Artifact of Chozo"),
     (77, "Artifact of Warrior"),
     (89, "Artifact of Newborn"),
     (91, "Artifact of Nature"),
