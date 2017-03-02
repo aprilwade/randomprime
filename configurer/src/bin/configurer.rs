@@ -313,6 +313,96 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
     Ok(res)
 }
 
+fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_items: u64)
+{
+    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
+    file_entry.guess_kind();
+    let pak = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Pak(ref mut pak) => pak,
+        _ => panic!(),
+    };
+
+
+    // Find the first MREA in the pak
+    let mut cursor = pak.resources.cursor();
+    loop {
+        if cursor.peek().unwrap().fourcc() == b"MREA".into() {
+            break;
+        }
+        cursor.next();
+    }
+    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+
+    let mut fetch_bits = |bits: u8| {
+        let ret = starting_items & ((1 << bits) - 1);
+        starting_items = starting_items >> bits;
+        ret as u32
+    };
+
+    // The object we want is in the first layer.
+    let ref mut layer = scly.layers.as_mut_vec()[0];
+    let obj = layer.objects.iter_mut().find(|obj| obj.property_data.object_type() == 0xF).unwrap();
+    let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
+
+    println!("Starting pickups set:");
+
+    spawn_point.missiles = fetch_bits(8);
+    println!("    missiles: {}", spawn_point.missiles);
+
+    spawn_point.energy_tanks = fetch_bits(4);
+    println!("    energy_tanks: {}", spawn_point.energy_tanks);
+
+    spawn_point.power_bombs = fetch_bits(3);
+    println!("    power_bombs: {}", spawn_point.power_bombs);
+
+    spawn_point.wave = fetch_bits(1);
+    println!("    wave: {}", spawn_point.wave);
+
+    spawn_point.ice = fetch_bits(1);
+    println!("    ice: {}", spawn_point.ice);
+
+    spawn_point.plasma = fetch_bits(1);
+    println!("    plasma: {}", spawn_point.plasma);
+
+    spawn_point.charge = fetch_bits(1);
+    println!("    charge: {}", spawn_point.plasma);
+
+    spawn_point.morph_ball = fetch_bits(1);
+    println!("    morph_ball: {}", spawn_point.morph_ball);
+
+    spawn_point.bombs = fetch_bits(1);
+    println!("    bombs: {}", spawn_point.bombs);
+
+    spawn_point.spider_ball = fetch_bits(1);
+    println!("    spider_ball: {}", spawn_point.spider_ball);
+
+    spawn_point.boost_ball = fetch_bits(1);
+    println!("    boost_ball: {}", spawn_point.boost_ball);
+
+    spawn_point.gravity_suit = fetch_bits(1);
+    println!("    gravity_suit: {}", spawn_point.gravity_suit);
+
+    spawn_point.phazon_suit = fetch_bits(1);
+    println!("    phazon_suit: {}", spawn_point.phazon_suit);
+
+    spawn_point.thermal_visor = fetch_bits(1);
+    println!("    thermal_visor: {}", spawn_point.thermal_visor);
+
+    spawn_point.xray= fetch_bits(1);
+    println!("    xray: {}", spawn_point.xray);
+
+    spawn_point.space_jump = fetch_bits(1);
+    println!("    space_jump: {}", spawn_point.space_jump);
+
+    spawn_point.grapple = fetch_bits(1);
+    println!("    grapple: {}", spawn_point.grapple);
+
+    spawn_point.super_missile = fetch_bits(1);
+    println!("    super_missile: {}", spawn_point.super_missile);
+
+}
+
 fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
     let dol = find_file_mut(gc_disc, "default.dol");
@@ -354,12 +444,24 @@ fn main_inner() -> Result<(), String>
             .takes_value(true))
         .arg(Arg::with_name("skip frigate")
             .long("skip-frigate"))
+        .arg(Arg::with_name("change starting items")
+            .long("starting-items")
+            .hidden(true)
+            .takes_value(true))
         .get_matches();
 
     let input_iso_path = matches.value_of("input iso path").unwrap();
     let output_iso_path = matches.value_of("output iso path").unwrap();
     let pickup_layout = matches.value_of("pickup layout").unwrap();
     let skip_frigate = matches.is_present("skip frigate");
+    let starting_items = matches.value_of("change starting items");
+
+    let starting_items = if let Some(starting_items) = starting_items {
+        Some(starting_items.parse::<u64>()
+            .map_err(|_| "Invalid starting-items value".to_string())?)
+    } else {
+        None
+    };
 
     let pickup_layout = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
@@ -384,6 +486,10 @@ fn main_inner() -> Result<(), String>
     if skip_frigate {
         patch_dol_skip_frigate(&mut gc_disc);
     }
+    if let Some(starting_items) = starting_items {
+        patch_starting_pickups(&mut gc_disc, starting_items);
+    }
+
     write_gc_disc(&mut gc_disc, output_iso_path);
     Ok(())
 }
