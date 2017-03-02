@@ -644,7 +644,9 @@ fn main_inner() -> Result<(), String>
         .arg(Arg::with_name("change starting items")
             .long("starting-items")
             .hidden(true)
-            .takes_value(true))
+            .takes_value(true)
+            .validator(|s| s.parse::<u64>().map(|_| ())
+                                           .map_err(|_| "Expected an integer".to_string())))
         .get_matches();
 
     let input_iso_path = matches.value_of("input iso path").unwrap();
@@ -653,13 +655,6 @@ fn main_inner() -> Result<(), String>
     let skip_frigate = matches.is_present("skip frigate");
     let quiet = matches.is_present("quiet");
     let starting_items = matches.value_of("change starting items");
-
-    let starting_items = if let Some(starting_items) = starting_items {
-        Some(starting_items.parse::<u64>()
-            .map_err(|_| "Invalid starting-items value".to_string())?)
-    } else {
-        None
-    };
 
     let pickup_layout = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
@@ -686,7 +681,8 @@ fn main_inner() -> Result<(), String>
     if skip_frigate {
         patch_dol_skip_frigate(&mut gc_disc);
     }
-    if let Some(starting_items) = starting_items {
+
+    if let Some(starting_items) = starting_items.map(|s| s.parse::<u64>().unwrap()) {
         patch_starting_pickups(&mut gc_disc, starting_items);
     }
 
