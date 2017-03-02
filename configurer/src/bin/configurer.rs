@@ -29,7 +29,7 @@ const METROID_PAK_NAMES: [&'static str; 5] = [
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 const ARTIFACT_TEMPLE_ID: u32 = 0x2398E906;
 
-fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str)
+fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNotifier)
 {
     let out_iso = OpenOptions::new()
         .write(true)
@@ -38,7 +38,9 @@ fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str)
         .unwrap();
     out_iso.set_len(structs::GC_DISC_LENGTH as u64).unwrap();
 
-    gc_disc.write(&mut &out_iso);
+    gc_disc.write(&mut &out_iso, &mut pn);
+
+    pn.notify_flushing_to_disk();
 }
 
 // When changing a pickup, we need to give the room a copy of the resources/
@@ -563,6 +565,60 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
 
+struct ProgressNotifier
+{
+    total_size: usize,
+    bytes_so_far: usize,
+    quiet: bool,
+}
+
+impl ProgressNotifier
+{
+    fn new(quiet: bool) -> ProgressNotifier
+    {
+        ProgressNotifier {
+            total_size: 0,
+            bytes_so_far: 0,
+            quiet: quiet,
+        }
+    }
+
+    fn notify_flushing_to_disk(&mut self)
+    {
+        if self.quiet {
+            return;
+        }
+        println!("Flushing written data to the disk...");
+    }
+}
+
+impl structs::ProgressNotifier for ProgressNotifier
+{
+    fn notify_total_bytes(&mut self, total_size: usize)
+    {
+        self.total_size = total_size
+    }
+
+    fn notify_writing_file(&mut self, file_name: &reader_writer::CStr, file_bytes: usize)
+    {
+        if self.quiet {
+            return;
+        }
+        let percent = self.bytes_so_far as f64 / self.total_size as f64 * 100.;
+        println!("{:02.0}% -- Writing file {:?}", percent, file_name);
+        self.bytes_so_far += file_bytes;
+    }
+
+    fn notify_writing_header(&mut self)
+    {
+        if self.quiet {
+            return;
+        }
+        let percent = self.bytes_so_far as f64 / self.total_size as f64 * 100.;
+        println!("{:02.0}% -- Writing ISO header", percent);
+    }
+}
+
 fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
@@ -583,6 +639,8 @@ fn main_inner() -> Result<(), String>
             .takes_value(true))
         .arg(Arg::with_name("skip frigate")
             .long("skip-frigate"))
+        .arg(Arg::with_name("quiet")
+            .long("quiet"))
         .arg(Arg::with_name("change starting items")
             .long("starting-items")
             .hidden(true)
@@ -593,6 +651,7 @@ fn main_inner() -> Result<(), String>
     let output_iso_path = matches.value_of("output iso path").unwrap();
     let pickup_layout = matches.value_of("pickup layout").unwrap();
     let skip_frigate = matches.is_present("skip frigate");
+    let quiet = matches.is_present("quiet");
     let starting_items = matches.value_of("change starting items");
 
     let starting_items = if let Some(starting_items) = starting_items {
@@ -631,7 +690,9 @@ fn main_inner() -> Result<(), String>
         patch_starting_pickups(&mut gc_disc, starting_items);
     }
 
-    write_gc_disc(&mut gc_disc, output_iso_path);
+    let pn = ProgressNotifier::new(quiet);
+    write_gc_disc(&mut gc_disc, output_iso_path, pn);
+    println!("Done");
     Ok(())
 }
 

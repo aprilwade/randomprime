@@ -48,12 +48,26 @@ impl<'a> Readable<'a> for GcDisc<'a>
     }
 }
 
+pub trait ProgressNotifier
+{
+    fn notify_total_bytes(&mut self, total_size: usize);
+    fn notify_writing_file(&mut self, file_name: &CStr, file_bytes: usize);
+    fn notify_writing_header(&mut self);
+}
+
 impl<'a> GcDisc<'a>
 {
-    pub fn write<W: Write + Seek>(&mut self, writer: &mut W)
+    pub fn write<W, N>(&mut self, writer: &mut W, notifier: &mut N)
+        where W: Write + Seek,
+              N: ProgressNotifier,
     {
-        self.file_system_table.recalculate_offsets_and_lengths();
-        self.file_system_table.write_files(writer);
+        let total_size = self.file_system_table.recalculate_offsets_and_lengths()
+            + self.header.size()
+            + self.header_info.size()
+            + self.apploader.size()
+            + self.file_system_table.size();
+        notifier.notify_total_bytes(total_size);
+        self.file_system_table.write_files(writer, notifier);
 
         let main_dol_offset = self.file_system_table.fst_entries.iter()
             .find(|e| e.name.to_bytes() == "default.dol".as_bytes())
@@ -62,6 +76,8 @@ impl<'a> GcDisc<'a>
 
         // XXX It simplifies life a bit to just assume that the fst is at the same
         //     is the same length as before...
+
+        notifier.notify_writing_header();
 
         self.header.main_dol_offset = main_dol_offset;
 
@@ -182,7 +198,8 @@ impl<'a> Writable for FileSystemTable<'a>
 impl<'a> FileSystemTable<'a>
 {
     /// Updates the length and offset fields
-    fn recalculate_offsets_and_lengths(&mut self)
+    /// Returns the total size of all the files in the FST.
+    fn recalculate_offsets_and_lengths(&mut self) -> usize
     {
         // Get a list of all of the files in reverse order of their offsets' from
         // the start of the disc.
@@ -198,9 +215,12 @@ impl<'a> FileSystemTable<'a>
             last_file_offset -= (e.length + 31) & (u32::max_value() - 31);
             e.offset = last_file_offset;
         }
+        GC_DISC_LENGTH - last_file_offset as usize
     }
 
-    fn write_files<W: Write + Seek>(&self, writer: &mut W)
+    fn write_files<W, N>(&self, writer: &mut W, notifier: &mut N)
+        where W: Write + Seek,
+              N: ProgressNotifier,
     {
         // TODO: If the files were sorted by offset, would that improve
         //       peformance?
@@ -209,6 +229,7 @@ impl<'a> FileSystemTable<'a>
             if f.is_none() {
                 continue
             }
+            notifier.notify_writing_file(&e.name, e.length as usize);
             let f = f.unwrap();
             writer.seek(SeekFrom::Start(e.offset as u64)).unwrap();
             f.write(writer)
