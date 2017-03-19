@@ -569,13 +569,13 @@ fn main()
     let mut nothing_bytes = Vec::new();
     {
         // The Varia Suit is used as a base
-        let mut nothing_pickup = Reader::new(&pickup_table[&4].bytes).read::<Pickup>(()).clone();
+        let mut nothing_pickup = Reader::new(&pickup_table[&0].bytes).read::<Pickup>(()).clone();
         nothing_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Nothing\0").unwrap());
         nothing_pickup.kind = 26; // This kind matches an energy refill
         nothing_pickup.max_increase = 0;
         nothing_pickup.curr_increase = 0;
         nothing_pickup.actor_params.scan_params.scan = 0xDEAF0002;
-        // TODO: replace CMDL
+        // TODO: rotate model?
         nothing_pickup.write(&mut nothing_bytes);
     }
     let mut nothing_deps: HashSet<_> = pickup_table[&4].deps.iter()
