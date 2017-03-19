@@ -129,6 +129,11 @@ impl<'a, A> DiffList<'a, A>
         // TODO: It might make sense to cache this...
         self.list.iter().map(|elem| elem.len()).sum()
     }
+
+    pub fn clear(&mut self)
+    {
+        self.list.clear()
+    }
 }
 
 impl<A> DiffListElem<A>

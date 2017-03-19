@@ -681,6 +681,15 @@ fn main_inner() -> Result<(), String>
 
     if skip_frigate {
         patch_dol_skip_frigate(&mut gc_disc);
+
+        // To reduce the amount of data that needs to be copied, empty the contents of the pak
+        let file_entry = find_file_mut(&mut gc_disc, "Metroid1.pak");
+        file_entry.guess_kind();
+        let pak = match *file_entry.file_mut().unwrap() {
+            structs::FstEntryFile::Pak(ref mut pak) => pak,
+            _ => panic!(),
+        };
+        pak.resources.clear();
     }
 
     if let Some(starting_items) = starting_items.map(|s| s.parse::<u64>().unwrap()) {
