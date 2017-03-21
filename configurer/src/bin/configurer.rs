@@ -3,6 +3,8 @@ extern crate clap;
 extern crate configurer;
 
 use clap::{Arg, App};
+// XXX This is an undocumented enum
+use clap::Format;
 
 pub use configurer::*;
 
@@ -11,12 +13,14 @@ use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
 use reader_writer::num::{BigUint, Integer, ToPrimitive};
 
+use std::io;
+use std::panic;
+use std::ascii::AsciiExt;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::ffi::{CStr, CString};
-use std::io::Read;
-use std::ascii::AsciiExt;
+use std::io::{Read, Write};
 
 const METROID_PAK_NAMES: [&'static str; 5] = [
     "Metroid2.pak",
@@ -30,17 +34,20 @@ const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 const ARTIFACT_TEMPLE_ID: u32 = 0x2398E906;
 
 fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNotifier)
+    -> Result<(), String>
 {
     let out_iso = OpenOptions::new()
         .write(true)
         .create(true)
         .open(path)
-        .unwrap();
-    out_iso.set_len(structs::GC_DISC_LENGTH as u64).unwrap();
+        .map_err(|e| format!("Failed to open output file: {}", e))?;
+    out_iso.set_len(structs::GC_DISC_LENGTH as u64)
+        .map_err(|e| format!("Failed to open output file: {}", e))?;
 
     gc_disc.write(&mut &out_iso, &mut pn);
 
     pn.notify_flushing_to_disk();
+    Ok(())
 }
 
 // When changing a pickup, we need to give the room a copy of the resources/
@@ -660,9 +667,26 @@ fn main_inner() -> Result<(), String>
     let pickup_layout = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
 
-    let file = File::open(input_iso_path).unwrap();
-    let mmap = memmap::Mmap::open(&file, memmap::Protection::Read).unwrap();
+    let file = File::open(input_iso_path)
+                .map_err(|e| format!("Failed to open input iso: {}", e))?;
+    let mmap = memmap::Mmap::open(&file, memmap::Protection::Read)
+                .map_err(|e| format!("Failed to open input iso: {}", e))?;
     let mut reader = Reader::new(unsafe { mmap.as_slice() });
+
+    // On non-debug builds, suppress the default panic message and print a more helpful and
+    // user-friendly one
+    if !cfg!(debug_assertions) {
+        panic::set_hook(Box::new(|_| {
+            let _ = writeln!(io::stderr(), "{} \
+An error occurred while parsing the input ISO. \
+This most likely means your ISO is corrupt. \
+Please verify that your ISO matches one of the following hashes:
+MD5:  737cbfe7230af3df047323a3185d7e57
+SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
+", Format::Error("error:"));
+        }));
+    }
+
     let mut gc_disc: structs::GcDisc = reader.read(());
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
@@ -685,11 +709,10 @@ fn main_inner() -> Result<(), String>
         // To reduce the amount of data that needs to be copied, empty the contents of the pak
         let file_entry = find_file_mut(&mut gc_disc, "Metroid1.pak");
         file_entry.guess_kind();
-        let pak = match *file_entry.file_mut().unwrap() {
-            structs::FstEntryFile::Pak(ref mut pak) => pak,
-            _ => panic!(),
+        match file_entry.file_mut() {
+            Some(&mut structs::FstEntryFile::Pak(ref mut pak)) => pak.resources.clear(),
+            _ => (),
         };
-        pak.resources.clear();
     }
 
     if let Some(starting_items) = starting_items.map(|s| s.parse::<u64>().unwrap()) {
@@ -697,15 +720,15 @@ fn main_inner() -> Result<(), String>
     }
 
     let pn = ProgressNotifier::new(quiet);
-    write_gc_disc(&mut gc_disc, output_iso_path, pn);
+    write_gc_disc(&mut gc_disc, output_iso_path, pn)?;
     println!("Done");
     Ok(())
 }
 
 fn main()
 {
-    match main_inner() {
-        Err(s) => println!("{}", s),
-        Ok(()) => (),
-    }
+    let _ = match main_inner() {
+        Err(s) => writeln!(io::stderr(), "{} {}", Format::Error("error:"), s),
+        Ok(()) => Ok(()),
+    };
 }
