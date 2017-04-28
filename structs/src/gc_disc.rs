@@ -98,6 +98,7 @@ impl<'a> GcDisc<'a>
 
 auto_struct! {
     #[auto_struct(Readable, FixedSize, Writable)]
+    #[derive(Debug)]
     pub struct GcDiscHeader
     {
         console_id: u8,
@@ -133,6 +134,15 @@ auto_struct! {
 
         unused2: u32,
         unused3: u32,
+    }
+}
+
+impl GcDiscHeader
+{
+    pub fn game_identifier(&self) -> [u8; 6]
+    {
+        [self.console_id, self.game_code[0], self.game_code[1], self.country_code,
+         self.maker_code[0], self.maker_code[1]]
     }
 }
 

@@ -698,6 +698,10 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
 
     let mut gc_disc: structs::GcDisc = reader.read(());
 
+    if &gc_disc.header.game_identifier() != b"GM8E01" {
+        Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
+    }
+
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
     let mut layout_iter = pickup_layout.iter()
