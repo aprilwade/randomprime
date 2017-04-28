@@ -1,6 +1,6 @@
 
 use std::fmt;
-use std::io::Write;
+use std::io;
 
 use reader::{Reader, Readable};
 use writer::Writable;
@@ -174,12 +174,12 @@ impl<'a, T> Writable for RoArray<'a, T>
           T::Args: Clone,
 {
     #[inline]
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         // TODO: Could this be done more efficently by using the length component of
         //       the reader?
         let len = self.size();
-        writer.write(&(*self.data_start)[0..len]).unwrap();
+        writer.write_all(&(*self.data_start)[0..len])
     }
 }
 

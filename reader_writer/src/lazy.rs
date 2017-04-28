@@ -2,7 +2,7 @@
 use std::mem;
 use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
-use std::io::Write;
+use std::io;
 use std::fmt::{Debug, Formatter, Error};
 
 use reader::{Reader, Readable};
@@ -148,11 +148,11 @@ impl<'a, T> Readable<'a> for Lazy<'a, T>
 impl<'a, T> Writable for Lazy<'a, T>
     where T: Readable<'a> + Writable
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         unsafe { 
             if let Some(uninit_data) = self.cell.uninitialized_data() {
-                writer.write(&(*uninit_data.0)[0..self.size()]).unwrap();
+                writer.write_all(&(*uninit_data.0)[0..self.size()])
             } else {
                 self.deref().write(writer)
             }
@@ -216,13 +216,13 @@ impl<'a, T> Readable<'a> for LazySized<'a, T>
 impl<'a, T> Writable for LazySized<'a, T>
     where T: Readable<'a> + Writable
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         unsafe {
             if let Some(uninit_data) = self.cell.uninitialized_data() {
-                writer.write(*uninit_data.0).unwrap();
+                writer.write_all(*uninit_data.0)
             } else {
-                self.deref().write(writer);
+                self.deref().write(writer)
             }
         }
     }

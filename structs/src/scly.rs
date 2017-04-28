@@ -2,7 +2,7 @@
 use reader_writer::{Dap, FourCC, ImmCow, RoArray, LazyArray, Readable, Reader, Writable,
                     pad_bytes_count, pad_bytes};
 
-use std::io::Write;
+use std::io;
 use std::borrow::Cow;
 
 use scly_props;
@@ -186,10 +186,10 @@ macro_rules! build_scly_property {
 
         impl<'a> Writable for SclyProperty<'a>
         {
-            fn write<W: Write>(&self, writer: &mut W)
+            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
             {
                 match *self {
-                    SclyProperty::Unknown { ref data, .. } => writer.write_all(&data).unwrap(),
+                    SclyProperty::Unknown { ref data, .. } => writer.write_all(&data),
                     $(SclyProperty::$name(ref i) => i.write(writer),)*
                 }
             }

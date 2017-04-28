@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::Write;
+use std::io;
 use std::slice::Iter as SliceIter;
 use std::slice::IterMut as SliceIterMut;
 
@@ -37,11 +37,12 @@ impl<'a, T> Writable for Vec<T>
     where T: Writable,
 {
     #[inline]
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for i in self {
-            i.write(writer)
+            i.write(writer)?
         }
+        Ok(())
     }
 }
 
@@ -212,7 +213,7 @@ impl<'a, T> Writable for LazyArray<'a, T>
           T::Args: Clone,
 {
     #[inline]
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         match *self {
             LazyArray::Borrowed(ref array) => array.write(writer),

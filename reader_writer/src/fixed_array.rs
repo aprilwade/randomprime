@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io;
 
 use reader::{Reader, Readable};
 use writer::Writable;
@@ -47,10 +47,11 @@ impl<'a, T, N> Writable for FixedArray<T, N>
           T: Readable<'a> + Default + Writable,
           T::Args: Clone,
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for elem in self.iter() {
-            elem.write(writer);
+            elem.write(writer)?
         }
+        Ok(())
     }
 }

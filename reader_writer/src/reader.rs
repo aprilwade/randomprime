@@ -1,5 +1,6 @@
-use std::ops::{Deref, DerefMut};
+use std::io;
 use std::fmt::{Debug, Formatter, Error};
+use std::ops::{Deref, DerefMut};
 
 use writer::Writable;
 
@@ -91,8 +92,10 @@ impl<'a> Readable<'a> for Reader<'a>
 
 impl<'a> Writable for Reader<'a>
 {
-    fn write<W: ::std::io::Write>(&self, _: &mut W)
-    { }
+    fn write<W: io::Write>(&self, _: &mut W) -> io::Result<()>
+    {
+        Ok(())
+    }
 }
 
 pub trait Readable<'a> : Sized

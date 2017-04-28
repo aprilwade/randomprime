@@ -89,7 +89,8 @@ impl FieldData
                                      cx.ident_of("write"));
         let method_expr = cx.expr_qpath(DUMMY_SP, qpath, path);
         let writer_expr = cx.expr_ident(DUMMY_SP, cx.ident_of("writer"));
-        cx.expr_call(DUMMY_SP, method_expr, vec![field_expr, writer_expr])
+        cx.expr_try(DUMMY_SP,
+                    cx.expr_call(DUMMY_SP, method_expr, vec![field_expr, writer_expr]))
     }
 
     fn has_storage(&self) -> bool
@@ -390,9 +391,17 @@ fn build_write_method(cx: &ExtCtxt, struct_ident: Ident, fields: &[FieldData])
         cx.ident_of("writer"),
         cx.ty_rptr(DUMMY_SP, cx.ty_ident(DUMMY_SP, cx.ident_of("W")), None, Mutability::Mutable)
     );
+    let result_ty = cx.ty_path(cx.path_all(
+        DUMMY_SP,
+        true,
+        ["std", "io", "Result"].iter().map(|s| cx.ident_of(s)).collect(),
+        vec![],
+        vec![cx.ty(DUMMY_SP, TyKind::Tup(vec![]))],
+        vec![],
+    ));
     let sig = cx.method_sig(
         Unsafety::Normal,
-        cx.fn_decl(vec![self_arg, writer_arg], cx.ty(DUMMY_SP, TyKind::Tup(vec![]))),
+        cx.fn_decl(vec![self_arg, writer_arg], result_ty),
         generics
     );
 
@@ -433,7 +442,7 @@ fn build_write_method(cx: &ExtCtxt, struct_ident: Ident, fields: &[FieldData])
         Visibility::Inherited,
         cx.ident_of("write"),
         sig,
-        cx.block(DUMMY_SP, vec![cx.stmt_expr(expr)]),
+        cx.block(DUMMY_SP, vec![cx.stmt_semi(expr), cx.parse_stmt("Ok(())".to_string())]),
     );
     ImplItem { attrs: vec![cx.inline_attribute()], ..impl_item }
 }

@@ -4,6 +4,7 @@ use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
 use std::fmt;
+use std::io;
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ascii::AsciiExt;
@@ -58,6 +59,7 @@ pub trait ProgressNotifier
 impl<'a> GcDisc<'a>
 {
     pub fn write<W, N>(&mut self, writer: &mut W, notifier: &mut N)
+        -> io::Result<()>
         where W: Write + Seek,
               N: ProgressNotifier,
     {
@@ -67,8 +69,10 @@ impl<'a> GcDisc<'a>
             + self.apploader.size()
             + self.file_system_table.size();
         notifier.notify_total_bytes(total_size);
-        self.file_system_table.write_files(writer, notifier);
+        self.file_system_table.write_files(writer, notifier)?;
 
+        // XXX Although using except here is sub optimal, it is acceptable for the time
+        //     being as it does represent an error in the input file and not an I/O error
         let main_dol_offset = self.file_system_table.fst_entries.iter()
             .find(|e| e.name.to_bytes() == "default.dol".as_bytes())
             .map(|e| e.offset)
@@ -81,14 +85,14 @@ impl<'a> GcDisc<'a>
 
         self.header.main_dol_offset = main_dol_offset;
 
-        writer.seek(SeekFrom::Start(0)).unwrap();
+        writer.seek(SeekFrom::Start(0))?;
 
-        self.header.write(writer);
-        self.header_info.write(writer);
-        self.apploader.write(writer);
+        self.header.write(writer)?;
+        self.header_info.write(writer)?;
+        self.apploader.write(writer)?;
 
-        writer.seek(SeekFrom::Start(self.header.fst_offset as u64)).unwrap();
-        self.file_system_table.write(writer);
+        writer.seek(SeekFrom::Start(self.header.fst_offset as u64))?;
+        self.file_system_table.write(writer)
     }
 }
 
@@ -188,10 +192,10 @@ impl<'a> Readable<'a> for FileSystemTable<'a>
 
 impl<'a> Writable for FileSystemTable<'a>
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        self.fst_entries.write(writer);
-        writer.write_all(&self.string_table).unwrap();
+        self.fst_entries.write(writer)?;
+        writer.write_all(&self.string_table)
     }
 }
 
@@ -219,21 +223,20 @@ impl<'a> FileSystemTable<'a>
     }
 
     fn write_files<W, N>(&self, writer: &mut W, notifier: &mut N)
+        -> io::Result<()>
         where W: Write + Seek,
               N: ProgressNotifier,
     {
         // TODO: If the files were sorted by offset, would that improve
         //       peformance?
         for e in self.fst_entries.iter() {
-            let f = e.file();
-            if f.is_none() {
-                continue
+            if let Some(f) = e.file() {
+                notifier.notify_writing_file(&e.name, e.length as usize);
+                writer.seek(SeekFrom::Start(e.offset as u64))?;
+                f.write(writer)?
             }
-            notifier.notify_writing_file(&e.name, e.length as usize);
-            let f = f.unwrap();
-            writer.seek(SeekFrom::Start(e.offset as u64)).unwrap();
-            f.write(writer)
         }
+        Ok(())
     }
 }
 
@@ -328,7 +331,7 @@ impl<'a> FstEntryFile<'a>
         }
     }
 
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         match *self {
             FstEntryFile::Pak(ref pak) => pak.write(writer),
@@ -336,14 +339,15 @@ impl<'a> FstEntryFile<'a>
                 let mut buf = [0u8; 4096];
                 let mut file = file.0.borrow_mut();
                 loop {
-                    let read = file.read(&mut buf).unwrap();
+                    let read = file.read(&mut buf)?;
                     if read == 0 {
                         break
                     };
-                    writer.write_all(&buf[0..read]).unwrap();
+                    writer.write_all(&buf[0..read])?
                 };
+                Ok(())
             },
-            FstEntryFile::Unknown(ref reader) => writer.write_all(&reader).unwrap(),
+            FstEntryFile::Unknown(ref reader) => writer.write_all(&reader),
         }
     }
 }

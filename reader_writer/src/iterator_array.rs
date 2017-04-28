@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::Write;
+use std::io;
 use std::slice::Iter as SliceIter;
 
 use imm_cow::ImmCow;
@@ -144,11 +144,12 @@ impl<'a, T, I> Writable for IteratorArray<'a, T, I>
     where T: Readable<'a> + Writable,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for i in self.iter() {
-            i.write(writer)
+            i.write(writer)?
         }
+        Ok(())
     }
 }
 

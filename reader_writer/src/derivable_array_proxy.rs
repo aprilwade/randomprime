@@ -2,7 +2,7 @@ use reader::{Reader, Readable};
 use writer::Writable;
 
 use std::marker::PhantomData;
-use std::io::Write;
+use std::io;
 use std::borrow::Borrow;
 
 /// Derivable Array Proxy - wraps an iterator for derived array.
@@ -47,11 +47,12 @@ impl<I, T> Writable for Dap<I, T>
           I::Item: Borrow<T>,
           T: Writable
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for e in self.0.clone() {
-            e.borrow().write(writer)
+            e.borrow().write(writer)?
         }
+        Ok(())
     }
 }
 

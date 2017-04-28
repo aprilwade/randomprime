@@ -1,6 +1,6 @@
 
 use std::fmt;
-use std::io::Write;
+use std::io;
 use std::iter::{once, FromIterator};
 use std::ops::{Deref, DerefMut};
 
@@ -306,11 +306,12 @@ impl<'a, A> Writable for DiffList<'a, A>
     where A: AsDiffListSourceCursor,
           <A::Cursor as DiffListSourceCursor>::Item: Writable,
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for i in self.iter() {
-            i.write(writer);
+            i.write(writer)?
         }
+        Ok(())
     }
 }
 

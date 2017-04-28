@@ -2,10 +2,10 @@
 
 use std::ffi;
 use std::fmt;
+use std::io;
 use std::mem;
 use std::borrow::Cow;
 use std::marker::PhantomData;
-use std::io::Write;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
 
@@ -33,9 +33,9 @@ macro_rules! define_arith_readable {
             }
             impl<'a> Writable for $T
             {
-                fn write<W: Write>(&self, writer: &mut W)
+                fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
                 {
-                    writer.$wf::<BigEndian>(*self).unwrap();
+                    writer.$wf::<BigEndian>(*self)
                 }
             }
         )*
@@ -63,9 +63,9 @@ macro_rules! define_byte_readable {
             }
             impl<'a> Writable for $T
             {
-                fn write<W: Write>(&self, writer: &mut W)
+                fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
                 {
-                    writer.$wf(*self).unwrap();
+                    writer.$wf(*self)
                 }
             }
         )*
@@ -134,9 +134,9 @@ impl<'a> Readable<'a> for FourCC
 
 impl Writable for FourCC
 {
-    fn write<W: ::std::io::Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        writer.write_all(&self.0).unwrap()
+        writer.write_all(&self.0)
     }
 }
 
@@ -216,7 +216,7 @@ impl<'a, T> Readable<'a> for Box<T>
 impl<T> Writable for Box<T>
     where T: Writable
 {
-    fn write<W: ::std::io::Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         (**self).write(writer)
     }
@@ -241,8 +241,10 @@ impl<'a, T> Readable<'a> for PhantomData<T>
 
 impl<T> Writable for PhantomData<T>
 {
-    fn write<W: ::std::io::Write>(&self, _: &mut W)
-    { }
+    fn write<W: io::Write>(&self, _: &mut W) -> io::Result<()>
+    {
+        Ok(())
+    }
 }
 
 pub type CStr<'a> = Cow<'a, ffi::CStr>;
@@ -266,8 +268,8 @@ impl<'a> Readable<'a> for CStr<'a>
 
 impl<'a> Writable for CStr<'a>
 {
-    fn write<W: ::std::io::Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        writer.write_all(self.to_bytes_with_nul()).unwrap()
+        writer.write_all(self.to_bytes_with_nul())
     }
 }

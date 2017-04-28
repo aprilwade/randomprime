@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io;
 use std::fmt::{Debug, Formatter, Error};
 
 use reader::{Reader, Readable};
@@ -63,8 +63,8 @@ impl<'a, T> Writable for Uncached<'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        writer.write_all(&self.0).unwrap();
+        writer.write_all(&self.0)
     }
 }

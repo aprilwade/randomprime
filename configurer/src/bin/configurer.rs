@@ -44,7 +44,8 @@ fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNoti
     out_iso.set_len(structs::GC_DISC_LENGTH as u64)
         .map_err(|e| format!("Failed to open output file: {}", e))?;
 
-    gc_disc.write(&mut &out_iso, &mut pn);
+    gc_disc.write(&mut &out_iso, &mut pn)
+        .map_err(|e| format!("Error writing output file: {}", e))?;
 
     pn.notify_flushing_to_disk();
     Ok(())

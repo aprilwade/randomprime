@@ -3,7 +3,7 @@ use reader_writer::{CStr, FourCC, IteratorArray, LazyArray, Readable, Reader, Ro
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-use std::io::Write;
+use std::io;
 use std::iter::Peekable;
 
 auto_struct! {
@@ -144,18 +144,19 @@ impl<'a> Readable<'a> for AreaDependencies<'a>
 
 impl<'a> Writable for AreaDependencies<'a>
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         let deps_count: u32 = self.deps.clone().iter().map(|i| i.len() as u32).sum();
-        deps_count.write(writer);
-        self.deps.write(writer);
-        (self.deps.len() as u32).write(writer);
+        deps_count.write(writer)?;
+        self.deps.write(writer)?;
+        (self.deps.len() as u32).write(writer)?;
 
         let mut offset_sum: u32 = 0;
         for array in self.deps.iter() {
-            offset_sum.write(writer);
+            offset_sum.write(writer)?;
             offset_sum += array.len() as u32;
         }
+        Ok(())
     }
 }
 
@@ -330,17 +331,18 @@ impl<'a> Readable<'a> for AreaLayerNames<'a>
 
 impl<'a> Writable for AreaLayerNames<'a>
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        self.0.iter().map(|area| area.len() as u32).sum::<u32>().write(writer);
-        self.0.write(writer);
+        self.0.iter().map(|area| area.len() as u32).sum::<u32>().write(writer)?;
+        self.0.write(writer)?;
 
-        (self.0.len() as u32).write(writer);
+        (self.0.len() as u32).write(writer)?;
 
         let mut offset: u32 = 0;
         for area in &self.0 {
-            offset.write(writer);
+            offset.write(writer)?;
             offset += area.len() as u32;
         }
+        Ok(())
     }
 }

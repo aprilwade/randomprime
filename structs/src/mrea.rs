@@ -4,7 +4,7 @@ use reader_writer::{Dap, ImmCow, IteratorArray, Readable, Reader, RoArray, RoArr
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-use std::io::Write;
+use std::io;
 
 use scly::Scly;
 
@@ -110,10 +110,10 @@ impl<'a> Readable<'a> for MreaSection<'a>
 
 impl<'a> Writable for MreaSection<'a>
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         match *self {
-            MreaSection::Unknown(ref reader) => writer.write_all(&reader).unwrap(),
+            MreaSection::Unknown(ref reader) => writer.write_all(&reader),
             MreaSection::Scly(ref scly) => scly.write(writer),
         }
     }

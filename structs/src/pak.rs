@@ -3,7 +3,7 @@ use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, Four
                     align_byte_count, pad_bytes_count, pad_bytes, pad_bytes_ff};
 
 
-use std::io::Write;
+use std::io;
 use std::borrow::Cow;
 
 use mlvl::Mlvl;
@@ -181,7 +181,7 @@ impl<'a, 'list> Readable<'a> for ResourceInfoProxy<'a, 'list>
 impl<'a, 'list> Writable for ResourceInfoProxy<'a, 'list>
     where 'a: 'list
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         let mut offset = align_byte_count(32,
                 self.1 +
@@ -190,9 +190,10 @@ impl<'a, 'list> Writable for ResourceInfoProxy<'a, 'list>
             ) as u32;
         for res in self.0.iter() {
             let info = res.resource_info(offset);
-            info.write(writer);
+            info.write(writer)?;
             offset += info.size;
         }
+        Ok(())
     }
 }
 
@@ -261,9 +262,9 @@ impl<'a> Readable<'a> for Resource<'a>
 
 impl<'a> Writable for Resource<'a>
 {
-    fn write<W: Write>(&self, writer: &mut W)
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
-        self.kind.write(writer);
+        self.kind.write(writer)
     }
 }
 
@@ -334,10 +335,10 @@ macro_rules! build_resource_data {
                 }
             }
 
-            fn write<W: Write>(&self, writer: &mut W)
+            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
             {
                 match *self {
-                    ResourceKind::Unknown(ref data, _) => writer.write_all(&data).unwrap(),
+                    ResourceKind::Unknown(ref data, _) => writer.write_all(&data),
                     $(ResourceKind::$name(ref i) => i.write(writer),)*
                 }
             }
