@@ -1,10 +1,10 @@
 //! This program traces the dependencies of each pickup in a Metroid Prime ISO.
 //! The location of the ISO should be provided as a command line argument.
 //!
-//! The output has been tailored to match the observed behavior of Miles'
+//! The output has been tailored to match the observed behavior of Claris's
 //! randomizer.
 //! A few sections of code are commented out, indicating what appear to me to
-//! be dependencies, but don't seem to match Miles' dependency lists.
+//! be dependencies, but don't seem to match Claris's dependency lists.
 
 extern crate memmap;
 extern crate flate2;
@@ -692,11 +692,11 @@ fn find_cutscene_trigger_relay<'a>(
     }
 }
 
-// We can get pretty close to the Miles' dependecies for each pickup, but some
+// We can get pretty close to the Claris's dependecies for each pickup, but some
 // of them need custom modification to match exactly.
 fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
 {
-    // Don't ask me why; Miles seems to skip this one.
+    // Don't ask me why; Claris seems to skip this one.
     deps.remove(&ResourceKey::new(0xA0DA476B, b"PART".into()));
 
     if pickup_kind == 19 {
@@ -708,7 +708,7 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x11BEB861, b"STRG".into())); // HudMemo
         deps.insert(ResourceKey::new(0x50535343, b"SCAN".into()));
         deps.insert(ResourceKey::new(0x50535353, b"STRG".into())); // HudMemo
-        // TODO: Miles uses a custom texture so it looks different from the
+        // TODO: Claris uses a custom texture so it looks different from the
         //       gravity suit. Either figure out a replacement or get
         //       permission to use it.
     };

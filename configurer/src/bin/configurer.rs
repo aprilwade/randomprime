@@ -435,7 +435,7 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
 }
 
 // Patches the current room to make the Artifact of Truth required to complete
-// the game. This logic is based on the observed behavior of Miles' randomizer.
+// the game. This logic is based on the observed behavior of Claris's randomizer.
 // XXX I still don't entirely understand why there needs to be a special case
 //     if an artifact is placed in this room.
 fn fix_artifact_of_truth_requirement<I>(area: &mut mlvl_wrapper::MlvlArea,
