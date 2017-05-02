@@ -663,8 +663,8 @@ fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
 
-    let matches = App::new("Metroid Prime Configuerer")
-        .version("0.0")
+    let matches = App::new("randomprime ISO patcher")
+        .version("0.1.0")
         .arg(Arg::with_name("input iso path")
             .long("input-iso")
             .required(true)
