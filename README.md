@@ -1,12 +1,12 @@
 # randomprime
 
 This is a tool for randomizing/customizing the layout of pickups in Metroid Prime.
-It has three parts: a webpage for generating a randomized layout [(Generator)](https://waedt.github.io/randomprime/generator.html), a webpage for editing layouts [(Editor)](https://waedt.github.io/randomprime/editor.html), and a command line program that manipulates the game ISO [(ISO Patcher)](https://github.com/waedt/randomprime/releases). Layouts created by the generator are guaranteed to be completable.
+It has three parts: a webpage for generating a randomized layout [(Generator)](https://waedt.github.io/randomprime/generator.html), a webpage for editing layouts [(Editor)](https://waedt.github.io/randomprime/editor.html), and a command line program that modifies the game ISO [(ISO Patcher)](https://github.com/waedt/randomprime/releases). All layouts created by the generator should be completable.
 
 This system has no notion of a "seed".
 Instead, a layout is communicated to and from these components as an 87 character long "layout descriptor".
-To create here randomized ISO, you must first use the generator to create a layout descriptor and then run the ISO patcher using the layout descriptor.
-.
+To create a randomized ISO, you must first use the generator to get a layout descriptor and then run the ISO patcher using the layout descriptor.
+Alternatively, you can create a layout from scratch using the editor.
 
 ## How to use the ISO patcher
 
@@ -16,7 +16,7 @@ If you're using Windows, you will need to use `cmd` to run the ISO patcher. Note
 "C:\Users\Me\Downloads\randomprime_patcher.exe" --input-iso "C:\Users\Me\mp1.iso" --output-iso "C:\Users\Me\mp1_random.iso" --layout NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4
 ```
 
-If you would like to not have to play through the tutorial section (aka the Frigate) each time, you also give the ISO patcher the ``--skip-frigate`` argument to skip it.
+If you would like to not have to play through the tutorial section (the Frigate) each time, you may also give the ISO patcher the ``--skip-frigate`` argument to skip it.
 
 ## Reporting a bug
 
@@ -38,13 +38,16 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
 ```
 
 ##### Q: Can a patched ISO be used as the input ISO?
-A: no, you must use a clean/unpatched input ISO.
+A:
+No, you must use a clean/unpatched input ISO.
 
 ##### Q: Why is there only one difficulty for the generator?
-A: Because I haven't gotten around to adding any others and its difficult to decide which capabilities/tricks should be required.
+A:
+Because I haven't gotten around to adding any others and its difficult to decide which capabilities/tricks should be required.
 
 ##### Q: Why don't you use seeds instead of this really long layout thingy?
-A: The advantage of this arrangement is that the inner-workings of the generator can be modified without users needing to re-download anything.
+A:
+The advantage of this arrangement is that the inner-workings of the generator can be modified without users needing to re-download anything.
 Also, this means pickup layouts can be customized or created from scratch using the editor if desired.
 
 ## To do
@@ -52,7 +55,7 @@ Also, this means pickup layouts can be customized or created from scratch using 
 * A GUI for the ISO patcher
 * Add an "Advanced" difficulty
 * Change the texture for the Phazon Suit so it looks different from the Gravity Suit
-* Fix the sound effects that plays when pickups are collected
+* Fix the sound effects that play when pickups are collected
 * Randomize elevators (with completability guarantees) (someday)
 
 
