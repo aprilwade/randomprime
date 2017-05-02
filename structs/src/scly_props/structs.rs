@@ -72,4 +72,18 @@ auto_struct! {
     }
 }
 
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct DamageInfo
+    {
+        #[expect = 4]
+        prop_count: u32,
+        weapon_type: u32,
+        damage: f32,
+        radius: f32,
+        knockback_power: f32,
+    }
+}
+
 

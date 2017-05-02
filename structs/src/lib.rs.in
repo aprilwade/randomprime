@@ -24,6 +24,8 @@ mod scly_props
     mod player_hint;
     mod streamed_audio;
     mod spawn_point;
+    mod dock;
+    mod trigger;
 
     pub mod structs;
 
@@ -36,6 +38,8 @@ mod scly_props
     pub use self::player_hint::*;
     pub use self::streamed_audio::*;
     pub use self::spawn_point::*;
+    pub use self::dock::*;
+    pub use self::trigger::*;
 }
 
 pub use gc_disc::*;

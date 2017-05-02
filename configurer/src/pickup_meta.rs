@@ -1,7 +1,7 @@
 use std::mem;
 
 use reader_writer::{FourCC, Reader};
-use structs::{Pickup, Resource, ResourceKind};
+use structs::{Connection, Pickup, Resource, ResourceKind};
 
 pub struct PickupMeta
 {
@@ -62,7 +62,7 @@ pub struct PickupLocation
 {
     pub location: ScriptObjectLocation,
     pub hudmemo: Option<ScriptObjectLocation>,
-    //pub objects_to_remove: &'static [ScriptObjectLocation],
+    pub post_pickup_relay_connections: &'static [Connection]
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -281,18 +281,22 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131372 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131747 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131377 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131753 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131178 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131759 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131414 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131765 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -303,6 +307,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524406 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524516 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -313,17 +318,30 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589860 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600311 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 67708749 },
+                        Connection { state: 9, message: 11, target_object_id: 600309 },
+                        Connection { state: 9, message: 13, target_object_id: 600311 },
+                        Connection { state: 9, message: 20, target_object_id: 600315 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589928 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600296 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589933 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600302 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 1,
+                    instance_ids: &[67708870],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xEF069019,
@@ -331,6 +349,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720957 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 721040 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -341,6 +360,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 787005 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -351,6 +371,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048674 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1048876 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -361,6 +382,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179651 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179744 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -371,6 +393,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310957 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310977 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -381,9 +404,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1377077 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1377153 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1377121 },
+                        Connection { state: 9, message: 13, target_object_id: 1377153 },
+                        Connection { state: 9, message: 20, target_object_id: 1377157 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1377201],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x11BD63B7,
@@ -391,12 +424,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769497 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769520 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1769507 },
+                        Connection { state: 9, message: 13, target_object_id: 1769520 },
+                        Connection { state: 9, message: 20, target_object_id: 1769524 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1769502, 1769558],
+                    instance_ids: &[1769502, 1769558, 1769533],
                 },
             ],
         },
@@ -406,10 +444,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1835044 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835393 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1835092 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835399 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -420,6 +460,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966450 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966460 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -430,6 +471,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2097239 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2107741 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -440,9 +482,23 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359772 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359780 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 7, target_object_id: 2359658 },
+                        Connection { state: 9, message: 7, target_object_id: 2359660 },
+                        Connection { state: 9, message: 11, target_object_id: 2359665 },
+                        Connection { state: 9, message: 5, target_object_id: 2359659 },
+                        Connection { state: 9, message: 5, target_object_id: 2359657 },
+                        Connection { state: 9, message: 13, target_object_id: 2359780 },
+                        Connection { state: 9, message: 20, target_object_id: 2359784 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2359879],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x9A0A03EB,
@@ -450,16 +506,35 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2435310 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2436929 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 69546194 },
+                        Connection { state: 9, message: 11, target_object_id: 2436927 },
+                        Connection { state: 9, message: 13, target_object_id: 2436929 },
+                        Connection { state: 9, message: 20, target_object_id: 2436933 },
+                        Connection { state: 9, message: 12, target_object_id: 2424833 },
+                        Connection { state: 9, message: 13, target_object_id: 2424834 },
+                        Connection { state: 9, message: 1, target_object_id: 2425063 },
+                        Connection { state: 9, message: 1, target_object_id: 2425064 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 6, instance_id: 405090173 },
                     hudmemo: Some(ScriptObjectLocation { layer: 6, instance_id: 405090182 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 405090180 },
+                        Connection { state: 9, message: 13, target_object_id: 405090182 },
+                        Connection { state: 9, message: 20, target_object_id: 405090186 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
+                    layer: 1,
+                    instance_ids: &[69534111],
+                },
+                ObjectsToRemove {
                     layer: 6,
-                    instance_ids: &[405090177, 405090261],
+                    instance_ids: &[405090177, 405090261, 405090195],
                 },
             ],
         },
@@ -469,6 +544,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2490376 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2500454 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -479,13 +555,25 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687109 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697713 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 2697213 },
+                        Connection { state: 9, message: 11, target_object_id: 2697491 },
+                        Connection { state: 9, message: 13, target_object_id: 2697713 },
+                        Connection { state: 9, message: 20, target_object_id: 2697717 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2697190 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697725 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2697836],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x04D6C285,
@@ -493,10 +581,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2949154 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949292 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2949293 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949305 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -507,13 +597,25 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3145782 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156040 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3155850 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156042 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 3155833 },
+                        Connection { state: 9, message: 11, target_object_id: 3156016 },
+                        Connection { state: 9, message: 13, target_object_id: 3156042 },
+                        Connection { state: 9, message: 20, target_object_id: 3156046 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3155860],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x2E318473,
@@ -521,10 +623,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3211358 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211962 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3211274 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211968 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -535,6 +639,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3408606 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3408618 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -545,6 +650,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3474120 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3474275 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -555,12 +661,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3735555 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3735582 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 3735566 },
+                        Connection { state: 9, message: 13, target_object_id: 3735582 },
+                        Connection { state: 9, message: 20, target_object_id: 3735586 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3735560, 3735619],
+                    instance_ids: &[3735560, 3735619, 3735595],
                 },
             ],
         },
@@ -570,9 +681,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3997699 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3997792 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 3997777 },
+                        Connection { state: 9, message: 13, target_object_id: 3997792 },
+                        Connection { state: 9, message: 20, target_object_id: 3997796 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3997849],
+                },
+            ],
         },
     ],
     // Metroid3.pak
@@ -583,10 +704,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131438 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131625 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131446 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131631 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -597,12 +720,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524887 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524952 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 524897 },
+                        Connection { state: 9, message: 13, target_object_id: 524952 },
+                        Connection { state: 9, message: 20, target_object_id: 524956 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[524892, 524969],
+                    instance_ids: &[524892, 524969, 524957],
                 },
             ],
         },
@@ -612,6 +740,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 600301 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600308 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -622,10 +751,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655531 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655751 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655761 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655773 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -636,9 +767,20 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917592 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 917980 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 918100 },
+                        Connection { state: 9, message: 11, target_object_id: 917957 },
+                        Connection { state: 9, message: 13, target_object_id: 917980 },
+                        Connection { state: 9, message: 20, target_object_id: 917984 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[918052],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x1921876D,
@@ -646,6 +788,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983596 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983608 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -656,9 +799,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048801 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1049562 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1049552 },
+                        Connection { state: 9, message: 13, target_object_id: 1049562 },
+                        Connection { state: 9, message: 20, target_object_id: 1049566 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1049490],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x70181194,
@@ -666,9 +819,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1573322 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1573584 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1573543 },
+                        Connection { state: 9, message: 13, target_object_id: 1573584 },
+                        Connection { state: 9, message: 20, target_object_id: 1573588 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 3,
+                    instance_ids: &[202899931],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x43E4CC25,
@@ -676,6 +839,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1639699 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1639827 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -686,6 +850,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769489 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769501 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -696,9 +861,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966838 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966963 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1966848 },
+                        Connection { state: 9, message: 13, target_object_id: 1966963 },
+                        Connection { state: 9, message: 20, target_object_id: 1966967 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1967144],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xD695B958,
@@ -706,6 +881,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2031781 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2031793 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -716,12 +892,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2557135 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2557235 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 2557153 },
+                        Connection { state: 9, message: 13, target_object_id: 2557235 },
+                        Connection { state: 9, message: 20, target_object_id: 2557239 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2557140, 2557309],
+                    instance_ids: &[2557140, 2557309, 2557262],
                 },
             ],
         },
@@ -731,9 +912,21 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 69730588 },
                     hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 69731489 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 69731438 },
+                        Connection { state: 9, message: 11, target_object_id: 2622567 },
+                        Connection { state: 9, message: 1, target_object_id: 2622534 },
+                        Connection { state: 9, message: 13, target_object_id: 69731489 },
+                        Connection { state: 9, message: 20, target_object_id: 69731493 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 1,
+                    instance_ids: &[69731299],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x4C6F7773,
@@ -741,6 +934,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687367 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2687509 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -751,10 +945,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3343328 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343340 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3343377 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343389 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -765,13 +961,24 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3473439 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473771 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 3473769 },
+                        Connection { state: 9, message: 13, target_object_id: 3473771 },
+                        Connection { state: 9, message: 20, target_object_id: 3473775 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3473708 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473781 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 1,
+                    instance_ids: &[70582821],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xF7C84340,
@@ -779,12 +986,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3539113 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3539126 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 3539124 },
+                        Connection { state: 9, message: 13, target_object_id: 3539126 },
+                        Connection { state: 9, message: 20, target_object_id: 3539130 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3539118, 3539164],
+                    instance_ids: &[3539118, 3539164, 3539139],
                 },
             ],
         },
@@ -794,6 +1006,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3604505 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3604513 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -807,6 +1020,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 126 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 587 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -817,9 +1031,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 262151 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 262323 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 262316 },
+                        Connection { state: 9, message: 13, target_object_id: 262323 },
+                        Connection { state: 9, message: 20, target_object_id: 262327 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[262271],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xB9ABCD56,
@@ -827,6 +1051,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524795 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524850 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -837,6 +1062,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852166 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852178 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -847,6 +1073,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983090 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983375 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -857,6 +1084,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 68157908 },
                     hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 68158264 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 68158057 },
+                        Connection { state: 9, message: 11, target_object_id: 1049534 },
+                        Connection { state: 9, message: 13, target_object_id: 68158264 },
+                        Connection { state: 9, message: 20, target_object_id: 68158268 },
+                    ],
                 },
             ],
             objects_to_remove: &[
@@ -868,6 +1101,10 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     layer: 1,
                     instance_ids: &[68157913],
                 },
+                ObjectsToRemove {
+                    layer: 18,
+                    instance_ids: &[1209008983],
+                },
             ],
         },
         RoomInfo {
@@ -876,6 +1113,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1245494 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1245510 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -886,6 +1124,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310741 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310782 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -896,6 +1135,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769749 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769761 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -906,6 +1146,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966828 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966840 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -916,6 +1157,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2293843 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2293855 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -926,6 +1168,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2424845 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2424862 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -936,6 +1179,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2555958 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556180 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -946,16 +1190,26 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2752545 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753160 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 2753124 },
+                        Connection { state: 9, message: 13, target_object_id: 2753160 },
+                        Connection { state: 9, message: 20, target_object_id: 2753164 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2753076 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753166 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 2753127 },
+                        Connection { state: 9, message: 13, target_object_id: 2753166 },
+                        Connection { state: 9, message: 20, target_object_id: 2753170 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2753081, 2753188],
+                    instance_ids: &[2753224, 2753081, 2753188, 2753185],
                 },
             ],
         },
@@ -968,6 +1222,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131635 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 132137 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -978,6 +1233,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 328071 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 328118 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -988,9 +1244,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589827 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 589905 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 589846 },
+                        Connection { state: 9, message: 13, target_object_id: 589905 },
+                        Connection { state: 9, message: 20, target_object_id: 589909 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[589877],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x35C5D736,
@@ -998,9 +1264,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786478 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 786476 },
+                        Connection { state: 9, message: 13, target_object_id: 786478 },
+                        Connection { state: 9, message: 20, target_object_id: 786482 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[786532],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x8A97BB54,
@@ -1008,16 +1284,22 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852800 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852966 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 852814 },
+                        Connection { state: 9, message: 13, target_object_id: 852966 },
+                        Connection { state: 9, message: 20, target_object_id: 852970 },
+                    ],
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 853233 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 853243 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[852805, 852988],
+                    instance_ids: &[852805, 852988, 852984],
                 },
             ],
         },
@@ -1027,6 +1309,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983181 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983251 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1037,6 +1320,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179916 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179980 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1047,6 +1331,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1247078 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1247169 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1057,6 +1342,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1441959 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1441971 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1067,6 +1353,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1705144 },
                     hudmemo: None,
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1077,6 +1364,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1770673 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1770850 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1087,6 +1375,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2032133 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2032240 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1097,6 +1386,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2098666 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2098678 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1107,6 +1397,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359591 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359608 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1117,12 +1408,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2556031 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556117 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 2556042 },
+                        Connection { state: 9, message: 13, target_object_id: 2556117 },
+                        Connection { state: 9, message: 20, target_object_id: 2556121 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2556036, 2556148],
+                    instance_ids: &[2556036, 2556148, 2556123],
                 },
             ],
         },
@@ -1132,6 +1428,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2621698 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2621708 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1145,12 +1442,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 272508 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 272568 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 272519 },
+                        Connection { state: 9, message: 13, target_object_id: 272568 },
+                        Connection { state: 9, message: 20, target_object_id: 272572 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[272513, 272642],
+                    instance_ids: &[272513, 272642, 272593],
                 },
             ],
         },
@@ -1160,6 +1462,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 393484 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 393779 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1170,6 +1473,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524303 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524336 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1180,6 +1484,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655366 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655641 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1190,12 +1495,17 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720951 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 720965 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 720962 },
+                        Connection { state: 9, message: 13, target_object_id: 720965 },
+                        Connection { state: 9, message: 20, target_object_id: 720969 },
+                    ],
                 },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[720956, 720975],
+                    instance_ids: &[720956, 720975, 720970],
                 },
             ],
         },
@@ -1205,9 +1515,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786472 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786524 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 786521 },
+                        Connection { state: 9, message: 13, target_object_id: 786524 },
+                        Connection { state: 9, message: 20, target_object_id: 786528 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[786574],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xF5EF1862,
@@ -1215,10 +1535,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917978 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918000 }),
+                    post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 918079 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918087 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],
@@ -1229,9 +1551,19 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1376287 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1376362 }),
+                    post_pickup_relay_connections: &[
+                        Connection { state: 9, message: 11, target_object_id: 1376369 },
+                        Connection { state: 9, message: 13, target_object_id: 1376362 },
+                        Connection { state: 9, message: 20, target_object_id: 1376366 },
+                    ],
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1376415],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x8ABEB3C3,
@@ -1239,6 +1571,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1507982 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1507994 }),
+                    post_pickup_relay_connections: &[]
                 },
             ],
             objects_to_remove: &[],

@@ -29,8 +29,9 @@ use std::ffi::CStr;
 #[derive(Clone, Debug)]
 pub struct PickupLocation
 {
-    pub location: ScriptObjectLocation,
-    pub hudmemo: Option<ScriptObjectLocation>,
+    location: ScriptObjectLocation,
+    hudmemo: Option<ScriptObjectLocation>,
+    post_pickup_relay_connections: Vec<structs::Connection>,
 }
 
 struct ResourceDb<'a>
@@ -65,7 +66,7 @@ impl<'a> ResourceDb<'a>
                 },
             };
             ResourceDbRecord {
-                data: data, 
+                data: data,
                 deps: None,
             }
         });
@@ -201,7 +202,7 @@ impl<'a> ResourceDb<'a>
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct ResourceKey
 {
-    file_id: u32, 
+    file_id: u32,
     fourcc: FourCC
 }
 
@@ -290,6 +291,58 @@ const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
     (91, "Artifact of Nature"),
     (95, "Artifact of Strength"),
 ];
+
+static CUT_SCENE_PICKUPS: &'static [(u32, u32)] = &[
+    (0x3C785450, 589860), // Morph Ball
+    (0x0D72F1F7, 1377077), // Wavebuster
+    (0x11BD63B7, 1769497), // Artifact of Lifegiver
+    (0xC8309DF6, 2359772), // Missile Launcher
+    (0x9A0A03EB, 2435310), // Varia Suit
+    (0x9A0A03EB, 405090173), // Artifact of Wild
+    (0x492CBF4A, 2687109), // Charge Beam
+    (0x4148F7B0, 3155850), // Morph Ball Bomb
+    (0xE1981EFC, 3735555), // Artifact of World
+    (0xAFEFE677, 3997699), // Ice Beam
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0x6655F51E, 524887), // Artifact of Sun
+
+    (0x40C548E9, 917592), // Wave Beam
+    (0xA20A7455, 1048801), // Boost Ball
+    (0x70181194, 1573322), // Spider Ball
+    (0x3FB4A34E, 1966838), // Super Missile
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0xB3C33249, 2557135), // Artifact of Elder
+
+    (0xA49B2544, 69730588), // Thermal Visor
+    (0x49175472, 3473439), // Gravity Suit
+    (0xF7C84340, 3539113), // Artifact of Spirit
+    (0xC44E7A07, 262151), // Space Jump Boots
+    (0x2398E906, 68157908), // Artifact of Truth
+    (0x86EB2E02, 2752545), // X-Ray Visor
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0x86EB2E02, 2753076), // Artifact of Chozo
+
+    (0xE39C342B, 589827), // Grapple Beam
+    (0x35C5D736, 786470), // Flamethrower !!!!
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0x8A97BB54, 852800), // Artifact of Warrior
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0xBBFA4AB3, 2556031), // Artifact of Newborn
+
+    (0xA4719C6A, 272508), // Artifact of Nature
+
+    // XXX Doesn't normally have a cutscene. Skip?
+    (0x89A6CB8D, 720951), // Artifact of Strength
+
+    (0x901040DF, 786472), // Ice Spreader
+    (0x4CC18E5A, 1376287), // Plasma Beam
+];
+
 
 #[derive(Debug)]
 struct PickupData
@@ -435,9 +488,18 @@ fn trace_pickup_deps(
 
             patch_dependencies(pickup.kind, &mut deps);
 
+            // If this is a pickup with an associated cutscene, find the connections we want to
+            // preserve and the objects we want to remove.
+            let mut post_pickup_relay_connections = vec![];
+            if CUT_SCENE_PICKUPS.contains(&(res.file_id, obj.instance_id)) {
+                post_pickup_relay_connections = build_skip_cutscene_relay_connections(
+                    pickup.kind, &obj.connections, &scly_db);
+                removals.push(find_cutscene_trigger_relay(pickup.kind, &obj.connections, &scly_db))
+            }
+
             if let Some(type_id) = PICKUP_TYPES.iter().position(|&(pos, _)| *counter == pos) {
                 let mut data = vec![];
-                pickup.write(&mut data);
+                pickup.write(&mut data).unwrap();
                 let name = PICKUP_TYPES[type_id].1;
                 pickup_table.insert(type_id, PickupData {
                     name: name,
@@ -460,6 +522,7 @@ fn trace_pickup_deps(
                         layer: scly_db[&obj.instance_id].0 as u32,
                         instance_id: obj.instance_id,
                     }),
+                    post_pickup_relay_connections: post_pickup_relay_connections,
                 };
                 if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
                     locations.last_mut().unwrap().pickups.push(location);
@@ -493,7 +556,7 @@ fn search_for_scly_object<'a, F>(
     // Circular references are possible, so keep track of which ones we've seen
     // already.
     let mut seen = HashSet::new();
-    
+
     for c in connections {
         stack.push(c.target_object_id);
         seen.insert(c.target_object_id);
@@ -518,6 +581,117 @@ fn search_for_scly_object<'a, F>(
     None
 }
 
+fn build_skip_cutscene_relay_connections<'a>(
+    pickup_type: u32,
+    obj_connections: &reader_writer::LazyArray<'a, structs::Connection>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+) -> Vec<structs::Connection>
+{
+    let post_pickup_relay = search_for_scly_object(obj_connections, scly_db, |o| {
+        o.property_data.as_relay()
+            .map(|i| i.name.to_bytes() == b"Relay Post Pickup")
+            .unwrap_or(false)
+    }).unwrap();
+
+    let mut connections = vec![];
+    for conn in post_pickup_relay.connections.iter() {
+        let connected_object = if let Some(obj) = scly_db.get(&conn.target_object_id) {
+            &obj.1
+        } else {
+            connections.push(conn.clone());
+            continue
+        };
+        if let Some(timer) = connected_object.property_data.as_timer() {
+             let name = timer.name.to_bytes();
+             if name == b"Timer Jingle" {
+                 connections.extend(connected_object.connections.iter().map(|i| i.clone()));
+             } else if name == b"Timer HUD" {
+                 // We want to copy most of Timer HUD's connections, with a few exceptions
+                 for conn in connected_object.connections.iter() {
+                    let obj = if let Some(ref obj) = scly_db.get(&conn.target_object_id) {
+                        &obj.1
+                    } else {
+                        connections.push(conn.clone());
+                        continue
+                    };
+
+                    let is_log_screen_timer = obj.property_data.as_timer()
+                        .map(|i| i.name.to_bytes() == &b"Timer - Delay Enter Logbook Screen"[..])
+                        .unwrap_or(false);
+                    // Skip player hints and a artifact log screen timers
+                    // Note the special case for the Artifact of Truth's timer
+                    if (is_log_screen_timer && obj.instance_id != 1049534) ||
+                        obj.property_data.as_player_hint().is_some() {
+                        continue
+                    }
+                    connections.push(conn.clone());
+                 }
+             } else {
+                 connections.push(conn.clone());
+             }
+        } else if connected_object.property_data.as_player_hint().is_none() {
+            // Skip the Player Hint objects.
+            connections.push(conn.clone());
+        }
+    }
+
+    // Stop here if not the Varia Suit
+    if pickup_type != 22 {
+        return connections
+    }
+
+    // We need a special case for the Varia Suit to unlock the doors
+    let unlock_doors_relay = search_for_scly_object(obj_connections, scly_db, |o| {
+        o.property_data.as_relay()
+            .map(|i| i.name.to_bytes() == &b"!Relay Local End Suit Attainment Cinematic"[..])
+            .unwrap_or(false)
+    }).unwrap();
+
+    for conn in unlock_doors_relay.connections.iter() {
+        let connected_object = &scly_db.get(&conn.target_object_id).unwrap().1;
+        if connected_object.property_data.as_dock().is_some() ||
+           connected_object.property_data.as_trigger().is_some() {
+            connections.push(conn.clone());
+        }
+    }
+
+    connections
+}
+
+fn find_cutscene_trigger_relay<'a>(
+    pickup_type: u32,
+    obj_connections: &reader_writer::LazyArray<'a, structs::Connection>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+) -> ScriptObjectLocation
+{
+    // We need to look for specific layer names depending on the pickup type. This is mostly the
+    // result of the non-cutscene artifacts, for which the relay we're looking for is simply titled
+    // "Relay".
+    // We need this seperate static in order to get static lifetimes. Its kinda awful.
+    static NAME_CANDIDATES: &'static [&'static [u8]] = &[
+        b"!Relay Start Suit Attainment Cinematic",
+        b"!Relay Local Start Suit Attainment Cinematic",
+        b"Relay-start of cinema",
+        b"Relay",
+    ];
+    let name_candidates: &[&[u8]] = match pickup_type {
+        21 => &NAME_CANDIDATES[0..1],
+        22 => &NAME_CANDIDATES[1..2],
+        29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40
+            => &NAME_CANDIDATES[2..4],
+        _ => &NAME_CANDIDATES[2..3],
+    };
+    let obj = search_for_scly_object(obj_connections, scly_db, |o| {
+        o.property_data.as_relay()
+            .map(|i| name_candidates.contains(&i.name.to_bytes()))
+            .unwrap_or(false)
+    }).unwrap();
+    ScriptObjectLocation {
+        layer: scly_db[&obj.instance_id].0 as u32,
+        instance_id: obj.instance_id,
+    }
+}
+
 // We can get pretty close to the Miles' dependecies for each pickup, but some
 // of them need custom modification to match exactly.
 fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
@@ -534,7 +708,7 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x11BEB861, b"STRG".into())); // HudMemo
         deps.insert(ResourceKey::new(0x50535343, b"SCAN".into()));
         deps.insert(ResourceKey::new(0x50535353, b"STRG".into())); // HudMemo
-        // TODO: Miles uses a custom texture so it doesn't different from the
+        // TODO: Miles uses a custom texture so it looks different from the
         //       gravity suit. Either figure out a replacement or get
         //       permission to use it.
     };
@@ -576,7 +750,7 @@ fn main()
         nothing_pickup.curr_increase = 0;
         nothing_pickup.actor_params.scan_params.scan = 0xDEAF0002;
         // TODO: rotate model?
-        nothing_pickup.write(&mut nothing_bytes);
+        nothing_pickup.write(&mut nothing_bytes).unwrap();
     }
     let mut nothing_deps: HashSet<_> = pickup_table[&4].deps.iter()
         .filter(|i| i.fourcc != b"SCAN".into() && i.fourcc != b"STRG".into())
@@ -606,6 +780,15 @@ fn main()
                 println!("                PickupLocation {{");
                 println!("                    location: {:?},", location.location);
                 println!("                    hudmemo: {:?},", location.hudmemo);
+                if location.post_pickup_relay_connections.len() == 0 {
+                    println!("                    post_pickup_relay_connections: &[]");
+                } else {
+                    println!("                    post_pickup_relay_connections: &[");
+                    for conn in &location.post_pickup_relay_connections {
+                        println!("                        {:?},", conn);
+                    }
+                    println!("                    ],");
+                }
                 println!("                }},");
             }
             println!("            ],");

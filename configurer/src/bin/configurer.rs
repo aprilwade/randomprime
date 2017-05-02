@@ -126,6 +126,18 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
     }
 }
 
+fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [structs::Connection])
+    -> structs::SclyObject<'a>
+{
+    structs::SclyObject {
+        instance_id: instance_id,
+        connections: reader_writer::LazyArray::Owned(connections.to_owned()),
+        property_data: structs::SclyProperty::Relay(structs::Relay {
+            name: Cow::Owned(CString::new(b"Randomizer Post Pickup Relay".to_vec()).unwrap()),
+            active: 1,
+        })
+    }
+}
 
 fn modify_pickups<'a, I, J>(
     gc_disc: &mut structs::GcDisc<'a>,
@@ -235,6 +247,17 @@ fn modify_pickups<'a, I, J>(
             let layers = scly.layers.as_mut_vec();
 
             let mut additional_connections = Vec::new();
+
+            // Add a post-pickup relay. This is used to support cutscene-skipping
+            let instance_id = fresh_instance_id_iter.next().unwrap();
+            let relay = post_pickup_relay_template(instance_id,
+                                                   pickup_location.post_pickup_relay_connections);
+            layers[new_layer_idx].objects.as_mut_vec().push(relay);
+            additional_connections.push(structs::Connection {
+                state: 1,
+                message: 13,
+                target_object_id: instance_id,
+            });
 
             // If this is an artifact, insert a layer change function
             let pickup_kind = pickup_meta.pickup.kind;

@@ -199,8 +199,10 @@ macro_rules! build_scly_property {
 }
 
 build_scly_property!(
+    Trigger,         as_trigger,          as_trigger_mut,            0x04, 9,
     Timer,           as_timer,            as_timer_mut,              0x05, 6,
     Sound,           as_sound,            as_sound_mut,              0x09, 20,
+    Dock,            as_dock,             as_dock_mut,               0x0B, 7,
     SpawnPoint,      as_spawn_point,      as_spawn_point_mut,        0x0F, 35,
     Pickup,          as_pickup,           as_pickup_mut,             0x11, 18,
     Relay,           as_relay,            as_relay_mut,              0x15, 2,
