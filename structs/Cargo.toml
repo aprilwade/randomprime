@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Tyler Wade <wayedt@gmail.com>"]
 
 build = "build.rs"
+workspace = ".."
 
 [dependencies]
 reader_writer = { path = "../reader_writer" }
