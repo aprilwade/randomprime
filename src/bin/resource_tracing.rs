@@ -8,10 +8,10 @@
 
 extern crate memmap;
 extern crate flate2;
-extern crate configurer;
+extern crate randomprime_patcher;
 
-pub use configurer::*;
-use configurer::pickup_meta::{/*PickupLocation,*/ ScriptObjectLocation};
+pub use randomprime_patcher::*;
+use randomprime_patcher::pickup_meta::{/*PickupLocation,*/ ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource, ResourceKind};

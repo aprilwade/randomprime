@@ -1,12 +1,12 @@
 extern crate memmap;
 extern crate clap;
-extern crate configurer;
+extern crate randomprime_patcher;
 
 use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
 
-pub use configurer::*;
+pub use randomprime_patcher::*;
 
 use reader_writer::{FourCC, Reader};
 use reader_writer::generic_array::GenericArray;
