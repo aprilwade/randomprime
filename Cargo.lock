@@ -215,7 +215,7 @@ dependencies = [
 
 [[package]]
 name = "randomprime_patcher"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap 2.19.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",

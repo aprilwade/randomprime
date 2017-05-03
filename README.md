@@ -1,7 +1,7 @@
 # randomprime
 
 This is a tool for randomizing/customizing the layout of pickups in Metroid Prime.
-It has three parts: a webpage for generating a randomized layout [(Generator)](https://aprilwade.github.io/randomprime/generator.html), a webpage for editing layouts [(Editor)](https://aprilwade.github.io/randomprime/editor.html), and a command line program that modifies the game ISO [(ISO Patcher)](https://github.com/aprilwade/randomprime/releases). All layouts created by the generator should be completable.
+It has three parts: a webpage for generating a randomized layout [(Generator)](https://aprilwade.github.io/randomprime/generator.html), a webpage for editing layouts [(Editor)](https://aprilwade.github.io/randomprime/editor.html), and a command line program that modifies the game ISO [(ISO Patcher)](https://github.com/aprilwade/randomprime/releases/latest). All layouts created by the generator should be completable.
 
 This system has no notion of a "seed".
 Instead, a layout is communicated to and from these components as an 87 character long "layout descriptor".
