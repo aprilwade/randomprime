@@ -8,7 +8,7 @@ use clap::Format;
 
 pub use randomprime_patcher::*;
 
-use reader_writer::{FourCC, Reader};
+use reader_writer::{FourCC, Reader, Writable};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
 use reader_writer::num::{BigUint, Integer, ToPrimitive};
@@ -77,6 +77,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
             _ => panic!(),
         };
 
+
         for res in pak.resources.iter() {
             let key = (res.file_id, res.fourcc());
             if looking_for.remove(&key) {
@@ -85,9 +86,57 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         }
     }
 
+    // Generate and add the assets for the Phazon Suit
+    let (cmdl, ancs) = create_phazo_cmdl_and_ancs(&mut found);
+    let key = (cmdl.file_id, cmdl.fourcc());
+    if looking_for.remove(&key) {
+        assert!(found.insert(key, cmdl).is_none());
+    }
+    let key = (ancs.file_id, ancs.fourcc());
+    if looking_for.remove(&key) {
+        assert!(found.insert(key, ancs).is_none());
+    }
+
     assert!(looking_for.is_empty());
 
     found
+}
+
+fn create_phazo_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
+    -> (structs::Resource<'a>, structs::Resource<'a>)
+{
+    let phazon_suit_cmdl = {
+        let grav_suit_cmdl = ResourceData::new(&resources[&(0x95946E41, b"CMDL".into())]);
+        let mut phazon_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+
+        // Ensure the length is a multiple of 32
+        let len = phazon_cmdl_bytes.len();
+        phazon_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Change which textures this points to
+        0x50535431u32.write(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
+        0x50535432u32.write(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
+        pickup_meta::build_resource(
+            0x50534D44,
+            structs::ResourceKind::External(phazon_cmdl_bytes, b"CMDL".into())
+        )
+    };
+    let phazon_suit_ancs = {
+        let grav_suit_ancs = ResourceData::new(&resources[&(0x27A97006, b"ANCS".into())]);
+        let mut phazon_ancs_bytes = grav_suit_ancs.decompress().into_owned();
+
+        // Ensure the length is a multiple of 32
+        let len = phazon_ancs_bytes.len();
+        phazon_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Change this to refer to the CMDL above
+        0x50534D44u32.write(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
+        pickup_meta::build_resource(
+            0x5053414E,
+            structs::ResourceKind::External(phazon_ancs_bytes, b"ANCS".into())
+        )
+    };
+    (phazon_suit_cmdl, phazon_suit_ancs)
 }
 
 fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)

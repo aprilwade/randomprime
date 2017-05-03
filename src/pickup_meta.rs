@@ -77,6 +77,10 @@ const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
     (0x50535343, *b"SCAN", include_bytes!("../extra_assets/phazon_suit_scan.scan")),
     // Phazon Suit STRG
     (0x50535353, *b"STRG", include_bytes!("../extra_assets/phazon_suit_scan.strg")),
+    // Phazon Suit TXTR 1
+    (0x50535431, *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
+    // Phazon Suit TXTR 2
+    (0x50535432, *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
     // Nothing acquired HudMemo STRG
     (0xDEAF0000, *b"STRG", include_bytes!("../extra_assets/nothing_hudmemo.strg")),
     // Nothing scan STRG
@@ -86,30 +90,31 @@ const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
 ];
 
 #[cfg(not(debug_assertions))]
-pub fn extra_assets<'a>() -> Vec<Resource<'a>>
+pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
 {
-    EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
-        Resource {
-            compressed: false,
-            file_id: file_id,
-            kind: ResourceKind::Unknown(Reader::new(bytes), fourcc.into()),
-        }
-    }).collect()
+    Resource {
+        compressed: false,
+        file_id: file_id,
+        kind: kind,
+    }
 }
 
 #[cfg(debug_assertions)]
+pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
+{
+    Resource {
+        compressed: false,
+        file_id: file_id,
+        kind: kind,
+        original_offset: 0,
+    }
+}
 pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 {
     EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
-        Resource {
-            compressed: false,
-            file_id: file_id,
-            kind: ResourceKind::Unknown(Reader::new(bytes), fourcc.into()),
-            original_offset: 0,
-        }
+        build_resource(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
     }).collect()
 }
-
 
 const MARKER_ASSERT_DATA: &'static [u8] = &[
     0x87, 0x65, 0x43, 0x21, 0x00, 0x00, 0x00, 0x00,

@@ -7,16 +7,13 @@
 //! be dependencies, but don't seem to match Claris's dependency lists.
 
 extern crate memmap;
-extern crate flate2;
 extern crate randomprime_patcher;
 
 pub use randomprime_patcher::*;
 use randomprime_patcher::pickup_meta::{/*PickupLocation,*/ ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
-use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource, ResourceKind};
-
-use flate2::{Decompress, Flush};
+use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
 
 use std::mem;
 use std::env::args;
@@ -58,15 +55,8 @@ impl<'a> ResourceDb<'a>
     {
         let key = ResourceKey::new(res.file_id, res.fourcc());
         self.map.entry(key).or_insert_with(move || {
-            let data = ResourceData {
-                is_compressed: res.compressed,
-                data: match res.kind {
-                    ResourceKind::Unknown(reader, _) => reader,
-                    _ => panic!("Only uninitialized (aka Unknown) resources may be added."),
-                },
-            };
             ResourceDbRecord {
-                data: data,
+                data: ResourceData::new(&res),
                 deps: None,
             }
         });
@@ -213,33 +203,6 @@ impl ResourceKey
         ResourceKey {
             file_id: file_id,
             fourcc: fourcc,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct ResourceData<'a>
-{
-    is_compressed: bool,
-    data: Reader<'a>,
-}
-
-
-impl<'a> ResourceData<'a>
-{
-    fn decompress(&self) -> Cow<'a, [u8]>
-    {
-        if self.is_compressed {
-            let mut reader = self.data.clone();
-            let size: u32 = reader.read(());
-            let _header: u16 = reader.read(());
-            // TODO: We could use Vec::set_len to avoid initializing the whole array.
-            let mut output = vec![0; size as usize];
-            Decompress::new(false).decompress(&reader, &mut output, Flush::Finish).unwrap();
-
-            Cow::Owned(output)
-        } else {
-            Cow::Borrowed(&self.data)
         }
     }
 }
@@ -480,10 +443,13 @@ fn trace_pickup_deps(
                 deps.insert(ResourceKey::new(strg, b"STRG".into()));
                 hudmemo_strg = strg;
             } else {
-                // Override for the Phazon Suit
+                // Overrides for the Phazon Suit
                 assert_eq!(pickup.kind, 23);
                 hudmemo_strg = 0x11BEB861;
                 pickup.actor_params.scan_params.scan = 0x50535343;
+
+                pickup.cmdl = 0x50534D44;
+                pickup.ancs.file_id = 0x5053414E;
             }
 
             patch_dependencies(pickup.kind, &mut deps);
@@ -708,9 +674,18 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x11BEB861, b"STRG".into())); // HudMemo
         deps.insert(ResourceKey::new(0x50535343, b"SCAN".into()));
         deps.insert(ResourceKey::new(0x50535353, b"STRG".into())); // HudMemo
-        // TODO: Claris uses a custom texture so it looks different from the
-        //       gravity suit. Either figure out a replacement or get
-        //       permission to use it.
+
+        // Remove the Gravity Suit's CMDL and ANCS
+        deps.remove(&ResourceKey::new(0x95946E41, b"CMDL".into()));
+        deps.remove(&ResourceKey::new(0x27A97006, b"ANCS".into()));
+        deps.remove(&ResourceKey::new(0x08C625DA, b"TXTR".into()));
+        deps.remove(&ResourceKey::new(0xA95D06BC, b"TXTR".into()));
+
+        // Add the custom CMDL and textures
+        deps.insert(ResourceKey::new(0x50534D44, b"CMDL".into()));
+        deps.insert(ResourceKey::new(0x5053414E, b"ANCS".into()));
+        deps.insert(ResourceKey::new(0x50535431, b"TXTR".into()));
+        deps.insert(ResourceKey::new(0x50535432, b"TXTR".into()));
     };
 }
 
@@ -738,6 +713,10 @@ fn main()
         trace_pickup_deps(&mut gc_disc, f, &mut i, &mut pickup_table, &mut locations,
                           &mut cmdl_aabbs);
     }
+
+    // Special case of Phazon Suits' custom CMDL
+    let aabb = *cmdl_aabbs.get(&0x95946E41).unwrap();
+    assert!(cmdl_aabbs.insert(0x50534D44, aabb).is_none());
 
     // Special case for Nothing
     let mut nothing_bytes = Vec::new();
@@ -840,7 +819,9 @@ fn main()
         }
         println!("        ],");
         println!("        deps: &[");
-        for dep in &pickup_data.deps {
+        let mut deps: Vec<_> = pickup_data.deps.iter().collect();
+        deps.sort();
+        for dep in deps {
             println!("            (0x{:08X}, *b\"{}\"),", dep.file_id, dep.fourcc);
         }
         println!("        ],");

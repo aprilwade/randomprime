@@ -275,6 +275,7 @@ macro_rules! build_resource_data {
         pub enum ResourceKind<'a>
         {
             Unknown(Reader<'a>, FourCC),
+            External(Vec<u8>, FourCC),
             $($name($name<'a>),)*
         }
 
@@ -284,6 +285,7 @@ macro_rules! build_resource_data {
             {
                 match *self {
                     ResourceKind::Unknown(_, fourcc) => fourcc,
+                    ResourceKind::External(_, fourcc) => fourcc,
                     $(ResourceKind::$name(_) => $fourcc.into(),)*
                 }
             }
@@ -331,6 +333,7 @@ macro_rules! build_resource_data {
             {
                 match *self {
                     ResourceKind::Unknown(ref data, _) => data.len(),
+                    ResourceKind::External(ref data, _) => data.len(),
                     $(ResourceKind::$name(ref i) => i.size(),)*
                 }
             }
@@ -339,6 +342,7 @@ macro_rules! build_resource_data {
             {
                 match *self {
                     ResourceKind::Unknown(ref data, _) => writer.write_all(&data),
+                    ResourceKind::External(ref data, _) => writer.write_all(&data),
                     $(ResourceKind::$name(ref i) => i.write(writer),)*
                 }
             }
