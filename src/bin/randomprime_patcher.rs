@@ -447,7 +447,7 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
     // Reverse the order of the odd bits
     let mut bits = sum.to_str_radix(2).into_bytes();
     for i in 0..(bits.len() / 4) {
-        let len = bits.len();
+        let len = bits.len() - bits.len() % 2;
         bits.swap(i * 2 + 1, len - i * 2 - 1);
     }
     sum = BigUint::parse_bytes(&bits, 2).unwrap();
