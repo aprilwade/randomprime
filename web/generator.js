@@ -288,21 +288,6 @@ $().ready(function() {
         ]);
     }
 
-    // TODO: When additional difficulties are added, move this into the normal
-    //       difficult to file.
-    function normal_difficulty_optional_items()
-    {
-        return [
-            [DifficultyShared.MISSILE, 49],
-            [DifficultyShared.ENERGY_TANK, 14],
-            [DifficultyShared.VARIA_SUIT, 1],
-            [DifficultyShared.POWER_BOMB, 1],
-            [DifficultyShared.POWER_BOMB_EXPANSION, 3],
-            [DifficultyShared.WAVEBUSTER, 1],
-            [DifficultyShared.ICE_SPREADER, 1],
-            [DifficultyShared.FLAMETHROWER, 1],
-        ];
-    }
 
     $('#randomize_button').click(function() {
         var nothings_count = update_nothings_count();
@@ -311,9 +296,9 @@ $().ready(function() {
             return;
         }
 
-        var difficulty_reqs;
+        var difficulty;
         if($('input[name="difficulty"]:checked').val() == "normal") {
-            difficulty_reqs = NormalDifficultyReqs;
+            difficulty = NormalDifficulty;
         } else {
             display_message("Illegal difficulty", true);
             return;
@@ -325,13 +310,13 @@ $().ready(function() {
         if(q_name == 'all') {
             // Don't need to do anything
         } else if(q_name == 'none') {
-            let optional = normal_difficulty_optional_items();
+            let optional = difficulty.optional_items;
             for(var [item_type, count] of optional) {
                 quantities.set(item_type, quantities.get(item_type) - count);
                 quantities.set(DifficultyShared.NOTHING, quantities.get(DifficultyShared.NOTHING) + count);
             }
         } else if(q_name == 'some') {
-            let optional = normal_difficulty_optional_items();
+            let optional = difficulty.optional_items
             var optional_readd_list = [];
             var total_kept = 0;
             for(var [item_type, count] of optional) {
@@ -415,7 +400,7 @@ $().ready(function() {
         }
         console.log(quantities);
 
-        var layout = generate_layout(difficulty_reqs, quantities);
+        var layout = generate_layout(difficulty.room_reqs, quantities);
 
         if(typeof layout === "string") {
             display_message(layout, true);
