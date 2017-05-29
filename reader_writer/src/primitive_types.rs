@@ -190,6 +190,19 @@ impl<'a, T> Readable<'a> for Option<T>
     }
 }
 
+impl<T> Writable for Option<T>
+    where T: Writable
+{
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    {
+        if let Some(ref i) = *self {
+            i.write(writer)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 impl<'a, T> Readable<'a> for Box<T>
     where T: Readable<'a>
 {

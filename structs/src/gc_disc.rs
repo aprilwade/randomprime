@@ -10,6 +10,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::ascii::AsciiExt;
 
 use ::pak::Pak;
+use ::thp::Thp;
 
 // Based on http://hitmen.c02.at/files/yagcd/yagcd/chap13.html
 
@@ -281,6 +282,7 @@ pub struct ReadWrapper<'a>(RefCell<Box<Read + 'a>>);
 pub enum FstEntryFile<'a>
 {
     Pak(Pak<'a>),
+    Thp(Thp<'a>),
     ExternalFile(ReadWrapper<'a>, usize),
     Unknown(Reader<'a>),
 }
@@ -319,12 +321,21 @@ impl<'a> FstEntry<'a>
         let mut ext = [name[len - 3], name[len - 2], name[len - 1]];
         ext.make_ascii_lowercase();
 
-        if ext == *b"pak" { 
+        if ext == *b"pak" {
             self.file = match self.file {
                 FstEntryFile::Unknown(ref reader)
                     => FstEntryFile::Pak(reader.clone().read(())),
                 FstEntryFile::Pak(_) => return,
                 _ => panic!("Unexpected fst file type while trying to guess pak."),
+            }
+        }
+
+        if ext == *b"thp" {
+            self.file = match self.file {
+                FstEntryFile::Unknown(ref reader)
+                    => FstEntryFile::Thp(reader.clone().read(())),
+                FstEntryFile::Thp(_) => return,
+                _ => panic!("Unexpected fst file type while trying to guess thp."),
             }
         }
     }
@@ -336,6 +347,7 @@ impl<'a> FstEntryFile<'a>
     {
         match *self {
             FstEntryFile::Pak(ref pak) => pak.size(),
+            FstEntryFile::Thp(ref thp) => thp.size(),
             FstEntryFile::ExternalFile(_, size) => size,
             FstEntryFile::Unknown(ref reader) => reader.len(),
         }
@@ -345,6 +357,7 @@ impl<'a> FstEntryFile<'a>
     {
         match *self {
             FstEntryFile::Pak(ref pak) => pak.write(writer),
+            FstEntryFile::Thp(ref thp) => thp.write(writer),
             FstEntryFile::ExternalFile(ref file, _) => {
                 let mut buf = [0u8; 4096];
                 let mut file = file.0.borrow_mut();

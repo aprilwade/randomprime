@@ -654,6 +654,32 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
 
+const FMV_NAMES: &'static [&'static [u8]] = &[
+    b"attract0.thp",
+    b"attract1.thp",
+    b"attract2.thp",
+    b"attract3.thp",
+    b"attract4.thp",
+    b"attract5.thp",
+    b"attract6.thp",
+    b"attract7.thp",
+    b"attract8.thp",
+    b"attract9.thp",
+];
+fn replace_fmvs(gc_disc: &mut structs::GcDisc)
+{
+    const FMV: &'static [u8] = include_bytes!("../../extra_assets/attract_mode.thp");
+    let fst = &mut gc_disc.file_system_table;
+    let fmv_entries = fst.fst_entries.iter_mut()
+        .filter(|e| FMV_NAMES.contains(&e.name.to_bytes()));
+    for entry in fmv_entries {
+        let file = entry.file_mut().unwrap();
+        let rw = structs::ReadWrapper::new(FMV);
+        *file = structs::FstEntryFile::ExternalFile(rw, FMV.len());
+    }
+}
+
+
 struct ProgressNotifier
 {
     total_size: usize,
@@ -728,6 +754,9 @@ fn main_inner() -> Result<(), String>
             .takes_value(true))
         .arg(Arg::with_name("skip frigate")
             .long("skip-frigate"))
+        .arg(Arg::with_name("keep attract mode")
+            .long("keep-attract-mode")
+            .help("Keep the attract mode FMVs, which are removed by default"))
         .arg(Arg::with_name("quiet")
             .long("quiet"))
         .arg(Arg::with_name("change starting items")
@@ -742,6 +771,7 @@ fn main_inner() -> Result<(), String>
     let output_iso_path = matches.value_of("output iso path").unwrap();
     let pickup_layout = matches.value_of("pickup layout").unwrap();
     let skip_frigate = matches.is_present("skip frigate");
+    let keep_fmvs = matches.is_present("keep attract mode");
     let quiet = matches.is_present("quiet");
     let starting_items = matches.value_of("change starting items");
 
@@ -802,6 +832,10 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
 
     if let Some(starting_items) = starting_items.map(|s| s.parse::<u64>().unwrap()) {
         patch_starting_pickups(&mut gc_disc, starting_items);
+    }
+
+    if !keep_fmvs {
+        replace_fmvs(&mut gc_disc);
     }
 
     let pn = ProgressNotifier::new(quiet);

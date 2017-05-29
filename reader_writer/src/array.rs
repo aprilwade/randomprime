@@ -109,6 +109,14 @@ impl<'a, T> LazyArray<'a, T>
             LazyArray::Borrowed(_) => unreachable!(),
         }
     }
+
+    pub fn is_owned(&self) -> bool
+    {
+        match *self {
+            LazyArray::Borrowed(_) => false,
+            LazyArray::Owned(_) => true,
+        }
+    }
 }
 
 impl<'a, T> Readable<'a> for LazyArray<'a, T>
