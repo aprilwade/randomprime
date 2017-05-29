@@ -1,4 +1,5 @@
 extern crate memmap;
+#[macro_use]
 extern crate clap;
 extern crate randomprime_patcher;
 
@@ -739,7 +740,7 @@ fn main_inner() -> Result<(), String>
     pickup_meta::setup_pickup_meta_table();
 
     let matches = App::new("randomprime ISO patcher")
-        .version("0.1.1")
+        .version(crate_version!())
         .arg(Arg::with_name("input iso path")
             .long("input-iso")
             .required(true)
