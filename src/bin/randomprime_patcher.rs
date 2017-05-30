@@ -337,6 +337,13 @@ fn modify_pickups<'a, I, J>(
                     .unwrap();
                 update_hudmemo(hudmemo, &pickup_meta);
             }
+            {
+                let location = pickup_location.attainment_audio;
+                let attainment_audio = layers[location.layer as usize].objects.iter_mut()
+                    .find(|obj| obj.instance_id ==  location.instance_id)
+                    .unwrap();
+                update_attainment_audio(attainment_audio, &pickup_meta);
+            }
         }
     }
 }
@@ -382,6 +389,14 @@ fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     hudmemo.strg = pickup_meta.hudmemo_strg;
     hudmemo.first_message_timer = 1.;
+}
+
+fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
+                           pickup_meta: &pickup_meta::PickupMeta)
+{
+    let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
+    let bytes = pickup_meta.attainment_audio_file_name.as_bytes();
+    attainment_audio.audio_file_name = Cow::Borrowed(CStr::from_bytes_with_nul(bytes).unwrap());
 }
 
 fn calculate_center(aabb: [f32; 6], rotation: GenericArray<f32, U3>, scale: GenericArray<f32, U3>)

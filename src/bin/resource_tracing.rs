@@ -21,6 +21,7 @@ use std::fs::File;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
+use std::str as stdstr;
 
 // Duplicated from pickup_meta. This version needs owned-lists instead of borrowed.
 #[derive(Clone, Debug)]
@@ -28,6 +29,7 @@ pub struct PickupLocation
 {
     location: ScriptObjectLocation,
     hudmemo: Option<ScriptObjectLocation>,
+    attainment_audio: ScriptObjectLocation,
     post_pickup_relay_connections: Vec<structs::Connection>,
 }
 
@@ -314,6 +316,7 @@ struct PickupData
     bytes: Vec<u8>,
     deps: HashSet<ResourceKey>,
     hudmemo_strg: u32,
+    attainment_audio_file_name: Vec<u8>,
 }
 
 #[derive(Debug)]
@@ -402,6 +405,12 @@ fn trace_pickup_deps(
         }
 
         for (layer_num, mut obj) in pickups {
+            if *counter == 84 {
+                // Skip the extra phazon suit-thing
+                *counter += 1;
+                continue
+            }
+
             let pickup = obj.property_data.as_pickup_mut().unwrap();
             let mut deps = res_db.get_dependencies(&pickup);
 
@@ -410,6 +419,37 @@ fn trace_pickup_deps(
                     .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
                     .unwrap_or(false)
             );
+
+            const ATTAINMENT_AUDIO_FILES: &'static [&'static [u8]] = &[
+                b"/audio/itm_x_short_02.dsp",
+                b"audio/jin_artifact.dsp",
+                b"audio/jin_itemattain.dsp",
+            ];
+            let attainment_audio = search_for_scly_object(&obj.connections, &scly_db,
+                |obj| obj.property_data.as_streamed_audio()
+                    .map(|sa| ATTAINMENT_AUDIO_FILES.contains(&sa.audio_file_name.to_bytes()))
+                    .unwrap_or(false)
+            );
+            // The Phazon Suit is weird: the audio object isn't directly connected to the Pickup.
+            // So, hardcode its location.
+            let attainment_audio_location;
+            let attainment_audio_file_name;
+            if let Some(attainment_audio) = attainment_audio {
+                attainment_audio_location = ScriptObjectLocation {
+                    layer: scly_db[&attainment_audio.instance_id].0 as u32,
+                    instance_id: attainment_audio.instance_id,
+                };
+                let streamed_audio = attainment_audio.property_data.as_streamed_audio().unwrap();
+                attainment_audio_file_name = streamed_audio.audio_file_name.to_bytes_with_nul()
+                                                           .to_owned();
+            } else {
+                assert!(*counter == 83);
+                attainment_audio_location = ScriptObjectLocation {
+                    layer: 1,
+                    instance_id: 68813644,
+                };
+                attainment_audio_file_name = b"audio/jin_itemattain.dsp\0".to_vec();
+            };
 
             let mut removals = Vec::new();
             if pickup.kind >= 29 && pickup.kind <= 40 {
@@ -471,38 +511,36 @@ fn trace_pickup_deps(
                     name: name,
                     bytes: data,
                     deps: deps,
-                    hudmemo_strg: hudmemo_strg
+                    hudmemo_strg: hudmemo_strg,
+                    attainment_audio_file_name: attainment_audio_file_name,
                 });
             }
 
-            // TODO: Find a better way to skip this than checking counter
-            if *counter != 84 {
-                // Skip the extra phazon suit-thing
-                let fid = res.file_id;
-                let location = PickupLocation {
-                    location: ScriptObjectLocation {
-                        layer: layer_num as u32,
-                        instance_id: obj.instance_id,
-                    },
-                    hudmemo: hudmemo.map(|obj| ScriptObjectLocation {
-                        layer: scly_db[&obj.instance_id].0 as u32,
-                        instance_id: obj.instance_id,
-                    }),
-                    post_pickup_relay_connections: post_pickup_relay_connections,
-                };
-                if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
-                    locations.last_mut().unwrap().pickups.push(location);
-                } else {
-                    locations.push(RoomInfo {
-                        room_id: res.file_id,
-                        pickups: vec![location],
-                        objects_to_remove: HashMap::new(),
-                    });
-                }
-                let mut objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
-                for r in removals {
-                    objects_to_remove.entry(r.layer).or_insert_with(Vec::new).push(r.instance_id);
-                }
+            let fid = res.file_id;
+            let location = PickupLocation {
+                location: ScriptObjectLocation {
+                    layer: layer_num as u32,
+                    instance_id: obj.instance_id,
+                },
+                attainment_audio: attainment_audio_location,
+                hudmemo: hudmemo.map(|obj| ScriptObjectLocation {
+                    layer: scly_db[&obj.instance_id].0 as u32,
+                    instance_id: obj.instance_id,
+                }),
+                post_pickup_relay_connections: post_pickup_relay_connections,
+            };
+            if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
+                locations.last_mut().unwrap().pickups.push(location);
+            } else {
+                locations.push(RoomInfo {
+                    room_id: res.file_id,
+                    pickups: vec![location],
+                    objects_to_remove: HashMap::new(),
+                });
+            }
+            let mut objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
+            for r in removals {
+                objects_to_remove.entry(r.layer).or_insert_with(Vec::new).push(r.instance_id);
             }
 
             *counter += 1;
@@ -745,6 +783,7 @@ fn main()
         bytes: nothing_bytes,
         deps: nothing_deps,
         hudmemo_strg: 0xDEAF0000,
+        attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
 
     println!("// This file is generated by bin/resource_tracing.rs");
@@ -762,6 +801,7 @@ fn main()
             for location in room_info.pickups {
                 println!("                PickupLocation {{");
                 println!("                    location: {:?},", location.location);
+                println!("                    attainment_audio: {:?},", location.attainment_audio);
                 println!("                    hudmemo: {:?},", location.hudmemo);
                 if location.post_pickup_relay_connections.len() == 0 {
                     println!("                    post_pickup_relay_connections: &[]");
@@ -826,6 +866,8 @@ fn main()
         }
         println!("        ],");
         println!("        hudmemo_strg: {:?},", pickup_data.hudmemo_strg);
+        let filename = stdstr::from_utf8(&pickup_data.attainment_audio_file_name).unwrap();
+        println!("        attainment_audio_file_name: {:?},", filename);
         println!("    }},");
 
     }

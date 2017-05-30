@@ -9,21 +9,25 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131372 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131962 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131747 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131377 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131964 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131753 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131178 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131966 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131759 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131414 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131969 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131765 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -35,6 +39,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524406 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 524537 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524516 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -46,6 +51,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589860 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 600315 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600311 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 67708749 },
@@ -56,11 +62,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589928 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 600471 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600296 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589933 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 600473 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600302 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -77,6 +85,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720957 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 721053 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 721040 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -88,6 +97,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 787038 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 787005 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -99,6 +109,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048674 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1048891 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1048876 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -110,6 +121,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179651 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1179772 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179744 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -121,6 +133,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310957 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1310981 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310977 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -132,6 +145,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1377077 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1377157 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1377153 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1377121 },
@@ -152,6 +166,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769497 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1769524 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769520 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1769507 },
@@ -172,11 +187,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1835044 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1835470 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835393 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1835092 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1835473 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1835399 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -188,6 +205,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966450 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1966462 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966460 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -199,6 +217,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2097239 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2107807 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2107741 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -210,6 +229,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359772 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2359784 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359780 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 7, target_object_id: 2359658 },
@@ -234,6 +254,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2435310 },
+                    attainment_audio: ScriptObjectLocation { layer: 1, instance_id: 69546121 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2436929 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 69546194 },
@@ -248,6 +269,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 6, instance_id: 405090173 },
+                    attainment_audio: ScriptObjectLocation { layer: 6, instance_id: 405090186 },
                     hudmemo: Some(ScriptObjectLocation { layer: 6, instance_id: 405090182 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 405090180 },
@@ -272,6 +294,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2490376 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2500515 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2500454 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -283,6 +306,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687109 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2697717 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697713 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 2697213 },
@@ -293,6 +317,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2697190 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2697821 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2697725 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -309,11 +334,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2949154 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2949311 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949292 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2949293 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2949314 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2949305 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -325,11 +352,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3145782 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3156119 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156040 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3155850 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3156046 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3156042 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 3155833 },
@@ -351,11 +380,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3211358 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3212039 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211962 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3211274 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3212041 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3211968 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -367,6 +398,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3408606 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3408749 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3408618 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -378,6 +410,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3474120 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3474345 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3474275 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -389,6 +422,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3735555 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3735586 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3735582 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 3735566 },
@@ -409,6 +443,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3997699 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3997796 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3997792 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 3997777 },
@@ -432,11 +467,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131438 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131825 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131625 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131446 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 131827 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 131631 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -448,6 +485,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524887 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 524956 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524952 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 524897 },
@@ -468,6 +506,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 600301 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 600312 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 600308 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -479,11 +518,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655531 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 655791 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655751 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655761 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 655793 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655773 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -495,6 +536,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917592 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 917984 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 917980 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 918100 },
@@ -516,6 +558,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983596 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 983762 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983608 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -527,6 +570,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048801 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1049566 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1049562 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1049552 },
@@ -547,6 +591,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1573322 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1573588 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1573584 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1573543 },
@@ -567,6 +612,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1639699 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1640007 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1639827 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -578,6 +624,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769489 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1769503 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769501 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -589,6 +636,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966838 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1966967 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966963 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1966848 },
@@ -609,6 +657,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2031781 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2031836 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2031793 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -620,6 +669,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2557135 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2557239 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2557235 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 2557153 },
@@ -640,6 +690,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 69730588 },
+                    attainment_audio: ScriptObjectLocation { layer: 1, instance_id: 69731493 },
                     hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 69731489 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 69731438 },
@@ -662,6 +713,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687367 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2687575 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2687509 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -673,11 +725,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3343328 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3343474 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343340 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3343377 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3343476 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3343389 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -689,6 +743,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3473439 },
+                    attainment_audio: ScriptObjectLocation { layer: 1, instance_id: 70582837 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473771 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 3473769 },
@@ -698,6 +753,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3473708 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3473975 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3473781 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -714,6 +770,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3539113 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3539130 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3539126 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 3539124 },
@@ -734,6 +791,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3604505 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 3604517 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 3604513 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -748,6 +806,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 126 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 637 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 587 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -759,6 +818,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 262151 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 262327 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 262323 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 262316 },
@@ -779,6 +839,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524795 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 524939 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524850 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -790,6 +851,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852166 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 852221 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852178 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -801,6 +863,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983090 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 983505 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983375 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -812,6 +875,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 68157908 },
+                    attainment_audio: ScriptObjectLocation { layer: 1, instance_id: 68158268 },
                     hudmemo: Some(ScriptObjectLocation { layer: 1, instance_id: 68158264 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 68158057 },
@@ -841,6 +905,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1245494 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1245521 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1245510 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -852,6 +917,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310741 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1310787 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1310782 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -863,6 +929,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769749 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1769769 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1769761 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -874,6 +941,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966828 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1966958 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1966840 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -885,6 +953,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2293843 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2293865 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2293855 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -896,6 +965,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2424845 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2424867 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2424862 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -907,6 +977,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2555958 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2556219 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556180 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -918,6 +989,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2752545 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2753249 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753160 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 2753124 },
@@ -927,6 +999,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2753076 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2753170 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2753166 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 2753127 },
@@ -950,6 +1023,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131635 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 132464 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 132137 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -961,6 +1035,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 328071 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 328300 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 328118 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -972,6 +1047,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589827 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 589900 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 589905 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 589846 },
@@ -992,6 +1068,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 786482 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786478 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 786476 },
@@ -1012,6 +1089,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852800 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 852970 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 852966 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 852814 },
@@ -1021,6 +1099,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 853233 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 853245 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 853243 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1037,6 +1116,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983181 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 983361 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 983251 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1048,6 +1128,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179916 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1180050 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1179980 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1059,6 +1140,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1247078 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1247505 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1247169 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1070,6 +1152,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1441959 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1441973 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1441971 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1081,6 +1164,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1705144 },
+                    attainment_audio: ScriptObjectLocation { layer: 1, instance_id: 68813644 },
                     hudmemo: None,
                     post_pickup_relay_connections: &[]
                 },
@@ -1092,6 +1176,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1770673 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1770854 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1770850 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1103,6 +1188,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2032133 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2032465 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2032240 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1114,6 +1200,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2098666 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2099011 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2098678 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1125,6 +1212,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359591 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2359740 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2359608 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1136,6 +1224,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2556031 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2556121 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2556117 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 2556042 },
@@ -1156,6 +1245,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2621698 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 2621710 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 2621708 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1170,6 +1260,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 272508 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 272572 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 272568 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 272519 },
@@ -1190,6 +1281,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 393484 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 393871 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 393779 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1201,6 +1293,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524303 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 524342 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 524336 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1212,6 +1305,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655366 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 655650 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 655641 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1223,6 +1317,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720951 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 720969 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 720965 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 720962 },
@@ -1243,6 +1338,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786472 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 786528 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 786524 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 786521 },
@@ -1263,11 +1359,13 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917978 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 918135 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918000 }),
                     post_pickup_relay_connections: &[]
                 },
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 918079 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 918091 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 918087 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1279,6 +1377,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1376287 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1376366 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1376362 }),
                     post_pickup_relay_connections: &[
                         Connection { state: 9, message: 11, target_object_id: 1376369 },
@@ -1299,6 +1398,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1507982 },
+                    attainment_audio: ScriptObjectLocation { layer: 0, instance_id: 1508127 },
                     hudmemo: Some(ScriptObjectLocation { layer: 0, instance_id: 1507994 }),
                     post_pickup_relay_connections: &[]
                 },
@@ -1370,6 +1470,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF8333189, *b"CINF"),
         ],
         hudmemo_strg: 1732374682,
+        attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
     // Energy Tank
     PickupMetaRaw {
@@ -1426,6 +1527,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF37BCBC7, *b"ANCS"),
         ],
         hudmemo_strg: 2571909800,
+        attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
     // Thermal Visor
     PickupMetaRaw {
@@ -1479,6 +1581,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xC4AD9154, *b"TXTR"),
         ],
         hudmemo_strg: 1762994935,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // X-Ray Visor
     PickupMetaRaw {
@@ -1533,6 +1636,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xC4AD9154, *b"TXTR"),
         ],
         hudmemo_strg: 3241323380,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Varia Suit
     PickupMetaRaw {
@@ -1586,6 +1690,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xCD995C16, *b"CMDL"),
         ],
         hudmemo_strg: 1960524085,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Gravity Suit
     PickupMetaRaw {
@@ -1639,6 +1744,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFEBBC197, *b"CSKR"),
         ],
         hudmemo_strg: 1823788442,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Phazon Suit
     PickupMetaRaw {
@@ -1692,6 +1798,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFEBBC197, *b"CSKR"),
         ],
         hudmemo_strg: 297711713,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Morph Ball
     PickupMetaRaw {
@@ -1749,6 +1856,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFB112513, *b"CSKR"),
         ],
         hudmemo_strg: 2658115401,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Boost Ball
     PickupMetaRaw {
@@ -1806,6 +1914,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFB112513, *b"CSKR"),
         ],
         hudmemo_strg: 2585342321,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Spider Ball
     PickupMetaRaw {
@@ -1865,6 +1974,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFCEFB0E9, *b"CMDL"),
         ],
         hudmemo_strg: 2186256758,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Morph Ball Bomb
     PickupMetaRaw {
@@ -1918,6 +2028,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xE580D665, *b"TXTR"),
         ],
         hudmemo_strg: 1134854805,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Power Bomb (small)
     PickupMetaRaw {
@@ -1975,6 +2086,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFBDEF3C0, *b"CINF"),
         ],
         hudmemo_strg: 3342044686,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Power Bomb (large)
     PickupMetaRaw {
@@ -2030,6 +2142,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF19131AD, *b"ANCS"),
         ],
         hudmemo_strg: 3314244187,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Charge Beam
     PickupMetaRaw {
@@ -2085,6 +2198,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFBE3C603, *b"EVNT"),
         ],
         hudmemo_strg: 3694059550,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Space Jump Boots
     PickupMetaRaw {
@@ -2142,6 +2256,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFC883F7C, *b"STRG"),
         ],
         hudmemo_strg: 3871572882,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Grapple Beam
     PickupMetaRaw {
@@ -2197,6 +2312,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF86621C9, *b"CMDL"),
         ],
         hudmemo_strg: 3643448637,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Super Missile
     PickupMetaRaw {
@@ -2250,6 +2366,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF7333676, *b"STRG"),
         ],
         hudmemo_strg: 2778944093,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Wavebuster
     PickupMetaRaw {
@@ -2303,6 +2420,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xE904020F, *b"SCAN"),
         ],
         hudmemo_strg: 2218254930,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Ice Spreader
     PickupMetaRaw {
@@ -2356,6 +2474,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFF187234, *b"TXTR"),
         ],
         hudmemo_strg: 3670222270,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Flamethrower
     PickupMetaRaw {
@@ -2410,6 +2529,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xDBDF0424, *b"CINF"),
         ],
         hudmemo_strg: 1231306575,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Wave Beam
     PickupMetaRaw {
@@ -2466,6 +2586,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xDCEC3E77, *b"FRME"),
         ],
         hudmemo_strg: 3090954159,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Ice Beam
     PickupMetaRaw {
@@ -2521,6 +2642,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xDA25B1BE, *b"CMDL"),
         ],
         hudmemo_strg: 220175477,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Plasma Beam
     PickupMetaRaw {
@@ -2577,6 +2699,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xF576EC35, *b"SCAN"),
         ],
         hudmemo_strg: 3013789598,
+        attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
     // Artifact of Lifegiver
     PickupMetaRaw {
@@ -2630,6 +2753,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 1893596527,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Wild
     PickupMetaRaw {
@@ -2683,6 +2807,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 3145805514,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of World
     PickupMetaRaw {
@@ -2736,6 +2861,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 2908011346,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Sun
     PickupMetaRaw {
@@ -2789,6 +2915,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 119487764,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Elder
     PickupMetaRaw {
@@ -2842,6 +2969,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 2793676402,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Spirit
     PickupMetaRaw {
@@ -2895,6 +3023,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 1711827191,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Truth
     PickupMetaRaw {
@@ -2948,6 +3077,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 2811675750,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Chozo
     PickupMetaRaw {
@@ -3001,6 +3131,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 1024810084,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Warrior
     PickupMetaRaw {
@@ -3054,6 +3185,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFCD66153, *b"CMDL"),
         ],
         hudmemo_strg: 4132016065,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Newborn
     PickupMetaRaw {
@@ -3107,6 +3239,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFE2CD4D3, *b"CMDL"),
         ],
         hudmemo_strg: 3768326745,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Nature
     PickupMetaRaw {
@@ -3160,6 +3293,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFAA9C708, *b"ANCS"),
         ],
         hudmemo_strg: 3427004081,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Artifact of Strength
     PickupMetaRaw {
@@ -3213,6 +3347,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xFFD05A2C, *b"CMDL"),
         ],
         hudmemo_strg: 1842925015,
+        attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
     // Nothing
     PickupMetaRaw {
@@ -3266,6 +3401,7 @@ const PICKUP_RAW_META: [PickupMetaRaw; 36] = [
             (0xDEAF0002, *b"SCAN"),
         ],
         hudmemo_strg: 3736010752,
+        attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
 ];
 

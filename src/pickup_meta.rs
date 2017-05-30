@@ -8,6 +8,7 @@ pub struct PickupMeta
     pub pickup: Pickup<'static>,
     pub deps: &'static [(u32, FourCC)],
     pub hudmemo_strg: u32,
+    pub attainment_audio_file_name: &'static str,
 }
 
 static mut _PICKUP_META: &'static [PickupMeta] = &[];
@@ -30,6 +31,7 @@ pub fn setup_pickup_meta_table()
                 pickup: Reader::new(meta.pickup).read(()),
                 deps: leak_vec(meta.deps.iter().map(|&(fid, ref b)| (fid, b.into())).collect()),
                 hudmemo_strg: meta.hudmemo_strg,
+                attainment_audio_file_name: meta.attainment_audio_file_name,
             }
         })
         .collect();
@@ -61,6 +63,7 @@ pub fn aabb_for_pickup_cmdl(cmdl_id: u32) -> Option<[f32; 6]>
 pub struct PickupLocation
 {
     pub location: ScriptObjectLocation,
+    pub attainment_audio: ScriptObjectLocation,
     pub hudmemo: Option<ScriptObjectLocation>,
     pub post_pickup_relay_connections: &'static [Connection]
 }
@@ -181,6 +184,7 @@ struct PickupMetaRaw
     pickup: &'static [u8],
     deps: &'static [(u32, [u8; 4])],
     hudmemo_strg: u32,
+    attainment_audio_file_name: &'static str,
 }
 
 #[derive(Clone, Copy, Debug)]

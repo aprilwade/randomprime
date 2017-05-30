@@ -54,7 +54,6 @@ Also, this means pickup layouts can be customized or created from scratch using 
 
 * A GUI for the ISO patcher
 * Add an "Advanced" difficulty
-* Fix the sound effects that play when pickups are collected
 * Randomize elevators (with completability guarantees) (someday)
 
 
