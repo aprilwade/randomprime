@@ -1,11 +1,13 @@
 extern crate memmap;
 #[macro_use]
 extern crate clap;
+extern crate rand;
 extern crate randomprime_patcher;
 
 use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
+use rand::{XorShiftRng, SeedableRng, Rng};
 
 pub use randomprime_patcher::*;
 
@@ -437,7 +439,7 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
-fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
+fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
 {
     const LAYOUT_CHAR_TABLE: [u8; 64] =
         *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
@@ -459,6 +461,14 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
             return Err(format!("Pickup layout contains invalid character '{}'.", c));
         }
     }
+
+    let sum_bytes = sum.to_bytes_le();
+    let seed = [
+        sum_bytes[0..17].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
+        sum_bytes[17..34].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
+        sum_bytes[34..41].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
+        sum_bytes[41..].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
+    ];
 
     // Reverse the order of the odd bits
     let mut bits = sum.to_str_radix(2).into_bytes();
@@ -496,7 +506,7 @@ fn parse_pickup_layout(text: &str) -> Result<Vec<u8>, String>
     assert!(sum == 0u8.into());
 
     res.reverse();
-    Ok(res)
+    Ok((res, seed))
 }
 
 // Patches the current room to make the Artifact of Truth required to complete
@@ -791,7 +801,7 @@ fn main_inner() -> Result<(), String>
     let quiet = matches.is_present("quiet");
     let starting_items = matches.value_of("change starting items");
 
-    let pickup_layout = parse_pickup_layout(pickup_layout)?;
+    let (pickup_layout, seed) = parse_pickup_layout(pickup_layout)?;
     assert_eq!(pickup_layout.len(), 100);
 
     let file = File::open(input_iso_path)
@@ -822,8 +832,14 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
 
     let pickup_resources = collect_pickup_resources(&gc_disc);
 
+    let mut rng = XorShiftRng::from_seed(seed);
     let mut layout_iter = pickup_layout.iter()
-        .map(|n| &pickup_meta::pickup_meta_table()[*n as usize])
+        .map(|n| {
+            // Use the E-Tank model for a nothing with a 1/4 chance. Otherwise, use the Missile
+            // model.
+            let n = if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize };
+            &pickup_meta::pickup_meta_table()[n]
+        })
         .enumerate();
     let mut fresh_instance_id_range = 0xDEEF0000..;
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {

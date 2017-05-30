@@ -6,7 +6,7 @@ authors = ["April Wade <wayedt@gmail.com>"]
 [dependencies]
 memmap = "0.4"
 rust-crypto = "*"
-rand = "*"
+rand = "0.3"
 flate2 = "0.2"
 clap = "2.9"
 
