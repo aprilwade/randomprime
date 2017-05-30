@@ -13,7 +13,7 @@ Alternatively, you can create a layout from scratch using the editor.
 If you're using Windows, you will need to use `cmd` to run the ISO patcher. Note, you can drag-and-drop files onto the `cmd` window rather than typing out their full path. An example:
 
 ```
-"C:\Users\Me\Downloads\randomprime_patcher.exe" --input-iso "C:\Users\Me\mp1.iso" --output-iso "C:\Users\Me\mp1_random.iso" --layout NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4
+"C:\Users\Me\Downloads\randomprime_patcher.exe" --input-iso="C:\Users\Me\mp1.iso" --output-iso="C:\Users\Me\mp1_random.iso" --layout=NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4
 ```
 
 If you would like to not have to play through the tutorial section (the Frigate) each time, you may also give the ISO patcher the ``--skip-frigate`` argument to skip it.
