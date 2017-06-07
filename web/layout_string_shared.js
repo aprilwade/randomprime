@@ -48,11 +48,9 @@ var LayoutString = (function() {
         num = bigInt(all_bits.join(""), 2)
 
         var s = '';
-        var max = bigInt(36).pow(100);
-        while(max.greater(0)) {
+        for(var i = 0; i < 87; i++) {
             var divmod = num.divmod(64);
             num = divmod.quotient;
-            max = max.divide(64);
 
             s = s + TABLE[divmod.remainder];
         }
