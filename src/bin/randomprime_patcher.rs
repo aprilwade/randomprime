@@ -370,7 +370,6 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
             original_pickup.position[1] - (new_center[1] - original_center[1]),
             original_pickup.position[2] - (new_center[2] - original_center[2]),
         ]),
-        rotation: original_pickup.rotation,
         hitbox: original_pickup.hitbox,
         scan_offset: GenericArray::from_slice(&[
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
