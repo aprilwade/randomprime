@@ -333,9 +333,9 @@ fn modify_pickups<'a, I, J>(
                     pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
                 }
             }
-            if let Some(ref hudmemo) = pickup_location.hudmemo {
-                let hudmemo = layers[hudmemo.layer as usize].objects.iter_mut()
-                    .find(|obj| obj.instance_id ==  hudmemo.instance_id)
+            {
+                let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
+                    .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
                     .unwrap();
                 update_hudmemo(hudmemo, &pickup_meta);
             }

@@ -28,7 +28,7 @@ use std::str as stdstr;
 pub struct PickupLocation
 {
     location: ScriptObjectLocation,
-    hudmemo: Option<ScriptObjectLocation>,
+    hudmemo: ScriptObjectLocation,
     attainment_audio: ScriptObjectLocation,
     post_pickup_relay_connections: Vec<structs::Connection>,
 }
@@ -414,7 +414,7 @@ fn trace_pickup_deps(
             let pickup = obj.property_data.as_pickup_mut().unwrap();
             let mut deps = res_db.get_dependencies(&pickup);
 
-            let mut hudmemo = search_for_scly_object(&obj.connections, &scly_db,
+            let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
                 |obj| obj.property_data.as_hud_memo()
                     .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
                     .unwrap_or(false)
@@ -477,11 +477,16 @@ fn trace_pickup_deps(
                 });
             }
 
+            let hudmemo_loc;
             let hudmemo_strg;
-            if let Some(ref mut hudmemo) = hudmemo {
+            if let Some(hudmemo) = hudmemo {
                 let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
                 deps.insert(ResourceKey::new(strg, b"STRG".into()));
                 hudmemo_strg = strg;
+                hudmemo_loc = ScriptObjectLocation {
+                    layer: scly_db[&hudmemo.instance_id].0 as u32,
+                    instance_id: hudmemo.instance_id,
+                };
             } else {
                 // Overrides for the Phazon Suit
                 assert_eq!(pickup.kind, 23);
@@ -490,6 +495,11 @@ fn trace_pickup_deps(
 
                 pickup.cmdl = 0x50534D44;
                 pickup.ancs.file_id = 0x5053414E;
+
+                hudmemo_loc = ScriptObjectLocation {
+                    layer: scly_db[&68813640].0 as u32,
+                    instance_id: 68813640,
+                };
             }
 
             patch_dependencies(pickup.kind, &mut deps);
@@ -523,10 +533,7 @@ fn trace_pickup_deps(
                     instance_id: obj.instance_id,
                 },
                 attainment_audio: attainment_audio_location,
-                hudmemo: hudmemo.map(|obj| ScriptObjectLocation {
-                    layer: scly_db[&obj.instance_id].0 as u32,
-                    instance_id: obj.instance_id,
-                }),
+                hudmemo: hudmemo_loc,
                 post_pickup_relay_connections: post_pickup_relay_connections,
             };
             if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
@@ -843,9 +850,9 @@ fn main()
     println!("];");
 
     println!("");
-    println!("// Because const fns are stable yet, we can't construct the actual array at");
-    println!("// compile-time. So, instead, these are the building-blocks for that actual");
-    println!("// array.");
+    println!("// Because const fns aren't stable yet, we can't construct the actual array");
+    println!("// at compile-time. So, instead, these are the building-blocks for that");
+    println!("// actual array.");
     println!("const PICKUP_RAW_META: [PickupMetaRaw; {}] = [", pickup_table.len());
     const BYTES_PER_LINE: usize = 8;
     // Iterate using an explicit indexer so the output is sorted.

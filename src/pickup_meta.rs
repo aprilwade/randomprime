@@ -41,7 +41,7 @@ pub fn setup_pickup_meta_table()
 pub fn pickup_meta_table()
     -> &'static [PickupMeta]
 {
-    debug_assert!(unsafe { _PICKUP_META }.len() == 36);
+    debug_assert!(unsafe { _PICKUP_META }.len() == 37);
     unsafe { _PICKUP_META }
 }
 
@@ -64,7 +64,7 @@ pub struct PickupLocation
 {
     pub location: ScriptObjectLocation,
     pub attainment_audio: ScriptObjectLocation,
-    pub hudmemo: Option<ScriptObjectLocation>,
+    pub hudmemo: ScriptObjectLocation,
     pub post_pickup_relay_connections: &'static [Connection]
 }
 
