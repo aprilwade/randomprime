@@ -346,7 +346,7 @@ fn trace_pickup_deps(
 
     let mut res_db = ResourceDb::new();
     for res in resources.iter() {
-        res_db.add_resource(res.clone());
+        res_db.add_resource(res.into_owned());
     }
 
 
@@ -358,13 +358,13 @@ fn trace_pickup_deps(
             continue;
         };
 
-        let mut res = res.clone();
+        let mut res = res.into_owned();
         let mrea = res.kind.as_mrea_mut().unwrap();
 
         let scly = mrea.sections.iter()
             .nth(mrea.scly_section_idx as usize)
-            .unwrap().clone();
-        let scly: structs::Scly = match scly {
+            .unwrap();
+        let scly: structs::Scly = match *scly {
             structs::MreaSection::Unknown(ref reader) => reader.clone().read(()),
             structs::MreaSection::Scly(ref scly) => scly.clone(),
         };
@@ -373,8 +373,8 @@ fn trace_pickup_deps(
         let mut scly_db = HashMap::new();
         for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
             for obj in scly_layer.objects.iter() {
+                let mut obj = obj.clone().into_owned();
                 if obj.property_data.object_type() == 0x11 {
-                    let mut obj = obj.clone();
                     obj.property_data.guess_kind();
                     let pickup = obj.property_data.as_pickup().unwrap();
 
@@ -400,7 +400,7 @@ fn trace_pickup_deps(
                 // pickup itself, but is displayed when its acquired. To facilitate finding
                 // it, we build a map of all of the scripting objects.
                 // XXX The assert checks for SCLY objects with duplicated ids
-                assert!(scly_db.insert(obj.instance_id, (layer_num, obj.clone())).is_none());
+                assert!(scly_db.insert(obj.instance_id, (layer_num, obj)).is_none());
             }
         }
 
@@ -609,20 +609,20 @@ fn build_skip_cutscene_relay_connections<'a>(
         let connected_object = if let Some(obj) = scly_db.get(&conn.target_object_id) {
             &obj.1
         } else {
-            connections.push(conn.clone());
+            connections.push(conn.into_owned());
             continue
         };
         if let Some(timer) = connected_object.property_data.as_timer() {
              let name = timer.name.to_bytes();
              if name == b"Timer Jingle" {
-                 connections.extend(connected_object.connections.iter().map(|i| i.clone()));
+                 connections.extend(connected_object.connections.iter().map(|i| i.into_owned()));
              } else if name == b"Timer HUD" {
                  // We want to copy most of Timer HUD's connections, with a few exceptions
                  for conn in connected_object.connections.iter() {
                     let obj = if let Some(ref obj) = scly_db.get(&conn.target_object_id) {
                         &obj.1
                     } else {
-                        connections.push(conn.clone());
+                        connections.push(conn.into_owned());
                         continue
                     };
 
@@ -635,14 +635,14 @@ fn build_skip_cutscene_relay_connections<'a>(
                         obj.property_data.as_player_hint().is_some() {
                         continue
                     }
-                    connections.push(conn.clone());
+                    connections.push(conn.into_owned());
                  }
              } else {
-                 connections.push(conn.clone());
+                 connections.push(conn.into_owned());
              }
         } else if connected_object.property_data.as_player_hint().is_none() {
             // Skip the Player Hint objects.
-            connections.push(conn.clone());
+            connections.push(conn.into_owned());
         }
     }
 
@@ -662,7 +662,7 @@ fn build_skip_cutscene_relay_connections<'a>(
         let connected_object = &scly_db.get(&conn.target_object_id).unwrap().1;
         if connected_object.property_data.as_dock().is_some() ||
            connected_object.property_data.as_trigger().is_some() {
-            connections.push(conn.clone());
+            connections.push(conn.into_owned());
         }
     }
 

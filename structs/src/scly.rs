@@ -1,5 +1,5 @@
 
-use reader_writer::{Dap, FourCC, ImmCow, RoArray, LazyArray, Readable, Reader, Writable,
+use reader_writer::{Dap, FourCC, LCow, RoArray, LazyArray, Readable, Reader, Writable,
                     pad_bytes_count, pad_bytes};
 
 use std::io;
@@ -21,7 +21,7 @@ auto_struct! {
         #[derivable = layers.len() as u32]
         layer_count: u32,
 
-        #[derivable: Dap<_, _> = layers.iter().map(&|i: ImmCow<SclyLayer>| i.size() as u32).into()]
+        #[derivable: Dap<_, _> = layers.iter().map(&|i: LCow<SclyLayer>| i.size() as u32).into()]
         _layer_sizes: RoArray<'a, u32> = (layer_count as usize, ()),
 
         layers: LazyArray<'a, SclyLayer<'a>> = (layer_count as usize, ()),

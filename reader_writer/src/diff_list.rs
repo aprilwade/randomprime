@@ -8,7 +8,7 @@ use linked_list::{Cursor as LinkedListCursor, Iter as LinkedListIter, LinkedList
 
 use reader::{Reader, Readable};
 use writer::Writable;
-use imm_cow::ImmCow;
+use lcow::LCow;
 
 pub trait DiffListSourceCursor
 {
@@ -201,15 +201,15 @@ impl<'list, A> DiffListCursor<'list, A>
         // least one element, so self.cursor should be pointing to an Inst.
     }
 
-    pub fn peek(&mut self) -> Option<ImmCow<<A::Cursor as DiffListSourceCursor>::Item>>
+    pub fn peek(&mut self) -> Option<LCow<<A::Cursor as DiffListSourceCursor>::Item>>
     {
         if let Some(ref ic) = self.inner_cursor {
-            Some(ImmCow::new_owned(ic.get()))
+            Some(LCow::Owned(ic.get()))
         } else {
             match self.cursor.peek_next() {
                 None => None,
                 Some(&mut DiffListElem::Array(_)) => unreachable!(),
-                Some(&mut DiffListElem::Inst(ref res)) => Some(ImmCow::new_borrowed(res)),
+                Some(&mut DiffListElem::Inst(ref res)) => Some(LCow::Borrowed(res)),
             }
         }
     }
@@ -258,12 +258,12 @@ pub struct DiffListIter<'list, A>
 impl<'list, A> Iterator for DiffListIter<'list, A>
     where A: AsDiffListSourceCursor + 'list,
 {
-    type Item = ImmCow<'list, <A::Cursor as DiffListSourceCursor>::Item>;
+    type Item = LCow<'list, <A::Cursor as DiffListSourceCursor>::Item>;
     fn next(&mut self) -> Option<Self::Item>
     {
         if let Some(ref mut cursor) = self.inner_cursor {
             if cursor.next() {
-                return Some(ImmCow::new_owned(cursor.get()))
+                return Some(LCow::Owned(cursor.get()))
             }
         }
         match self.list_iter.next() {
@@ -271,9 +271,9 @@ impl<'list, A> Iterator for DiffListIter<'list, A>
                 let cursor = array.as_cursor();
                 let res = cursor.get();
                 self.inner_cursor = Some(cursor);
-                Some(ImmCow::new_owned(res))
+                Some(LCow::Owned(res))
             },
-            Some(&DiffListElem::Inst(ref inst)) => Some(ImmCow::new_borrowed(inst)),
+            Some(&DiffListElem::Inst(ref inst)) => Some(LCow::Borrowed(inst)),
             None => None,
         }
     }

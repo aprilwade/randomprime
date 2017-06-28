@@ -14,7 +14,7 @@ mod read_only_array;
 mod iterator_array;
 mod diff_list;
 
-mod imm_cow;
+mod lcow;
 mod derivable_array_proxy;
 mod uncached;
 
@@ -35,7 +35,7 @@ pub use iterator_array::{IteratorArray, IteratorArrayIterator};
 pub use derivable_array_proxy::Dap;
 pub use uncached::Uncached;
 
-pub use imm_cow::ImmCow;
+pub use lcow::LCow;
 
 // XXX There are > 5 items in these modules. Do I want to use * imports everywhere for
 //     consistency?

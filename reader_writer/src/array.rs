@@ -3,7 +3,7 @@ use std::io;
 use std::slice::Iter as SliceIter;
 use std::slice::IterMut as SliceIterMut;
 
-use imm_cow::ImmCow;
+use lcow::LCow;
 use reader::{Reader, Readable};
 use writer::Writable;
 
@@ -82,11 +82,11 @@ impl<'a, T> LazyArray<'a, T>
     }
 
     #[inline]
-    pub fn get(&self, index: usize) -> Option<ImmCow<T>>
+    pub fn get(&self, index: usize) -> Option<LCow<T>>
     {
         match *self {
-            LazyArray::Borrowed(ref array) => array.get(index).map(ImmCow::new_owned),
-            LazyArray::Owned(ref vec) => vec.get(index).map(ImmCow::new_borrowed),
+            LazyArray::Borrowed(ref array) => array.get(index).map(LCow::Owned),
+            LazyArray::Owned(ref vec) => vec.get(index).map(LCow::Borrowed),
         }
     }
 
@@ -165,13 +165,13 @@ impl<'s, 'a, T> Iterator for LazyArrayIter<'s, 'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    type Item = ImmCow<'s, T>;
+    type Item = LCow<'s, T>;
     #[inline]
     fn next(&mut self) -> Option<Self::Item>
     {
         match *self {
-            LazyArrayIter::Borrowed(ref mut iter) => iter.next().map(ImmCow::new_owned),
-            LazyArrayIter::Owned(ref mut iter) => iter.next().map(ImmCow::new_borrowed),
+            LazyArrayIter::Borrowed(ref mut iter) => iter.next().map(LCow::Owned),
+            LazyArrayIter::Owned(ref mut iter) => iter.next().map(LCow::Borrowed),
         }
     }
 
@@ -203,7 +203,7 @@ impl<'s, 'a, T: 's> IntoIterator for &'s LazyArray<'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    type Item = ImmCow<'s, T>;
+    type Item = LCow<'s, T>;
     type IntoIter = LazyArrayIter<'s, 'a, T>;
     #[inline]
     fn into_iter(self) -> Self::IntoIter

@@ -1,5 +1,5 @@
 
-use reader_writer::{Dap, ImmCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable,
+use reader_writer::{Dap, LCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable,
                     pad_bytes_count, pad_bytes, pad_bytes_ff};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
@@ -38,7 +38,7 @@ auto_struct! {
         area_octree_section_idx: u32,
 
         #[derivable: Dap<_, _> = sections.iter()
-                                          .map(&|i: ImmCow<MreaSection>| i.size() as u32).into()]
+                                          .map(&|i: LCow<MreaSection>| i.size() as u32).into()]
         section_sizes: RoArray<'a, u32> = (sections_count as usize, ()),
 
         #[offset]

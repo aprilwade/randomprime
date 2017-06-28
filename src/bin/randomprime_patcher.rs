@@ -84,7 +84,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         for res in pak.resources.iter() {
             let key = (res.file_id, res.fourcc());
             if looking_for.remove(&key) {
-                assert!(found.insert(key, res.clone()).is_none());
+                assert!(found.insert(key, res.into_owned()).is_none());
             }
         }
     }

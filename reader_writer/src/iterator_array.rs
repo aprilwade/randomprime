@@ -2,7 +2,7 @@ use std::fmt;
 use std::io;
 use std::slice::Iter as SliceIter;
 
-use imm_cow::ImmCow;
+use lcow::LCow;
 use reader::{Reader, Readable};
 use writer::Writable;
 
@@ -93,19 +93,19 @@ impl<'s, 'a: 's, T, I> Iterator for IteratorArrayIterator<'s, 'a, T, I>
     where T: Readable<'a> + 's,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    type Item = ImmCow<'s, T>;
+    type Item = LCow<'s, T>;
     fn next(&mut self) -> Option<Self::Item>
     {
         match *self {
             IteratorArrayIterator::Borrowed(ref mut reader, ref mut args_iter) => {
                 if let Some(args) = args_iter.next() {
                     let res = reader.read::<T>(args);
-                    Some(ImmCow::new_owned(res))
+                    Some(LCow::Owned(res))
                 } else {
                     None
                 }
             },
-            IteratorArrayIterator::Owned(ref mut iter) => iter.next().map(ImmCow::new_borrowed),
+            IteratorArrayIterator::Owned(ref mut iter) => iter.next().map(LCow::Borrowed),
         }
     }
 
