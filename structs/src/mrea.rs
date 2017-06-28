@@ -21,7 +21,6 @@ auto_struct! {
         version: u32,
 
 
-        //area_transform: Lazy<'a, Box<GenericArray<f, U12>>>,
         area_transform: GenericArray<f32, U12>,
         world_model_count: u32,
 

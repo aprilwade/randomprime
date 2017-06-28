@@ -1,5 +1,5 @@
 
-use reader_writer::{CStr, Lazy, Reader, Readable, RoArray, Writable};
+use reader_writer::{CStr, Reader, Readable, RoArray, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -19,7 +19,7 @@ pub const GC_DISC_LENGTH: usize = 1_459_978_240;
 pub struct GcDisc<'a>
 {
     pub header: GcDiscHeader,
-    header_info: Lazy<'a, Box<GenericArray<u8, U8192>>>,
+    header_info: GenericArray<u8, U8192>,
     apploader: GcDiscApploader<'a>,
     pub file_system_table: FileSystemTable<'a>,
 }

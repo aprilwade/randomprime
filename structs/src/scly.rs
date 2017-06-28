@@ -25,10 +25,6 @@ auto_struct! {
         _layer_sizes: RoArray<'a, u32> = (layer_count as usize, ()),
 
         layers: LazyArray<'a, SclyLayer<'a>> = (layer_count as usize, ()),
-        // TODO: If we wrap SclyLayer in LazySized, then we can make use of the
-        //       layer_sizes field to maybe speed things up. It probably requires
-        //       profiling to see if its actually any better.
-        //layers: IteratorArray<'a, SclyLayer<'a>, ArrayBorrowedIterator<'a, u32>> = layer_sizes.borrowed_iter().unwrap(),
     }
 }
 
