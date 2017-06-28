@@ -30,15 +30,6 @@ impl<'a, T, I> IteratorArray<'a, T, I>
     }
 
     #[inline]
-    pub fn linear_get(&self, at: usize) -> Option<ImmCow<T>>
-    {
-        match *self {
-            IteratorArray::Borrowed(_, _) => self.iter().nth(at),
-            IteratorArray::Owned(ref vec) => vec.get(at).map(ImmCow::new_borrowed),
-        }
-    }
-
-    #[inline]
     pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'a, T, I>
     {
         match *self {
