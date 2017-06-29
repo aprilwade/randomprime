@@ -153,7 +153,7 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
     };
     structs::SclyObject {
         instance_id: instance_id,
-        connections: reader_writer::LazyArray::Owned(Vec::new()),
+        connections: vec![].into(),
         property_data: structs::SclyProperty::SpecialFunction(
             structs::SpecialFunction {
                 name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Artifact Layer Switch\0").unwrap()),
@@ -183,7 +183,7 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
 {
     structs::SclyObject {
         instance_id: instance_id,
-        connections: reader_writer::LazyArray::Owned(connections.to_owned()),
+        connections: connections.to_owned().into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
             name: Cow::Owned(CString::new(b"Randomizer Post Pickup Relay".to_vec()).unwrap()),
             active: 1,
@@ -542,13 +542,13 @@ fn fix_artifact_of_truth_requirement<I>(area: &mut mlvl_wrapper::MlvlArea,
     let new_relay_instance_id = fresh_instance_id_iter.next().unwrap();
     let new_relay = structs::SclyObject {
         instance_id: new_relay_instance_id,
-        connections: reader_writer::LazyArray::Owned(vec![
+        connections: vec![
             structs::Connection {
                 state: 9,
                 message: 13,
                 target_object_id: 1048869,
             },
-        ]),
+        ].into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
             name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Relay Show Progress1\0").unwrap()),
             active: 1,

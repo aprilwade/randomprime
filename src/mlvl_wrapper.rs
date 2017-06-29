@@ -1,5 +1,5 @@
 use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource, ResourceSource};
-use reader_writer::{CStr, DiffListCursor, FourCC, LazyArray};
+use reader_writer::{CStr, DiffListCursor, FourCC};
 
 use pickup_meta::marker_asset;
 
@@ -72,7 +72,7 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
         {
             let mut deps = self.mlvl_area.dependencies.deps.as_mut_vec();
             let index = deps.len() - 1;
-            deps.insert(index, LazyArray::Owned(vec![]));
+            deps.insert(index, vec![].into());
         }
 
         self.mrea().scly_section_mut().layers.as_mut_vec().push(SclyLayer::new());

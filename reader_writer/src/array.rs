@@ -229,3 +229,13 @@ impl<'a, T> Writable for LazyArray<'a, T>
         }
     }
 }
+
+impl<'a, T> From<Vec<T>> for LazyArray<'a, T>
+    where T: Readable<'a>,
+          T::Args: Clone,
+{
+    fn from(vec: Vec<T>) -> LazyArray<'a, T>
+    {
+        LazyArray::Owned(vec)
+    }
+}

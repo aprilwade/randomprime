@@ -1,5 +1,5 @@
 use std::io;
-use std::char::{DecodeUtf16, decode_utf16, DecodeUtf16Error};
+use std::char::{DecodeUtf16, decode_utf16};
 use std::str::Chars;
 
 use reader::{Readable, Reader};
@@ -140,5 +140,15 @@ impl<'a, 's> Iterator for LazyUtf16beStrChars<'a, 's>
             LazyUtf16beStrChars::Owned(ref mut c) => c.next().map(|i| i),
             LazyUtf16beStrChars::Borrowed(ref mut c) => c.next().map(|r| r.unwrap_or('\u{fffd}')),
         }
+    }
+}
+
+impl<'a> From<String> for LazyUtf16beStr<'a>
+{
+    fn from(s: String) -> LazyUtf16beStr<'a>
+    {
+        // Verify null-terminator
+        assert!(s.chars().next_back().unwrap() == '\0');
+        LazyUtf16beStr::Owned(s)
     }
 }

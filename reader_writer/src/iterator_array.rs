@@ -154,3 +154,13 @@ impl<'a, T, I> fmt::Debug for IteratorArray<'a, T, I>
     }
 }
 
+impl<'a, T, I> From<Vec<T>> for IteratorArray<'a, T, I>
+    where T: Readable<'a>,
+          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+{
+    fn from(vec: Vec<T>) -> IteratorArray<'a, T, I>
+    {
+        IteratorArray::Owned(vec)
+    }
+}
+

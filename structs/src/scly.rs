@@ -49,7 +49,7 @@ impl<'a> SclyLayer<'a>
     {
         SclyLayer {
             unknown: 0,
-            objects: LazyArray::Owned(Vec::new()),
+            objects: vec![].into(),
         }
     }
 }
