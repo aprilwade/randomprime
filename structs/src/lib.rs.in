@@ -12,6 +12,8 @@ mod evnt;
 mod part;
 mod savw;
 mod thp;
+mod hint;
+mod strg;
 
 mod scly_props
 {
@@ -56,3 +58,5 @@ pub use evnt::*;
 pub use part::*;
 pub use savw::*;
 pub use thp::*;
+pub use hint::*;
+pub use strg::*;

@@ -9,6 +9,8 @@ use std::borrow::Cow;
 use mlvl::Mlvl;
 use mrea::Mrea;
 use savw::Savw;
+use hint::Hint;
+use strg::Strg;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -348,5 +350,7 @@ build_resource_data!(
     Mrea, b"MREA", as_mrea, as_mrea_mut,
     Mlvl, b"MLVL", as_mlvl, as_mlvl_mut,
     Savw, b"SAVW", as_savw, as_savw_mut,
+    Hint, b"HINT", as_hint, as_hint_mut,
+    Strg, b"STRG", as_strg, as_strg_mut,
 );
 
