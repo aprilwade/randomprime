@@ -135,6 +135,14 @@ impl FieldDataKind
             _ => false,
         }
     }
+
+    fn is_simple(&self) -> bool
+    {
+        match *self {
+            FieldDataKind::Simple => true,
+            _ => false,
+        }
+    }
 }
 
 fn get_pat_ident(pat: &P<Pat>) -> Ident
@@ -183,18 +191,19 @@ fn parse_field_kind<'a>(parser: &mut Parser<'a>)
 }
 
 fn parse_field<'a>(cx: &ExtCtxt, parser: &mut Parser<'a>)
-    -> PResult<'a, FieldData>
+    -> PResult<'a, SmallVector<FieldData>>
 {
     let kind = try!(parse_field_kind(parser));
 
-    // TODO: It would be very nice to be able to parse a pattern for args instead
-    //       of an ident.
     let span = parser.span;
     let name = if kind.is_args() {
         try!(parser.parse_pat())
     } else {
         cx.pat_ident(DUMMY_SP, try!(parser.parse_ident()))
     };
+    if kind.is_simple() && parser.eat(&token::Not) {
+        return parse_alignment_padding(cx, parser, span, name);
+    }
     try!(parser.expect(&token::Colon));
     let ty = try!(parser.parse_ty());
     let args = if !kind.is_args() && parser.eat(&token::Eq) {
@@ -203,13 +212,89 @@ fn parse_field<'a>(cx: &ExtCtxt, parser: &mut Parser<'a>)
         cx.parse_expr("()".to_string())
     };
 
-    Ok(FieldData {
+    Ok(SmallVector::one(FieldData {
         name: name,
         ty: ty,
         args: args,
         kind: kind,
         span: span,
-    })
+    }))
+}
+
+fn parse_alignment_padding<'a>(cx: &ExtCtxt, parser: &mut Parser<'a>, span: Span, name: P<Pat>)
+    -> PResult<'a, SmallVector<FieldData>>
+{
+    let name = match name.node {
+        PatKind::Ident(_, ref ident, _) => format!("{}", ident.node),
+        _ => panic!(),
+    };
+    if name != "alignment_padding" {
+        return Err(parser.diagnostic().struct_span_err(span,
+                &format!("unknown macro field \"{}\"", name)));
+    }
+    let exprs = parser.parse_unspanned_seq(
+        &token::OpenDelim(token::Paren),
+        &token::CloseDelim(token::Paren),
+        SeqSep::trailing_allowed(token::Comma),
+        |parser| parser.parse_expr()
+    )?;
+    if exprs.len() < 1 || exprs.len() > 2 {
+        return Err(parser.diagnostic().struct_span_err(span,
+                "expected one or two arguments"));
+    }
+    let alignment_expr = exprs[0].clone();
+    /* let byte_expr = exprs.get(1)
+        .map(|i| i.clone())
+        .unwrap_or_else(|| cx.expr_usize(DUMMY_SP, 0));*/
+    return Ok(SmallVector::many(vec![
+        FieldData {
+            name: cx.pat_ident(DUMMY_SP, cx.ident_of("_padding_offset")),
+            ty: cx.ty_ident(DUMMY_SP, cx.ident_of("usize")),
+            args: cx.parse_expr("()".to_string()),
+            kind: FieldDataKind::Offset,
+            span: DUMMY_SP,
+        },
+        FieldData {
+            name: cx.pat_ident(DUMMY_SP, cx.ident_of("_padding")),
+            ty: cx.ty_path(cx.path_all(
+                DUMMY_SP,
+                true,
+                vec![cx.ident_of("reader_writer"), cx.ident_of("RoArray")],
+                vec![],
+                vec![cx.ty_ident(DUMMY_SP, cx.ident_of("u8"))],
+                vec![],
+            )),
+            args: cx.expr_tuple(DUMMY_SP, vec![
+                cx.expr_call_global(
+                    DUMMY_SP,
+                    vec![
+                        cx.ident_of("reader_writer"),
+                        cx.ident_of("pad_bytes_count"),
+                    ],
+                    vec![
+                        alignment_expr.clone(),
+                        cx.expr_ident(DUMMY_SP, cx.ident_of("_padding_offset")),
+                    ],
+                ),
+                cx.expr_tuple(DUMMY_SP, vec![]),
+            ]),
+            kind: FieldDataKind::Derivable(
+                cx.expr_call_global(
+                    DUMMY_SP,
+                    vec![
+                        cx.ident_of("reader_writer"),
+                        cx.ident_of("pad_bytes"),
+                    ],
+                    vec![
+                        alignment_expr,
+                        cx.expr_ident(DUMMY_SP, cx.ident_of("_padding_offset")),
+                    ],
+                ),
+                None,
+            ),
+            span: DUMMY_SP,
+        },
+    ]));
 }
 
 fn parse_attributes<'a>(span: Span, parser: &mut Parser<'a>)
@@ -313,7 +398,7 @@ fn build_read_method(cx: &ExtCtxt, struct_ident: Ident, fields: &[FieldData],
                            cx.expr_ident(DUMMY_SP, reader_ident)));
 
     let offset_start_ident = cx.ident_of("__start_len__");
-    // If there are any #[offset] fields, we need to note the starting size of the 
+    // If there are any #[offset] fields, we need to note the starting size of the
     // reader.
     if fields.iter().any(|f| match f.kind { FieldDataKind::Offset => true, _ => false }) {
         stmts.push(cx.stmt_let(DUMMY_SP, true, offset_start_ident,
@@ -619,6 +704,7 @@ fn parse_auto_struct<'cx>(cx: &'cx mut ExtCtxt, span: Span, parser: &mut Parser<
         SeqSep::trailing_allowed(token::Comma),
         |parser| parse_field(cx, parser),
     ));
+    let fields: Vec<_> = fields.into_iter().flat_map(|i| i).collect();
 
     let (args_pat, args_ty, fields) = match fields.first() {
         Some(ref field) if field.kind.is_args() => (field.name.clone(), field.ty.clone(),
@@ -669,7 +755,7 @@ fn expand_auto_struct_macro<'cx>(cx: &'cx mut ExtCtxt, span: Span, tts: &[TokenT
         },
         Ok(items) => MacEager::items(items),
     }
-    
+
 }
 
 #[cfg(test)]
@@ -681,7 +767,7 @@ mod tests
     #[test]
     fn test_basic()
     {
-         
+
         let mut registry = syntex::Registry::new();
         ::register(&mut registry);
         let res = registry.expand_str("input", "output", "
@@ -695,6 +781,8 @@ mod tests
 
                 #[literal]
                 first: u32 = args.0,
+
+                alignment_padding!(64),
 
                 #[expect = 0xFF]
                 magic: u32,

@@ -1,6 +1,5 @@
 
-use reader_writer::{FourCC, IteratorArray, LazyArray, Readable, RoArray, RoArrayIter,
-                    pad_bytes_count, pad_bytes};
+use reader_writer::{FourCC, IteratorArray, LazyArray, Readable, RoArray, RoArrayIter};
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -125,9 +124,6 @@ auto_struct! {
         video_data: RoArray<'a, u8> = (video_size as usize, ()),
         audio_data: Option<RoArray<'a, u8>> = audio_size.map(|s| (s as usize, ())),
 
-        #[offset]
-        offset: usize,
-        #[derivable = pad_bytes(32, offset)]
-        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
+        alignment_padding!(32),
     }
 }

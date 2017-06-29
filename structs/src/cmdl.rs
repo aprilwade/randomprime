@@ -1,6 +1,5 @@
 
-use reader_writer::{RoArray, RoArrayIter, IteratorArray,
-                    pad_bytes_count, pad_bytes};
+use reader_writer::{RoArray, RoArrayIter, IteratorArray};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
@@ -28,10 +27,7 @@ auto_struct! {
         data_section_sizes: RoArray<'a, u32> =
             ((data_section_count - material_set_count) as usize, ()),
 
-        #[offset]
-        offset: usize,
-        #[derivable = pad_bytes(32, offset)]
-        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
+        alignment_padding!(32),
 
         material_sets: IteratorArray<'a, MaterialSet<'a>, RoArrayIter<'a, u32>> =
             material_set_sizes.iter(),

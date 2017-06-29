@@ -1,6 +1,5 @@
 
-use reader_writer::{Dap, FourCC, LCow, RoArray, LazyArray, Readable, Reader, Writable,
-                    pad_bytes_count, pad_bytes};
+use reader_writer::{Dap, FourCC, LCow, RoArray, LazyArray, Readable, Reader, Writable};
 
 use std::io;
 use std::borrow::Cow;
@@ -40,10 +39,7 @@ auto_struct! {
         // TODO: Consider using DiffList here. Maybe requires profiling to decide...
         objects: LazyArray<'a, SclyObject<'a>> = (object_count as usize, ()),
 
-        #[offset]
-        offset: usize,
-        #[derivable = pad_bytes(32, offset)]
-        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
+        alignment_padding!(32),
     }
 }
 

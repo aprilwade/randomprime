@@ -1,6 +1,6 @@
 use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, FourCC, Readable,
                     Reader, RoArray, Writable,
-                    align_byte_count, pad_bytes_count, pad_bytes, pad_bytes_ff};
+                    align_byte_count};
 
 
 use std::io;
@@ -30,18 +30,12 @@ auto_struct! {
         #[derivable: ResourceInfoProxy = ResourceInfoProxy(&resources, named_resources.size())]
         resource_info: RoArray<'a, ResourceInfo> = (resources_count as usize, ()),
 
-        #[offset]
-        offset: usize,
-        #[derivable = pad_bytes(32, offset)]
-        _padding: RoArray<'a, u8> = (pad_bytes_count(32, offset), ()),
+        alignment_padding!(32),
 
         resources: DiffList<'a, ResourceSource<'a>> = ResourceSource(start.clone(),
                                                                      resource_info.clone()),
 
-        #[offset]
-        offset_after: usize,
-        #[derivable = pad_bytes_ff(32, offset_after)]
-        _padding_after: RoArray<'a, u8> = (pad_bytes_count(32, offset_after), ()),
+        alignment_padding!(32),
     }
 }
 

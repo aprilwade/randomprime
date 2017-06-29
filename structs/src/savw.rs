@@ -1,4 +1,4 @@
-use reader_writer::{LazyArray, RoArray, pad_bytes_count, pad_bytes_ff};
+use reader_writer::{LazyArray, RoArray};
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -33,10 +33,7 @@ auto_struct! {
         scan_count: u32,
         scan_array: LazyArray<'a, ScannableObject> = (scan_count as usize, ()),
 
-        #[offset]
-        offset_after: usize,
-        #[derivable = pad_bytes_ff(32, offset_after)]
-        _padding_after: RoArray<'a, u8> = (pad_bytes_count(32, offset_after), ()),
+        alignment_padding!(32),
     }
 }
 
