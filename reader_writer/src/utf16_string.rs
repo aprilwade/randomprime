@@ -1,11 +1,12 @@
 use std::io;
+use std::fmt;
 use std::char::{DecodeUtf16, decode_utf16};
 use std::str::Chars;
 
 use reader::{Readable, Reader};
 use writer::Writable;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Utf16beStr<'a>(Reader<'a>);
 
 impl<'a> Utf16beStr<'a>
@@ -34,6 +35,14 @@ impl<'a> Readable<'a> for Utf16beStr<'a>
     fn size(&self) -> usize
     {
         self.0.len()
+    }
+}
+
+impl<'a> fmt::Debug for Utf16beStr<'a>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
+    {
+        fmt::Debug::fmt(&self.chars().map(|i| i.unwrap()).collect::<String>(), f)
     }
 }
 
@@ -102,7 +111,7 @@ impl<'a> Readable<'a> for LazyUtf16beStr<'a>
     fn size(&self) -> usize
     {
         match *self {
-            LazyUtf16beStr::Owned(ref s) => s.chars().map(|c| c.len_utf16()).sum(),
+            LazyUtf16beStr::Owned(ref s) => s.chars().map(|c| c.len_utf16()).sum::<usize>() * 2,
             LazyUtf16beStr::Borrowed(ref s) => s.size(),
         }
     }

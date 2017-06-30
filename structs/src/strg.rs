@@ -26,6 +26,8 @@ auto_struct! {
         langs: RoArray<'a, StrgLang> = (lang_count as usize, ()),
         string_tables: IteratorArray<'a, StrgStringTable<'a>, StrgLangIter<'a>>
             = StrgLangIter(string_count as usize, langs.iter()),
+
+        alignment_padding!(32),
     }
 }
 
