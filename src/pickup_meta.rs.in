@@ -32,7 +32,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[131743, 131749, 131755, 131761],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x165A4DE9,
@@ -44,7 +49,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[524512],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x3C785450,
@@ -75,6 +85,10 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[600314, 600292, 600298],
+                },
+                ObjectsToRemove {
                     layer: 1,
                     instance_ids: &[67708870],
                 },
@@ -90,7 +104,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[721036],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x3F04F304,
@@ -102,7 +121,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[787001],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xC2576E4D,
@@ -114,7 +138,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1048872],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x18D186BB,
@@ -126,7 +155,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1179740],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x491BFABA,
@@ -138,7 +172,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1310980],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x0D72F1F7,
@@ -157,7 +196,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1377201],
+                    instance_ids: &[1377156, 1377201],
                 },
             ],
         },
@@ -178,7 +217,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1769502, 1769558, 1769533],
+                    instance_ids: &[1769502, 1769558, 1769523, 1769533],
                 },
             ],
         },
@@ -198,7 +237,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1835389, 1835395],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x3AD2120F,
@@ -210,7 +254,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1966457],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x47E73BC5,
@@ -222,7 +271,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2107737],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xC8309DF6,
@@ -245,7 +299,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2359879],
+                    instance_ids: &[2359783, 2359879],
                 },
             ],
         },
@@ -280,12 +334,16 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2436932],
+                },
+                ObjectsToRemove {
                     layer: 1,
                     instance_ids: &[69534111],
                 },
                 ObjectsToRemove {
                     layer: 6,
-                    instance_ids: &[405090177, 405090261, 405090195],
+                    instance_ids: &[405090177, 405090261, 405090185, 405090195],
                 },
             ],
         },
@@ -299,7 +357,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2500450],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x492CBF4A,
@@ -325,7 +388,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2697836],
+                    instance_ids: &[2697716, 2697836, 2697721],
                 },
             ],
         },
@@ -345,7 +408,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2949288, 2949301],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x4148F7B0,
@@ -371,7 +439,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3155860],
+                    instance_ids: &[3156036, 3156045, 3155860],
                 },
             ],
         },
@@ -391,7 +459,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3211958, 3211964],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xFB54A0CB,
@@ -403,7 +476,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3408614],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x13FFF119,
@@ -415,7 +493,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3474271],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xE1981EFC,
@@ -434,7 +517,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3735560, 3735619, 3735595],
+                    instance_ids: &[3735560, 3735619, 3735585, 3735595],
                 },
             ],
         },
@@ -455,7 +538,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3997849],
+                    instance_ids: &[3997795, 3997849],
                 },
             ],
         },
@@ -478,7 +561,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[131621, 131627],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x6655F51E,
@@ -497,7 +585,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[524892, 524969, 524957],
+                    instance_ids: &[524892, 524969, 524955, 524957],
                 },
             ],
         },
@@ -511,7 +599,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[600311],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xDAFCC26F,
@@ -529,7 +622,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[655747, 655769],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x40C548E9,
@@ -549,7 +647,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[918052],
+                    instance_ids: &[917983, 918052],
                 },
             ],
         },
@@ -563,7 +661,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[983604],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xA20A7455,
@@ -582,7 +685,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1049490],
+                    instance_ids: &[1049565, 1049490],
                 },
             ],
         },
@@ -602,6 +705,10 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1573587],
+                },
+                ObjectsToRemove {
                     layer: 3,
                     instance_ids: &[202899931],
                 },
@@ -617,7 +724,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1639823],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x2191A05D,
@@ -629,7 +741,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1769497],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x3FB4A34E,
@@ -648,7 +765,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1967144],
+                    instance_ids: &[1966966, 1967144],
                 },
             ],
         },
@@ -662,7 +779,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2031789],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xB3C33249,
@@ -681,7 +803,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2557140, 2557309, 2557262],
+                    instance_ids: &[2557140, 2557309, 2557238, 2557262],
                 },
             ],
         },
@@ -704,7 +826,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 1,
-                    instance_ids: &[69731299],
+                    instance_ids: &[69731492, 69731299],
                 },
             ],
         },
@@ -718,7 +840,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2687505],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x21B4BFF6,
@@ -736,7 +863,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3343336, 3343385],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x49175472,
@@ -760,6 +892,10 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3473774, 3473777],
+                },
+                ObjectsToRemove {
                     layer: 1,
                     instance_ids: &[70582821],
                 },
@@ -782,7 +918,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[3539118, 3539164, 3539139],
+                    instance_ids: &[3539118, 3539164, 3539129, 3539139],
                 },
             ],
         },
@@ -796,7 +932,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[3604516],
+                },
+            ],
         },
     ],
     // Metroid4.pak
@@ -811,7 +952,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[583],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xC44E7A07,
@@ -830,7 +976,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[262271],
+                    instance_ids: &[262326, 262271],
                 },
             ],
         },
@@ -844,7 +990,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[524846],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xCEA263E3,
@@ -856,7 +1007,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[852174],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xBD8C8625,
@@ -868,7 +1024,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[983371],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x2398E906,
@@ -892,7 +1053,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                 },
                 ObjectsToRemove {
                     layer: 1,
-                    instance_ids: &[68157913],
+                    instance_ids: &[68157913, 68158267],
                 },
                 ObjectsToRemove {
                     layer: 18,
@@ -910,7 +1071,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1245506],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x24F8AFF3,
@@ -922,7 +1088,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1310778],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x37B3AFE6,
@@ -934,7 +1105,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1769757],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xAC2C58FE,
@@ -946,7 +1122,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1966836],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xFFB4A966,
@@ -958,7 +1139,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2293851],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xC5D6A597,
@@ -970,7 +1156,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2424858],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xB4FBBEF5,
@@ -982,7 +1173,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2556176],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x86EB2E02,
@@ -1011,7 +1207,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2753224, 2753081, 2753188, 2753185],
+                    instance_ids: &[2753163, 2753224, 2753081, 2753188, 2753169, 2753185],
                 },
             ],
         },
@@ -1028,7 +1224,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[132133],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xC7653A92,
@@ -1040,7 +1241,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[328114],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xE39C342B,
@@ -1059,7 +1265,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[589877],
+                    instance_ids: &[589908, 589877],
                 },
             ],
         },
@@ -1080,7 +1286,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[786532],
+                    instance_ids: &[786481, 786532],
                 },
             ],
         },
@@ -1107,7 +1313,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[852805, 852988, 852984],
+                    instance_ids: &[852805, 852988, 852969, 852984, 853240],
                 },
             ],
         },
@@ -1121,7 +1327,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[983247],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x90709AAC,
@@ -1133,7 +1344,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1179976],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xAD2E7EB9,
@@ -1145,7 +1361,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1247165],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xED6DE73B,
@@ -1157,7 +1378,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1441967],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x3953C353,
@@ -1181,7 +1407,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1770853],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xBB3AFC4E,
@@ -1193,7 +1424,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2032236],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xFB051F5A,
@@ -1205,7 +1441,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2098674],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xEC47C242,
@@ -1217,7 +1458,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2359604],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xBBFA4AB3,
@@ -1236,7 +1482,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[2556036, 2556148, 2556123],
+                    instance_ids: &[2556036, 2556148, 2556120, 2556123],
                 },
             ],
         },
@@ -1250,7 +1496,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[2621705],
+                },
+            ],
         },
     ],
     // Metroid6.pak
@@ -1272,7 +1523,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[272513, 272642, 272593],
+                    instance_ids: &[272513, 272642, 272571, 272593],
                 },
             ],
         },
@@ -1286,7 +1537,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[393775],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0xADEF843E,
@@ -1298,7 +1554,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[524332],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x47F2C087,
@@ -1310,7 +1571,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[655637],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x89A6CB8D,
@@ -1329,7 +1595,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[720956, 720975, 720970],
+                    instance_ids: &[720956, 720975, 720968, 720970],
                 },
             ],
         },
@@ -1350,7 +1616,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[786574],
+                    instance_ids: &[786527, 786574],
                 },
             ],
         },
@@ -1370,7 +1636,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[917996, 918090],
+                },
+            ],
         },
         RoomInfo {
             room_id: 0x4CC18E5A,
@@ -1389,7 +1660,7 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
             objects_to_remove: &[
                 ObjectsToRemove {
                     layer: 0,
-                    instance_ids: &[1376415],
+                    instance_ids: &[1376365, 1376415],
                 },
             ],
         },
@@ -1403,7 +1674,12 @@ pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [
                     post_pickup_relay_connections: &[]
                 },
             ],
-            objects_to_remove: &[],
+            objects_to_remove: &[
+                ObjectsToRemove {
+                    layer: 0,
+                    instance_ids: &[1507990],
+                },
+            ],
         },
     ],
 ];

@@ -191,6 +191,76 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
     }
 }
 
+fn skip_hudmemos_strg_id(pickup_kind: u32) -> u32
+{
+    const HUDMEMO_STRG_START: u32 = 0xDEAFF000;
+    HUDMEMO_STRG_START + pickup_kind
+}
+
+fn build_skip_hudmemos_strgs<'a>() -> Vec<structs::Resource<'a>>
+{
+    const PICKUP_NAMES: &'static [&'static str] = &[
+        "Missile",
+        "Energy Tank",
+
+        "Thermal Visor",
+        "X-Ray Visor",
+
+        "Varia Suit",
+        "Gravity Suit",
+        "Phazon Suit",
+
+        "Morph Ball",
+        "Boost Ball",
+        "Spider Ball",
+
+        "Morph Ball Bomb",
+        "Power Bomb Expansion",
+        "Power Bomb",
+
+        "Charge Beam",
+        "Space Jump Boots",
+        "Grapple Beam",
+
+        "Super Missile",
+        "Wavebuster",
+        "Ice Spreader",
+        "Flamethrower",
+
+        "Wave Beam",
+        "Ice Beam",
+        "Plasma Beam",
+
+        "Artifact of Lifegiver",
+        "Artifact of Wild",
+        "Artifact of World",
+        "Artifact of Sun",
+        "Artifact of Elder",
+        "Artifact of Spirit",
+        "Artifact of Truth",
+        "Artifact of Chozo",
+        "Artifact of Warrior",
+        "Artifact of Newborn",
+        "Artifact of Nature",
+        "Artifact of Strength",
+        "Nothing",
+        "Nothing",
+    ];
+    PICKUP_NAMES.iter().enumerate().map(|(pickup_kind, name)| {
+        pickup_meta::build_resource(
+            skip_hudmemos_strg_id(pickup_kind as u32),
+            structs::ResourceKind::Strg(structs::Strg {
+                string_tables: vec![
+                    structs::StrgStringTable {
+                        lang: b"ENGL".into(),
+                        strings: vec![format!("&just=center;{} acquired!\u{0}", name).into()].into(),
+                    },
+                ].into(),
+            })
+        )
+    }).collect()
+}
+
 fn modify_pickups<'a, I, J>(
     gc_disc: &mut structs::GcDisc<'a>,
     pak_name: &str,
@@ -198,8 +268,9 @@ fn modify_pickups<'a, I, J>(
     room_list: &'static [pickup_meta::RoomInfo],
     pickup_list_iter: &mut I,
     fresh_instance_id_iter: &mut J,
+    skip_hudmenus: bool,
 )
-    where I: Iterator<Item=(usize, &'static pickup_meta::PickupMeta)>,
+    where I: Iterator<Item=(usize, usize)>,
           J: Iterator<Item=u32>,
 {
     let file_entry = find_file_mut(gc_disc, pak_name);
@@ -244,7 +315,7 @@ fn modify_pickups<'a, I, J>(
                 });
                 continue
             },
-            Some((file_id, fourcc)) if fourcc == b"MREA".into() => file_id,
+            Some((file_id, fourcc)) if fourcc == b"MREA".into() => file_id, // Handled below
             _ => continue,
         };
 
@@ -273,7 +344,8 @@ fn modify_pickups<'a, I, J>(
 
         for &pickup_location in pickup_locations {
 
-            let (i, pickup_meta) = pickup_list_iter.next().unwrap();
+            let (i, pickup_meta_i) = pickup_list_iter.next().unwrap();
+            let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_i];
             let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
                     asset_id: file_id,
                     asset_type: fourcc,
@@ -286,7 +358,16 @@ fn modify_pickups<'a, I, J>(
             area.add_layer(name);
 
             let new_layer_idx = area.layer_flags.layer_count as usize - 1;
-            area.add_dependencies(pickup_resources, new_layer_idx, iter);
+            if !skip_hudmenus {
+                area.add_dependencies(pickup_resources, new_layer_idx, iter);
+            } else {
+                // Add our custom STRG
+                let iter = iter.chain(::std::iter::once(structs::Dependency {
+                        asset_id: skip_hudmemos_strg_id(pickup_meta_i as u32),
+                        asset_type: b"STRG".into(),
+                    }));
+                area.add_dependencies(pickup_resources, new_layer_idx, iter);
+            }
 
             if curr_file_id == ARTIFACT_TEMPLE_ID {
                 // If this room is the Artifact Temple, patch it.
@@ -337,7 +418,7 @@ fn modify_pickups<'a, I, J>(
                 let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
                     .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
                     .unwrap();
-                update_hudmemo(hudmemo, &pickup_meta);
+                update_hudmemo(hudmemo, pickup_meta_i, &pickup_meta, skip_hudmenus);
             }
             {
                 let location = pickup_location.attainment_audio;
@@ -385,11 +466,17 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     };
 }
 
-fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
+fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta_i: usize,
+                  pickup_meta: &pickup_meta::PickupMeta, skip_hudmenus: bool)
 {
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
-    hudmemo.strg = pickup_meta.hudmemo_strg;
-    hudmemo.first_message_timer = 1.;
+    if skip_hudmenus {
+        hudmemo.first_message_timer = 5.;
+        hudmemo.memo_type = 0;
+        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_i as u32);
+    } else {
+        hudmemo.strg = pickup_meta.hudmemo_strg;
+    }
 }
 
 fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
@@ -780,6 +867,9 @@ fn main_inner() -> Result<(), String>
         .arg(Arg::with_name("skip frigate")
             .long("skip-frigate")
             .help("New save files will skip the \"Space Pirate Frigate\" tutorial level"))
+        .arg(Arg::with_name("skip hudmenus")
+            .long("non-modal-item-messages")
+            .help("Display a non-modal message when an item is is acquired"))
         .arg(Arg::with_name("keep attract mode")
             .long("keep-attract-mode")
             .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -797,6 +887,7 @@ fn main_inner() -> Result<(), String>
     let input_iso_path = matches.value_of("input iso path").unwrap();
     let output_iso_path = matches.value_of("output iso path").unwrap();
     let pickup_layout = matches.value_of("pickup layout").unwrap();
+    let skip_hudmenus = matches.is_present("skip hudmenus");
     let skip_frigate = matches.is_present("skip frigate");
     let keep_fmvs = matches.is_present("keep attract mode");
     let quiet = matches.is_present("quiet");
@@ -831,15 +922,19 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
     }
 
-    let pickup_resources = collect_pickup_resources(&gc_disc);
+    let mut pickup_resources = collect_pickup_resources(&gc_disc);
+    if skip_hudmenus {
+        for res in build_skip_hudmemos_strgs() {
+            assert!(pickup_resources.insert((res.file_id, res.kind.fourcc()), res).is_none());
+        }
+    }
 
     let mut rng = XorShiftRng::from_seed(seed);
     let mut layout_iter = pickup_layout.iter()
         .map(|n| {
             // Use the E-Tank model for a nothing with a 1/4 chance. Otherwise, use the Missile
             // model.
-            let n = if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize };
-            &pickup_meta::pickup_meta_table()[n]
+            if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize }
         })
         .enumerate();
     let mut fresh_instance_id_range = 0xDEEF0000..;
@@ -848,7 +943,8 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
                        &pickup_resources,
                        &mut pickup_meta::PICKUP_LOCATIONS[i],
                        &mut layout_iter,
-                       &mut fresh_instance_id_range);
+                       &mut fresh_instance_id_range,
+                       skip_hudmenus);
     }
 
     if skip_frigate {

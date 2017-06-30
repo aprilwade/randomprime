@@ -477,6 +477,18 @@ fn trace_pickup_deps(
                 });
             }
 
+            let player_hint = search_for_scly_object(&obj.connections, &scly_db,
+                    |obj| obj.property_data.as_player_hint()
+                        .map(|hm| hm.name.to_str().unwrap() == "Player Hint Disable Controls")
+                        .unwrap_or(false),
+                );
+            if let Some(player_hint) = player_hint {
+                removals.push(ScriptObjectLocation {
+                    layer: scly_db[&player_hint.instance_id].0 as u32,
+                    instance_id: player_hint.instance_id,
+                });
+            };
+
             let hudmemo_loc;
             let hudmemo_strg;
             if let Some(hudmemo) = hudmemo {
