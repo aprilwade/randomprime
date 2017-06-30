@@ -1,7 +1,6 @@
 use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource, ResourceSource};
 use reader_writer::{CStr, DiffListCursor, FourCC};
 
-use pickup_meta::marker_asset;
 
 use std::iter::once;
 use std::collections::HashMap;
@@ -57,6 +56,11 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
           'a: 'cursor,
           'list: 'cursor,
 {
+    pub fn mrea_file_id(&mut self) -> u32
+    {
+        self.mrea_cursor.peek().unwrap().file_id
+    }
+
     pub fn mrea(&mut self) -> &mut Mrea<'a>
     {
         self.mrea_cursor.value().unwrap().kind.as_mrea_mut().unwrap()
@@ -82,9 +86,6 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
                                layer_num: usize, deps: I)
         where I: Iterator<Item=Dependency>,
     {
-        self.mrea_cursor.insert_before(once(marker_asset()));
-        self.mrea_cursor.next();
-
         let layers = self.mlvl_area.dependencies.deps.as_mut_vec();
         for dep in deps {
             if layers.iter().all(|layer| layer.iter().all(|i| *i != dep)) {
@@ -95,8 +96,5 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
                 layers[layer_num].as_mut_vec().push(dep);
             }
         }
-
-        self.mrea_cursor.insert_before(once(marker_asset()));
-        self.mrea_cursor.next();
     }
 }

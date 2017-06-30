@@ -24,6 +24,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::ffi::{CStr, CString};
 use std::io::{Read, Write};
+use std::ops::RangeFrom;
 
 const METROID_PAK_NAMES: [&'static str; 5] = [
     "Metroid2.pak",
@@ -90,7 +91,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     }
 
     // Generate and add the assets for the Phazon Suit
-    let (cmdl, ancs) = create_phazo_cmdl_and_ancs(&mut found);
+    let (cmdl, ancs) = create_phazon_cmdl_and_ancs(&mut found);
     let key = (cmdl.file_id, cmdl.fourcc());
     if looking_for.remove(&key) {
         assert!(found.insert(key, cmdl).is_none());
@@ -105,7 +106,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     found
 }
 
-fn create_phazo_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
+fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
     -> (structs::Resource<'a>, structs::Resource<'a>)
 {
     let phazon_suit_cmdl = {
@@ -191,13 +192,13 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn skip_hudmemos_strg_id(pickup_kind: u32) -> u32
+fn skip_hudmemos_strg_id(pickup_meta_idx: u32) -> u32
 {
     const HUDMEMO_STRG_START: u32 = 0xDEAFF000;
-    HUDMEMO_STRG_START + pickup_kind
+    HUDMEMO_STRG_START + pickup_meta_idx
 }
 
-fn build_skip_hudmemos_strgs<'a>() -> Vec<structs::Resource<'a>>
+fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs::Resource>)
 {
     const PICKUP_NAMES: &'static [&'static str] = &[
         "Missile",
@@ -246,40 +247,75 @@ fn build_skip_hudmemos_strgs<'a>() -> Vec<structs::Resource<'a>>
         "Nothing",
         "Nothing",
     ];
-    PICKUP_NAMES.iter().enumerate().map(|(pickup_kind, name)| {
-        pickup_meta::build_resource(
-            skip_hudmemos_strg_id(pickup_kind as u32),
+    for (pickup_meta_idx, name) in PICKUP_NAMES.iter().enumerate() {
+        let id = skip_hudmemos_strg_id(pickup_meta_idx as u32);
+        let res = pickup_meta::build_resource(
+            skip_hudmemos_strg_id(pickup_meta_idx as u32),
             structs::ResourceKind::Strg(structs::Strg {
                 string_tables: vec![
                     structs::StrgStringTable {
                         lang: b"ENGL".into(),
-                        strings: vec![format!("&just=center;{} acquired!\u{0}", name).into()].into(),
+                        strings: vec![format!("&just=center;{} acquired!\u{0}",
+                                              name).into()].into(),
                     },
                 ].into(),
             })
-        )
-    }).collect()
+        );
+        assert!(pickup_resources.insert((id, b"STRG".into()), res).is_none())
+    }
 }
 
-fn modify_pickups<'a, I, J>(
-    gc_disc: &mut structs::GcDisc<'a>,
-    pak_name: &str,
+fn modify_pickups(
+    gc_disc: &mut structs::GcDisc,
+    pickup_layout: &[u8],
+    mut rng: XorShiftRng,
+    skip_hudmenus: bool
+) {
+    let mut pickup_resources = collect_pickup_resources(&gc_disc);
+    if skip_hudmenus {
+        add_skip_hudmemos_strgs(&mut pickup_resources);
+    }
+
+    let mut layout_iter = pickup_layout.iter()
+        .map(|n| {
+            // Use the E-Tank model for a nothing with a 1/4 chance. Otherwise, use the Missile
+            // model.
+            if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize }
+        })
+        .enumerate();
+
+    let mut fresh_instance_id_range = 0xDEEF0000..;
+
+    for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
+        let file_entry = find_file_mut(gc_disc, pak_name);
+        file_entry.guess_kind();
+        let pak = match *file_entry.file_mut().unwrap() {
+            structs::FstEntryFile::Pak(ref mut pak) => pak,
+            _ => panic!(),
+        };
+
+        modify_pickups_in_pak(
+            pak,
+            &pickup_resources,
+            pickup_meta::PICKUP_LOCATIONS[i].iter(),
+            layout_iter.by_ref(),
+            &mut fresh_instance_id_range,
+            skip_hudmenus
+        );
+    }
+}
+
+fn modify_pickups_in_pak<'a, I, J>(
+    pak: &mut structs::Pak<'a>,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
-    room_list: &'static [pickup_meta::RoomInfo],
-    pickup_list_iter: &mut I,
-    fresh_instance_id_iter: &mut J,
+    room_list_iter: I,
+    layout_iter: &mut J,
+    fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
 )
-    where I: Iterator<Item=(usize, usize)>,
-          J: Iterator<Item=u32>,
+    where I: Iterator<Item = &'static pickup_meta::RoomInfo>,
+          J: Iterator<Item = (usize, usize)>,
 {
-    let file_entry = find_file_mut(gc_disc, pak_name);
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-
     let resources = &mut pak.resources;
 
     // To appease the borrow checker, make a copy of the Mlvl on the stack that
@@ -291,14 +327,14 @@ fn modify_pickups<'a, I, J>(
 
     let mut editor = mlvl_wrapper::MlvlEditor::new(mlvl);
 
-    let mut room_list_iter = room_list.iter().peekable();
+    let mut room_list_iter = room_list_iter.peekable();
 
     let mut cursor = resources.cursor();
     loop {
         let mut cursor = cursor.cursor_advancer();
 
-        let curr_file_id = match cursor.peek().map(|res| (res.file_id, res.fourcc())) {
-            None => break,
+        match cursor.peek().map(|res| (res.file_id, res.fourcc())) {
+            None => panic!("Unexpectedly reached the end of the pak"),
             Some((_, fourcc)) if fourcc == b"MLVL".into() => {
                 // Update the Mlvl in the table with version we've been updating
                 let mut res = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
@@ -306,127 +342,140 @@ fn modify_pickups<'a, I, J>(
                 // The Mlvl is the last entry in the PAK, so break here.
                 break;
             },
-            Some((_, fourcc)) if fourcc == b"SAVW".into() && pak_name == "metroid5.pak" => {
+            Some((file_id, fourcc)) if fourcc == b"SAVW".into() && file_id == 0x2D52090E => {
                 // Add a scan for the Phazon suit.
                 let mut savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
                 savw.scan_array.as_mut_vec().push(structs::ScannableObject {
                     scan: 0x50535343,
                     logbook_category: 0,
                 });
-                continue
             },
-            Some((file_id, fourcc)) if fourcc == b"MREA".into() => file_id, // Handled below
-            _ => continue,
-        };
-
-        // The default case is MREA, since its the most complex by far.
-        let (pickup_locations, removals) = if let Some(&&room_info) = room_list_iter.peek() {
-            if room_info.room_id != curr_file_id {
-                continue;
-            }
-            room_list_iter.next();
-            (room_info.pickup_locations, room_info.objects_to_remove)
-        } else {
-            continue;
-        };
-
-        let mut area = editor.get_area(&mut cursor);
-
-        // Remove objects
-        {
-            let scly = area.mrea().scly_section_mut();
-            let layers = scly.layers.as_mut_vec();
-            for otr in removals {
-                layers[otr.layer as usize].objects.as_mut_vec()
-                    .retain(|i| !otr.instance_ids.contains(&i.instance_id));
-            }
-        }
-
-        for &pickup_location in pickup_locations {
-
-            let (i, pickup_meta_i) = pickup_list_iter.next().unwrap();
-            let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_i];
-            let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
-                    asset_id: file_id,
-                    asset_type: fourcc,
-                });
-
-            // TODO: Re-randomization: reuse the same layer, just clear its contents
-            //       (and remove any connections to any objects contained within it)
-            let name = CString::new(format!(
-                    "Randomizer - Pickup {} ({:?})", i, pickup_meta.pickup.name)).unwrap();
-            area.add_layer(name);
-
-            let new_layer_idx = area.layer_flags.layer_count as usize - 1;
-            if !skip_hudmenus {
-                area.add_dependencies(pickup_resources, new_layer_idx, iter);
-            } else {
-                // Add our custom STRG
-                let iter = iter.chain(::std::iter::once(structs::Dependency {
-                        asset_id: skip_hudmemos_strg_id(pickup_meta_i as u32),
-                        asset_type: b"STRG".into(),
-                    }));
-                area.add_dependencies(pickup_resources, new_layer_idx, iter);
-            }
-
-            if curr_file_id == ARTIFACT_TEMPLE_ID {
-                // If this room is the Artifact Temple, patch it.
-                assert_eq!(pickup_locations.len(), 1, "Sanity check");
-                fix_artifact_of_truth_requirement(&mut area, pickup_meta.pickup.kind,
-                                                  fresh_instance_id_iter);
-            }
-
-            let scly = area.mrea().scly_section_mut();
-            let layers = scly.layers.as_mut_vec();
-
-            let mut additional_connections = Vec::new();
-
-            // Add a post-pickup relay. This is used to support cutscene-skipping
-            let instance_id = fresh_instance_id_iter.next().unwrap();
-            let relay = post_pickup_relay_template(instance_id,
-                                                   pickup_location.post_pickup_relay_connections);
-            layers[new_layer_idx].objects.as_mut_vec().push(relay);
-            additional_connections.push(structs::Connection {
-                state: 1,
-                message: 13,
-                target_object_id: instance_id,
-            });
-
-            // If this is an artifact, insert a layer change function
-            let pickup_kind = pickup_meta.pickup.kind;
-            if pickup_kind >= 29 && pickup_kind <= 40 {
-                let instance_id = fresh_instance_id_iter.next().unwrap();
-                let function = artifact_layer_change_template(instance_id, pickup_kind);
-                layers[new_layer_idx].objects.as_mut_vec().push(function);
-                additional_connections.push(structs::Connection {
-                    state: 1,
-                    message: 7,
-                    target_object_id: instance_id,
-                });
-            }
-
-            {
-                let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
-                    .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
-                    .unwrap();
-                update_pickup(pickup, &pickup_meta);
-                if additional_connections.len() > 0 {
-                    pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
+            Some((file_id, fourcc)) if fourcc == b"MREA".into() => {
+                if let Some(&&room_info) = room_list_iter.peek() {
+                    if room_info.room_id == file_id {
+                        room_list_iter.next();
+                        let area = editor.get_area(&mut cursor);
+                        modify_pickups_in_mrea(
+                            area,
+                            room_info,
+                            pickup_resources,
+                            layout_iter,
+                            fresh_instance_id_range,
+                            skip_hudmenus
+                        );
+                    }
                 }
             }
-            {
-                let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
-                    .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
-                    .unwrap();
-                update_hudmemo(hudmemo, pickup_meta_i, &pickup_meta, skip_hudmenus);
+            _ => (),
+        };
+
+    }
+}
+
+fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
+    mut area: mlvl_wrapper::MlvlArea<'a, 'mlvl, 'cursor, 'list>,
+    room_info: pickup_meta::RoomInfo,
+    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
+    layout_iter: &mut I,
+    fresh_instance_id_range: &mut RangeFrom<u32>,
+    skip_hudmenus: bool,
+)
+    where I: Iterator<Item = (usize, usize)>,
+{
+    // Remove objects
+    {
+        let scly = area.mrea().scly_section_mut();
+        let layers = scly.layers.as_mut_vec();
+        for otr in room_info.objects_to_remove {
+            layers[otr.layer as usize].objects.as_mut_vec()
+                .retain(|i| !otr.instance_ids.contains(&i.instance_id));
+        }
+    }
+
+    for &pickup_location in room_info.pickup_locations {
+
+        let (i, pickup_meta_idx) = layout_iter.next().unwrap();
+        let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_idx];
+        let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            });
+
+        // TODO: Re-randomization: reuse the same layer, just clear its contents
+        //       (and remove any connections to any objects contained within it)
+        let name = CString::new(format!(
+                "Randomizer - Pickup {} ({:?})", i, pickup_meta.pickup.name)).unwrap();
+        area.add_layer(name);
+
+        let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+        if !skip_hudmenus {
+            area.add_dependencies(pickup_resources, new_layer_idx, iter);
+        } else {
+            // Add our custom STRG
+            let iter = iter.chain(::std::iter::once(structs::Dependency {
+                    asset_id: skip_hudmemos_strg_id(pickup_meta_idx as u32),
+                    asset_type: b"STRG".into(),
+                }));
+            area.add_dependencies(pickup_resources, new_layer_idx, iter);
+        }
+
+        if area.mrea_file_id() == ARTIFACT_TEMPLE_ID {
+            // If this room is the Artifact Temple, patch it.
+            assert_eq!(room_info.pickup_locations.len(), 1, "Sanity check");
+            fix_artifact_of_truth_requirement(&mut area, pickup_meta.pickup.kind,
+                                                fresh_instance_id_range);
+        }
+
+        let scly = area.mrea().scly_section_mut();
+        let layers = scly.layers.as_mut_vec();
+
+        let mut additional_connections = Vec::new();
+
+        // Add a post-pickup relay. This is used to support cutscene-skipping
+        let instance_id = fresh_instance_id_range.next().unwrap();
+        let relay = post_pickup_relay_template(instance_id,
+                                                pickup_location.post_pickup_relay_connections);
+        layers[new_layer_idx].objects.as_mut_vec().push(relay);
+        additional_connections.push(structs::Connection {
+            state: 1,
+            message: 13,
+            target_object_id: instance_id,
+        });
+
+        // If this is an artifact, insert a layer change function
+        let pickup_kind = pickup_meta.pickup.kind;
+        if pickup_kind >= 29 && pickup_kind <= 40 {
+            let instance_id = fresh_instance_id_range.next().unwrap();
+            let function = artifact_layer_change_template(instance_id, pickup_kind);
+            layers[new_layer_idx].objects.as_mut_vec().push(function);
+            additional_connections.push(structs::Connection {
+                state: 1,
+                message: 7,
+                target_object_id: instance_id,
+            });
+        }
+
+        {
+            let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
+                .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
+                .unwrap();
+            update_pickup(pickup, &pickup_meta);
+            if additional_connections.len() > 0 {
+                pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
             }
-            {
-                let location = pickup_location.attainment_audio;
-                let attainment_audio = layers[location.layer as usize].objects.iter_mut()
-                    .find(|obj| obj.instance_id ==  location.instance_id)
-                    .unwrap();
-                update_attainment_audio(attainment_audio, &pickup_meta);
-            }
+        }
+        {
+            let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
+                .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
+                .unwrap();
+            update_hudmemo(hudmemo, pickup_meta_idx, &pickup_meta, skip_hudmenus);
+        }
+        {
+            let location = pickup_location.attainment_audio;
+            let attainment_audio = layers[location.layer as usize].objects.iter_mut()
+                .find(|obj| obj.instance_id ==  location.instance_id)
+                .unwrap();
+            update_attainment_audio(attainment_audio, &pickup_meta);
         }
     }
 }
@@ -466,14 +515,14 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     };
 }
 
-fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta_i: usize,
+fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta_idx: usize,
                   pickup_meta: &pickup_meta::PickupMeta, skip_hudmenus: bool)
 {
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     if skip_hudmenus {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_i as u32);
+        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_idx as u32);
     } else {
         hudmemo.strg = pickup_meta.hudmemo_strg;
     }
@@ -599,10 +648,9 @@ fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
 // the game. This logic is based on the observed behavior of Claris's randomizer.
 // XXX I still don't entirely understand why there needs to be a special case
 //     if an artifact is placed in this room.
-fn fix_artifact_of_truth_requirement<I>(area: &mut mlvl_wrapper::MlvlArea,
-                                        pickup_kind: u32,
-                                        fresh_instance_id_iter: &mut I)
-    where I: Iterator<Item=u32>,
+fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
+                                     pickup_kind: u32,
+                                     fresh_instance_id_range: &mut RangeFrom<u32>)
 {
     let truth_req_layer_id = area.layer_flags.layer_count;
     assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
@@ -626,7 +674,7 @@ fn fix_artifact_of_truth_requirement<I>(area: &mut mlvl_wrapper::MlvlArea,
     let scly = area.mrea().scly_section_mut();
 
     // A relay is created and connected to "Relay Show Progress 1"
-    let new_relay_instance_id = fresh_instance_id_iter.next().unwrap();
+    let new_relay_instance_id = fresh_instance_id_range.next().unwrap();
     let new_relay = structs::SclyObject {
         instance_id: new_relay_instance_id,
         connections: vec![
@@ -922,30 +970,8 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
     }
 
-    let mut pickup_resources = collect_pickup_resources(&gc_disc);
-    if skip_hudmenus {
-        for res in build_skip_hudmemos_strgs() {
-            assert!(pickup_resources.insert((res.file_id, res.kind.fourcc()), res).is_none());
-        }
-    }
-
-    let mut rng = XorShiftRng::from_seed(seed);
-    let mut layout_iter = pickup_layout.iter()
-        .map(|n| {
-            // Use the E-Tank model for a nothing with a 1/4 chance. Otherwise, use the Missile
-            // model.
-            if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize }
-        })
-        .enumerate();
-    let mut fresh_instance_id_range = 0xDEEF0000..;
-    for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
-        modify_pickups(&mut gc_disc, pak_name,
-                       &pickup_resources,
-                       &mut pickup_meta::PICKUP_LOCATIONS[i],
-                       &mut layout_iter,
-                       &mut fresh_instance_id_range,
-                       skip_hudmenus);
-    }
+    let rng = XorShiftRng::from_seed(seed);
+    modify_pickups(&mut gc_disc, &pickup_layout, rng, skip_hudmenus);
 
     if skip_frigate {
         patch_dol_skip_frigate(&mut gc_disc);
