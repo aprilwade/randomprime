@@ -11,6 +11,7 @@ use rand::{XorShiftRng, SeedableRng, Rng};
 
 pub use randomprime_patcher::*;
 
+use asset_ids;
 use reader_writer::{FourCC, Reader, Writable};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
@@ -35,7 +36,6 @@ const METROID_PAK_NAMES: [&'static str; 5] = [
 ];
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
-const ARTIFACT_TEMPLE_ID: u32 = 0x2398E906;
 
 fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNotifier)
     -> Result<(), String>
@@ -110,7 +110,8 @@ fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), struct
     -> (structs::Resource<'a>, structs::Resource<'a>)
 {
     let phazon_suit_cmdl = {
-        let grav_suit_cmdl = ResourceData::new(&resources[&(0x95946E41, b"CMDL".into())]);
+        let grav_suit_cmdl = ResourceData::new(&resources[&(
+                asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into())]);
         let mut phazon_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -118,15 +119,16 @@ fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), struct
         phazon_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change which textures this points to
-        0x50535431u32.write(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
-        0x50535432u32.write(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
+        asset_ids::PHAZON_SUIT_TXTR1.write(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
+        asset_ids::PHAZON_SUIT_TXTR2.write(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            0x50534D44,
+            asset_ids::PHAZON_SUIT_CMDL,
             structs::ResourceKind::External(phazon_cmdl_bytes, b"CMDL".into())
         )
     };
     let phazon_suit_ancs = {
-        let grav_suit_ancs = ResourceData::new(&resources[&(0x27A97006, b"ANCS".into())]);
+        let grav_suit_ancs = ResourceData::new(&resources[&(
+                asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into())]);
         let mut phazon_ancs_bytes = grav_suit_ancs.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -134,9 +136,9 @@ fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), struct
         phazon_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change this to refer to the CMDL above
-        0x50534D44u32.write(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
+        asset_ids::PHAZON_SUIT_CMDL.write(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            0x5053414E,
+            asset_ids::PHAZON_SUIT_ANCS,
             structs::ResourceKind::External(phazon_ancs_bytes, b"ANCS".into())
         )
     };
@@ -192,71 +194,25 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn skip_hudmemos_strg_id(pickup_meta_idx: u32) -> u32
+fn skip_hudmemos_strg_id(pickup_meta_idx: usize) -> u32
 {
-    const HUDMEMO_STRG_START: u32 = 0xDEAFF000;
-    HUDMEMO_STRG_START + pickup_meta_idx
+    (asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
+        .nth(pickup_meta_idx)
+        .unwrap()
 }
 
 fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs::Resource>)
 {
-    const PICKUP_NAMES: &'static [&'static str] = &[
-        "Missile",
-        "Energy Tank",
-
-        "Thermal Visor",
-        "X-Ray Visor",
-
-        "Varia Suit",
-        "Gravity Suit",
-        "Phazon Suit",
-
-        "Morph Ball",
-        "Boost Ball",
-        "Spider Ball",
-
-        "Morph Ball Bomb",
-        "Power Bomb Expansion",
-        "Power Bomb",
-
-        "Charge Beam",
-        "Space Jump Boots",
-        "Grapple Beam",
-
-        "Super Missile",
-        "Wavebuster",
-        "Ice Spreader",
-        "Flamethrower",
-
-        "Wave Beam",
-        "Ice Beam",
-        "Plasma Beam",
-
-        "Artifact of Lifegiver",
-        "Artifact of Wild",
-        "Artifact of World",
-        "Artifact of Sun",
-        "Artifact of Elder",
-        "Artifact of Spirit",
-        "Artifact of Truth",
-        "Artifact of Chozo",
-        "Artifact of Warrior",
-        "Artifact of Newborn",
-        "Artifact of Nature",
-        "Artifact of Strength",
-        "Nothing",
-        "Nothing",
-    ];
-    for (pickup_meta_idx, name) in PICKUP_NAMES.iter().enumerate() {
-        let id = skip_hudmemos_strg_id(pickup_meta_idx as u32);
+    for (pickup_meta_idx, pt) in PICKUP_TYPES.iter().enumerate() {
+        let id = skip_hudmemos_strg_id(pickup_meta_idx);
         let res = pickup_meta::build_resource(
-            skip_hudmemos_strg_id(pickup_meta_idx as u32),
+            id,
             structs::ResourceKind::Strg(structs::Strg {
                 string_tables: vec![
                     structs::StrgStringTable {
                         lang: b"ENGL".into(),
                         strings: vec![format!("&just=center;{} acquired!\u{0}",
-                                              name).into()].into(),
+                                              pt.name).into()].into(),
                     },
                 ].into(),
             })
@@ -342,11 +298,11 @@ fn modify_pickups_in_pak<'a, I, J>(
                 // The Mlvl is the last entry in the PAK, so break here.
                 break;
             },
-            Some((file_id, fourcc)) if fourcc == b"SAVW".into() && file_id == 0x2D52090E => {
+            Some((asset_ids::PHAZON_MINES_SAVW, fourcc)) if fourcc == b"SAVW".into() => {
                 // Add a scan for the Phazon suit.
                 let mut savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
                 savw.scan_array.as_mut_vec().push(structs::ScannableObject {
-                    scan: 0x50535343,
+                    scan: asset_ids::PHAZON_SUIT_SCAN,
                     logbook_category: 0,
                 });
             },
@@ -413,13 +369,13 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
         } else {
             // Add our custom STRG
             let iter = iter.chain(::std::iter::once(structs::Dependency {
-                    asset_id: skip_hudmemos_strg_id(pickup_meta_idx as u32),
+                    asset_id: skip_hudmemos_strg_id(pickup_meta_idx),
                     asset_type: b"STRG".into(),
                 }));
             area.add_dependencies(pickup_resources, new_layer_idx, iter);
         }
 
-        if area.mrea_file_id() == ARTIFACT_TEMPLE_ID {
+        if area.mrea_file_id() == asset_ids::ARTIFACT_TEMPLE_MREA {
             // If this room is the Artifact Temple, patch it.
             assert_eq!(room_info.pickup_locations.len(), 1, "Sanity check");
             fix_artifact_of_truth_requirement(&mut area, pickup_meta.pickup.kind,
@@ -522,7 +478,7 @@ fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta_idx: usize,
     if skip_hudmenus {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_idx as u32);
+        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_idx);
     } else {
         hudmemo.strg = pickup_meta.hudmemo_strg;
     }
@@ -732,7 +688,7 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_it
 
     // The object we want is in the first layer.
     let ref mut layer = scly.layers.as_mut_vec()[0];
-    let obj = layer.objects.iter_mut().find(|obj| obj.property_data.object_type() == 0xF).unwrap();
+    let obj = layer.objects.iter_mut().find(|obj| obj.property_data.is_spawn_point()).unwrap();
     let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
 
     println!("Starting pickups set:");

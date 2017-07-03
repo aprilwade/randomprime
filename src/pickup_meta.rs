@@ -2,6 +2,7 @@ use std::mem;
 
 use reader_writer::{FourCC, Reader};
 use structs::{Connection, Pickup, Resource, ResourceKind};
+use asset_ids;
 
 pub struct PickupMeta
 {
@@ -77,19 +78,26 @@ pub struct ScriptObjectLocation
 
 const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
     // Phazon Suit SCAN
-    (0x50535343, *b"SCAN", include_bytes!("../extra_assets/phazon_suit_scan.scan")),
+    (asset_ids::PHAZON_SUIT_SCAN, *b"SCAN",
+     include_bytes!("../extra_assets/phazon_suit_scan.scan")),
     // Phazon Suit STRG
-    (0x50535353, *b"STRG", include_bytes!("../extra_assets/phazon_suit_scan.strg")),
+    (asset_ids::PHAZON_SUIT_STRG, *b"STRG",
+     include_bytes!("../extra_assets/phazon_suit_scan.strg")),
     // Phazon Suit TXTR 1
-    (0x50535431, *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
+    (asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
+     include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
     // Phazon Suit TXTR 2
-    (0x50535432, *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
+    (asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
+     include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
     // Nothing acquired HudMemo STRG
-    (0xDEAF0000, *b"STRG", include_bytes!("../extra_assets/nothing_hudmemo.strg")),
+    (asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, *b"STRG",
+     include_bytes!("../extra_assets/nothing_hudmemo.strg")),
     // Nothing scan STRG
-    (0xDEAF0001, *b"STRG", include_bytes!("../extra_assets/nothing_scan.strg")),
+    (asset_ids::NOTHING_SCAN_STRG, *b"STRG",
+     include_bytes!("../extra_assets/nothing_scan.strg")),
     // Nothing SCAN
-    (0xDEAF0002, *b"SCAN", include_bytes!("../extra_assets/nothing_scan.scan")),
+    (asset_ids::NOTHING_SCAN, *b"SCAN",
+     include_bytes!("../extra_assets/nothing_scan.scan")),
 ];
 
 #[cfg(not(debug_assertions))]

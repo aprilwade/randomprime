@@ -10,7 +10,7 @@ extern crate memmap;
 extern crate randomprime_patcher;
 
 pub use randomprime_patcher::*;
-use randomprime_patcher::pickup_meta::{/*PickupLocation,*/ ScriptObjectLocation};
+use randomprime_patcher::pickup_meta::ScriptObjectLocation;
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
@@ -210,53 +210,6 @@ impl ResourceKey
 }
 
 
-// A map from pickup type -> pickup position
-const PICKUP_TYPES: &'static [(usize, &'static str)] = &[
-    (1, "Missile"),
-    (9, "Energy Tank"),
-
-    (50, "Thermal Visor"),
-    (71, "X-Ray Visor"),
-
-    (20, "Varia Suit"),
-    (54, "Gravity Suit"),
-    (83, "Phazon Suit"),
-
-    (5,  "Morph Ball"),
-    (43, "Boost Ball"),
-    (44, "Spider Ball"),
-
-    (28, "Morph Ball Bomb"),
-    (12, "Power Bomb (small)"),
-    (85, "Power Bomb (large)"),
-
-    (23, "Charge Beam"),
-    (59, "Space Jump Boots"),
-    (75, "Grapple Beam"),
-
-    (47, "Super Missile"),
-    (13, "Wavebuster"),
-    (96, "Ice Spreader"),
-    (76, "Flamethrower"),
-
-    (41, "Wave Beam"),
-    (34, "Ice Beam"),
-    (99, "Plasma Beam"),
-
-    (14, "Artifact of Lifegiver"),
-    (21, "Artifact of Wild"),
-    (33, "Artifact of World"),
-    (37, "Artifact of Sun"),
-    (49, "Artifact of Elder"),
-    (56, "Artifact of Spirit"),
-    (63, "Artifact of Truth"),
-    (72, "Artifact of Chozo"),
-    (77, "Artifact of Warrior"),
-    (89, "Artifact of Newborn"),
-    (91, "Artifact of Nature"),
-    (95, "Artifact of Strength"),
-];
-
 static CUT_SCENE_PICKUPS: &'static [(u32, u32)] = &[
     (0x3C785450, 589860), // Morph Ball
     (0x0D72F1F7, 1377077), // Wavebuster
@@ -374,7 +327,7 @@ fn trace_pickup_deps(
         for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
             for obj in scly_layer.objects.iter() {
                 let mut obj = obj.clone().into_owned();
-                if obj.property_data.object_type() == 0x11 {
+                if obj.property_data.is_pickup() {
                     obj.property_data.guess_kind();
                     let pickup = obj.property_data.as_pickup().unwrap();
 
@@ -502,11 +455,11 @@ fn trace_pickup_deps(
             } else {
                 // Overrides for the Phazon Suit
                 assert_eq!(pickup.kind, 23);
-                hudmemo_strg = 0x11BEB861;
-                pickup.actor_params.scan_params.scan = 0x50535343;
+                hudmemo_strg = asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG;
+                pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
 
-                pickup.cmdl = 0x50534D44;
-                pickup.ancs.file_id = 0x5053414E;
+                pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
+                pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
 
                 hudmemo_loc = ScriptObjectLocation {
                     layer: scly_db[&68813640].0 as u32,
@@ -525,12 +478,11 @@ fn trace_pickup_deps(
                 removals.push(find_cutscene_trigger_relay(pickup.kind, &obj.connections, &scly_db))
             }
 
-            if let Some(type_id) = PICKUP_TYPES.iter().position(|&(pos, _)| *counter == pos) {
+            if let Some(kind_id) = PICKUP_TYPES.iter().position(|pt| *counter == pt.first_loc) {
                 let mut data = vec![];
                 pickup.write(&mut data).unwrap();
-                let name = PICKUP_TYPES[type_id].1;
-                pickup_table.insert(type_id, PickupData {
-                    name: name,
+                pickup_table.insert(kind_id, PickupData {
+                    name: PICKUP_TYPES[kind_id].name,
                     bytes: data,
                     deps: deps,
                     hudmemo_strg: hudmemo_strg,
@@ -728,21 +680,21 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x00656374, b"CSKR".into()));
     } else if pickup_kind == 23 {
         // Phazon suit.
-        deps.insert(ResourceKey::new(0x11BEB861, b"STRG".into())); // HudMemo
-        deps.insert(ResourceKey::new(0x50535343, b"SCAN".into()));
-        deps.insert(ResourceKey::new(0x50535353, b"STRG".into())); // HudMemo
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG, b"STRG".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_SCAN, b"SCAN".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_STRG, b"STRG".into()));
 
         // Remove the Gravity Suit's CMDL and ANCS
-        deps.remove(&ResourceKey::new(0x95946E41, b"CMDL".into()));
-        deps.remove(&ResourceKey::new(0x27A97006, b"ANCS".into()));
+        deps.remove(&ResourceKey::new(asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into()));
+        deps.remove(&ResourceKey::new(asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into()));
         deps.remove(&ResourceKey::new(0x08C625DA, b"TXTR".into()));
         deps.remove(&ResourceKey::new(0xA95D06BC, b"TXTR".into()));
 
         // Add the custom CMDL and textures
-        deps.insert(ResourceKey::new(0x50534D44, b"CMDL".into()));
-        deps.insert(ResourceKey::new(0x5053414E, b"ANCS".into()));
-        deps.insert(ResourceKey::new(0x50535431, b"TXTR".into()));
-        deps.insert(ResourceKey::new(0x50535432, b"TXTR".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_CMDL, b"CMDL".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_ANCS, b"ANCS".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
+        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR2, b"TXTR".into()));
     };
 }
 
@@ -757,7 +709,7 @@ fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>, base_kind: usiz
         nothing_pickup.kind = 26; // This kind matches an energy refill
         nothing_pickup.max_increase = 0;
         nothing_pickup.curr_increase = 0;
-        nothing_pickup.actor_params.scan_params.scan = 0xDEAF0002;
+        nothing_pickup.actor_params.scan_params.scan = asset_ids::NOTHING_SCAN;
         // TODO: rotate model?
         nothing_pickup.write(&mut nothing_bytes).unwrap();
     }
@@ -766,16 +718,16 @@ fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>, base_kind: usiz
         .cloned()
         .collect();
     nothing_deps.extend(&[
-        ResourceKey::new(0xDEAF0000, b"STRG".into()),
-        ResourceKey::new(0xDEAF0001, b"STRG".into()),
-        ResourceKey::new(0xDEAF0002, b"SCAN".into()),
+        ResourceKey::new(asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, b"STRG".into()),
+        ResourceKey::new(asset_ids::NOTHING_SCAN_STRG, b"STRG".into()),
+        ResourceKey::new(asset_ids::NOTHING_SCAN, b"SCAN".into()),
     ]);
     let len = pickup_table.len();
     assert!(pickup_table.insert(len, PickupData {
         name: "Nothing",
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: 0xDEAF0000,
+        hudmemo_strg: asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
 }
@@ -805,8 +757,8 @@ fn main()
     }
 
     // Special case of Phazon Suits' custom CMDL
-    let aabb = *cmdl_aabbs.get(&0x95946E41).unwrap();
-    assert!(cmdl_aabbs.insert(0x50534D44, aabb).is_none());
+    let aabb = *cmdl_aabbs.get(&asset_ids::GRAVITY_SUIT_CMDL).unwrap();
+    assert!(cmdl_aabbs.insert(asset_ids::PHAZON_SUIT_CMDL, aabb).is_none());
 
     create_nothing(&mut pickup_table, 0);
     create_nothing(&mut pickup_table, 1);

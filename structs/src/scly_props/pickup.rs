@@ -1,16 +1,19 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-
 use scly_props::structs::{ActorParameters, AncsProp};
+
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
     #[derive(Debug, Clone)]
     pub struct Pickup<'a>
     {
-        // 18 properties
+        #[expect = 18]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         position: GenericArray<f32, U3>,
@@ -35,5 +38,13 @@ auto_struct! {
         active: u8,
         unknown: f32,
         part: u32,
+    }
+}
+
+impl<'a> SclyPropertyData for Pickup<'a>
+{
+    fn object_type() -> u8
+    {
+        0x11
     }
 }

@@ -1,4 +1,5 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 
 auto_struct! {
@@ -6,7 +7,9 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct HudMemo<'a>
     {
-        // 6 properties
+        #[expect = 6]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         first_message_timer: f32,
@@ -14,5 +17,13 @@ auto_struct! {
         memo_type: u32,
         strg: u32,
         active: u8,
+    }
+}
+
+impl<'a> SclyPropertyData for HudMemo<'a>
+{
+    fn object_type() -> u8
+    {
+        0x17
     }
 }

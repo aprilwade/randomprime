@@ -1,4 +1,5 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
@@ -8,7 +9,9 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct SpawnPoint<'a>
     {
-        // 18 properties
+        #[expect = 35]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         position: GenericArray<f32, U3>,
@@ -48,5 +51,13 @@ auto_struct! {
         default_spawn: u8,
         active: u8,
         morphed: u8,
+    }
+}
+
+impl<'a> SclyPropertyData for SpawnPoint<'a>
+{
+    fn object_type() -> u8
+    {
+        0x0F
     }
 }

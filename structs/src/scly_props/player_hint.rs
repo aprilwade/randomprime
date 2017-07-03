@@ -1,4 +1,5 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
@@ -21,7 +22,9 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct PlayerHint<'a>
     {
-        // 6 properties
+        #[expect = 6]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         position: GenericArray<f32, U3>,
@@ -32,5 +35,13 @@ auto_struct! {
         inner_struct: PlayerHintStruct,
 
         unknown1: u32,
+    }
+}
+
+impl<'a> SclyPropertyData for PlayerHint<'a>
+{
+    fn object_type() -> u8
+    {
+        0x3E
     }
 }

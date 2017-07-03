@@ -1,4 +1,5 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
@@ -8,7 +9,9 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct StreamedAudio<'a>
     {
-        // 9 properties
+        #[expect = 9]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         active: u8,
@@ -16,5 +19,13 @@ auto_struct! {
 
         // 6 unknown properties
         unknowns: GenericArray<u8, U18>,
+    }
+}
+
+impl<'a> SclyPropertyData for StreamedAudio<'a>
+{
+    fn object_type() -> u8
+    {
+        0x61
     }
 }

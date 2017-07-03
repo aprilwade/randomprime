@@ -62,7 +62,7 @@ auto_struct! {
         #[derivable = property_data.object_type()]
         object_type: u8,
 
-        #[derivable = (12 + connections.size() + property_data.size()) as u32]
+        #[derivable = (8 + connections.size() + property_data.size()) as u32]
         instance_size: u32,
 
         instance_id: u32,
@@ -71,22 +71,19 @@ auto_struct! {
         connection_count: u32,
         connections: LazyArray<'a, Connection> = (connection_count as usize, ()),
 
-        #[derivable = property_data.property_count()]
-        property_count: u32,
-        property_data: SclyProperty<'a> = (object_type, property_count,
-                                           (instance_size - 12) as usize - connections.size()),
+        property_data: SclyProperty<'a> = (object_type,
+                                           (instance_size - 8) as usize - connections.size()),
     }
 }
 
 macro_rules! build_scly_property {
-    ($($name:ident, $accessor:ident, $accessor_mut:ident, $obj_type:expr, $prop_count:expr,)*) => {
+    ($($name:ident, $is_check:ident, $accessor:ident, $accessor_mut:ident,)*) => {
 
         #[derive(Clone, Debug)]
         pub enum SclyProperty<'a>
         {
             Unknown {
                 object_type: u8,
-                property_count: u32,
                 data: Reader<'a>
             },
 
@@ -99,41 +96,44 @@ macro_rules! build_scly_property {
             {
                 match *self {
                     SclyProperty::Unknown { object_type, .. } => object_type,
-                    $(SclyProperty::$name(_) => $obj_type,)*
-                }
-            }
-
-            fn property_count(&self) -> u32
-            {
-                match *self {
-                    SclyProperty::Unknown { property_count, .. } => property_count,
-                    $(SclyProperty::$name(_) => $prop_count,)*
+                    $(SclyProperty::$name(_) =>
+                      <scly_props::$name as SclyPropertyData>::object_type(),)*
                 }
             }
 
             pub fn guess_kind(&mut self)
             {
-                let (mut reader, object_type, prop_count) = match *self {
-                    SclyProperty::Unknown { ref data, object_type, property_count }
-                        => (data.clone(), object_type, property_count),
+                let (mut reader, object_type) = match *self {
+                    SclyProperty::Unknown { ref data, object_type }
+                        => (data.clone(), object_type),
                     _ => return,
                 };
-                *self = match object_type {
-                    $($obj_type => {
-                        assert_eq!(prop_count, $prop_count);
-                        SclyProperty::$name(reader.read(()))
-                    },)*
-                    _ => return,
-                }
+                *self = if false {
+                    return
+                } $(else if object_type == <scly_props::$name as SclyPropertyData>::object_type() {
+                    SclyProperty::$name(reader.read(()))
+                })* else {
+                    return
+                };
             }
 
             $(
+                pub fn $is_check(&self) -> bool
+                {
+                    match *self {
+                        SclyProperty::$name(_) => true,
+                        SclyProperty::Unknown { object_type, .. } =>
+                            object_type == <scly_props::$name as SclyPropertyData>::object_type(),
+                        _ => false,
+                    }
+                }
+
                 pub fn $accessor(&self) -> Option<Cow<scly_props::$name<'a>>>
                 {
                     match *self {
                         SclyProperty::$name(ref inst) => Some(Cow::Borrowed(inst)),
                         SclyProperty::Unknown { ref data, object_type, .. } => {
-                            if object_type == $obj_type {
+                            if object_type == <scly_props::$name as SclyPropertyData>::object_type() {
                                 Some(Cow::Owned(data.clone().read(())))
                             } else {
                                 None
@@ -145,10 +145,19 @@ macro_rules! build_scly_property {
 
                 pub fn $accessor_mut(&mut self) -> Option<&mut scly_props::$name<'a>>
                 {
-                    self.guess_kind();
+                    let (mut data, object_type) = match *self {
+                        SclyProperty::Unknown { ref data, object_type, .. } =>
+                            (data.clone(), object_type),
+                        SclyProperty::$name(ref mut inst) => return Some(inst),
+                        _ => return None,
+                    };
+                    if object_type != <scly_props::$name as SclyPropertyData>::object_type() {
+                        return None
+                    }
+                    *self = SclyProperty::$name(data.read(()));
                     match *self {
-                        SclyProperty::$name(ref mut inst) => Some(inst),
-                        _ => None,
+                        SclyProperty::$name(ref mut inst) => return Some(inst),
+                        _ => panic!(),
                     }
                 }
             )*
@@ -156,12 +165,11 @@ macro_rules! build_scly_property {
 
         impl<'a> Readable<'a> for SclyProperty<'a>
         {
-            type Args = (u8, u32, usize);
-            fn read(reader: Reader<'a>, (otype, prop_count, size): Self::Args) -> (Self, Reader<'a>)
+            type Args = (u8, usize);
+            fn read(reader: Reader<'a>, (otype, size): Self::Args) -> (Self, Reader<'a>)
             {
                 let prop = SclyProperty::Unknown {
                     object_type: otype,
-                    property_count: prop_count,
                     data: reader.truncated(size),
                 };
                 (prop, reader.offset(size))
@@ -191,18 +199,23 @@ macro_rules! build_scly_property {
 }
 
 build_scly_property!(
-    Trigger,         as_trigger,          as_trigger_mut,            0x04, 9,
-    Timer,           as_timer,            as_timer_mut,              0x05, 6,
-    Sound,           as_sound,            as_sound_mut,              0x09, 20,
-    Dock,            as_dock,             as_dock_mut,               0x0B, 7,
-    SpawnPoint,      as_spawn_point,      as_spawn_point_mut,        0x0F, 35,
-    Pickup,          as_pickup,           as_pickup_mut,             0x11, 18,
-    Relay,           as_relay,            as_relay_mut,              0x15, 2,
-    HudMemo,         as_hud_memo,         as_hud_memo_mut,           0x17, 6,
-    SpecialFunction, as_special_function, as_special_function_mut,   0x3A, 15,
-    PlayerHint,      as_player_hint,      as_player_hint_mut,        0x3E, 6,
-    StreamedAudio,   as_streamed_audio,   as_streamed_audio_mut,     0x61, 9,
+    Trigger,         is_trigger,          as_trigger,          as_trigger_mut,
+    Timer,           is_timer,            as_timer,            as_timer_mut,
+    Sound,           is_sound,            as_sound,            as_sound_mut,
+    Dock,            is_dock,             as_dock,             as_dock_mut,
+    SpawnPoint,      is_spawn_point,      as_spawn_point,      as_spawn_point_mut,
+    Pickup,          is_pickup,           as_pickup,           as_pickup_mut,
+    Relay,           is_relay,            as_relay,            as_relay_mut,
+    HudMemo,         is_hud_memo,         as_hud_memo,         as_hud_memo_mut,
+    SpecialFunction, is_special_function, as_special_function, as_special_function_mut,
+    PlayerHint,      is_player_hint,      as_player_hint,      as_player_hint_mut,
+    StreamedAudio,   is_streamed_audio,   as_streamed_audio,   as_streamed_audio_mut,
 );
+
+pub trait SclyPropertyData
+{
+    fn object_type() -> u8;
+}
 
 
 auto_struct! {

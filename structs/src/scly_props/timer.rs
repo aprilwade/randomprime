@@ -1,4 +1,5 @@
 
+use SclyPropertyData;
 use reader_writer::CStr;
 
 auto_struct! {
@@ -6,7 +7,9 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct Timer<'a>
     {
-        // 6 properties
+        #[expect = 6]
+        prop_count: u32,
+
         name: CStr<'a>,
 
         start_time: f32,
@@ -14,5 +17,13 @@ auto_struct! {
         reset_to_zero: u8,
         start_immediately: u8,
         active: u8,
+    }
+}
+
+impl<'a> SclyPropertyData for Timer<'a>
+{
+    fn object_type() -> u8
+    {
+        0x5
     }
 }

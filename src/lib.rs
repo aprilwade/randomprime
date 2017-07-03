@@ -66,3 +66,93 @@ impl<'a> ResourceData<'a>
     }
 }
 
+macro_rules! def_asset_ids {
+    (@Build { $prev:expr } $id:ident, $($rest:tt)*) => {
+        def_asset_ids!(@Build { $prev } $id = $prev + 1, $($rest)*);
+    };
+    (@Build { $_prev:expr } $id:ident = $e:expr, $($rest:tt)*) => {
+        pub const $id: u32 = $e;
+        def_asset_ids!(@Build { $id } $($rest)*);
+    };
+    (@Build { $prev:expr }) => {
+    };
+    ($($tokens:tt)*) => {
+        def_asset_ids!(@Build { 0 } $($tokens)*);
+    };
+}
+
+pub mod asset_ids {
+    def_asset_ids! {
+        PHAZON_SUIT_SCAN = 0xDEAF0000,
+        PHAZON_SUIT_STRG,
+        PHAZON_SUIT_TXTR1,
+        PHAZON_SUIT_TXTR2,
+        PHAZON_SUIT_CMDL,
+        PHAZON_SUIT_ANCS,
+        NOTHING_ACQUIRED_HUDMEMO_STRG,
+        NOTHING_SCAN_STRG,
+        NOTHING_SCAN,
+
+        SKIP_HUDMEMO_STRG_START,
+        SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 37,
+
+        GRAVITY_SUIT_CMDL = 0x95946E41,
+        GRAVITY_SUIT_ANCS = 0x27A97006,
+        PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG = 0x11BEB861,
+        PHAZON_MINES_SAVW = 0x2D52090E,
+        ARTIFACT_TEMPLE_MREA = 0x2398E906,
+    }
+}
+
+pub struct PickupType
+{
+    pub name: &'static str,
+    pub first_loc: usize,
+}
+// A map from pickup type -> pickup name and location
+// Note, the ordering matters here
+pub const PICKUP_TYPES: &'static [PickupType] = &[
+    PickupType { name: "Missile", first_loc: 1 },
+    PickupType { name: "Energy Tank", first_loc: 9, },
+
+    PickupType { name: "Thermal Visor", first_loc: 50, },
+    PickupType { name: "X-Ray Visor", first_loc: 71, },
+
+    PickupType { name: "Varia Suit", first_loc: 20, },
+    PickupType { name: "Gravity Suit", first_loc: 54, },
+    PickupType { name: "Phazon Suit", first_loc: 83, },
+
+    PickupType { name: "Morph Ball", first_loc: 5, },
+    PickupType { name: "Boost Ball", first_loc: 43, },
+    PickupType { name: "Spider Ball", first_loc: 44, },
+
+    PickupType { name: "Morph Ball Bomb", first_loc: 28, },
+    PickupType { name: "Power Bomb Expansion", first_loc: 12, },
+    PickupType { name: "Power Bomb", first_loc: 85, },
+
+    PickupType { name: "Charge Beam", first_loc: 23, },
+    PickupType { name: "Space Jump Boots", first_loc: 59, },
+    PickupType { name: "Grapple Beam", first_loc: 75, },
+
+    PickupType { name: "Super Missile", first_loc: 47, },
+    PickupType { name: "Wavebuster", first_loc: 13, },
+    PickupType { name: "Ice Spreader", first_loc: 96, },
+    PickupType { name: "Flamethrower", first_loc: 76, },
+
+    PickupType { name: "Wave Beam", first_loc: 41, },
+    PickupType { name: "Ice Beam", first_loc: 34, },
+    PickupType { name: "Plasma Beam", first_loc: 99, },
+
+    PickupType { name: "Artifact of Lifegiver", first_loc: 14, },
+    PickupType { name: "Artifact of Wild", first_loc: 21, },
+    PickupType { name: "Artifact of World", first_loc: 33, },
+    PickupType { name: "Artifact of Sun", first_loc: 37, },
+    PickupType { name: "Artifact of Elder", first_loc: 49, },
+    PickupType { name: "Artifact of Spirit", first_loc: 56, },
+    PickupType { name: "Artifact of Truth", first_loc: 63, },
+    PickupType { name: "Artifact of Chozo", first_loc: 72, },
+    PickupType { name: "Artifact of Warrior", first_loc: 77, },
+    PickupType { name: "Artifact of Newborn", first_loc: 89, },
+    PickupType { name: "Artifact of Nature", first_loc: 91, },
+    PickupType { name: "Artifact of Strength", first_loc: 95, },
+];
