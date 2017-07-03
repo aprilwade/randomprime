@@ -7,10 +7,10 @@
 //! be dependencies, but don't seem to match Claris's dependency lists.
 
 extern crate memmap;
-extern crate randomprime_patcher;
+extern crate randomprime;
 
-pub use randomprime_patcher::*;
-use randomprime_patcher::pickup_meta::ScriptObjectLocation;
+pub use randomprime::*;
+use randomprime::pickup_meta::ScriptObjectLocation;
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};

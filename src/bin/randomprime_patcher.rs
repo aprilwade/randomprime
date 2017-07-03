@@ -2,14 +2,14 @@ extern crate memmap;
 #[macro_use]
 extern crate clap;
 extern crate rand;
-extern crate randomprime_patcher;
+extern crate randomprime;
 
 use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
 use rand::{XorShiftRng, SeedableRng, Rng};
 
-pub use randomprime_patcher::*;
+pub use randomprime::*;
 
 use asset_ids;
 use reader_writer::{FourCC, Reader, Writable};

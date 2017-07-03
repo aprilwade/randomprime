@@ -1,5 +1,5 @@
 [package]
-name = "randomprime_patcher"
+name = "randomprime"
 version = "0.1.3"
 authors = ["April Wade <wayedt@gmail.com>"]
 
