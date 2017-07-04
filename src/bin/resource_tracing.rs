@@ -282,7 +282,9 @@ struct RoomInfo
 
 
 fn trace_pickup_deps(
-    gc_disc: &mut structs::GcDisc, pak_name: &str, counter: &mut usize,
+    gc_disc: &mut structs::GcDisc,
+    pak_name: &str,
+    counter: &mut usize,
     pickup_table: &mut HashMap<usize, PickupData>,
     locations: &mut Vec<Vec<RoomInfo>>,
     cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
@@ -326,11 +328,8 @@ fn trace_pickup_deps(
         let mut scly_db = HashMap::new();
         for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
             for obj in scly_layer.objects.iter() {
-                let mut obj = obj.clone().into_owned();
-                if obj.property_data.is_pickup() {
-                    obj.property_data.guess_kind();
-                    let pickup = obj.property_data.as_pickup().unwrap();
-
+                let obj = obj.into_owned();
+                if let Some(pickup) = obj.property_data.as_pickup() {
                     // We're only interested in "real" pickups
                     if pickup.max_increase > 0 {
                         pickups.push((layer_num, obj.clone()));
@@ -349,10 +348,6 @@ fn trace_pickup_deps(
                         }
                     }
                 }
-                // One of the assets for each pickup is an STRG that is not part of the
-                // pickup itself, but is displayed when its acquired. To facilitate finding
-                // it, we build a map of all of the scripting objects.
-                // XXX The assert checks for SCLY objects with duplicated ids
                 assert!(scly_db.insert(obj.instance_id, (layer_num, obj)).is_none());
             }
         }
@@ -366,12 +361,7 @@ fn trace_pickup_deps(
 
             let pickup = obj.property_data.as_pickup_mut().unwrap();
             let mut deps = res_db.get_dependencies(&pickup);
-
-            let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
-                |obj| obj.property_data.as_hud_memo()
-                    .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
-                    .unwrap_or(false)
-            );
+            patch_dependencies(pickup.kind, &mut deps);
 
             const ATTAINMENT_AUDIO_FILES: &'static [&'static [u8]] = &[
                 b"/audio/itm_x_short_02.dsp",
@@ -383,8 +373,7 @@ fn trace_pickup_deps(
                     .map(|sa| ATTAINMENT_AUDIO_FILES.contains(&sa.audio_file_name.to_bytes()))
                     .unwrap_or(false)
             );
-            // The Phazon Suit is weird: the audio object isn't directly connected to the Pickup.
-            // So, hardcode its location.
+
             let attainment_audio_location;
             let attainment_audio_file_name;
             if let Some(attainment_audio) = attainment_audio {
@@ -396,6 +385,8 @@ fn trace_pickup_deps(
                 attainment_audio_file_name = streamed_audio.audio_file_name.to_bytes_with_nul()
                                                            .to_owned();
             } else {
+                // The Phazon Suit is weird: the audio object isn't directly connected to the
+                // Pickup. So, hardcode its location.
                 assert!(*counter == 83);
                 attainment_audio_location = ScriptObjectLocation {
                     layer: 1,
@@ -403,6 +394,36 @@ fn trace_pickup_deps(
                 };
                 attainment_audio_file_name = b"audio/jin_itemattain.dsp\0".to_vec();
             };
+
+            let hudmemo_loc;
+            let hudmemo_strg;
+            let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
+                |obj| obj.property_data.as_hud_memo()
+                    .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
+                    .unwrap_or(false)
+            );
+            if let Some(hudmemo) = hudmemo {
+                let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
+                deps.insert(ResourceKey::new(strg, b"STRG".into()));
+                hudmemo_strg = strg;
+                hudmemo_loc = ScriptObjectLocation {
+                    layer: scly_db[&hudmemo.instance_id].0 as u32,
+                    instance_id: hudmemo.instance_id,
+                };
+            } else {
+                // Overrides for the Phazon Suit
+                assert_eq!(pickup.kind, 23);
+                hudmemo_strg = asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG;
+                pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
+
+                pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
+                pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
+
+                hudmemo_loc = ScriptObjectLocation {
+                    layer: scly_db[&68813640].0 as u32,
+                    instance_id: 68813640,
+                };
+            }
 
             let mut removals = Vec::new();
             if pickup.kind >= 29 && pickup.kind <= 40 {
@@ -430,6 +451,7 @@ fn trace_pickup_deps(
                 });
             }
 
+            // Remove the PlayerHint objects that disable control when collecting an item.
             let player_hint = search_for_scly_object(&obj.connections, &scly_db,
                     |obj| obj.property_data.as_player_hint()
                         .map(|hm| hm.name.to_str().unwrap() == "Player Hint Disable Controls")
@@ -441,33 +463,6 @@ fn trace_pickup_deps(
                     instance_id: player_hint.instance_id,
                 });
             };
-
-            let hudmemo_loc;
-            let hudmemo_strg;
-            if let Some(hudmemo) = hudmemo {
-                let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
-                deps.insert(ResourceKey::new(strg, b"STRG".into()));
-                hudmemo_strg = strg;
-                hudmemo_loc = ScriptObjectLocation {
-                    layer: scly_db[&hudmemo.instance_id].0 as u32,
-                    instance_id: hudmemo.instance_id,
-                };
-            } else {
-                // Overrides for the Phazon Suit
-                assert_eq!(pickup.kind, 23);
-                hudmemo_strg = asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG;
-                pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
-
-                pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
-                pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
-
-                hudmemo_loc = ScriptObjectLocation {
-                    layer: scly_db[&68813640].0 as u32,
-                    instance_id: 68813640,
-                };
-            }
-
-            patch_dependencies(pickup.kind, &mut deps);
 
             // If this is a pickup with an associated cutscene, find the connections we want to
             // preserve and the objects we want to remove.
@@ -490,7 +485,6 @@ fn trace_pickup_deps(
                 });
             }
 
-            let fid = res.file_id;
             let location = PickupLocation {
                 location: ScriptObjectLocation {
                     layer: layer_num as u32,
@@ -500,6 +494,7 @@ fn trace_pickup_deps(
                 hudmemo: hudmemo_loc,
                 post_pickup_relay_connections: post_pickup_relay_connections,
             };
+            let fid = res.file_id; // Ugh, the borrow checker...
             if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
                 locations.last_mut().unwrap().pickups.push(location);
             } else {
