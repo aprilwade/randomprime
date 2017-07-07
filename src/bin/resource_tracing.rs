@@ -276,6 +276,7 @@ struct PickupData
 struct RoomInfo
 {
     room_id: u32,
+    name: String,
     pickups: Vec<PickupLocation>,
     objects_to_remove: HashMap<u32, Vec<u32>>,
 }
@@ -303,6 +304,14 @@ fn trace_pickup_deps(
     for res in resources.iter() {
         res_db.add_resource(res.into_owned());
     }
+
+    let mrea_name_strg_map: HashMap<_, _> = resources.iter()
+        .find(|res| res.fourcc() == b"MLVL".into())
+        .unwrap()
+        .kind.as_mlvl().unwrap()
+        .areas.iter()
+        .map(|area| (area.mrea, area.area_name_strg))
+        .collect();
 
 
     locations.push(vec![]);
@@ -498,8 +507,16 @@ fn trace_pickup_deps(
             if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
                 locations.last_mut().unwrap().pickups.push(location);
             } else {
+                let strg_id = mrea_name_strg_map[&res.file_id];
+                let strg: structs::Strg = res_db.map[&ResourceKey::new(strg_id, b"STRG".into())]
+                    .data.data.clone().read(());
+                let name = strg
+                    .string_tables.iter().next().unwrap()
+                    .strings.iter().next().unwrap()
+                    .into_owned().into_string();
                 locations.push(RoomInfo {
                     room_id: res.file_id,
+                    name: name,
                     pickups: vec![location],
                     objects_to_remove: HashMap::new(),
                 });
@@ -762,13 +779,14 @@ fn main()
     println!("");
     println!("");
 
-    println!("pub const PICKUP_LOCATIONS: [&'static [RoomInfo]; 5] = [");
+    println!("pub const PICKUP_LOCATIONS: &'static [&'static [RoomInfo]; 5] = &[");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         println!("    // {}", fname);
         println!("    &[");
         for room_info in locations {
             println!("        RoomInfo {{");
             println!("            room_id: 0x{:08X},", room_info.room_id);
+            println!("            name: {:?},", &room_info.name[..(room_info.name.len() - 1)]);
             println!("            pickup_locations: &[");
             for location in room_info.pickups {
                 println!("                PickupLocation {{");

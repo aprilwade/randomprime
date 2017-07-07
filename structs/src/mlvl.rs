@@ -86,6 +86,7 @@ auto_struct! {
         attached_areas: RoArray<'a, u16> = (attached_area_count as usize, ()),
 
         // Not actually unknown, length of an array that's always empty...
+        #[expect = 0]
         _unused0: u32,
 
         dependencies: AreaDependencies<'a>,

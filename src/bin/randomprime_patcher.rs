@@ -7,7 +7,7 @@ extern crate randomprime;
 use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
-use rand::{XorShiftRng, SeedableRng, Rng};
+use rand::{XorShiftRng, SeedableRng, Rng, Rand};
 
 pub use randomprime::*;
 
@@ -19,6 +19,7 @@ use reader_writer::num::{BigUint, Integer, ToPrimitive};
 
 use std::io;
 use std::panic;
+use std::iter;
 use std::ascii::AsciiExt;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -221,16 +222,100 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
     }
 }
 
-fn modify_pickups(
+fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R)
+    -> [String; 12]
+    where R: Rng + Rand
+{
+    let mut generic_text_templates = [
+        "I mean, maybe it'll be in &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
+        "I'm not sure where it exactly is, but like, you can try &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hey man, so some of the Chozo dudes are telling me that they're might be a thing in &push;&main-color=#43CD80;{room}&pop;. Just sayin'.\0",
+        "Uhh umm... Where was it...? Uhhh, errr, it's definitely in &push;&main-color=#43CD80;{room}&pop;! I am 100% not totally making it up...\0",
+        "Some say it may be in &push;&main-color=#43CD80;{room}&pop;. Others say that you have no business here. Please leave me alone.\0",
+        "So a buddy of mine and I were drinking one night and we thought 'Hey, wouldn't be crazy if we put it at &push;&main-color=#43CD80;{room}&pop;?' So we did and it took both of us just to get it there!\0",
+        "So, uhhh, I kind of got a little lazy and I might have just dropped mine somewhere... Maybe it's in &push;&main-color=#43CD80;{room}&pop;? Who knows.\0",
+        "I uhhh... was a little late to the party and someone had to run out and hide both mine and hers. I owe her one. She told me it might be in &push;&main-color=#43CD80;{room}&pop;, so you're going to have to trust her on this one.\0",
+        "Okay, so this jerk forgets to hide his and I had to hide it for him too. So, I just tossed his somewhere and made up a name for the room. This is literally saving the planet - how can anyone forget that? Anyway, mine is at &push;&main-color=#43CD80;{room}&pop;, so go check it out. I'm never doing this again...\0",
+        "To be honest, I don't know if it was a Missile Expansion or not. Maybe it was... We'll just go with that: There's a Missile Expansion at &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you well, that you may find a key lost to our cause... Alright, whatever. It's at &push;&main-color=#43CD80;{room}&pop;.\0",
+        "I kind of just played Frisbee with mine. It flew and landed too far so I didn't want to walk over and grab it because I was lazy. It's at &push;&main-color=#43CD80;{room}&pop; if you want to find it.\0",
+    ];
+    rng.shuffle(&mut generic_text_templates);
+    let mut generic_templates_iter = generic_text_templates.iter();
+
+    // TODO: If there end up being a large number of these, we could use a binary search
+    //       instead of searching linearly.
+    let specific_room_templates: &mut [(u32, usize, &mut [&str])] = &mut [
+        // Artifact Temple
+        (0x2398E906, 0, &mut ["{pickup} awaits those who truly seek it.\0"]),
+    ];
+    for rt in specific_room_templates.iter_mut() {
+        rng.shuffle(rt.2);
+    }
+
+
+    let mut scan_text = [
+        String::new(), String::new(), String::new(), String::new(),
+        String::new(), String::new(), String::new(), String::new(),
+        String::new(), String::new(), String::new(), String::new(),
+    ];
+
+    let names_iter = pickup_meta::PICKUP_LOCATIONS.iter()
+        .flat_map(|i| i.iter()) // Flatten out the rooms of the paks
+        .flat_map(|l| iter::repeat((l.room_id, l.name)).take(l.pickup_locations.len()));
+    let iter = pickup_layout.iter()
+        .zip(names_iter)
+        // ▼▼▼▼ Only yield artifacts ▼▼▼▼
+        .filter(|&(pickup_meta_idx, _)| *pickup_meta_idx >= 23 && *pickup_meta_idx <= 34);
+
+    // Shame there isn't a way to flatten tuples automatically
+    for (pickup_meta_idx, (room_id, name)) in iter {
+        let artifact_id = *pickup_meta_idx as usize - 23;
+        if scan_text[artifact_id].len() != 0 {
+            // If there are multiple of this particular artifact, then we use the first instance
+            // for the location of the artifact.
+            continue;
+        }
+
+        // If there are specific messages for this room, choose one, other wise choose a generic
+        // message.
+        let mut srt_iter = specific_room_templates.iter_mut();
+        let template = if let Some(room_templates) = srt_iter.find(|i| i.0 == room_id) {
+            let &mut (_, ref mut template_idx, ref mut templates) = room_templates;
+            *template_idx += 1;
+            if *template_idx <= templates.len() {
+                templates[*template_idx - 1]
+            } else {
+                generic_templates_iter.next().unwrap()
+            }
+        } else {
+            generic_templates_iter.next().unwrap()
+        };
+        let pickup_name = PICKUP_TYPES[*pickup_meta_idx as usize].name;
+        scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
+    }
+
+    // Set a default value for any artifacts that we didn't find.
+    for i in 0..scan_text.len() {
+        if scan_text[i].len() == 0 {
+            scan_text[i] = "Artifact not present. This layout may not be completable.\0".to_owned();
+        }
+    }
+    scan_text
+}
+
+fn modify_pickups<R: Rng + Rand>(
     gc_disc: &mut structs::GcDisc,
     pickup_layout: &[u8],
-    mut rng: XorShiftRng,
+    mut rng: R,
     skip_hudmenus: bool
 ) {
     let mut pickup_resources = collect_pickup_resources(&gc_disc);
     if skip_hudmenus {
         add_skip_hudmemos_strgs(&mut pickup_resources);
     }
+
+    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let mut layout_iter = pickup_layout.iter()
         .map(|n| {
@@ -252,20 +337,39 @@ fn modify_pickups(
 
         modify_pickups_in_pak(
             pak,
-            &pickup_resources,
             pickup_meta::PICKUP_LOCATIONS[i].iter(),
+            &pickup_resources,
             layout_iter.by_ref(),
+            &artifact_totem_strings,
             &mut fresh_instance_id_range,
             skip_hudmenus
         );
     }
 }
 
+// TODO: It might be nice for this list to be generataed by resource_tracing, but
+//       the sorting is probably non-trivial.
+const ARTIFACT_TOTEM_SCAN_STRGS: &'static [u32] = &[
+    0x61729798,// Lifegiver
+    0xAA2E443D,// Wild
+    0x8E9C7387,// World
+    0x16B057E3,// Sun
+    0xB72B7485,// Elder
+    0x45C0A022,// Spirit
+    0xFAE3D58E,// Truth
+    0x2CBA3693,// Chozo
+    0xE7E6E536,// Warrior
+    0xC354D28C,// Newborn
+    0xDDEC8446,// Nature
+    0x7C77A720,// Strength
+];
+
 fn modify_pickups_in_pak<'a, I, J>(
     pak: &mut structs::Pak<'a>,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
     room_list_iter: I,
+    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
     layout_iter: &mut J,
+    artifact_totem_strings: &[String; 12],
     fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
 )
@@ -305,6 +409,16 @@ fn modify_pickups_in_pak<'a, I, J>(
                     scan: asset_ids::PHAZON_SUIT_SCAN,
                     logbook_category: 0,
                 });
+            },
+            Some((file_id, fourcc)) if fourcc == b"STRG".into() => {
+                if let Some(pos) = ARTIFACT_TOTEM_SCAN_STRGS.iter().position(|id| *id == file_id) {
+                    // Replace the text of the scans of the totems in the Artifact Temple
+                    let mut strg = cursor.value().unwrap().kind.as_strg_mut().unwrap();
+                    for st in strg.string_tables.as_mut_vec().iter_mut() {
+                        let strings = st.strings.as_mut_vec();
+                        *strings.last_mut().unwrap() = artifact_totem_strings[pos].clone().into();
+                    }
+                }
             },
             Some((file_id, fourcc)) if fourcc == b"MREA".into() => {
                 if let Some(&&room_info) = room_list_iter.peek() {
@@ -368,7 +482,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
             area.add_dependencies(pickup_resources, new_layer_idx, iter);
         } else {
             // Add our custom STRG
-            let iter = iter.chain(::std::iter::once(structs::Dependency {
+            let iter = iter.chain(iter::once(structs::Dependency {
                     asset_id: skip_hudmemos_strg_id(pickup_meta_idx),
                     asset_type: b"STRG".into(),
                 }));

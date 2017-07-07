@@ -1,11 +1,12 @@
 
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
+use std::marker::PhantomData;
 
 auto_struct! {
     #[auto_struct(Readable, Writable, FixedSize)]
     #[derive(Debug, Clone)]
-    pub struct Scan
+    pub struct Scan<'a>
     {
         #[expect = 5]
         version: u32,
@@ -21,6 +22,9 @@ auto_struct! {
 
         images: GenericArray<ScanImage, U4>,
         padding: GenericArray<u8, U23>,
+
+        // Dummy so we can have a <'a>
+        _dummy: PhantomData<&'a ()>,
     }
 }
 

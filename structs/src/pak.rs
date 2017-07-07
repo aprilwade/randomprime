@@ -11,6 +11,7 @@ use mrea::Mrea;
 use savw::Savw;
 use hint::Hint;
 use strg::Strg;
+use scan::Scan;
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
@@ -352,5 +353,6 @@ build_resource_data!(
     Savw, b"SAVW", as_savw, as_savw_mut,
     Hint, b"HINT", as_hint, as_hint_mut,
     Strg, b"STRG", as_strg, as_strg_mut,
+    Scan, b"SCAN", as_scan, as_scan_mut,
 );
 

@@ -90,6 +90,14 @@ impl<'a> LazyUtf16beStr<'a>
         self.as_mut_string()
     }
 
+    pub fn into_string<'s>(self) -> String
+    {
+        match self {
+            LazyUtf16beStr::Owned(s) => return s,
+            LazyUtf16beStr::Borrowed(s) => s.chars().map(|i| i.unwrap()).collect(),
+        }
+    }
+
     pub fn chars<'s>(&'s self) -> LazyUtf16beStrChars<'a, 's>
     {
         match *self {

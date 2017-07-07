@@ -139,6 +139,7 @@ struct PickupMetaRaw
 pub struct RoomInfo
 {
     pub room_id: u32,
+    pub name: &'static str,
     pub pickup_locations: &'static [PickupLocation],
     pub objects_to_remove: &'static [ObjectsToRemove],
 }
