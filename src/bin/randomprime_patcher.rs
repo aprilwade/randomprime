@@ -41,7 +41,7 @@ const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNotifier)
     -> Result<(), String>
 {
-    let out_iso = OpenOptions::new()
+    let mut out_iso = OpenOptions::new()
         .write(true)
         .create(true)
         .open(path)
@@ -49,7 +49,7 @@ fn write_gc_disc(gc_disc: &mut structs::GcDisc, path: &str, mut pn: ProgressNoti
     out_iso.set_len(structs::GC_DISC_LENGTH as u64)
         .map_err(|e| format!("Failed to open output file: {}", e))?;
 
-    gc_disc.write(&mut &out_iso, &mut pn)
+    gc_disc.write(&mut out_iso, &mut pn)
         .map_err(|e| format!("Error writing output file: {}", e))?;
 
     pn.notify_flushing_to_disk();
@@ -464,7 +464,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
 
     for &pickup_location in room_info.pickup_locations {
 
-        let (i, pickup_meta_idx) = layout_iter.next().unwrap();
+        let (location_idx, pickup_meta_idx) = layout_iter.next().unwrap();
         let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_idx];
         let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
@@ -474,7 +474,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
         // TODO: Re-randomization: reuse the same layer, just clear its contents
         //       (and remove any connections to any objects contained within it)
         let name = CString::new(format!(
-                "Randomizer - Pickup {} ({:?})", i, pickup_meta.pickup.name)).unwrap();
+                "Randomizer - Pickup {} ({:?})", location_idx, pickup_meta.pickup.name)).unwrap();
         area.add_layer(name);
 
         let new_layer_idx = area.layer_flags.layer_count as usize - 1;
@@ -538,7 +538,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
             let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
                 .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
                 .unwrap();
-            update_hudmemo(hudmemo, pickup_meta_idx, &pickup_meta, skip_hudmenus);
+            update_hudmemo(hudmemo, pickup_meta_idx, &pickup_meta, location_idx, skip_hudmenus);
         }
         {
             let location = pickup_location.attainment_audio;
@@ -585,11 +585,19 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     };
 }
 
-fn update_hudmemo(hudmemo: &mut structs::SclyObject, pickup_meta_idx: usize,
-                  pickup_meta: &pickup_meta::PickupMeta, skip_hudmenus: bool)
+fn update_hudmemo(
+    hudmemo: &mut structs::SclyObject,
+    pickup_meta_idx: usize,
+    pickup_meta: &pickup_meta::PickupMeta,
+    location_idx: usize,
+    skip_hudmenus: bool)
 {
+    // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
+    // (Artifact of Truth) should always have modal hudmenus to because a cutscene plays
+    // immediately after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
+    const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
-    if skip_hudmenus {
+    if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
         hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_idx);
