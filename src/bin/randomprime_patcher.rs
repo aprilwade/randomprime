@@ -245,12 +245,15 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
 
     // TODO: If there end up being a large number of these, we could use a binary search
     //       instead of searching linearly.
-    let specific_room_templates: &mut [(u32, usize, &mut [&str])] = &mut [
+    // XXX It would be nice if we didn't have to use Vec here and could allocated on the stack
+    //     instead, but there doesn't seem to be a way to do it that isn't extremely painful or
+    //     relies on unsafe code.
+    let specific_room_templates: &mut [(u32, Vec<&str>)] = &mut [
         // Artifact Temple
-        (0x2398E906, 0, &mut ["{pickup} awaits those who truly seek it.\0"]),
+        (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
     for rt in specific_room_templates.iter_mut() {
-        rng.shuffle(rt.2);
+        rng.shuffle(&mut rt.1);
     }
 
 
@@ -279,18 +282,10 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
 
         // If there are specific messages for this room, choose one, other wise choose a generic
         // message.
-        let mut srt_iter = specific_room_templates.iter_mut();
-        let template = if let Some(room_templates) = srt_iter.find(|i| i.0 == room_id) {
-            let &mut (_, ref mut template_idx, ref mut templates) = room_templates;
-            *template_idx += 1;
-            if *template_idx <= templates.len() {
-                templates[*template_idx - 1]
-            } else {
-                generic_templates_iter.next().unwrap()
-            }
-        } else {
-            generic_templates_iter.next().unwrap()
-        };
+        let template = specific_room_templates.iter_mut()
+            .find(|row| row.0 == room_id)
+            .and_then(|row| row.1.pop())
+            .unwrap_or_else(|| generic_templates_iter.next().unwrap());
         let pickup_name = PICKUP_TYPES[*pickup_meta_idx as usize].name;
         scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
     }
