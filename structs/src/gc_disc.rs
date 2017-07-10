@@ -359,16 +359,8 @@ impl<'a> FstEntryFile<'a>
             FstEntryFile::Pak(ref pak) => pak.write(writer),
             FstEntryFile::Thp(ref thp) => thp.write(writer),
             FstEntryFile::ExternalFile(ref file, _) => {
-                let mut buf = [0u8; 4096];
                 let mut file = file.0.borrow_mut();
-                loop {
-                    let read = file.read(&mut buf)?;
-                    if read == 0 {
-                        break
-                    };
-                    writer.write_all(&buf[0..read])?
-                };
-                Ok(())
+                io::copy(&mut **file, writer).map(|_| ())
             },
             FstEntryFile::Unknown(ref reader) => writer.write_all(&reader),
         }
