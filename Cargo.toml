@@ -1,6 +1,6 @@
 [package]
 name = "randomprime"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["April Wade <wayedt@gmail.com>"]
 
 [dependencies]
