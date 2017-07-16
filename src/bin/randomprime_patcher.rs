@@ -204,7 +204,7 @@ fn skip_hudmemos_strg_id(pickup_meta_idx: usize) -> u32
 
 fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs::Resource>)
 {
-    for (pickup_meta_idx, pt) in PICKUP_TYPES.iter().enumerate() {
+    for (pickup_meta_idx, pt) in pickup_meta::pickup_meta_table().iter().enumerate() {
         let id = skip_hudmemos_strg_id(pickup_meta_idx);
         let res = pickup_meta::build_resource(
             id,
@@ -248,7 +248,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
     // XXX It would be nice if we didn't have to use Vec here and could allocated on the stack
     //     instead, but there doesn't seem to be a way to do it that isn't extremely painful or
     //     relies on unsafe code.
-    let specific_room_templates: &mut [(u32, Vec<&str>)] = &mut [
+    let mut specific_room_templates = [
         // Artifact Temple
         (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
@@ -286,7 +286,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
             .find(|row| row.0 == room_id)
             .and_then(|row| row.1.pop())
             .unwrap_or_else(|| generic_templates_iter.next().unwrap());
-        let pickup_name = PICKUP_TYPES[*pickup_meta_idx as usize].name;
+        let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
         scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
     }
 

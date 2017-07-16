@@ -6,6 +6,7 @@ use asset_ids;
 
 pub struct PickupMeta
 {
+    pub name: &'static str,
     pub pickup: Pickup<'static>,
     pub deps: &'static [(u32, FourCC)],
     pub hudmemo_strg: u32,
@@ -29,6 +30,7 @@ pub fn setup_pickup_meta_table()
     let vec = PICKUP_RAW_META.iter()
         .map(|meta| {
             PickupMeta {
+                name: meta.name,
                 pickup: Reader::new(meta.pickup).read(()),
                 deps: leak_vec(meta.deps.iter().map(|&(fid, ref b)| (fid, b.into())).collect()),
                 hudmemo_strg: meta.hudmemo_strg,
@@ -129,6 +131,7 @@ pub fn extra_assets<'a>() -> Vec<Resource<'a>>
 
 struct PickupMetaRaw
 {
+    name: &'static str,
     pickup: &'static [u8],
     deps: &'static [(u32, [u8; 4])],
     hudmemo_strg: u32,

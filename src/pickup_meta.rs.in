@@ -1770,8 +1770,8 @@ pub const PICKUP_LOCATIONS: &'static [&'static [RoomInfo]; 5] = &[
 // at compile-time. So, instead, these are the building-blocks for that
 // actual array.
 const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
-    // Missile
     PickupMetaRaw {
+        name: "Missile",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x4D, 0x69,
             0x73, 0x73, 0x69, 0x6C, 0x65, 0x5F, 0x4C, 0x61,
@@ -1830,8 +1830,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1732374682,
         attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
-    // Energy Tank
     PickupMetaRaw {
+        name: "Energy Tank",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x45, 0x6E,
             0x65, 0x72, 0x67, 0x79, 0x54, 0x61, 0x6E, 0x6B,
@@ -1888,8 +1888,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2571909800,
         attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
-    // Thermal Visor
     PickupMetaRaw {
+        name: "Thermal Visor",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x54, 0x68,
             0x65, 0x72, 0x6D, 0x61, 0x6C, 0x5F, 0x30, 0x31,
@@ -1942,8 +1942,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1762994935,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // X-Ray Visor
     PickupMetaRaw {
+        name: "X-Ray Visor",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x58, 0x52,
             0x61, 0x79, 0x5F, 0x30, 0x31, 0x2D, 0x63, 0x6F,
@@ -1998,8 +1998,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3241323380,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Varia Suit
     PickupMetaRaw {
+        name: "Varia Suit",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x56, 0x61,
             0x72, 0x69, 0x61, 0x53, 0x75, 0x69, 0x74, 0x00,
@@ -2053,8 +2053,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1960524085,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Gravity Suit
     PickupMetaRaw {
+        name: "Gravity Suit",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x47, 0x72,
             0x61, 0x76, 0x69, 0x74, 0x79, 0x53, 0x75, 0x69,
@@ -2108,8 +2108,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1823788442,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Phazon Suit
     PickupMetaRaw {
+        name: "Phazon Suit",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x47, 0x72,
             0x61, 0x76, 0x69, 0x74, 0x79, 0x53, 0x75, 0x69,
@@ -2163,8 +2163,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 297711713,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Morph Ball
     PickupMetaRaw {
+        name: "Morph Ball",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x70, 0x5F, 0x6D, 0x6F,
             0x72, 0x70, 0x68, 0x62, 0x61, 0x6C, 0x6C, 0x5F,
@@ -2221,8 +2221,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2658115401,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Boost Ball
     PickupMetaRaw {
+        name: "Boost Ball",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x62, 0x6F,
             0x6F, 0x73, 0x74, 0x62, 0x61, 0x6C, 0x6C, 0x5F,
@@ -2279,8 +2279,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2585342321,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Spider Ball
     PickupMetaRaw {
+        name: "Spider Ball",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x53, 0x70, 0x69, 0x64,
             0x65, 0x72, 0x62, 0x61, 0x6C, 0x6C, 0x00, 0x43,
@@ -2340,8 +2340,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2186256758,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Morph Ball Bomb
     PickupMetaRaw {
+        name: "Morph Ball Bomb",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x42, 0x6F,
             0x6D, 0x62, 0x2D, 0x63, 0x6F, 0x6D, 0x70, 0x6F,
@@ -2395,8 +2395,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1134854805,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Power Bomb Expansion
     PickupMetaRaw {
+        name: "Power Bomb Expansion",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x42, 0x6F,
             0x6D, 0x62, 0x2D, 0x63, 0x6F, 0x6D, 0x70, 0x6F,
@@ -2454,8 +2454,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3342044686,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Power Bomb
     PickupMetaRaw {
+        name: "Power Bomb",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x42, 0x6F,
             0x6D, 0x62, 0x2D, 0x63, 0x6F, 0x6D, 0x70, 0x6F,
@@ -2511,8 +2511,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3314244187,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Charge Beam
     PickupMetaRaw {
+        name: "Charge Beam",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x43, 0x68,
             0x61, 0x72, 0x67, 0x65, 0x62, 0x65, 0x61, 0x6D,
@@ -2567,8 +2567,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3694059550,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Space Jump Boots
     PickupMetaRaw {
+        name: "Space Jump Boots",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x70, 0x5F, 0x44, 0x6F,
             0x75, 0x62, 0x6C, 0x65, 0x6A, 0x75, 0x6D, 0x70,
@@ -2625,8 +2625,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3871572882,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Grapple Beam
     PickupMetaRaw {
+        name: "Grapple Beam",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x47, 0x72,
             0x61, 0x70, 0x70, 0x6C, 0x65, 0x5F, 0x30, 0x31,
@@ -2681,8 +2681,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3643448637,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Super Missile
     PickupMetaRaw {
+        name: "Super Missile",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x50, 0x6F,
             0x77, 0x65, 0x72, 0x5F, 0x43, 0x6F, 0x6D, 0x62,
@@ -2736,8 +2736,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2778944093,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Wavebuster
     PickupMetaRaw {
+        name: "Wavebuster",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x57, 0x61,
             0x76, 0x65, 0x5F, 0x43, 0x6F, 0x6D, 0x62, 0x6F,
@@ -2791,8 +2791,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2218254930,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Ice Spreader
     PickupMetaRaw {
+        name: "Ice Spreader",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x49, 0x63,
             0x65, 0x5F, 0x43, 0x6F, 0x6D, 0x62, 0x6F, 0x00,
@@ -2846,8 +2846,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3670222270,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Flamethrower
     PickupMetaRaw {
+        name: "Flamethrower",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x50, 0x6C,
             0x61, 0x73, 0x6D, 0x61, 0x5F, 0x43, 0x6F, 0x6D,
@@ -2901,8 +2901,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1231306575,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Wave Beam
     PickupMetaRaw {
+        name: "Wave Beam",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x57, 0x61,
             0x76, 0x65, 0x62, 0x65, 0x61, 0x6D, 0x5F, 0x30,
@@ -2958,8 +2958,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3090954159,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Ice Beam
     PickupMetaRaw {
+        name: "Ice Beam",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x49, 0x63,
             0x65, 0x42, 0x65, 0x61, 0x6D, 0x5F, 0x30, 0x31,
@@ -3014,8 +3014,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 220175477,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Plasma Beam
     PickupMetaRaw {
+        name: "Plasma Beam",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x50, 0x5F, 0x50, 0x6C,
             0x61, 0x73, 0x6D, 0x61, 0x62, 0x65, 0x61, 0x6D,
@@ -3071,8 +3071,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3013789598,
         attainment_audio_file_name: "audio/jin_itemattain.dsp\u{0}",
     },
-    // Artifact of Lifegiver
     PickupMetaRaw {
+        name: "Artifact of Lifegiver",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0xC3, 0x10, 0x84,
@@ -3125,8 +3125,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1893596527,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Wild
     PickupMetaRaw {
+        name: "Artifact of Wild",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x43, 0x8E, 0x1F,
@@ -3179,8 +3179,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3145805514,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of World
     PickupMetaRaw {
+        name: "Artifact of World",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x44, 0x48, 0x5C,
@@ -3233,8 +3233,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2908011346,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Sun
     PickupMetaRaw {
+        name: "Artifact of Sun",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0xC3, 0x6F, 0xBC,
@@ -3287,8 +3287,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 119487764,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Elder
     PickupMetaRaw {
+        name: "Artifact of Elder",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x41, 0xB8, 0x77,
@@ -3341,8 +3341,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2793676402,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Spirit
     PickupMetaRaw {
+        name: "Artifact of Spirit",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x43, 0x56, 0x08,
@@ -3395,8 +3395,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1711827191,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Truth
     PickupMetaRaw {
+        name: "Artifact of Truth",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0xC3, 0xBA, 0xA5,
@@ -3449,8 +3449,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 2811675750,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Chozo
     PickupMetaRaw {
+        name: "Artifact of Chozo",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x41, 0x8D, 0x64,
@@ -3503,8 +3503,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1024810084,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Warrior
     PickupMetaRaw {
+        name: "Artifact of Warrior",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0xC1, 0xCD, 0x17,
@@ -3557,8 +3557,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 4132016065,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Newborn
     PickupMetaRaw {
+        name: "Artifact of Newborn",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x42, 0xF0, 0x45,
@@ -3611,8 +3611,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3768326745,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Nature
     PickupMetaRaw {
+        name: "Artifact of Nature",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0xC2, 0x35, 0x5E,
@@ -3665,8 +3665,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3427004081,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Artifact of Strength
     PickupMetaRaw {
+        name: "Artifact of Strength",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x41, 0x72, 0x74, 0x69,
             0x66, 0x61, 0x63, 0x74, 0x00, 0x43, 0x9A, 0xBD,
@@ -3719,8 +3719,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 1842925015,
         attainment_audio_file_name: "audio/jin_artifact.dsp\u{0}",
     },
-    // Nothing
     PickupMetaRaw {
+        name: "Nothing",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
             0x69, 0x6E, 0x67, 0x00, 0x42, 0x8B, 0x98, 0x83,
@@ -3774,8 +3774,8 @@ const PICKUP_RAW_META: [PickupMetaRaw; 37] = [
         hudmemo_strg: 3736010758,
         attainment_audio_file_name: "/audio/itm_x_short_02.dsp\u{0}",
     },
-    // Nothing
     PickupMetaRaw {
+        name: "Nothing",
         pickup: &[
             0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
             0x69, 0x6E, 0x67, 0x00, 0x43, 0x09, 0xDC, 0x5D,
