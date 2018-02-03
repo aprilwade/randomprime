@@ -368,7 +368,7 @@ fn trace_pickup_deps(
 
 
     locations.push(vec![]);
-    let mut locations = locations.last_mut().unwrap();
+    let locations = locations.last_mut().unwrap();
 
     for res in resources.iter() {
         if res.fourcc() != b"MREA".into() {

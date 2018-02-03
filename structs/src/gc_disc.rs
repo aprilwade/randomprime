@@ -7,7 +7,6 @@ use std::fmt;
 use std::io;
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::ascii::AsciiExt;
 
 use ::pak::Pak;
 use ::thp::Thp;

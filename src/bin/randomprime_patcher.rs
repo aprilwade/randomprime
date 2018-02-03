@@ -20,7 +20,6 @@ use reader_writer::num::{BigUint, Integer, ToPrimitive};
 use std::io;
 use std::panic;
 use std::iter;
-use std::ascii::AsciiExt;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};

@@ -74,7 +74,7 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
         self.layer_names.push(Cow::Owned(name));
 
         {
-            let mut deps = self.mlvl_area.dependencies.deps.as_mut_vec();
+            let deps = self.mlvl_area.dependencies.deps.as_mut_vec();
             let index = deps.len() - 1;
             deps.insert(index, vec![].into());
         }
