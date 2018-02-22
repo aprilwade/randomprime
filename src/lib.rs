@@ -90,7 +90,7 @@ pub mod asset_ids {
         PHAZON_SUIT_CMDL,
         PHAZON_SUIT_ANCS,
         NOTHING_ACQUIRED_HUDMEMO_STRG,
-        NOTHING_SCAN_STRG,
+        NOTHING_SCAN_STRG, // 0xDEAF0007
         NOTHING_SCAN,
 
         SKIP_HUDMEMO_STRG_START,
