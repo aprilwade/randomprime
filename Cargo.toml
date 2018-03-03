@@ -4,11 +4,12 @@ version = "0.1.4"
 authors = ["April Wade <wayedt@gmail.com>"]
 
 [dependencies]
-memmap = "0.4"
-rust-crypto = "*"
-rand = "0.3"
-flate2 = "0.2"
 clap = "2.9"
+flate2 = "0.2"
+memmap = "0.4"
+preferences = "1.1"
+rand = "0.3"
+winapi = "0.3"
 
 structs = { path = "structs" }
 
