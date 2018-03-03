@@ -199,17 +199,20 @@ macro_rules! build_scly_property {
 }
 
 build_scly_property!(
+    Actor,           is_actor,            as_actor,            as_actor_mut,
     Trigger,         is_trigger,          as_trigger,          as_trigger_mut,
     Timer,           is_timer,            as_timer,            as_timer_mut,
     Sound,           is_sound,            as_sound,            as_sound_mut,
     Dock,            is_dock,             as_dock,             as_dock_mut,
     SpawnPoint,      is_spawn_point,      as_spawn_point,      as_spawn_point_mut,
     Pickup,          is_pickup,           as_pickup,           as_pickup_mut,
+    PointOfInterest, is_point_of_interest,as_point_of_interest,as_point_of_interest_mut,
     Relay,           is_relay,            as_relay,            as_relay_mut,
     HudMemo,         is_hud_memo,         as_hud_memo,         as_hud_memo_mut,
     SpecialFunction, is_special_function, as_special_function, as_special_function_mut,
     PlayerHint,      is_player_hint,      as_player_hint,      as_player_hint_mut,
     StreamedAudio,   is_streamed_audio,   as_streamed_audio,   as_streamed_audio_mut,
+    WorldTransporter,is_world_transporter,as_world_transporter,as_world_transporter_mut,
 );
 
 pub trait SclyPropertyData

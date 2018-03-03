@@ -86,4 +86,83 @@ auto_struct! {
     }
 }
 
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct DamageVulnerability
+    {
+        #[expect = 18]
+        prop_count: u32,
+
+        power: u32,
+        ice: u32,
+        wave: u32,
+        plasma: u32,
+        bomb: u32,
+        power_bomb: u32,
+        missile: u32,
+        boost_ball: u32,
+        phazon: u32,
+
+        enemy_weapon0: u32,
+        enemy_weapon1: u32,
+        enemy_weapon2: u32,
+        enemy_weapon3: u32,
+
+        unknown_weapon0: u32,
+        unknown_weapon1: u32,
+        unknown_weapon2: u32,
+
+        charged_beams: ChargedBeams,
+        beam_combos: BeamCombos,
+
+    }
+}
+
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct ChargedBeams
+    {
+        #[expect = 5]
+        prop_count: u32,
+
+        power: u32,
+        ice: u32,
+        wave: u32,
+        plasma: u32,
+        phazon: u32,
+    }
+}
+
+
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct BeamCombos
+    {
+        #[expect = 5]
+        prop_count: u32,
+
+        power: u32,
+        ice: u32,
+        wave: u32,
+        plasma: u32,
+        phazon: u32,
+    }
+}
+
+
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct HealthInfo
+    {
+        #[expect = 2]
+        prop_count: u32,
+
+        health: f32,
+        knockback_resistance: f32,
+    }
+}
 
