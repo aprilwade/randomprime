@@ -191,17 +191,10 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn skip_hudmemos_strg_id(pickup_meta_idx: usize) -> u32
-{
-    (asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
-        .nth(pickup_meta_idx)
-        .unwrap()
-}
-
 fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs::Resource>)
 {
-    for (pickup_meta_idx, pt) in pickup_meta::pickup_meta_table().iter().enumerate() {
-        let id = skip_hudmemos_strg_id(pickup_meta_idx);
+    for pickup_meta in pickup_meta::pickup_meta_table().iter() {
+        let id = pickup_meta.skip_hudmemos_strg;
         let res = pickup_meta::build_resource(
             id,
             structs::ResourceKind::Strg(structs::Strg {
@@ -209,7 +202,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
                     structs::StrgStringTable {
                         lang: b"ENGL".into(),
                         strings: vec![format!("&just=center;{} acquired!\u{0}",
-                                              pt.name).into()].into(),
+                                              pickup_meta.name).into()].into(),
                     },
                 ].into(),
             })
@@ -457,7 +450,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
 
         let (location_idx, pickup_meta_idx) = layout_iter.next().unwrap();
         let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_idx];
-        let iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
+        let deps_iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
                 asset_type: fourcc,
             });
@@ -470,14 +463,14 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
 
         let new_layer_idx = area.layer_flags.layer_count as usize - 1;
         if !skip_hudmenus {
-            area.add_dependencies(pickup_resources, new_layer_idx, iter);
+            area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
         } else {
             // Add our custom STRG
-            let iter = iter.chain(iter::once(structs::Dependency {
-                    asset_id: skip_hudmemos_strg_id(pickup_meta_idx),
+            let deps_iter = deps_iter.chain(iter::once(structs::Dependency {
+                    asset_id: pickup_meta.skip_hudmemos_strg,
                     asset_type: b"STRG".into(),
                 }));
-            area.add_dependencies(pickup_resources, new_layer_idx, iter);
+            area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
         }
 
         if area.mrea_file_id() == asset_ids::ARTIFACT_TEMPLE_MREA {
@@ -529,7 +522,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
             let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
                 .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
                 .unwrap();
-            update_hudmemo(hudmemo, pickup_meta_idx, &pickup_meta, location_idx, skip_hudmenus);
+            update_hudmemo(hudmemo, &pickup_meta, location_idx, skip_hudmenus);
         }
         {
             let location = pickup_location.attainment_audio;
@@ -578,7 +571,6 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
 
 fn update_hudmemo(
     hudmemo: &mut structs::SclyObject,
-    pickup_meta_idx: usize,
     pickup_meta: &pickup_meta::PickupMeta,
     location_idx: usize,
     skip_hudmenus: bool)
@@ -591,7 +583,7 @@ fn update_hudmemo(
     if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = skip_hudmemos_strg_id(pickup_meta_idx);
+        hudmemo.strg = pickup_meta.skip_hudmemos_strg;
     } else {
         hudmemo.strg = pickup_meta.hudmemo_strg;
     }
