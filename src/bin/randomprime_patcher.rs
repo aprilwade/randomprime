@@ -12,6 +12,7 @@ use preferences::{AppInfo, PreferencesMap, Preferences};
 use rand::{XorShiftRng, SeedableRng, Rng, Rand};
 
 pub use randomprime::*;
+use elevators::ELEVATORS;
 
 use asset_ids;
 use reader_writer::{FourCC, Reader, Writable};
@@ -712,6 +713,56 @@ fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
     Ok((res, seed))
 }
 
+fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
+{
+    for pak_name in METROID_PAK_NAMES.iter().chain(&["Metroid7.pak"]) {
+        let file_entry = find_file_mut(gc_disc, pak_name);
+        file_entry.guess_kind();
+        let pak = match *file_entry.file_mut().unwrap() {
+            structs::FstEntryFile::Pak(ref mut pak) => pak,
+            _ => panic!(),
+        };
+
+        let iter = || ELEVATORS.iter().enumerate();
+        let mut cursor = pak.resources.cursor();
+        while let Some(file_id) = cursor.peek().map(|res| res.file_id) {
+            let mut cursor = cursor.cursor_advancer();
+
+            if let Some((i, elv)) = iter().find(|&(_, ref elv)| elv.mrea == file_id) {
+                let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+                let scly = mrea.scly_section_mut();
+                for layer in scly.layers.iter_mut() {
+
+                    let obj = layer.objects.iter_mut()
+                        .find(|obj| obj.instance_id == elv.scly_id);
+                    if let Some(obj) = obj {
+                        let wt = obj.property_data.as_world_transporter_mut().unwrap();
+                        wt.mrea = ELEVATORS[layout[i] as usize].mrea;
+                        wt.mlvl = ELEVATORS[layout[i] as usize].mlvl;
+                    }
+                }
+
+            } else if let Some((i, _)) = iter().find(|&(_, ref elv)| elv.room_strg == file_id) {
+                let string = format!("Transport to {}\u{0}", ELEVATORS[layout[i] as usize].name);
+                let strg = structs::Strg::from_strings(vec![string]);
+                cursor.value().unwrap().kind = structs::ResourceKind::Strg(strg);
+
+            } else if let Some((i, _)) = iter().find(|&(_, ref elv)| elv.hologram_strg == file_id) {
+                let string = format!("Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}", ELEVATORS[layout[i] as usize].name);
+                let strg = structs::Strg::from_strings(vec![string]);
+                cursor.value().unwrap().kind = structs::ResourceKind::Strg(strg);
+
+            } else if let Some((i, _)) = iter().find(|&(_, ref elv)| elv.control_strg == file_id) {
+                let string = format!("Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}", ELEVATORS[layout[i] as usize].name);
+                let strg = structs::Strg::from_strings(vec![string]);
+                cursor.value().unwrap().kind = structs::ResourceKind::Strg(strg);
+
+            }
+
+        }
+    }
+}
+
 // Patches the current room to make the Artifact of Truth required to complete
 // the game. This logic is based on the observed behavior of Claris's randomizer.
 // XXX I still don't entirely understand why there needs to be a special case
@@ -1288,6 +1339,8 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
     if !config.keep_fmvs {
         replace_fmvs(&mut gc_disc);
     }
+
+    patch_elevators(&mut gc_disc, &ELEVATORS.iter().map(|i| i.default_dest).collect::<Vec<_>>());
 
     let pn = ProgressNotifier::new(config.quiet);
     write_gc_disc(&mut gc_disc, config.output_iso, pn)?;

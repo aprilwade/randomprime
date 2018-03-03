@@ -31,6 +31,19 @@ auto_struct! {
     }
 }
 
+impl<'a> Strg<'a>
+{
+    pub fn from_strings(strings: Vec<String>) -> Strg<'a>
+    {
+        Strg {
+            string_tables: vec![StrgStringTable {
+                lang: b"ENGL".into(),
+                strings: strings.into_iter().map(|i| i.into()).collect::<Vec<_>>().into(),
+            }].into(),
+        }
+    }
+}
+
 #[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct StrgLangIter<'a>(usize, RoArrayIter<'a, StrgLang>);

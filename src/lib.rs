@@ -7,6 +7,7 @@ use flate2::{Decompress, Flush};
 
 use std::borrow::Cow;
 
+pub mod elevators;
 pub mod mlvl_wrapper;
 pub mod pickup_meta;
 

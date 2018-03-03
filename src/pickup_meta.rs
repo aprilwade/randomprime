@@ -10,6 +10,7 @@ pub struct PickupMeta
     pub pickup: Pickup<'static>,
     pub deps: &'static [(u32, FourCC)],
     pub hudmemo_strg: u32,
+    pub skip_hudmemos_strg: u32,
     pub attainment_audio_file_name: &'static str,
 }
 
@@ -28,12 +29,14 @@ fn leak_vec<T>(vec: Vec<T>) -> &'static [T]
 pub fn setup_pickup_meta_table()
 {
     let vec = PICKUP_RAW_META.iter()
-        .map(|meta| {
+        .zip(asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
+        .map(|(meta, skip_hudmemos_strg)| {
             PickupMeta {
                 name: meta.name,
                 pickup: Reader::new(meta.pickup).read(()),
                 deps: leak_vec(meta.deps.iter().map(|&(fid, ref b)| (fid, b.into())).collect()),
                 hudmemo_strg: meta.hudmemo_strg,
+                skip_hudmemos_strg: skip_hudmemos_strg,
                 attainment_audio_file_name: meta.attainment_audio_file_name,
             }
         })
