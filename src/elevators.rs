@@ -13,6 +13,37 @@ pub struct Elevator {
     pub default_dest: u8,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct SpawnRoom
+{
+    pub pak_name: &'static str,
+    pub name: &'static str,
+    pub mlvl: u32,
+    pub mrea: u32,
+}
+
+impl SpawnRoom
+{
+    pub fn from_room_idx(idx: usize) -> SpawnRoom
+    {
+        if idx == 20 {
+            SpawnRoom {
+                pak_name: "Metroid4.pak",
+                name: "Landing Site",
+                mlvl: 0x39f2de28,
+                mrea: 0xb2701146,
+            }
+        } else {
+            let elv = &ELEVATORS[idx];
+            SpawnRoom {
+                pak_name: elv.pak_name,
+                name: elv.name,
+                mlvl: elv.mlvl,
+                mrea: elv.mrea,
+            }
+        }
+    }
+}
 
 pub const ELEVATORS: &'static [Elevator] = &[
     Elevator {

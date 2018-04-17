@@ -2,6 +2,7 @@
 extern crate preferences;
 extern crate memmap;
 extern crate rand;
+extern crate sha2;
 extern crate randomprime;
 extern crate winapi;
 
@@ -9,10 +10,11 @@ use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
 use preferences::{AppInfo, PreferencesMap, Preferences};
-use rand::{XorShiftRng, SeedableRng, Rng, Rand};
+use sha2::{Digest, Sha512};
+use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 
 pub use randomprime::*;
-use elevators::ELEVATORS;
+use elevators::{ELEVATORS, SpawnRoom};
 
 use asset_ids;
 use reader_writer::{FourCC, Reader, Writable};
@@ -635,36 +637,21 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
-fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
+fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, checksum_size: usize, is: I)
+    -> Result<Vec<u8>, String>
+    where I: Iterator<Item = u8> + Clone
 {
     const LAYOUT_CHAR_TABLE: [u8; 64] =
         *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
 
-    if !text.is_ascii() {
-        return Err("Pickup layout string contains non-ascii characters.".to_string());
-    }
-    let text = text.as_bytes();
-    if text.len() != 87 {
-        return Err("Pickup layout should be exactly 87 characters".to_string());
-    }
-
     let mut sum: BigUint = 0u8.into();
-    let mut res = vec![];
-    for c in text.iter().rev() {
+    for c in bytes.iter().rev() {
         if let Some(idx) = LAYOUT_CHAR_TABLE.iter().position(|i| i == c) {
             sum = sum * BigUint::from(64u8) + BigUint::from(idx);
         } else {
-            return Err(format!("Pickup layout contains invalid character '{}'.", c));
+            return Err(format!("Layout contains invalid character '{}'.", c));
         }
     }
-
-    let sum_bytes = sum.to_bytes_le();
-    let seed = [
-        sum_bytes[0..17].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
-        sum_bytes[17..34].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
-        sum_bytes[34..41].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
-        sum_bytes[41..].iter().fold(0u32, |n, i| n.overflowing_add(*i as u32).0),
-    ];
 
     // Reverse the order of the odd bits
     let mut bits = sum.to_str_radix(2).into_bytes();
@@ -674,27 +661,28 @@ fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
     }
     sum = BigUint::parse_bytes(&bits, 2).unwrap();
 
-    // The upper 5 bits are a checksum, so seperate them from the sum.
-    let checksum_bitmask = BigUint::from(0b11111u8) << 517;
-    let checksum = sum.clone() & checksum_bitmask;
+    // The upper `checksum_size` bits are a checksum, so seperate them from the sum.
+    let checksum_bitmask = (1u8 << checksum_size) - 1;
+    let checksum = sum.clone() & (BigUint::from(checksum_bitmask) << layout_data_size);
     sum = sum - checksum.clone();
-    let checksum = (checksum >> 517).to_u8().unwrap();
+    let checksum = (checksum >> layout_data_size).to_u8().unwrap();
 
     let mut computed_checksum = 0;
     {
         let mut sum = sum.clone();
         while sum > 0u8.into() {
-            let remainder = (sum.clone() & BigUint::from(0b11111u8)).to_u8().unwrap();
-            computed_checksum = (computed_checksum + remainder) % 32;
-            sum = sum >> 5;
+            let remainder = (sum.clone() & BigUint::from(checksum_bitmask)).to_u8().unwrap();
+            computed_checksum = (computed_checksum + remainder) & checksum_bitmask;
+            sum = sum >> checksum_size;
         }
     }
     if checksum != computed_checksum {
-        return Err("Pickup layout checksum failed.".to_string());
+        return Err("Layout checksum failed.".to_string());
     }
 
-    for _ in 0..100 {
-        let (quotient, remainder) = sum.div_rem(&36u8.into());
+    let mut res = vec![];
+    for denum in is {
+        let (quotient, remainder) = sum.div_rem(&denum.into());
         res.push(remainder.to_u8().unwrap());
         sum = quotient;
     }
@@ -702,8 +690,59 @@ fn parse_pickup_layout(text: &str) -> Result<(Vec<u8>, [u32; 4]), String>
     assert!(sum == 0u8.into());
 
     res.reverse();
-    Ok((res, seed))
+    Ok(res)
 }
+
+
+fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, [u32; 16]), String>
+{
+    if !text.is_ascii() {
+        return Err("Layout string contains non-ascii characters.".to_string());
+    }
+    let text = text.as_bytes();
+
+    let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
+        (&text[..n], &text[(n + 1)..])
+    } else {
+        (b"qzoCAr2fwehJmRjM" as &[u8], text)
+    };
+
+    if elevator_bytes.len() != 16 {
+        let msg = "The section of the layout string before the '.' should be 16 characters";
+        return Err(msg.to_string());
+    }
+
+    if pickup_bytes.len() != 87 {
+        return Err("Layout string should be exactly 87 characters".to_string());
+    }
+
+    let mut seed_hasher = Sha512::default();
+    seed_hasher.input(elevator_bytes);
+    seed_hasher.input(pickup_bytes);
+    let seed_data = seed_hasher.result();
+    let mut seed_reader = Reader::new(&seed_data);
+    let seed = [
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+    ];
+
+    let pickup_layout = parse_layout_chars_to_ints(
+            pickup_bytes,
+            517, 5,
+            iter::repeat(36u8).take(100)
+        ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
+
+    let elevator_layout = parse_layout_chars_to_ints(
+            elevator_bytes,
+            91, 5,
+            iter::once(21u8).chain(iter::repeat(20u8).take(20))
+        ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
+
+    Ok((pickup_layout, elevator_layout, seed))
+}
+
 
 fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
 {
@@ -753,6 +792,97 @@ fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
 
         }
     }
+}
+
+fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
+    file_entry.guess_kind();
+    let pak = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Pak(ref mut pak) => pak,
+        _ => panic!(),
+    };
+
+    let mut cursor = pak.resources.cursor();
+    loop {
+        if cursor.peek().unwrap().file_id == 0xb2701146 {
+            break;
+        }
+        cursor.next();
+    }
+
+    // XXX I'd like to do this some other way than inserting a timer to trigger
+    //     the memory relay, but I couldn't figure out how to make the memory
+    //     relay default to on/enabled.
+    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let layer = scly.layers.iter_mut().next().unwrap();
+    for obj in layer.objects.iter_mut() {
+        if obj.instance_id == 427 {
+            obj.connections.as_mut_vec().push(structs::Connection {
+                state: 0,
+                message: 4,
+                target_object_id: 0xDEEFFFFF,
+            });
+        }
+    }
+    layer.objects.as_mut_vec().push(structs::SclyObject {
+        instance_id: 0xDEEFFFFF,
+        property_data: structs::SclyProperty::Timer(structs::Timer {
+            name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Fuck\0").unwrap()),
+
+            start_time: 0.001,
+            max_random_add: 0f32,
+            reset_to_zero: 0,
+            start_immediately: 1,
+            active: 1,
+        }),
+        connections: vec![
+            structs::Connection {
+                state: 9,
+                message: 1,
+                target_object_id: 323,
+            },
+            structs::Connection {
+                state: 9,
+                message: 1,
+                target_object_id: 427,
+            },
+            structs::Connection {
+                state: 9,
+                message: 1,
+                target_object_id: 484,
+            },
+        ].into(),
+    });
+}
+
+fn patch_frigate_teleporter<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
+{
+    let file_entry = find_file_mut(gc_disc, "Metroid1.pak");
+    file_entry.guess_kind();
+    let pak = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Pak(ref mut pak) => pak,
+        _ => panic!(),
+    };
+
+    let mut cursor = pak.resources.cursor();
+    loop {
+        if cursor.peek().unwrap().file_id == 0xd1241219 {
+            break;
+        }
+        cursor.next();
+    }
+
+    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let wt = scly.layers.iter_mut()
+        .flat_map(|layer| layer.objects.iter_mut())
+        .find(|obj| obj.property_data.is_world_transporter())
+        .and_then(|obj| obj.property_data.as_world_transporter_mut())
+        .unwrap();
+    wt.mlvl = spawn_room.mlvl;
+    wt.mrea = spawn_room.mrea;
 }
 
 // Patches the current room to make the Artifact of Truth required to complete
@@ -814,9 +944,10 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
     });
 }
 
-fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_items: u64)
+fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
+                              mut starting_items: u64, debug_print: bool)
 {
-    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
+    let file_entry = find_file_mut(gc_disc, spawn_room.pak_name);
     file_entry.guess_kind();
     let pak = match *file_entry.file_mut().unwrap() {
         structs::FstEntryFile::Pak(ref mut pak) => pak,
@@ -824,10 +955,9 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_it
     };
 
 
-    // Find the first MREA in the pak
     let mut cursor = pak.resources.cursor();
     loop {
-        if cursor.peek().unwrap().fourcc() == b"MREA".into() {
+        if cursor.peek().unwrap().file_id == spawn_room.mrea {
             break;
         }
         cursor.next();
@@ -835,77 +965,111 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, mut starting_it
     let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
 
-    let mut fetch_bits = |bits: u8| {
-        let ret = starting_items & ((1 << bits) - 1);
-        starting_items = starting_items >> bits;
-        ret as u32
-    };
+    let mut first = debug_print;
+    macro_rules! print_maybe {
+        ($first:ident, $($tts:tt)*) => {
+            if $first {
+                println!($($tts)*);
+            }
 
-    // The object we want is in the first layer.
-    let ref mut layer = scly.layers.as_mut_vec()[0];
-    let obj = layer.objects.iter_mut().find(|obj| obj.property_data.is_spawn_point()).unwrap();
-    let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
+        };
+    }
+    for layer in scly.layers.iter_mut() {
+        for obj in layer.objects.iter_mut() {
+            let spawn_point = if let Some(spawn_point) = obj.property_data.as_spawn_point_mut() {
+                spawn_point
+            } else {
+                continue;
+            };
 
-    println!("Starting pickups set:");
+            let mut fetch_bits = |bits: u8| {
+                let ret = starting_items & ((1 << bits) - 1);
+                starting_items = starting_items >> bits;
+                ret as u32
+            };
 
-    spawn_point.missiles = fetch_bits(8);
-    println!("    missiles: {}", spawn_point.missiles);
+            print_maybe!(first, "Starting pickups set:");
 
-    spawn_point.energy_tanks = fetch_bits(4);
-    println!("    energy_tanks: {}", spawn_point.energy_tanks);
+            spawn_point.scan_visor = 1;
 
-    spawn_point.power_bombs = fetch_bits(3);
-    println!("    power_bombs: {}", spawn_point.power_bombs);
+            spawn_point.missiles = fetch_bits(8);
+            print_maybe!(first, "    missiles: {}", spawn_point.missiles);
 
-    spawn_point.wave = fetch_bits(1);
-    println!("    wave: {}", spawn_point.wave);
+            spawn_point.energy_tanks = fetch_bits(4);
+            print_maybe!(first, "    energy_tanks: {}", spawn_point.energy_tanks);
 
-    spawn_point.ice = fetch_bits(1);
-    println!("    ice: {}", spawn_point.ice);
+            spawn_point.power_bombs = fetch_bits(3);
+            print_maybe!(first, "    power_bombs: {}", spawn_point.power_bombs);
 
-    spawn_point.plasma = fetch_bits(1);
-    println!("    plasma: {}", spawn_point.plasma);
+            spawn_point.wave = fetch_bits(1);
+            print_maybe!(first, "    wave: {}", spawn_point.wave);
 
-    spawn_point.charge = fetch_bits(1);
-    println!("    charge: {}", spawn_point.plasma);
+            spawn_point.ice = fetch_bits(1);
+            print_maybe!(first, "    ice: {}", spawn_point.ice);
 
-    spawn_point.morph_ball = fetch_bits(1);
-    println!("    morph_ball: {}", spawn_point.morph_ball);
+            spawn_point.plasma = fetch_bits(1);
+            print_maybe!(first, "    plasma: {}", spawn_point.plasma);
 
-    spawn_point.bombs = fetch_bits(1);
-    println!("    bombs: {}", spawn_point.bombs);
+            spawn_point.charge = fetch_bits(1);
+            print_maybe!(first, "    charge: {}", spawn_point.plasma);
 
-    spawn_point.spider_ball = fetch_bits(1);
-    println!("    spider_ball: {}", spawn_point.spider_ball);
+            spawn_point.morph_ball = fetch_bits(1);
+            print_maybe!(first, "    morph_ball: {}", spawn_point.morph_ball);
 
-    spawn_point.boost_ball = fetch_bits(1);
-    println!("    boost_ball: {}", spawn_point.boost_ball);
+            spawn_point.bombs = fetch_bits(1);
+            print_maybe!(first, "    bombs: {}", spawn_point.bombs);
 
-    spawn_point.gravity_suit = fetch_bits(1);
-    println!("    gravity_suit: {}", spawn_point.gravity_suit);
+            spawn_point.spider_ball = fetch_bits(1);
+            print_maybe!(first, "    spider_ball: {}", spawn_point.spider_ball);
 
-    spawn_point.phazon_suit = fetch_bits(1);
-    println!("    phazon_suit: {}", spawn_point.phazon_suit);
+            spawn_point.boost_ball = fetch_bits(1);
+            print_maybe!(first, "    boost_ball: {}", spawn_point.boost_ball);
 
-    spawn_point.thermal_visor = fetch_bits(1);
-    println!("    thermal_visor: {}", spawn_point.thermal_visor);
+            spawn_point.gravity_suit = fetch_bits(1);
+            print_maybe!(first, "    gravity_suit: {}", spawn_point.gravity_suit);
 
-    spawn_point.xray= fetch_bits(1);
-    println!("    xray: {}", spawn_point.xray);
+            spawn_point.phazon_suit = fetch_bits(1);
+            print_maybe!(first, "    phazon_suit: {}", spawn_point.phazon_suit);
 
-    spawn_point.space_jump = fetch_bits(1);
-    println!("    space_jump: {}", spawn_point.space_jump);
+            spawn_point.thermal_visor = fetch_bits(1);
+            print_maybe!(first, "    thermal_visor: {}", spawn_point.thermal_visor);
 
-    spawn_point.grapple = fetch_bits(1);
-    println!("    grapple: {}", spawn_point.grapple);
+            spawn_point.xray= fetch_bits(1);
+            print_maybe!(first, "    xray: {}", spawn_point.xray);
 
-    spawn_point.super_missile = fetch_bits(1);
-    println!("    super_missile: {}", spawn_point.super_missile);
+            spawn_point.space_jump = fetch_bits(1);
+            print_maybe!(first, "    space_jump: {}", spawn_point.space_jump);
 
+            spawn_point.grapple = fetch_bits(1);
+            print_maybe!(first, "    grapple: {}", spawn_point.grapple);
+
+            spawn_point.super_missile = fetch_bits(1);
+            print_maybe!(first, "    super_missile: {}", spawn_point.super_missile);
+
+            first = false;
+        }
+    }
 }
 
-fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
+fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
 {
+    let mrea_idx = {
+        let file_entry = find_file_mut(gc_disc, spawn_room.pak_name);
+        file_entry.guess_kind();
+        let pak = match *file_entry.file_mut().unwrap() {
+            structs::FstEntryFile::Pak(ref mut pak) => pak,
+            _ => panic!(),
+        };
+        pak.resources.iter()
+            .filter(|res| res.fourcc() == b"MREA".into())
+            .enumerate()
+            .find(|&(_, ref res)| res.file_id == spawn_room.mrea)
+            .unwrap().0
+    };
+
+    let mut mlvl_bytes = [0u8; 4];
+    spawn_room.mlvl.write(&mut io::Cursor::new(&mut mlvl_bytes as &mut [u8])).unwrap();
+
     let dol = find_file_mut(gc_disc, "default.dol");
     let file = dol.file_mut().unwrap();
     let reader = match file {
@@ -913,15 +1077,16 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>)
         _ => panic!(),
     };
 
-    // Replace 4 of the bytes in the main dol. By using chain() like this, we
-    // can avoid copying the contents of the dol onto the heap.
-    static REPLACEMENT_1: &'static [u8] = &[0x39, 0xF3];
-    static REPLACEMENT_2: &'static [u8] = &[0xDE, 0x28];
+    // Replace some of the bytes in the main dol. By using chain() like this, we
+    // can avoid copying the contents of the whole dol onto the heap.
+
     let data = reader[..0x1FF1E]
-        .chain(REPLACEMENT_1)
+        .chain(io::Cursor::new(vec![mlvl_bytes[0], mlvl_bytes[1] + 1]))
         .chain(&reader[0x1FF20..0x1FF2A])
-        .chain(REPLACEMENT_2)
-        .chain(&reader[0x1FF2C..]);
+        .chain(io::Cursor::new(vec![mlvl_bytes[2], mlvl_bytes[3]]))
+        .chain(&reader[0x1FF2C..0x1D1FE3])
+        .chain(io::Cursor::new(vec![mrea_idx as u8]))
+        .chain(&reader[0x1D1FE4..]);
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
 
@@ -1011,7 +1176,8 @@ struct ParsedConfig
     output_iso: File,
 
     pickup_layout: Vec<u8>,
-    seed: [u32; 4],
+    elevator_layout: Vec<u8>,
+    seed: [u32; 16],
 
     skip_frigate: bool,
     skip_hudmenus: bool,
@@ -1141,11 +1307,11 @@ fn interactive() -> Result<ParsedConfig, String>
                 "\nalready have one, go to https://etaylor8086.github.io/randomizer/ generate one.",
                 "\nIts suggested that you copy-paste the string rather than try to re-type it.")
     };
-    let (pickup_layout, seed) = read_option(
+    let (pickup_layout, elevator_layout, seed) = read_option(
         "Layout descriptor", "",
         layout_help_message,
         |pickup_layout| {
-            parse_pickup_layout(pickup_layout.trim())
+            parse_layout(pickup_layout.trim())
     })?;
 
     let match_bool = |resp: &str| match resp.trim() {
@@ -1191,7 +1357,7 @@ fn interactive() -> Result<ParsedConfig, String>
     Ok(ParsedConfig {
         input_iso: input_iso_mmap,
         output_iso: out_iso,
-        pickup_layout, seed,
+        pickup_layout, elevator_layout, seed,
 
         skip_hudmenus: true,
         skip_frigate,
@@ -1258,12 +1424,13 @@ fn get_config() -> Result<ParsedConfig, String>
             .map_err(|e| format!("Failed to open output file: {}", e))?;
 
         let pickup_layout = matches.value_of("pickup layout").unwrap();
-        let (pickup_layout, seed) = parse_pickup_layout(pickup_layout)?;
+        let (pickup_layout, elevator_layout, seed) = parse_layout(pickup_layout)?;
 
         Ok(ParsedConfig {
             input_iso: input_iso_mmap,
             output_iso: out_iso,
             pickup_layout: pickup_layout,
+            elevator_layout: elevator_layout,
             seed: seed,
 
             skip_hudmenus: matches.is_present("skip hudmenus"),
@@ -1309,11 +1476,18 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
     }
 
-    let rng = XorShiftRng::from_seed(config.seed);
+    let rng = ChaChaRng::from_seed(&config.seed);
     modify_pickups(&mut gc_disc, &config.pickup_layout, rng, config.skip_hudmenus);
 
+    if config.elevator_layout[20] != 20 {
+        // If we have a non-default start point, patch the landing site to avoid
+        // weirdness with cutscene triggers and the ship spawning.
+        patch_landing_site_cutscene_triggers(&mut gc_disc);
+    }
+
+    let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
     if config.skip_frigate {
-        patch_dol_skip_frigate(&mut gc_disc);
+        patch_dol_skip_frigate(&mut gc_disc, spawn_room);
 
         // To reduce the amount of data that needs to be copied, empty the contents of the pak
         let file_entry = find_file_mut(&mut gc_disc, "Metroid1.pak");
@@ -1322,17 +1496,21 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
             Some(&mut structs::FstEntryFile::Pak(ref mut pak)) => pak.resources.clear(),
             _ => (),
         };
+    } else {
+        patch_frigate_teleporter(&mut gc_disc, spawn_room);
     }
 
     if let Some(starting_items) = config.starting_items {
-        patch_starting_pickups(&mut gc_disc, starting_items);
+        patch_starting_pickups(&mut gc_disc, spawn_room, starting_items, true);
+    } else {
+        patch_starting_pickups(&mut gc_disc, spawn_room, 0, false);
     }
 
     if !config.keep_fmvs {
         replace_fmvs(&mut gc_disc);
     }
 
-    patch_elevators(&mut gc_disc, &ELEVATORS.iter().map(|i| i.default_dest).collect::<Vec<_>>());
+    patch_elevators(&mut gc_disc, &config.elevator_layout);
 
     let pn = ProgressNotifier::new(config.quiet);
     write_gc_disc(&mut gc_disc, config.output_iso, pn)?;
@@ -1346,8 +1524,7 @@ fn was_launched_by_windows_explorer() -> bool
     // https://stackoverflow.com/a/513574
     use winapi::um::processenv:: *;
     use winapi::um::winbase:: *;
-    use winapi::um::wincon:: *;
-    static mut CACHED: Option<bool> = None;
+    use winapi::um::wincon:: *; static mut CACHED: Option<bool> = None;
     unsafe {
         if let Some(t) = CACHED {
             return t;
@@ -1365,7 +1542,8 @@ fn was_launched_by_windows_explorer() -> bool
     false
 }
 
-fn maybe_pause_at_exit() {
+fn maybe_pause_at_exit()
+{
     if was_launched_by_windows_explorer() {
         // XXX Windows only
         let _ = Command::new("cmd.exe").arg("/c").arg("pause").status();

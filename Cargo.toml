@@ -8,7 +8,8 @@ clap = "2.9"
 flate2 = "0.2"
 memmap = "0.4"
 preferences = "1.1"
-rand = "0.3"
+sha2 = "0.7"
+rand = "0.4"
 winapi = "0.3"
 
 structs = { path = "structs" }

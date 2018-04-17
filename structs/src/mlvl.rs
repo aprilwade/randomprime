@@ -23,7 +23,7 @@ auto_struct! {
 
         #[derivable = memory_relays.len() as u32]
         memory_relay_count: u32,
-        memory_relays: RoArray<'a, MemoryRelay> = (memory_relay_count as usize, ()),
+        memory_relays: LazyArray<'a, MemoryRelay> = (memory_relay_count as usize, ()),
 
         #[derivable = areas.len() as u32]
         area_count: u32,
