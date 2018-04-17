@@ -549,13 +549,13 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
     *pickup = structs::Pickup {
-        position: GenericArray::from_slice(&[
+        position: *GenericArray::from_slice(&[
             original_pickup.position[0] - (new_center[0] - original_center[0]),
             original_pickup.position[1] - (new_center[1] - original_center[1]),
             original_pickup.position[2] - (new_center[2] - original_center[2]),
         ]),
         hitbox: original_pickup.hitbox,
-        scan_offset: GenericArray::from_slice(&[
+        scan_offset: *GenericArray::from_slice(&[
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
             original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),

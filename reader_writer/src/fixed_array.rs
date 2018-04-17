@@ -6,12 +6,9 @@ use generic_array::{GenericArray, ArrayLength};
 
 pub type FixedArray<T, N> = GenericArray<T, N>;
 
-// TODO: It would be nice if we could initialize from an iterator directly.
-//       That would allow the Default bound to be removed
-//       That would require an upstream change though...
 impl<'a, T, N> Readable<'a> for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'a> + Default,
+          T: Readable<'a>,
           T::Args: Clone,
 {
     type Args = T::Args;
@@ -20,10 +17,10 @@ impl<'a, T, N> Readable<'a> for FixedArray<T, N>
     #[inline]
     fn read(mut reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>)
     {
-        let mut array = GenericArray::new();
-        for i in 0..N::to_usize() {
-            array[i] = reader.read(args.clone());
-        }
+        let array = {
+            let iter = (0..N::to_usize()).map(|_| reader.read(args.clone()));
+            GenericArray::from_exact_iter(iter).unwrap()
+        };
         (array, reader)
     }
 
