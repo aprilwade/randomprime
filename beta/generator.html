@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Metroid Prime Randomized Layout Generator
+  </title>
+
+  <link href="./external_libs/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="./external_libs/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
+  <link href="./external_libs/bootstrap-touchspin/jquery.bootstrap-touchspin.min.css" rel="stylesheet">
+
+  <script src="./external_libs/jquery.min.js"></script>
+  <script src="./external_libs/bootstrap/js/bootstrap.min.js"></script>
+  <script src="./external_libs/bootstrap-touchspin/jquery.bootstrap-touchspin.min.js"></script>
+  <script type="text/javascript" src="./external_libs/BigInteger.min.js"></script>
+
+  <script type="text/javascript" src="difficulty_shared.js"></script>
+  <script type="text/javascript" src="layout_string_shared.js"></script>
+  <script type="text/javascript" src="normal_difficulty.js"></script>
+  <script type="text/javascript" src="generator.js"></script>
+
+  <style>
+    #randomize_feedback {
+        opacity: 0;
+        word-wrap: break-word;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+  <h1>Metroid Prime Randomized Layout Generator</h1>
+
+  <h3>Difficulty:</h3>
+  <div class='list-group'>
+    <div class='list-group-item'>
+      <input type='radio' name='difficulty' id='normal_difficulty' value='normal' checked />
+      <label for='normal_difficulty'>
+        <h4 class="list-group-item-heading">Normal</h4>
+      </label>
+      <p class="list-group-item-text">This difficulty requires no special
+      tricks or techniques and should be completable by anyone.</p>
+    </div>
+    <!--<div class='list-group-item'>
+      <input type='radio' name='difficulty' id='advanced_difficulty' value='advanced' disabled />
+      <label for='advanced_difficulty'>
+        <h4 class="list-group-item-heading">Advanced</h4>
+      </label>
+      <p class="list-group-item-text">Knowledge of advanced movement tricks and skips is assumed and may be
+      required to be able to complete the game with this difficulty.</p>
+      <p class="list-group-item-text"><strong>Warning:</strong>
+      this configuration is a work in progress and not all generated
+      layouts may be completable yet.</p>
+    </div>-->
+  </div>
+
+  <h3>Item Quantities:</h3>
+
+  <div class='list-group'>
+    <div class='list-group-item'>
+      <input type='radio' name='quantities' id='all_quantities' value='all' checked data-toggle="collapse" data-target="#item_count_table.in" />
+      <label for='all_quantities'>
+        <h4 class="list-group-item-heading">All</h4>
+      </label>
+      <p class="list-group-item-text">All items are present in their original
+      quantities.</p>
+    </div>
+    <div class='list-group-item'>
+      <input type='radio' name='quantities' id='some_quantities' value='some' data-toggle="collapse" data-target="#item_count_table.in" />
+      <label for='some_quantities'>
+        <h4 class="list-group-item-heading">Some</h4>
+      </label>
+      <p class="list-group-item-text">Approximately 50% of optional items are
+      removed.</p>
+    </div>
+    <div class='list-group-item'>
+      <input type='radio' name='quantities' id='none_quantities' value='none' data-toggle="collapse" data-target="#item_count_table.in" />
+      <label for='none_quantities'>
+        <h4 class="list-group-item-heading">None</h4>
+      </label>
+      <p class="list-group-item-text">All optional items are removed. Good luck!</p>
+    </div>
+    <div class='list-group-item'>
+      <input type='radio' name='quantities' id='custom_quantities' value='custom' data-toggle="collapse" data-target="#item_count_table:not(.in)" />
+      <label for='custom_quantities'>
+        <h4 class="list-group-item-heading">Custom</h4>
+      </label>
+      <p class="list-group-item-text">Select to reveal table.</p>
+
+      <div id="item_count_table" class="row panel-collapse collapse ">
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="missile_count">Missile</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="missile_count" type="text" value="50">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="energy_tank_count">Energy Tank</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="energy_tank_count" type="text" value="14">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="thermal_visor_count">Thermal Visor</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="thermal_visor_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="xray_visor_count">X-Ray Visor</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="xray_visor_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="varia_suit_count">Varia Suit</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="varia_suit_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="gravity_suit_count">Gravity Suit</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="gravity_suit_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="phazon_suit_count">Phazon Suit</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="phazon_suit_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="morph_ball_count">Morph Ball</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="morph_ball_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="boost_ball_count">Boost Ball</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="boost_ball_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="spider_ball_count">Spider Ball</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="spider_ball_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="morph_ball_bomb_count">Morph Ball Bomb</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="morph_ball_bomb_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="power_bomb_expansion_count">Power Bomb Expansion</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="power_bomb_expansion_count" type="text" value="4">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="power_bomb_count">Power Bomb</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="power_bomb_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="charge_beam_count">Charge Beam</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="charge_beam_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="space_jump_boots_count">Space Jump Boots</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="space_jump_boots_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="grapple_beam_count">Grapple Beam</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="grapple_beam_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="super_missile_count">Super Missile</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="super_missile_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="wavebuster_count">Wavebuster</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="wavebuster_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="ice_spreader_count">Ice Spreader</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="ice_spreader_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="flamethrower_count">Flamethrower</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="flamethrower_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="ice_beam_count">Ice Beam</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="ice_beam_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="wave_beam_count">Wave Beam</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="wave_beam_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="plasma_beam_count">Plasma Beam</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="plasma_beam_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_lifegiver_count">Artifact of Lifegiver</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_lifegiver_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_wild_count">Artifact of Wild</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_wild_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_world_count">Artifact of World</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_world_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_sun_count">Artifact of Sun</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_sun_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_elder_count">Artifact of Elder</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_elder_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_spirit_count">Artifact of Spirit</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_spirit_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_truth_count">Artifact of Truth</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_truth_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_chozo_count">Artifact of Chozo</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_chozo_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_warrior_count">Artifact of Warrior</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_warrior_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_newborn_count">Artifact of Newborn</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_newborn_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_nature_count">Artifact of Nature</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_nature_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix visible-xs"></div>
+
+        <div class="col-lg-4 col-sm-6 col-xs-12">
+          <div class="row">
+            <div class="col-xs-8">
+              <label for="artifact_strength_count">Artifact of Strength</label>
+            </div>
+            <div class="col-xs-4">
+              <input id="artifact_strength_count" type="text" value="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="clearfix col-xs-12">
+          <label>Nothings</label>
+          <span id="nothings_count">0</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="randomize_feedback" class="alert alert-success" role="alert"></div>
+
+  <button id="randomize_button">Create Randomized Layout</button>
+
+  </div>
+</body>
+
+</html>
