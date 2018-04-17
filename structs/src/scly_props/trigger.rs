@@ -21,9 +21,9 @@ auto_struct! {
         damage_info: DamageInfo,
         unknown0: GenericArray<f32, U3>,
         unknown1: u32,
+        active: u8,
         unknown2: u8,
         unknown3: u8,
-        unknown4: u8,
     }
 }
 

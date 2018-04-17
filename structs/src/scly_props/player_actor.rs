@@ -3,15 +3,16 @@ use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use scly_props::structs::{ActorParameters, AncsProp, DamageVulnerability, HealthInfo};
+use scly_props::structs::{ActorParameters, AncsProp, DamageVulnerability, HealthInfo,
+                          PlayerActorParams};
 
 
 auto_struct! {
     #[auto_struct(Readable, Writable)]
     #[derive(Debug, Clone)]
-    pub struct Actor<'a>
+    pub struct PlayerActor<'a>
     {
-        #[expect = 24]
+        #[expect = 19]
         prop_count: u32,
 
         name: CStr<'a>,
@@ -32,24 +33,19 @@ auto_struct! {
         ancs: AncsProp,
         actor_params: ActorParameters,
 
-        looping: u8,
-        snow: u8,
-        solid: u8,
-        camera_passthrough: u8,
+        loop_animation: u8,
+        unknown3: u8,
+        disable_movement: u8,
         active: u8,
+        player_actor_params: PlayerActorParams,
         unknown8: u32,
-        unknown9: f32,
-        unknown10: u8,
-        unknown11: u8,
-        unknown12: u8,
-        unknown13: u8,
     }
 }
 
-impl<'a> SclyPropertyData for Actor<'a>
+impl<'a> SclyPropertyData for PlayerActor<'a>
 {
     fn object_type() -> u8
     {
-        0x0
+        0x4c
     }
 }

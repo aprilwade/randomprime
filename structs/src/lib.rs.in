@@ -21,8 +21,11 @@ mod scly_props
     mod actor;
     mod dock;
     mod hud_memo;
+    mod memory_relay;
     mod pickup;
+    mod platorm;
     mod point_of_interest;
+    mod player_actor;
     mod player_hint;
     mod relay;
     mod sound;
@@ -38,8 +41,11 @@ mod scly_props
     pub use self::actor::*;
     pub use self::dock::*;
     pub use self::hud_memo::*;
+    pub use self::memory_relay::*;
     pub use self::pickup::*;
+    pub use self::platorm::*;
     pub use self::point_of_interest::*;
+    pub use self::player_actor::*;
     pub use self::player_hint::*;
     pub use self::relay::*;
     pub use self::sound::*;

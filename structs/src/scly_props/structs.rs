@@ -166,3 +166,18 @@ auto_struct! {
     }
 }
 
+auto_struct! {
+    #[auto_struct(Readable, Writable, FixedSize)]
+    #[derive(Debug, Clone)]
+    pub struct PlayerActorParams
+    {
+        #[expect = 5]
+        prop_count: u32,
+
+        unknown0: u8,
+        unknown1: u8,
+        unknown2: u8,
+        unknown3: u8,
+        unknown4: u8,
+    }
+}
