@@ -1278,6 +1278,7 @@ fn interactive() -> Result<ParsedConfig, String>
                 "\nIf you ran this program by double clicking on it, and the ISO file is in the",
                 "\nsame folder, you can simply enter the name of the file. Otherwise, you need to",
                 "\nenter an absolute path, which probably should start with a drive letter (eg C:\\)",
+                "\nA shortcut to doing that is to drag and drop the ISO file onto this CMD window.",
                 "\nAlternatively, if you relaunch this program by dragging and dropping your ISO",
                 "\nfile onto the patcher's EXE file, this option will be handled automatically."
             )
@@ -1288,6 +1289,13 @@ fn interactive() -> Result<ParsedConfig, String>
             "Input file name", prefs.get("input_iso").map(|x| x.as_str()).unwrap_or(""),
            help_message,
             |input_iso_path| {
+                let bytes = input_iso_path.as_bytes();
+                let input_iso_path = if bytes[0] == b'"' && bytes[2] == b':' && bytes[3] == b'\\'
+                                        && bytes.ends_with(b"\"") {
+                    Cow::Owned(input_iso_path[1..(input_iso_path.len() - 1)].to_string())
+                } else {
+                    Cow::Borrowed(input_iso_path)
+                };
                 let input_iso_file = File::open(input_iso_path.trim())
                             .map_err(|e| format!("Failed to open {}: {}", input_iso_path, e))?;
                 memmap::Mmap::open(&input_iso_file, memmap::Protection::Read)
