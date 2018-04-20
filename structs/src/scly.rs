@@ -204,6 +204,7 @@ build_scly_property!(
     Timer,           is_timer,            as_timer,            as_timer_mut,
     Sound,           is_sound,            as_sound,            as_sound_mut,
     Dock,            is_dock,             as_dock,             as_dock_mut,
+    Effect,          is_effect,           as_effect,           as_effect_mut,
     SpawnPoint,      is_spawn_point,      as_spawn_point,      as_spawn_point_mut,
     MemoryRelay,     is_memory_relay,     as_memory_relay,     as_memory_relay_mut,
     Pickup,          is_pickup,           as_pickup,           as_pickup_mut,
