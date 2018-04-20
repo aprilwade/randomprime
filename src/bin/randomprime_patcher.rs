@@ -853,6 +853,11 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
                 message: 1,
                 target_object_id: 484,
             },
+            structs::Connection {
+                state: 9,
+                message: 1,
+                target_object_id: 0x1cf,
+            },
         ].into(),
     });
 }
