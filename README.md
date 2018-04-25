@@ -46,7 +46,6 @@ Because ~~I'm lazy~~ I wanted to allow other people to write their own generator
 ## To do
 
 * A GUI
-* Randomize elevators (someday)
 
 
 ## Thanks
