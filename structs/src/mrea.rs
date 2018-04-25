@@ -73,7 +73,7 @@ impl<'a> MreaSection<'a>
     pub fn convert_to_scly(&mut self) -> &mut Scly<'a>
     {
         *self = match *self {
-            MreaSection::Unknown(ref reader) => MreaSection::Scly(reader.clone().read((()))),
+            MreaSection::Unknown(ref reader) => MreaSection::Scly(reader.clone().read(())),
             MreaSection::Scly(ref mut scly) => return scly,
         };
         match *self {
