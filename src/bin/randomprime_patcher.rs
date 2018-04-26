@@ -89,20 +89,62 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         }
     }
 
-    // Generate and add the assets for the Phazon Suit
-    let (cmdl, ancs) = create_phazon_cmdl_and_ancs(&mut found);
-    let key = (cmdl.file_id, cmdl.fourcc());
-    if looking_for.remove(&key) {
-        assert!(found.insert(key, cmdl).is_none());
-    }
-    let key = (ancs.file_id, ancs.fourcc());
-    if looking_for.remove(&key) {
-        assert!(found.insert(key, ancs).is_none());
+    // Generate and add the assets for Nothing and Phazon Suit
+    // XXX This is super gross because arrays don't have owned-iterators
+    let new_assets = vec![create_nothing_cmdl_and_ancs(&mut found),
+                          create_phazon_cmdl_and_ancs(&mut found)]
+                    .into_iter()
+                    .flat_map(|(a, b)| vec![a, b].into_iter());
+    for res in new_assets {
+        let key = (res.file_id, res.fourcc());
+        if looking_for.remove(&key) {
+            assert!(found.insert(key, res).is_none());
+        }
     }
 
     assert!(looking_for.is_empty());
 
     found
+}
+
+// TODO Reduce duplication between create_phazon_cmdl_and_ancs and create_nothing_cmdl_and_ancs
+fn create_nothing_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
+    -> (structs::Resource<'a>, structs::Resource<'a>)
+{
+    let nothing_suit_cmdl = {
+        let grav_suit_cmdl = ResourceData::new(&resources[&(
+                asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into())]);
+        let mut nothing_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+
+        // Ensure the length is a multiple of 32
+        let len = nothing_cmdl_bytes.len();
+        nothing_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Change which texture this points to
+        asset_ids::NOTHING_TXTR.write(&mut &mut nothing_cmdl_bytes[0x64..]).unwrap();
+        asset_ids::PHAZON_SUIT_TXTR2.write(&mut &mut nothing_cmdl_bytes[0x70..]).unwrap();
+        pickup_meta::build_resource(
+            asset_ids::NOTHING_CMDL,
+            structs::ResourceKind::External(nothing_cmdl_bytes, b"CMDL".into())
+        )
+    };
+    let nothing_suit_ancs = {
+        let grav_suit_ancs = ResourceData::new(&resources[&(
+                asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into())]);
+        let mut nothing_ancs_bytes = grav_suit_ancs.decompress().into_owned();
+
+        // Ensure the length is a multiple of 32
+        let len = nothing_ancs_bytes.len();
+        nothing_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Change this to refer to the CMDL above
+        asset_ids::NOTHING_CMDL.write(&mut &mut nothing_ancs_bytes[0x14..]).unwrap();
+        pickup_meta::build_resource(
+            asset_ids::NOTHING_ANCS,
+            structs::ResourceKind::External(nothing_ancs_bytes, b"ANCS".into())
+        )
+    };
+    (nothing_suit_cmdl, nothing_suit_ancs)
 }
 
 fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
@@ -304,11 +346,7 @@ fn modify_pickups<R: Rng + Rand>(
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let mut layout_iter = pickup_layout.iter()
-        .map(|n| {
-            // Use the E-Tank model for a nothing with a 1/4 chance. Otherwise, use the Missile
-            // model.
-            if *n != 35 { *n as usize } else { 35 + rng.gen_weighted_bool(4) as usize }
-        })
+        .map(|n| *n as usize)
         .enumerate();
 
     let mut fresh_instance_id_range = 0xDEEF0000..;

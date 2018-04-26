@@ -47,7 +47,7 @@ pub fn setup_pickup_meta_table()
 pub fn pickup_meta_table()
     -> &'static [PickupMeta]
 {
-    debug_assert!(unsafe { _PICKUP_META }.len() == 37);
+    debug_assert!(unsafe { _PICKUP_META }.len() == 36);
     unsafe { _PICKUP_META }
 }
 
@@ -103,6 +103,9 @@ const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
     // Nothing SCAN
     (asset_ids::NOTHING_SCAN, *b"SCAN",
      include_bytes!("../extra_assets/nothing_scan.scan")),
+    // Nothing texture
+    (asset_ids::NOTHING_TXTR, *b"TXTR",
+     include_bytes!("../extra_assets/nothing_texture.txtr")),
 ];
 
 #[cfg(not(debug_assertions))]
