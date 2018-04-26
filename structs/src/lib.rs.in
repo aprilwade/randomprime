@@ -14,6 +14,7 @@ mod scan;
 mod scly;
 mod strg;
 mod thp;
+mod txtr;
 
 mod scly_props
 {
@@ -74,3 +75,4 @@ pub use scan::*;
 pub use scly::*;
 pub use strg::*;
 pub use thp::*;
+pub use txtr::*;
