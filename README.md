@@ -11,12 +11,13 @@ There's an [editor webpage](https://aprilwade.github.io/randomprime/editor.html)
 
 ## How to use the ISO patcher
 
-If you're on Windows, you can launch the patcher by simply double clicking the EXE file in Explorer.
-Alternatively, you can drag-and-drop your input ISO onto the EXE file to avoid manually typing its location later.
+If you're using Windows, you will need to use `cmd` to run the ISO patcher. Note, you can drag-and-drop files onto the `cmd` window rather than typing out their full path. An example:
 
-The patcher can also be run from a terminal.
-If you run it without passing any arguments, it'll operate in interactive mode, just like when its launched from the GUI.
-It also has a CLI, the details of which you can find by running it with the `-h` flag.
+```
+"C:\Users\Me\Downloads\randomprime_patcher.exe" --input-iso="C:\Users\Me\mp1.iso" --output-iso="C:\Users\Me\mp1_random.iso" --layout=NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4
+```
+
+If you would like to not have to play through the tutorial section (the Frigate) each time, you may also give the ISO patcher the ``--skip-frigate`` argument to skip it.
 
 ## Reporting a bug
 
