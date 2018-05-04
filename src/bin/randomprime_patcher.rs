@@ -987,6 +987,35 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
     });
 }
 
+fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
+    file_entry.guess_kind();
+    let pak = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Pak(ref mut pak) => pak,
+        _ => panic!(),
+    };
+
+    let mut cursor = pak.resources.cursor();
+    loop {
+        if cursor.peek().unwrap().file_id == 3182558380 {
+            break;
+        }
+        cursor.next();
+    }
+
+    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let trigger = scly.layers.iter_mut()
+        .flat_map(|layer| layer.objects.iter_mut())
+        .find(|obj| obj.instance_id == 0x70067)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+    trigger.active = 0;
+
+}
+
+
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
 {
@@ -1561,6 +1590,7 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         replace_fmvs(&mut gc_disc);
     }
 
+    patch_temple_security_station_cutscene_trigger(&mut gc_disc);
     patch_elevators(&mut gc_disc, &config.elevator_layout);
 
     let pn = ProgressNotifier::new(config.quiet);
