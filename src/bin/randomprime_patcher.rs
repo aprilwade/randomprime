@@ -1141,6 +1141,10 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
 
     let mut mlvl_bytes = [0u8; 4];
     spawn_room.mlvl.write(&mut io::Cursor::new(&mut mlvl_bytes as &mut [u8])).unwrap();
+    // PPC addi encoding shenanigans
+    if mlvl_bytes[2] & 0x80 == 0x80 {
+        mlvl_bytes[1] += 1;
+    }
 
     let dol = find_file_mut(gc_disc, "default.dol");
     let file = dol.file_mut().unwrap();
@@ -1153,7 +1157,7 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
     // can avoid copying the contents of the whole dol onto the heap.
 
     let data = reader[..0x1FF1E]
-        .chain(io::Cursor::new(vec![mlvl_bytes[0], mlvl_bytes[1] + 1]))
+        .chain(io::Cursor::new(vec![mlvl_bytes[0], mlvl_bytes[1]]))
         .chain(&reader[0x1FF20..0x1FF2A])
         .chain(io::Cursor::new(vec![mlvl_bytes[2], mlvl_bytes[3]]))
         .chain(&reader[0x1FF2C..0x1D1FE3])
