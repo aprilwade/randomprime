@@ -1015,6 +1015,41 @@ fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcD
 
 }
 
+fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let file_entry = find_file_mut(gc_disc, "metroid5.pak");
+    file_entry.guess_kind();
+    let pak = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Pak(ref mut pak) => pak,
+        _ => panic!(),
+    };
+
+    let elite_research_idx =  pak.resources.iter()
+        .filter(|res| res.fourcc() == b"MREA".into())
+        .position(|res| res.file_id == 2325199700)
+        .unwrap();
+
+    let mut cursor = pak.resources.cursor();
+    loop {
+        if cursor.peek().is_none() {
+            break;
+        } else if cursor.peek().unwrap().file_id == 0xb1ac4d65 {
+            let mlvl = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
+            let flags = &mut mlvl.area_layer_flags.as_mut_vec()[elite_research_idx].flags;
+            *flags |= 1 << 1; // Turn on "3rd pass elite bustout"
+            *flags &= !(1 << 5); // Turn off the "dummy elite"
+
+        } else if cursor.peek().unwrap().file_id == 4272124642 {
+            let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+            let scly = mrea.scly_section_mut();
+            scly.layers.as_mut_vec()[0].objects.as_mut_vec()
+                .retain(|obj| obj.instance_id != 0x1b0525 && obj.instance_id != 0x1b0522);
+        }
+        cursor.next();
+    }
+
+}
+
 
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
@@ -1595,6 +1630,7 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
     }
 
     patch_temple_security_station_cutscene_trigger(&mut gc_disc);
+    patch_elite_research_fight_prereq(&mut gc_disc);
     patch_elevators(&mut gc_disc, &config.elevator_layout);
 
     let pn = ProgressNotifier::new(config.quiet);
