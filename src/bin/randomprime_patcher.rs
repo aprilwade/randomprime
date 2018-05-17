@@ -1089,7 +1089,7 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
                 continue;
             };
 
-            let mut fetch_bits = |bits: u8| {
+            let mut fetch_bits = move |bits: u8| {
                 let ret = starting_items & ((1 << bits) - 1);
                 starting_items = starting_items >> bits;
                 ret as u32
