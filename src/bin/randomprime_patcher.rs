@@ -863,6 +863,9 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
                 target_object_id: 0xDEEFFFFF,
             });
         }
+        if obj.instance_id == 221 {
+            obj.property_data.as_trigger_mut().unwrap().active = 0;
+        }
     }
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: 0xDEEFFFFF,
@@ -879,22 +882,22 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
             structs::Connection {
                 state: 9,
                 message: 1,
-                target_object_id: 323,
+                target_object_id: 323,// "Memory Relay Set For Load"
             },
             structs::Connection {
                 state: 9,
                 message: 1,
-                target_object_id: 427,
+                target_object_id: 427,// "Memory Relay Ship"
             },
             structs::Connection {
                 state: 9,
                 message: 1,
-                target_object_id: 484,
+                target_object_id: 484,// "Effect_BaseLights"
             },
             structs::Connection {
                 state: 9,
                 message: 1,
-                target_object_id: 0x1cf,
+                target_object_id: 463,// "Actor Save Station Beam"
             },
         ].into(),
     });
