@@ -834,25 +834,11 @@ fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
 
 fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-
-    let mut cursor = pak.resources.cursor();
-    loop {
-        if cursor.peek().unwrap().file_id == 0xb2701146 {
-            break;
-        }
-        cursor.next();
-    }
-
     // XXX I'd like to do this some other way than inserting a timer to trigger
     //     the memory relay, but I couldn't figure out how to make the memory
     //     relay default to on/enabled.
-    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let res = find_resource_mut(gc_disc, "Metroid4.pak", |res| res.file_id == 0xb2701146);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let layer = scly.layers.iter_mut().next().unwrap();
     for obj in layer.objects.iter_mut() {
@@ -905,22 +891,8 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 fn patch_frigate_teleporter<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
 {
-    let file_entry = find_file_mut(gc_disc, "Metroid1.pak");
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-
-    let mut cursor = pak.resources.cursor();
-    loop {
-        if cursor.peek().unwrap().file_id == 0xd1241219 {
-            break;
-        }
-        cursor.next();
-    }
-
-    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let res = find_resource_mut(gc_disc, "Metroid1.pak", |res| res.file_id == 0xd1241219);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let wt = scly.layers.iter_mut()
         .flat_map(|layer| layer.objects.iter_mut())
@@ -992,22 +964,8 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
 
 fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let file_entry = find_file_mut(gc_disc, "Metroid4.pak");
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-
-    let mut cursor = pak.resources.cursor();
-    loop {
-        if cursor.peek().unwrap().file_id == 3182558380 {
-            break;
-        }
-        cursor.next();
-    }
-
-    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let res = find_resource_mut(gc_disc, "Metroid4.pak", |res| res.file_id == 3182558380);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let trigger = scly.layers.iter_mut()
         .flat_map(|layer| layer.objects.iter_mut())
@@ -1057,22 +1015,8 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
 {
-    let file_entry = find_file_mut(gc_disc, spawn_room.pak_name);
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut().unwrap() {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-
-
-    let mut cursor = pak.resources.cursor();
-    loop {
-        if cursor.peek().unwrap().file_id == spawn_room.mrea {
-            break;
-        }
-        cursor.next();
-    }
-    let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
+    let res = find_resource_mut(gc_disc, spawn_room.pak_name, |res| res.file_id == spawn_room.mrea);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
 
     let mut first = debug_print;

@@ -2,7 +2,6 @@ use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource,
 use reader_writer::{CStr, DiffListCursor, FourCC};
 
 
-use std::iter::once;
 use std::collections::HashMap;
 use std::borrow::Cow;
 use std::ffi::CString;
@@ -87,14 +86,16 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
         where I: Iterator<Item=Dependency>,
     {
         let layers = self.mlvl_area.dependencies.deps.as_mut_vec();
-        for dep in deps {
-            if layers.iter().all(|layer| layer.iter().all(|i| *i != dep)) {
-                let res = pickup_resources[&(dep.asset_id, dep.asset_type)].clone();
-                self.mrea_cursor.insert_before(once(res));
-                self.mrea_cursor.next();
-
-                layers[layer_num].as_mut_vec().push(dep);
-            }
-        }
+        let iter = deps.filter_map(|dep| {
+                if layers.iter().all(|layer| layer.iter().all(|i| *i != dep)) {
+                    let res = pickup_resources[&(dep.asset_id, dep.asset_type)].clone();
+                    layers[layer_num].as_mut_vec().push(dep);
+                    Some(res)
+                }  else {
+                    None
+                }
+            });
+        self.mrea_cursor.insert_after(iter);
     }
 }
+
