@@ -73,7 +73,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     }
 
     for pak_name in METROID_PAK_NAMES.iter() {
-        let file_entry = find_file(gc_disc, pak_name);
+        let file_entry = gc_disc.find_file(pak_name);
         let pak = match *file_entry.file().unwrap() {
             structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
             structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
@@ -352,7 +352,7 @@ fn modify_pickups<R: Rng + Rand>(
     let mut fresh_instance_id_range = 0xDEEF0000..;
 
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
-        let file_entry = find_file_mut(gc_disc, pak_name);
+        let file_entry = gc_disc.find_file_mut(pak_name);
         file_entry.guess_kind();
         let pak = match *file_entry.file_mut().unwrap() {
             structs::FstEntryFile::Pak(ref mut pak) => pak,
@@ -785,7 +785,7 @@ fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, [u32; 16]), String>
 fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
 {
     for pak_name in METROID_PAK_NAMES.iter().chain(&["Metroid7.pak"]) {
-        let file_entry = find_file_mut(gc_disc, pak_name);
+        let file_entry = gc_disc.find_file_mut(pak_name);
         file_entry.guess_kind();
         let pak = match *file_entry.file_mut().unwrap() {
             structs::FstEntryFile::Pak(ref mut pak) => pak,
@@ -837,7 +837,7 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
     // XXX I'd like to do this some other way than inserting a timer to trigger
     //     the memory relay, but I couldn't figure out how to make the memory
     //     relay default to on/enabled.
-    let res = find_resource_mut(gc_disc, "Metroid4.pak", |res| res.file_id == 0xb2701146);
+    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xb2701146);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let layer = scly.layers.iter_mut().next().unwrap();
@@ -891,7 +891,7 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 fn patch_frigate_teleporter<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
 {
-    let res = find_resource_mut(gc_disc, "Metroid1.pak", |res| res.file_id == 0xd1241219);
+    let res = gc_disc.find_resource_mut("Metroid1.pak", |res| res.file_id == 0xd1241219);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let wt = scly.layers.iter_mut()
@@ -964,7 +964,7 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
 
 fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let res = find_resource_mut(gc_disc, "Metroid4.pak", |res| res.file_id == 3182558380);
+    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 3182558380);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let trigger = scly.layers.iter_mut()
@@ -978,7 +978,7 @@ fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcD
 
 fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let file_entry = find_file_mut(gc_disc, "metroid5.pak");
+    let file_entry = gc_disc.find_file_mut("metroid5.pak");
     file_entry.guess_kind();
     let pak = match *file_entry.file_mut().unwrap() {
         structs::FstEntryFile::Pak(ref mut pak) => pak,
@@ -1015,7 +1015,7 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
 {
-    let res = find_resource_mut(gc_disc, spawn_room.pak_name, |res| res.file_id == spawn_room.mrea);
+    let res = gc_disc.find_resource_mut(spawn_room.pak_name, |res| res.file_id == spawn_room.mrea);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
 
@@ -1108,7 +1108,7 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
 fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
 {
     let mrea_idx = {
-        let file_entry = find_file_mut(gc_disc, spawn_room.pak_name);
+        let file_entry = gc_disc.find_file_mut(spawn_room.pak_name);
         file_entry.guess_kind();
         let pak = match *file_entry.file_mut().unwrap() {
             structs::FstEntryFile::Pak(ref mut pak) => pak,
@@ -1128,7 +1128,7 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
         mlvl_bytes[1] += 1;
     }
 
-    let dol = find_file_mut(gc_disc, "default.dol");
+    let dol = gc_disc.find_file_mut("default.dol");
     let file = dol.file_mut().unwrap();
     let reader = match file {
         &mut structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
@@ -1556,7 +1556,7 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         patch_dol_skip_frigate(&mut gc_disc, spawn_room);
 
         // To reduce the amount of data that needs to be copied, empty the contents of the pak
-        let file_entry = find_file_mut(&mut gc_disc, "Metroid1.pak");
+        let file_entry = gc_disc.find_file_mut("Metroid1.pak");
         file_entry.guess_kind();
         match file_entry.file_mut() {
             Some(&mut structs::FstEntryFile::Pak(ref mut pak)) => pak.resources.clear(),

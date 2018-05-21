@@ -11,61 +11,73 @@ pub mod elevators;
 pub mod mlvl_wrapper;
 pub mod pickup_meta;
 
-pub fn find_file<'r, 'a: 'r>(gc_disc: &'r structs::GcDisc<'a>, name: &str)
-    -> &'r structs::FstEntry<'a>
+pub trait GcDiscLookupExtensions<'a>
 {
-    let fst = &gc_disc.file_system_table;
-    fst.fst_entries.iter()
-        .find(|e| e.name.to_bytes() == name.as_bytes())
-        .unwrap()
+    fn find_file(&self, name: &str) -> &structs::FstEntry<'a>;
+    fn find_file_mut(&mut self, name: &str) -> &mut structs::FstEntry<'a>;
+    fn find_resource<'r, F>(&'r self, pak_name: &str, f: F)
+        -> Option<LCow<'r, structs::Resource<'a>>>
+        where F: FnMut(&structs::Resource<'a>) -> bool;
+    fn find_resource_mut<'r, F>(&'r mut self, pak_name: &str, f: F)
+        -> Option<&'r mut structs::Resource<'a>>
+        where F: FnMut(&structs::Resource<'a>) -> bool;
 }
 
-pub fn find_file_mut<'r, 'a: 'r>(gc_disc: &'r mut structs::GcDisc<'a>, name: &str)
-    -> &'r mut structs::FstEntry<'a>
+impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
 {
-    let fst = &mut gc_disc.file_system_table;
-    fst.fst_entries.iter_mut()
-        .find(|e| e.name.to_bytes() == name.as_bytes())
-        .unwrap()
-}
-
-pub fn find_resource<'r, 'a, F>(gc_disc: &'r structs::GcDisc<'a>, pak_name: &str, mut f: F)
-    -> Option<LCow<'r, structs::Resource<'a>>>
-    where 'a: 'r,
-          F: FnMut(&structs::Resource<'a>) -> bool
-{
-    let file_entry = find_file(gc_disc, pak_name);
-    match *file_entry.file()? {
-        structs::FstEntryFile::Pak(ref pak) => pak.resources.iter().find(|res| f(&res)),
-        structs::FstEntryFile::Unknown(ref reader) => {
-            let pak: structs::Pak = reader.clone().read(());
-            pak.resources.iter()
-               .find(|res| f(&res))
-               .map(|res| LCow::Owned(res.into_owned()))
-        },
-        _ => panic!(),
+    fn find_file(&self, name: &str) -> &structs::FstEntry<'a>
+    {
+        let fst = &self.file_system_table;
+        fst.fst_entries.iter()
+            .find(|e| e.name.to_bytes() == name.as_bytes())
+            .unwrap()
     }
-}
 
-pub fn find_resource_mut<'r, 'a, F>(gc_disc: &'r mut structs::GcDisc<'a>, pak_name: &str, mut f: F)
-    -> Option<&'r mut structs::Resource<'a>>
-    where 'a: 'r,
-          F: FnMut(&structs::Resource<'a>) -> bool
-{
-    let file_entry = find_file_mut(gc_disc, pak_name);
-    file_entry.guess_kind();
-    let pak = match *file_entry.file_mut()? {
-        structs::FstEntryFile::Pak(ref mut pak) => pak,
-        _ => panic!(),
-    };
-    let mut cursor = pak.resources.cursor();
-    loop {
-        if cursor.peek().map(|res| f(&res)).unwrap_or(true) {
-            break
+    fn find_file_mut(&mut self, name: &str) -> &mut structs::FstEntry<'a>
+    {
+        let fst = &mut self.file_system_table;
+        fst.fst_entries.iter_mut()
+            .find(|e| e.name.to_bytes() == name.as_bytes())
+            .unwrap()
+    }
+
+    fn find_resource<'r, F>(&'r self, pak_name: &str, mut f: F)
+        -> Option<LCow<'r, structs::Resource<'a>>>
+        where F: FnMut(&structs::Resource<'a>) -> bool
+    {
+        let file_entry = self.find_file(pak_name);
+        match *file_entry.file()? {
+            structs::FstEntryFile::Pak(ref pak) => pak.resources.iter().find(|res| f(&res)),
+            structs::FstEntryFile::Unknown(ref reader) => {
+                let pak: structs::Pak = reader.clone().read(());
+                pak.resources.iter()
+                .find(|res| f(&res))
+                .map(|res| LCow::Owned(res.into_owned()))
+            },
+            _ => panic!(),
         }
-        cursor.next();
     }
-    cursor.into_value()
+
+    fn find_resource_mut<'r, F>(&'r mut self, pak_name: &str, mut f: F)
+        -> Option<&'r mut structs::Resource<'a>>
+        where F: FnMut(&structs::Resource<'a>) -> bool
+    {
+        let file_entry = self.find_file_mut(pak_name);
+        file_entry.guess_kind();
+        let pak = match *file_entry.file_mut()? {
+            structs::FstEntryFile::Pak(ref mut pak) => pak,
+            _ => panic!(),
+        };
+        let mut cursor = pak.resources.cursor();
+        loop {
+            if cursor.peek().map(|res| f(&res)).unwrap_or(true) {
+                break
+            }
+            cursor.next();
+        }
+        cursor.into_value()
+    }
+
 }
 
 
