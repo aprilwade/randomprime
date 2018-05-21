@@ -3,8 +3,6 @@ use reader_writer::{CStr, DiffListCursor, FourCC};
 
 
 use std::collections::HashMap;
-use std::borrow::Cow;
-use std::ffi::CString;
 
 pub struct MlvlEditor<'a>
 {
@@ -65,12 +63,12 @@ impl<'a, 'mlvl, 'cursor, 'list> MlvlArea<'a, 'mlvl, 'cursor, 'list>
         self.mrea_cursor.value().unwrap().kind.as_mrea_mut().unwrap()
     }
 
-    pub fn add_layer(&mut self, name: CString)
+    pub fn add_layer(&mut self, name: CStr<'a>)
     {
         // Mark this layer as active
         self.layer_flags.flags |= 1 << self.layer_flags.layer_count;
         self.layer_flags.layer_count += 1;
-        self.layer_names.push(Cow::Owned(name));
+        self.layer_names.push(name);
 
         {
             let deps = self.mlvl_area.dependencies.deps.as_mut_vec();

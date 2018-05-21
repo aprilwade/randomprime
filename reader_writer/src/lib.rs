@@ -26,7 +26,7 @@ pub use generic_array::typenum;
 pub use reader::{Reader, Readable};
 pub use writer::Writable;
 
-pub use primitive_types::{FourCC, CStr};
+pub use primitive_types::{FourCC, CStr, CStrConversionExtension};
 pub use array::{LazyArray, LazyArrayIter};
 pub use read_only_array::{RoArray, RoArrayIter};
 pub use fixed_array::FixedArray;

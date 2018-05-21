@@ -17,7 +17,7 @@ pub use randomprime::*;
 use elevators::{ELEVATORS, SpawnRoom};
 
 use asset_ids;
-use reader_writer::{FourCC, Reader, Writable};
+use reader_writer::{CStrConversionExtension, FourCC, Reader, Writable};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
 use reader_writer::num::{BigUint, Integer, ToPrimitive};
@@ -25,7 +25,7 @@ use reader_writer::num::{BigUint, Integer, ToPrimitive};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::iter;
@@ -200,12 +200,12 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
         connections: vec![].into(),
         property_data: structs::SclyProperty::SpecialFunction(
             structs::SpecialFunction {
-                name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Artifact Layer Switch\0").unwrap()),
+                name: b"Artifact Layer Switch\0".as_cstr(),
                 position: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
                 rotation: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
                 type_: 16,
                 // TODO Working around a compiler bug. Switch this back to being checked later.
-                unknown0: Cow::Borrowed(unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") }),
+                unknown0: b"\0".as_cstr(),
                 unknown1: 0.,
                 unknown2: 0.,
                 unknown3: 0.,
@@ -229,7 +229,7 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
         instance_id: instance_id,
         connections: connections.to_owned().into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
-            name: Cow::Owned(CString::new(b"Randomizer Post Pickup Relay".to_vec()).unwrap()),
+            name: b"Randomizer Post Pickup Relay".as_cstr(),
             active: 1,
         })
     }
@@ -499,7 +499,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
         //       (and remove any connections to any objects contained within it)
         let name = CString::new(format!(
                 "Randomizer - Pickup {} ({:?})", location_idx, pickup_meta.pickup.name)).unwrap();
-        area.add_layer(name);
+        area.add_layer(Cow::Owned(name));
 
         let new_layer_idx = area.layer_flags.layer_count as usize - 1;
         if !skip_hudmenus {
@@ -634,7 +634,7 @@ fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
 {
     let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
     let bytes = pickup_meta.attainment_audio_file_name.as_bytes();
-    attainment_audio.audio_file_name = Cow::Borrowed(CStr::from_bytes_with_nul(bytes).unwrap());
+    attainment_audio.audio_file_name = bytes.as_cstr();
 }
 
 fn calculate_center(aabb: [f32; 6], rotation: GenericArray<f32, U3>, scale: GenericArray<f32, U3>)
@@ -856,7 +856,7 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: 0xDEEFFFFF,
         property_data: structs::SclyProperty::Timer(structs::Timer {
-            name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Fuck\0").unwrap()),
+            name: b"Cutscene fixup timer\0".as_cstr(),
 
             start_time: 0.001,
             max_random_add: 0f32,
@@ -915,7 +915,7 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
     assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
 
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
-    area.add_layer(CString::new("Randomizer - Got Artifact 1".to_string()).unwrap());
+    area.add_layer(b"Randomizer - Got Artifact 1".as_cstr());
 
     // TODO: Manually verify the correct layers are being toggled
     if pickup_kind != 29 {
@@ -944,7 +944,7 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
             },
         ].into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
-            name: Cow::Borrowed(CStr::from_bytes_with_nul(b"Relay Show Progress1\0").unwrap()),
+            name: b"Relay Show Progress1\0".as_cstr(),
             active: 1,
         }),
     };
