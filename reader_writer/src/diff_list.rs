@@ -4,7 +4,7 @@ use std::io;
 use std::iter::{once, FromIterator};
 use std::ops::{Deref, DerefMut};
 
-use linked_list::{Cursor as LinkedListCursor, Iter as LinkedListIter, LinkedList};
+use std::slice::Iter as SliceIter;
 
 use reader::{Reader, Readable};
 use writer::Writable;
@@ -36,7 +36,7 @@ pub struct DiffList<'a, A>
     where A: AsDiffListSourceCursor,
 {
     data_start: Reader<'a>,
-    list: LinkedList<DiffListElem<A>>,
+    list: Vec<DiffListElem<A>>,
 }
 
 impl<'a, A> Clone for DiffList<'a, A>
@@ -101,13 +101,14 @@ impl<'a, A> DiffList<'a, A>
 {
     pub fn cursor<'s>(&'s mut self) -> DiffListCursor<'s, A>
     {
-        let mut cursor = self.list.cursor();
-        DiffListCursor {
-            inner_cursor: match cursor.peek_next() {
-                Some(&mut DiffListElem::Array(ref a)) => Some(a.as_cursor()),
+        let inner_cursor = match self.list.get(0) {
+                Some(&DiffListElem::Array(ref a)) => Some(a.as_cursor()),
                 _ => None,
-            },
-            cursor: cursor,
+            };
+        DiffListCursor {
+            vec: &mut self.list,
+            idx: 0,
+            inner_cursor,
         }
     }
 
@@ -119,7 +120,7 @@ impl<'a, A> DiffList<'a, A>
         }
     }
 
-    pub fn elems_iter<'s>(&'s self) -> LinkedListIter<DiffListElem<A>>
+    pub fn elems_iter<'s>(&'s self) -> SliceIter<'s, DiffListElem<A>>
     {
         self.list.iter()
     }
@@ -152,7 +153,8 @@ impl<A> DiffListElem<A>
 pub struct DiffListCursor<'list, A>
     where A: AsDiffListSourceCursor + 'list,
 {
-    cursor: LinkedListCursor<'list, DiffListElem<A>>,
+    vec: &'list mut Vec<DiffListElem<A>>,
+    idx: usize,
     inner_cursor: Option<A::Cursor>,
 }
 
@@ -163,13 +165,13 @@ impl<'list, A> DiffListCursor<'list, A>
     pub fn next(&mut self)
     {
         let advance_cursor = self.inner_cursor.as_mut().map(|ic| !ic.next()).unwrap_or(true);
-        if advance_cursor && !self.cursor.peek_next().is_none() {
+        if advance_cursor && !self.vec.get(self.idx).is_none() {
             self.inner_cursor = None;
-            self.cursor.next();
-            match self.cursor.peek_next() {
+            self.idx += 1;
+            match self.vec.get(self.idx) {
                 None => (),
-                Some(&mut DiffListElem::Inst(_)) => (),
-                Some(&mut DiffListElem::Array(ref a)) => {
+                Some(&DiffListElem::Inst(_)) => (),
+                Some(&DiffListElem::Array(ref a)) => {
                     self.inner_cursor = Some(a.as_cursor());
                 },
             };
@@ -183,20 +185,49 @@ impl<'list, A> DiffListCursor<'list, A>
     pub fn insert_before<I>(&mut self, iter: I)
         where I: Iterator<Item=<A::Cursor as DiffListSourceCursor>::Item>
     {
-        let mut list = LinkedList::from_iter(iter.map(DiffListElem::Inst));
-        if list.len() == 0 {
+        let mut iter = iter.peekable();
+        if iter.peek().is_none() {
             return;
         };
 
+        // XXX This could probably be made more efficent by combining the insert with the splice,
+        //     but it'd probably be even harder to understand...
         if let Some(ic) = self.inner_cursor.take() {
             let (left, right) = ic.split();
             if let Some(left) = left {
-                self.cursor.insert(DiffListElem::Array(left));
-                self.cursor.next();
+                self.vec.insert(self.idx, DiffListElem::Array(left));
+                self.idx += 1
             };
-            *self.cursor.peek_next().unwrap() = DiffListElem::Array(right);
+            self.vec[self.idx] = DiffListElem::Array(right);
         };
-        self.cursor.splice(&mut list);
+        self.vec.splice(self.idx..self.idx, iter.map(DiffListElem::Inst));
+        // We shouldn't need to set self.inner_cursor here. We've inserted at
+        // least one element, so self.cursor should be pointing to an Inst.
+    }
+
+    /// Inserts the items yielded by `iter` into the list. The cursor will be positioned after the
+    /// last inserted item (the same item it was originally pointed to).
+    pub fn insert_after<I>(&mut self, iter: I)
+        where I: Iterator<Item=<A::Cursor as DiffListSourceCursor>::Item>
+    {
+        let mut iter = iter.peekable();
+        if iter.peek().is_none() {
+            return;
+        };
+
+        // XXX This could probably be made more efficent by combining the insert with the splice,
+        //     but it'd probably be even harder to understand...
+        let pre_len = self.vec.len();
+        if let Some(ic) = self.inner_cursor.take() {
+            let (left, right) = ic.split();
+            if let Some(left) = left {
+                self.vec.insert(self.idx, DiffListElem::Array(left));
+                self.idx += 1
+            };
+            self.vec[self.idx] = DiffListElem::Array(right);
+        };
+        self.vec.splice(self.idx..self.idx, iter.map(DiffListElem::Inst));
+        self.idx += self.vec.len() - pre_len
         // We shouldn't need to set self.inner_cursor here. We've inserted at
         // least one element, so self.cursor should be pointing to an Inst.
     }
@@ -206,10 +237,10 @@ impl<'list, A> DiffListCursor<'list, A>
         if let Some(ref ic) = self.inner_cursor {
             Some(LCow::Owned(ic.get()))
         } else {
-            match self.cursor.peek_next() {
+            match self.vec.get(self.idx) {
                 None => None,
-                Some(&mut DiffListElem::Array(_)) => unreachable!(),
-                Some(&mut DiffListElem::Inst(ref res)) => Some(LCow::Borrowed(res)),
+                Some(&DiffListElem::Array(_)) => unreachable!(),
+                Some(&DiffListElem::Inst(ref res)) => Some(LCow::Borrowed(res)),
             }
         }
     }
@@ -220,26 +251,35 @@ impl<'list, A> DiffListCursor<'list, A>
             let (left, elem, right) = ic.split_around();
             if let Some(right) = right {
                 // There are elements to the right
-                *self.cursor.peek_next().unwrap() = DiffListElem::Array(right);
-                self.cursor.insert(DiffListElem::Inst(elem));
+                self.vec[self.idx] = DiffListElem::Array(right);
+                self.vec.insert(self.idx, DiffListElem::Inst(elem));
             } else {
                 // This was the last element.
-                *self.cursor.peek_next().unwrap() = DiffListElem::Inst(elem);
+                self.vec[self.idx] = DiffListElem::Inst(elem);
             };
             // self.cursor now points to the correct Inst
             if let Some(left) = left {
                 // There are elements to the left.
-                self.cursor.insert(DiffListElem::Array(left));
-                self.cursor.next();
+                self.vec.insert(self.idx, DiffListElem::Array(left));
+                self.idx += 1
             };
         };
-        match self.cursor.peek_next() {
+        match self.vec.get_mut(self.idx) {
             Some(&mut DiffListElem::Inst(ref mut inst)) => Some(inst),
             Some(&mut DiffListElem::Array(_)) => unreachable!(),
             None => None,
         }
     }
 
+    pub fn into_value(mut self) -> Option<&'list mut <A::Cursor as DiffListSourceCursor>::Item>
+    {
+        self.value();
+        match self.vec.get_mut(self.idx) {
+            Some(&mut DiffListElem::Inst(ref mut inst)) => Some(inst),
+            Some(&mut DiffListElem::Array(_)) => unreachable!(),
+            None => None,
+        }
+    }
 
     pub fn cursor_advancer<'a>(&'a mut self) -> DiffListCursorAdvancer<'a, 'list, A>
     {
@@ -251,7 +291,7 @@ impl<'list, A> DiffListCursor<'list, A>
 pub struct DiffListIter<'list, A>
     where A: AsDiffListSourceCursor + 'list,
 {
-    list_iter: LinkedListIter<'list, DiffListElem<A>>,
+    list_iter: SliceIter<'list, DiffListElem<A>>,
     inner_cursor: Option<A::Cursor>,
 }
 
@@ -287,7 +327,7 @@ impl<'a, A> Readable<'a> for DiffList<'a, A>
     fn read(reader: Reader<'a>, args: A) -> (Self, Reader<'a>)
     {
         let res = DiffList {
-            list: LinkedList::from_iter(once(DiffListElem::Array(args))),
+            list: Vec::from_iter(once(DiffListElem::Array(args))),
             data_start: reader.clone(),
         };
         let size = res.size();
