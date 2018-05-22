@@ -1011,6 +1011,53 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 }
 
+fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let ref mut layer = scly.layers.as_mut_vec()[0];
+
+    layer.objects.as_mut_vec().push(structs::SclyObject {
+        instance_id: 1,
+        property_data: structs::SclyProperty::Trigger(structs::Trigger {
+                name: b"Trigger_DoorOpen-component\0".as_cstr(),
+                position: *GenericArray::from_slice(&[
+                    31.232622,
+                    442.69165,
+                    -64.20529
+                ]),
+                scale: *GenericArray::from_slice(&[
+                    6.0,
+                    17.0,
+                    6.0
+                ]),
+                damage_info: structs::structs::DamageInfo {
+                    weapon_type: 0,
+                    damage: 0.0,
+                    radius: 0.0,
+                    knockback_power: 0.0
+                },
+                unknown0: *GenericArray::from_slice(&[
+                    0.0,
+                    0.0,
+                    0.0
+                ]),
+                unknown1: 1,
+                active: 1,
+                unknown2: 0,
+                unknown3: 0
+            }),
+        connections: vec![
+            structs::Connection {
+                state: 6,
+                message: 13,
+                target_object_id: 1376367,
+            },
+        ].into(),
+    });
+}
+
 
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
@@ -1579,6 +1626,7 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
     patch_temple_security_station_cutscene_trigger(&mut gc_disc);
     patch_elite_research_fight_prereq(&mut gc_disc);
     patch_elevators(&mut gc_disc, &config.elevator_layout);
+    patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
 
     let pn = ProgressNotifier::new(config.quiet);
     write_gc_disc(&mut gc_disc, config.output_iso, pn)?;
