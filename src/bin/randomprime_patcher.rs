@@ -1640,7 +1640,8 @@ fn was_launched_by_windows_explorer() -> bool
     // https://stackoverflow.com/a/513574
     use winapi::um::processenv:: *;
     use winapi::um::winbase:: *;
-    use winapi::um::wincon:: *; static mut CACHED: Option<bool> = None;
+    use winapi::um::wincon:: *;
+    static mut CACHED: Option<bool> = None;
     unsafe {
         if let Some(t) = CACHED {
             return t;
