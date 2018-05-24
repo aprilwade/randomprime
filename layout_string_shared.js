@@ -6,27 +6,44 @@ var LayoutString = (function() {
     for(var i = 0; i < TABLE.length; i++) {
         REV_TABLE.set(TABLE[i], i);
     }
+    var PICKUP_SIZES = Array(100).fill(36);
+    var ELEVATOR_SIZES = Array(20).fill(20).concat([21]);
 
-    function compute_checksum(layout_number)
+    function compute_checksum(checksum_size, layout_number)
     {
         var s = 0;
         while(layout_number.greater(0)){
-            var divmod = layout_number.divmod(32);
-            s = (s + divmod.remainder) % 32;
+            var divmod = layout_number.divmod(1 << checksum_size);
+            s = (s + divmod.remainder) % (1 << checksum_size);
             layout_number = divmod.quotient;
         }
         return s;
     }
 
-    function encode_pickup_layout(layout)
+    function encode_layout(pickup_layout, elevator_layout)
+    {
+        if(elevator_layout === undefined) {
+            return encode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+        } else {
+            var elevator_string = encode_layout_inner(ELEVATOR_SIZES, 91, 5, elevator_layout);
+            var pickup_string = encode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+            if(elevator_string != "qzoCAr2fwehJmRjM") {
+                return elevator_string + "." + pickup_string;
+            } else {
+                return pickup_string;
+            }
+        }
+    }
+
+    function encode_layout_inner(sizes, layout_data_size, checksum_size, layout)
     {
         var num = bigInt(0);
-        layout.forEach(function(item_type) {
-            num = num.times(36).plus(item_type);
+        layout.forEach(function(item_type, i) {
+            num = num.times(sizes[i]).plus(item_type);
         });
 
-        var checksum = compute_checksum(num);
-        num = num.plus(bigInt(checksum).shiftLeft(517));
+        var checksum = compute_checksum(checksum_size, num);
+        num = num.plus(bigInt(checksum).shiftLeft(layout_data_size));
 
         var even_bits = [];
         var odd_bits = [];
@@ -48,11 +65,9 @@ var LayoutString = (function() {
         num = bigInt(all_bits.join(""), 2)
 
         var s = '';
-        var max = bigInt(36).pow(100);
-        while(max.greater(0)) {
+        for(var i = 0; i < layout_data_size / 6; i++) {
             var divmod = num.divmod(64);
             num = divmod.quotient;
-            max = max.divide(64);
 
             s = s + TABLE[divmod.remainder];
         }
@@ -60,11 +75,37 @@ var LayoutString = (function() {
         return s;
     }
 
-    function decode_pickup_layout(layout_string)
+    function decode_layout(layout_string)
     {
-        if(layout_string.length != 87) {
-            return 'Invalid layout: incorrect legnth, not 87 characters';
+        var pickup_layout, elevator_layout;
+        if(layout_string.includes('.')) {
+            [elevator_layout, pickup_layout] = layout_string.split('.');
+            if(pickup_layout.length != 87) {
+                return "Invalid layout: incorrect length for the section after '.', not 87 characters";
+            }
+            if(elevator_layout.length != 16) {
+                return "Invalid layout: incorrect length for the section before '.', not 16 characters";
+            }
+        } else {
+            pickup_layout = layout_string;
+            elevator_layout = "qzoCAr2fwehJmRjM";
+            if(pickup_layout.length != 87) {
+                return 'Invalid layout: incorrect length, not 87 characters';
+            }
         }
+        var el = decode_layout_inner(ELEVATOR_SIZES, 91, 5, elevator_layout);
+        if(typeof el === "string") {
+            return el;
+        }
+        var pl = decode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+        if(typeof pl === "string") {
+            return pl;
+        }
+        return [el, pl];
+    }
+
+    function decode_layout_inner(sizes, layout_data_size, checksum_size, layout_string)
+    {
         var num = bigInt(0);
         for(var i = layout_string.length - 1; i >= 0; i--) {
             num = num.shiftLeft(6).plus(REV_TABLE.get(layout_string[i]));
@@ -89,26 +130,27 @@ var LayoutString = (function() {
         }
         num = bigInt(all_bits.join(""), 2)
 
-        var checksum_value = num.shiftRight(517);
-        num = num.minus(checksum_value.shiftLeft(517));
+        var checksum_value = num.shiftRight(layout_data_size);
+        num = num.minus(checksum_value.shiftLeft(layout_data_size));
         checksum_value = checksum_value.toJSNumber();
-        if(checksum_value != compute_checksum(num)) {
+        if(checksum_value != compute_checksum(checksum_size, num)) {
             return 'Invalid layout: checksum failed';
         }
 
         var layout = [];
-        for(var i = 0; i < 100; i++) {
-            var divmod = num.divmod(36);
+        sizes = sizes.slice().reverse();
+        sizes.forEach(function(denum) {
+            var divmod = num.divmod(denum);
             layout.push(divmod.remainder.toJSNumber());
             num = divmod.quotient;
-        }
+        });
 
         layout.reverse();
         return layout;
     }
 
     return {
-        decode_pickup_layout: decode_pickup_layout,
-        encode_pickup_layout: encode_pickup_layout,
+        decode_layout: decode_layout,
+        encode_layout: encode_layout,
     };
 }());

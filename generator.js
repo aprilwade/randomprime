@@ -407,7 +407,7 @@ $().ready(function() {
             return;
         }
 
-        display_message("Layout: " + LayoutString.encode_pickup_layout(layout), false);
+        display_message("Layout: " + LayoutString.encode_layout(layout), false);
     });
 
     $('#item_count_table input').change(update_nothings_count);
