@@ -67,7 +67,7 @@ auto_struct! {
         #[expect = 3]
         prop_count: u32,
         unknown0: u8,
-        unknown1: u8,
+        target_passthrough: u8,
         unknown2: u32,
     }
 }

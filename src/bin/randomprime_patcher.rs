@@ -1011,6 +1011,20 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 }
 
+fn patch_research_lab_hydra_barrier<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0x43e4cc25);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let ref mut layer = scly.layers.as_mut_vec()[3];
+
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 202965810)
+        .unwrap();
+    let actor = obj.property_data.as_actor_mut().unwrap();
+    actor.actor_params.visor_params.target_passthrough = 1;
+}
+
 fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
     let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
@@ -1627,6 +1641,7 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
     patch_elite_research_fight_prereq(&mut gc_disc);
     patch_elevators(&mut gc_disc, &config.elevator_layout);
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
+    patch_research_lab_hydra_barrier(&mut gc_disc);
 
     let pn = ProgressNotifier::new(config.quiet);
     write_gc_disc(&mut gc_disc, config.output_iso, pn)?;
