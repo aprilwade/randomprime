@@ -32,33 +32,31 @@ pub trait AsDiffListSourceCursor: Sized
 }
 
 
-pub struct DiffList<'a, A>
+pub struct DiffList<A>
     where A: AsDiffListSourceCursor,
 {
-    data_start: Reader<'a>,
     list: Vec<DiffListElem<A>>,
 }
 
-impl<'a, A> Clone for DiffList<'a, A>
+impl<A> Clone for DiffList<A>
     where A: AsDiffListSourceCursor + Clone,
           <A::Cursor as DiffListSourceCursor>::Item: Clone,
 {
     fn clone(&self) -> Self
     {
         DiffList {
-            data_start: self.data_start.clone(),
             list: self.list.clone(),
         }
     }
 }
 
-impl<'a, A> fmt::Debug for DiffList<'a, A>
+impl<A> fmt::Debug for DiffList<A>
     where A: AsDiffListSourceCursor + fmt::Debug,
           <A::Cursor as DiffListSourceCursor>::Item: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
-        write!(f, "DiffList {{ data_start: {:?}, list: {:?} }}", self.data_start, self.list)
+        write!(f, "DiffList {{ list: {:?} }}", self.list)
     }
 }
 
@@ -96,7 +94,7 @@ impl<A> fmt::Debug for DiffListElem<A>
     }
 }
 
-impl<'a, A> DiffList<'a, A>
+impl<A> DiffList<A>
     where A: AsDiffListSourceCursor,
 {
     pub fn cursor<'s>(&'s mut self) -> DiffListCursor<'s, A>
@@ -319,7 +317,7 @@ impl<'list, A> Iterator for DiffListIter<'list, A>
     }
 }
 
-impl<'a, A> Readable<'a> for DiffList<'a, A>
+impl<'a, A> Readable<'a> for DiffList<A>
     where A: AsDiffListSourceCursor,
           <A::Cursor as DiffListSourceCursor>::Item: Readable<'a>,
 {
@@ -328,7 +326,6 @@ impl<'a, A> Readable<'a> for DiffList<'a, A>
     {
         let res = DiffList {
             list: Vec::from_iter(once(DiffListElem::Array(args))),
-            data_start: reader.clone(),
         };
         let size = res.size();
         (res, reader.offset(size))
@@ -342,7 +339,7 @@ impl<'a, A> Readable<'a> for DiffList<'a, A>
     }
 }
 
-impl<'a, A> Writable for DiffList<'a, A>
+impl<A> Writable for DiffList<A>
     where A: AsDiffListSourceCursor,
           <A::Cursor as DiffListSourceCursor>::Item: Writable,
 {
@@ -354,6 +351,19 @@ impl<'a, A> Writable for DiffList<'a, A>
         Ok(())
     }
 }
+
+impl<A> FromIterator<<A::Cursor as DiffListSourceCursor>::Item> for DiffList<A>
+    where A: AsDiffListSourceCursor
+{
+    fn from_iter<I>(i: I) -> Self
+        where I: IntoIterator<Item = <A::Cursor as DiffListSourceCursor>::Item>
+    {
+        DiffList {
+            list: i.into_iter().map(|x| DiffListElem::Inst(x)).collect(),
+        }
+    }
+}
+
 
 /// Wraps a DiffListCursor and automatically advances it when it is dropped.
 pub struct DiffListCursorAdvancer<'cursor, 'list: 'cursor, A>

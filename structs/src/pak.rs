@@ -35,8 +35,8 @@ auto_struct! {
 
         alignment_padding!(32),
 
-        resources: DiffList<'a, ResourceSource<'a>> = ResourceSource(start.clone(),
-                                                                     resource_info.clone()),
+        resources: DiffList<ResourceSource<'a>> = ResourceSource(start.clone(),
+                                                                 resource_info.clone()),
 
         alignment_padding!(32),
     }
@@ -157,7 +157,7 @@ impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
     }
 }
 
-struct ResourceInfoProxy<'a, 'list>(&'list DiffList<'a, ResourceSource<'a>>, usize)
+struct ResourceInfoProxy<'a, 'list>(&'list DiffList<ResourceSource<'a>>, usize)
     where 'a: 'list;
 impl<'a, 'list> Readable<'a> for ResourceInfoProxy<'a, 'list>
     where 'a: 'list
