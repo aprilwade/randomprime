@@ -1619,10 +1619,16 @@ SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
         // To reduce the amount of data that needs to be copied, empty the contents of the pak
         let file_entry = gc_disc.find_file_mut("Metroid1.pak");
         file_entry.guess_kind();
-        match file_entry.file_mut() {
-            Some(&mut structs::FstEntryFile::Pak(ref mut pak)) => pak.resources.clear(),
-            _ => (),
+        let pak = match file_entry.file_mut() {
+            Some(&mut structs::FstEntryFile::Pak(ref mut pak)) => pak,
+            _ => unreachable!(),
         };
+
+        // XXX This is a workaround for a bug in some versions of Nintendont.
+        //     The details can be found in a comment on issue #5.
+        let res = pickup_meta::build_resource(0, structs::ResourceKind::External(vec![0; 64],
+                                                                                 b"XXXX".into()));
+        pak.resources = ::std::iter::once(res).collect();
     } else {
         patch_frigate_teleporter(&mut gc_disc, spawn_room);
     }
