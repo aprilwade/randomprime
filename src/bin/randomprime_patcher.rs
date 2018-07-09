@@ -1589,8 +1589,8 @@ fn main_inner() -> Result<(), String>
 An error occurred while parsing the input ISO. \
 This most likely means your ISO is corrupt. \
 Please verify that your ISO matches one of the following hashes:
-MD5:  737cbfe7230af3df047323a3185d7e57
-SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
+MD5:  eeacd0ced8e2bae491eca14f141a4b7c
+SHA1: ac20c744db18fdf0339f37945e880708fd317231
 ", Format::Error("error:"));
 
             maybe_pause_at_exit();

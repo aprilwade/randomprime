@@ -31,8 +31,8 @@ It is highly unlikely that any non-NTSC version will work.
 The trilogy version is right out.
 Hashes of a known good ISO dump are:
 ```
-MD5:  737cbfe7230af3df047323a3185d7e57
-SHA1: 1c8b27af7eed2d52e7f038ae41bb682c4f9d09b5
+MD5:  eeacd0ced8e2bae491eca14f141a4b7c
+SHA1: ac20c744db18fdf0339f37945e880708fd317231
 ```
 
 ##### Q: Can a patched ISO be used as the input ISO?
