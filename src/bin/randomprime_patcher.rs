@@ -229,7 +229,7 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
         instance_id: instance_id,
         connections: connections.to_owned().into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
-            name: b"Randomizer Post Pickup Relay".as_cstr(),
+            name: b"Randomizer Post Pickup Relay\0".as_cstr(),
             active: 1,
         })
     }
@@ -915,7 +915,7 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
     assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
 
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
-    area.add_layer(b"Randomizer - Got Artifact 1".as_cstr());
+    area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
 
     // TODO: Manually verify the correct layers are being toggled
     if pickup_kind != 29 {

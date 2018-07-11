@@ -296,6 +296,6 @@ impl CStrConversionExtension for [u8]
 {
     fn as_cstr<'a>(&'a self) -> CStr<'a>
     {
-        Cow::Borrowed(ffi::CStr::from_bytes_with_nul(b"Trigger_DoorOpen-component\0").unwrap())
+        Cow::Borrowed(ffi::CStr::from_bytes_with_nul(self).unwrap())
     }
 }
