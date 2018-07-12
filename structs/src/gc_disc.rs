@@ -32,7 +32,7 @@ impl<'a> Readable<'a> for GcDisc<'a>
         let header: GcDiscHeader = reader.read(());
         let header_info = reader.read(());
         let apploader = reader.read(());
-        let fst = reader.read((start, header.fst_offset as usize, header.fst_length as usize));
+        let fst = reader.read((start, header.fst_offset as usize));
 
         let gc_disc = GcDisc {
             header: header,
@@ -84,6 +84,8 @@ impl<'a> GcDisc<'a>
         notifier.notify_writing_header();
 
         self.header.main_dol_offset = main_dol_offset;
+        self.header.fst_length = self.file_system_table.size() as u32;
+        self.header.fst_max_length = self.header.fst_length;
 
         writer.seek(SeekFrom::Start(0))?;
 
@@ -164,16 +166,15 @@ auto_struct! {
 pub struct FileSystemTable<'a>
 {
     pub fst_entries: Vec<FstEntry<'a>>,
-    string_table: Reader<'a>,
 }
 
 impl<'a> Readable<'a> for FileSystemTable<'a>
 {
-    type Args = (Reader<'a>, usize, usize);
-    fn read(reader: Reader<'a>, args: (Reader<'a>, usize, usize))
+    type Args = (Reader<'a>, usize);
+    fn read(reader: Reader<'a>, args: Self::Args)
         -> (FileSystemTable<'a>, Reader<'a>)
     {
-        let (disc_start, fst_offset, total_size) = args;
+        let (disc_start, fst_offset) = args;
         let fst_start = disc_start.offset(fst_offset as usize);
 
         // We lie initially to about the start of the string table because we
@@ -186,17 +187,16 @@ impl<'a> Readable<'a> for FileSystemTable<'a>
 
         let fst_entries: Vec<FstEntry> = fst_start.clone()
             .read((fst_len, (disc_start, string_table_start.clone())));
-        let string_table = string_table_start.truncated(total_size - fst_len);
 
         (FileSystemTable {
             fst_entries: fst_entries,
-            string_table: string_table,
         }, reader)
     }
 
     fn size(&self) -> usize
     {
-        self.fst_entries.size() + self.string_table.size()
+        self.fst_entries.size() +
+            self.fst_entries.iter().map(|e| e.name.to_bytes_with_nul().len()).sum::<usize>()
     }
 }
 
@@ -205,7 +205,10 @@ impl<'a> Writable for FileSystemTable<'a>
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         self.fst_entries.write(writer)?;
-        writer.write_all(&self.string_table)
+        for s in self.fst_entries.iter() {
+            &s.name.write(writer)?;
+        }
+        Ok(())
     }
 }
 
@@ -215,6 +218,14 @@ impl<'a> FileSystemTable<'a>
     /// Returns the total size of all the files in the FST.
     fn recalculate_offsets_and_lengths(&mut self) -> usize
     {
+        self.fst_entries[0].length = self.fst_entries.len() as u32;
+
+        let mut str_table_len_so_far = 0;
+        for e in self.fst_entries.iter_mut() {
+            e.name_offset = str_table_len_so_far as u16;
+            str_table_len_so_far += e.name.to_bytes_with_nul().len();
+        }
+
         // Get a list of all of the files in reverse order of their offsets' from
         // the start of the disc.
         let mut entries : Vec<_> = self.fst_entries.iter_mut()
@@ -247,6 +258,20 @@ impl<'a> FileSystemTable<'a>
             }
         }
         Ok(())
+    }
+
+    pub fn add_file(&mut self, name: CStr<'a>, file: FstEntryFile<'a>)
+    {
+        self.fst_entries.push(FstEntry {
+            flags: 0,
+            unused: 0,
+            name_offset: 0,
+            offset: 0,
+            length: 0,
+
+            name: name,
+            file: file,
+        });
     }
 }
 
