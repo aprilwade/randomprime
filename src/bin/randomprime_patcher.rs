@@ -371,23 +371,6 @@ fn modify_pickups<R: Rng + Rand>(
     }
 }
 
-// TODO: It might be nice for this list to be generataed by resource_tracing, but
-//       the sorting is probably non-trivial.
-const ARTIFACT_TOTEM_SCAN_STRGS: &'static [u32] = &[
-    0x61729798,// Lifegiver
-    0xAA2E443D,// Wild
-    0x8E9C7387,// World
-    0x16B057E3,// Sun
-    0xB72B7485,// Elder
-    0x45C0A022,// Spirit
-    0xFAE3D58E,// Truth
-    0x2CBA3693,// Chozo
-    0xE7E6E536,// Warrior
-    0xC354D28C,// Newborn
-    0xDDEC8446,// Nature
-    0x7C77A720,// Strength
-];
-
 fn modify_pickups_in_pak<'a, I, J>(
     pak: &mut structs::Pak<'a>,
     room_list_iter: I,
@@ -400,6 +383,23 @@ fn modify_pickups_in_pak<'a, I, J>(
     where I: Iterator<Item = &'static pickup_meta::RoomInfo>,
           J: Iterator<Item = (usize, usize)>,
 {
+    // TODO: It might be nice for this list to be generataed by resource_tracing, but
+    //       the sorting is probably non-trivial.
+    const ARTIFACT_TOTEM_SCAN_STRGS: &'static [u32] = &[
+        0x61729798,// Lifegiver
+        0xAA2E443D,// Wild
+        0x8E9C7387,// World
+        0x16B057E3,// Sun
+        0xB72B7485,// Elder
+        0x45C0A022,// Spirit
+        0xFAE3D58E,// Truth
+        0x2CBA3693,// Chozo
+        0xE7E6E536,// Warrior
+        0xC354D28C,// Newborn
+        0xDDEC8446,// Nature
+        0x7C77A720,// Strength
+    ];
+
     let resources = &mut pak.resources;
 
     // To appease the borrow checker, make a copy of the Mlvl on the stack that
@@ -1209,20 +1209,20 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
 
-const FMV_NAMES: &'static [&'static [u8]] = &[
-    b"attract0.thp",
-    b"attract1.thp",
-    b"attract2.thp",
-    b"attract3.thp",
-    b"attract4.thp",
-    b"attract5.thp",
-    b"attract6.thp",
-    b"attract7.thp",
-    b"attract8.thp",
-    b"attract9.thp",
-];
 fn replace_fmvs(gc_disc: &mut structs::GcDisc)
 {
+    const FMV_NAMES: &'static [&'static [u8]] = &[
+        b"attract0.thp",
+        b"attract1.thp",
+        b"attract2.thp",
+        b"attract3.thp",
+        b"attract4.thp",
+        b"attract5.thp",
+        b"attract6.thp",
+        b"attract7.thp",
+        b"attract8.thp",
+        b"attract9.thp",
+    ];
     const FMV: &'static [u8] = include_bytes!("../../extra_assets/attract_mode.thp");
     let fst = &mut gc_disc.file_system_table;
     let fmv_entries = fst.fst_entries.iter_mut()

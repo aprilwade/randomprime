@@ -1,10 +1,5 @@
 //! This program traces the dependencies of each pickup in a Metroid Prime ISO.
 //! The location of the ISO should be provided as a command line argument.
-//!
-//! The output has been tailored to match the observed behavior of Claris's
-//! randomizer.
-//! A few sections of code are commented out, indicating what appear to me to
-//! be dependencies, but don't seem to match Claris's dependency lists.
 
 extern crate memmap;
 extern crate randomprime;
@@ -81,7 +76,10 @@ impl<'a> ResourceDb<'a>
         result
     }
 
-    // XXX We're assuming there are no cycles
+    // The output has been tailored to match the observed behavior of Claris's
+    // randomizer.
+    // A few sections of code are commented out, indicating what appear to me to
+    // be dependencies, but don't seem to match Claris's dependency lists.
     fn get_resource_deps(&mut self, key: ResourceKey, ancs_node: Option<u32>) -> HashSet<ResourceKey>
     {
         let mut deps = HashSet::with_capacity(0);
@@ -113,7 +111,6 @@ impl<'a> ResourceDb<'a>
                 let buf: &[u8] = &buf;
                 // We're cheating here. We're going to find the sub-string ICTSCNST
                 // and then using the next word as the id of a PART.
-                //const TOKENS: [&'static [u8]; 3] = [b"ICTSCNST", b"IITSCNST", b"IDTSCNST"];
                 for i in 0..(buf.len() - 8) {
                     if &buf[i..(i + 8)] == b"ICTSCNST" {
                         let id : u32 = Reader::new(&buf[(i + 8)..(i+12)]).read(());
@@ -154,13 +151,13 @@ impl<'a> ResourceDb<'a>
                     extend_deps(char_info.cmdl, b"CMDL");
                     extend_deps(char_info.cskr, b"CSKR");
                     extend_deps(char_info.cinf, b"CINF");
-                    /*char_info.effects.map(|effects| for effect in effects.iter() {
-                        for comp in effect.components.iter() {
-                            extend_deps(ResourceKey::new(comp.file_id, comp.type_));
-                        }
-                    });*/
-                    //char_info.overlay_cmdl.map(|cmdl| extend_deps(cmdl, b"CMDL"));
-                    //char_info.overlay_cskr.map(|cmdl| extend_deps(cmdl, b"CSKR"));
+                    // char_info.effects.map(|effects| for effect in effects.iter() {
+                    //     for comp in effect.components.iter() {
+                    //         extend_deps(ResourceKey::new(comp.file_id, comp.type_));
+                    //     }
+                    // });
+                    // char_info.overlay_cmdl.map(|cmdl| extend_deps(cmdl, b"CMDL"));
+                    // char_info.overlay_cskr.map(|cmdl| extend_deps(cmdl, b"CSKR"));
                     for part in char_info.particles.part_assets.iter() {
                         extend_deps(part, b"PART");
                     }
