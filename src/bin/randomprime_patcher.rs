@@ -1294,6 +1294,7 @@ struct ParsedConfig
     input_iso: memmap::Mmap,
     output_iso: File,
 
+    layout_string: String,
     pickup_layout: Vec<u8>,
     elevator_layout: Vec<u8>,
     seed: [u32; 16],
@@ -1434,11 +1435,12 @@ fn interactive() -> Result<ParsedConfig, String>
                 "\nalready have one, go to https://etaylor8086.github.io/randomizer/ generate one.",
                 "\nIts suggested that you copy-paste the string rather than try to re-type it.")
     };
-    let (pickup_layout, elevator_layout, seed) = read_option(
+    let (pickup_layout, elevator_layout, seed, layout_string) = read_option(
         "Layout descriptor", "",
         layout_help_message,
         |pickup_layout| {
-            parse_layout(pickup_layout.trim())
+            let pickup_layout = pickup_layout.trim().to_string();
+            parse_layout(&pickup_layout).map(|i| (i.0, i.1, i.2, pickup_layout))
     })?;
 
     let match_bool = |resp: &str| match resp.trim() {
@@ -1484,7 +1486,7 @@ fn interactive() -> Result<ParsedConfig, String>
     Ok(ParsedConfig {
         input_iso: input_iso_mmap,
         output_iso: out_iso,
-        pickup_layout, elevator_layout, seed,
+        pickup_layout, elevator_layout, seed, layout_string,
 
         skip_hudmenus: true,
         skip_frigate,
@@ -1550,15 +1552,13 @@ fn get_config() -> Result<ParsedConfig, String>
         out_iso.set_len(structs::GC_DISC_LENGTH as u64)
             .map_err(|e| format!("Failed to open output file: {}", e))?;
 
-        let pickup_layout = matches.value_of("pickup layout").unwrap();
-        let (pickup_layout, elevator_layout, seed) = parse_layout(pickup_layout)?;
+        let layout_string = matches.value_of("pickup layout").unwrap().to_string();
+        let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
 
         Ok(ParsedConfig {
             input_iso: input_iso_mmap,
             output_iso: out_iso,
-            pickup_layout: pickup_layout,
-            elevator_layout: elevator_layout,
-            seed: seed,
+            pickup_layout, elevator_layout, seed, layout_string,
 
             skip_hudmenus: matches.is_present("skip hudmenus"),
             skip_frigate: matches.is_present("skip frigate"),
@@ -1578,7 +1578,18 @@ fn main_inner() -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
 
+    let mut ct = Vec::new();
+
     let config = get_config()?;
+
+    writeln!(ct, "Created by randomprime version {}", crate_version!()).unwrap();
+    writeln!(ct, "").unwrap();
+    writeln!(ct, "Options used:").unwrap();
+    writeln!(ct, "configuration string: {}", config.layout_string).unwrap();
+    writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
+    writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
+    writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
+
     let mut reader = Reader::new(unsafe { config.input_iso.as_slice() });
 
     // On non-debug builds, suppress the default panic message and print a more helpful and
@@ -1648,6 +1659,11 @@ SHA1: ac20c744db18fdf0339f37945e880708fd317231
     patch_elevators(&mut gc_disc, &config.elevator_layout);
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
+
+    gc_disc.file_system_table.add_file(
+        b"randomprime.txt\0".as_cstr(),
+        structs::FstEntryFile::Unknown(Reader::new(&ct)),
+    );
 
     let pn = ProgressNotifier::new(config.quiet);
     write_gc_disc(&mut gc_disc, config.output_iso, pn)?;
