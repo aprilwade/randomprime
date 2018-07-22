@@ -1305,6 +1305,8 @@ struct ParsedConfig
     quiet: bool,
 
     starting_items: Option<u64>,
+
+    comment: String,
 }
 
 fn interactive() -> Result<ParsedConfig, String>
@@ -1494,6 +1496,7 @@ fn interactive() -> Result<ParsedConfig, String>
         quiet: false,
 
         starting_items: None,
+        comment: "".to_string(),
     })
 }
 
@@ -1535,6 +1538,10 @@ fn get_config() -> Result<ParsedConfig, String>
                 .takes_value(true)
                 .validator(|s| s.parse::<u64>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
+            .arg(Arg::with_name("text file comment")
+                 .long("text-file-comment")
+                 .hidden(true)
+                 .takes_value(true))
             .get_matches();
 
         let input_iso_path = matches.value_of("input iso path").unwrap();
@@ -1568,6 +1575,8 @@ fn get_config() -> Result<ParsedConfig, String>
             // XXX We can unwrap safely because we verified the parse earlier
             starting_items: matches.value_of("change starting items")
                                    .map(|s| s.parse::<u64>().unwrap()),
+
+            comment: matches.value_of("text file comment").unwrap_or("").to_string(),
         })
 
     }
@@ -1589,6 +1598,7 @@ fn main_inner() -> Result<(), String>
     writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
+    writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(unsafe { config.input_iso.as_slice() });
 
