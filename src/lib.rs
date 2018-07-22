@@ -1,15 +1,25 @@
-pub extern crate structs;
 extern crate flate2;
+extern crate memmap;
+extern crate rand;
+extern crate sha2;
+extern crate winapi;
+
+pub extern crate structs;
 
 pub use structs::reader_writer;
 use reader_writer::{LCow, Reader};
+use reader_writer::num::{BigUint, Integer, ToPrimitive};
+
 use flate2::{Decompress, Flush};
+use sha2::{Digest, Sha512};
 
 use std::borrow::Cow;
+use std::iter;
 
 pub mod elevators;
 pub mod mlvl_wrapper;
 pub mod pickup_meta;
+pub mod patcher;
 
 pub trait GcDiscLookupExtensions<'a>
 {
@@ -79,6 +89,113 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
     }
 
 }
+
+pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, checksum_size: usize, is: I)
+    -> Result<Vec<u8>, String>
+    where I: Iterator<Item = u8> + Clone
+{
+    const LAYOUT_CHAR_TABLE: [u8; 64] =
+        *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
+
+    let mut sum: BigUint = 0u8.into();
+    for c in bytes.iter().rev() {
+        if let Some(idx) = LAYOUT_CHAR_TABLE.iter().position(|i| i == c) {
+            sum = sum * BigUint::from(64u8) + BigUint::from(idx);
+        } else {
+            return Err(format!("Layout contains invalid character '{}'.", c));
+        }
+    }
+
+    // Reverse the order of the odd bits
+    let mut bits = sum.to_str_radix(2).into_bytes();
+    for i in 0..(bits.len() / 4) {
+        let len = bits.len() - bits.len() % 2;
+        bits.swap(i * 2 + 1, len - i * 2 - 1);
+    }
+    sum = BigUint::parse_bytes(&bits, 2).unwrap();
+
+    // The upper `checksum_size` bits are a checksum, so seperate them from the sum.
+    let checksum_bitmask = (1u8 << checksum_size) - 1;
+    let checksum = sum.clone() & (BigUint::from(checksum_bitmask) << layout_data_size);
+    sum = sum - checksum.clone();
+    let checksum = (checksum >> layout_data_size).to_u8().unwrap();
+
+    let mut computed_checksum = 0;
+    {
+        let mut sum = sum.clone();
+        while sum > 0u8.into() {
+            let remainder = (sum.clone() & BigUint::from(checksum_bitmask)).to_u8().unwrap();
+            computed_checksum = (computed_checksum + remainder) & checksum_bitmask;
+            sum = sum >> checksum_size;
+        }
+    }
+    if checksum != computed_checksum {
+        return Err("Layout checksum failed.".to_string());
+    }
+
+    let mut res = vec![];
+    for denum in is {
+        let (quotient, remainder) = sum.div_rem(&denum.into());
+        res.push(remainder.to_u8().unwrap());
+        sum = quotient;
+    }
+
+    assert!(sum == 0u8.into());
+
+    res.reverse();
+    Ok(res)
+}
+
+
+pub fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, [u32; 16]), String>
+{
+    if !text.is_ascii() {
+        return Err("Layout string contains non-ascii characters.".to_string());
+    }
+    let text = text.as_bytes();
+
+    let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
+        (&text[..n], &text[(n + 1)..])
+    } else {
+        (b"qzoCAr2fwehJmRjM" as &[u8], text)
+    };
+
+    if elevator_bytes.len() != 16 {
+        let msg = "The section of the layout string before the '.' should be 16 characters";
+        return Err(msg.to_string());
+    }
+
+    if pickup_bytes.len() != 87 {
+        return Err("Layout string should be exactly 87 characters".to_string());
+    }
+
+    let mut seed_hasher = Sha512::default();
+    seed_hasher.input(elevator_bytes);
+    seed_hasher.input(pickup_bytes);
+    let seed_data = seed_hasher.result();
+    let mut seed_reader = Reader::new(&seed_data);
+    let seed = [
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+        seed_reader.read(()), seed_reader.read(()), seed_reader.read(()), seed_reader.read(()),
+    ];
+
+    let pickup_layout = parse_layout_chars_to_ints(
+            pickup_bytes,
+            517, 5,
+            iter::repeat(36u8).take(100)
+        ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
+
+    let elevator_layout = parse_layout_chars_to_ints(
+            elevator_bytes,
+            91, 5,
+            iter::once(21u8).chain(iter::repeat(20u8).take(20))
+        ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
+
+    Ok((pickup_layout, elevator_layout, seed))
+}
+
 
 
 #[derive(Clone, Debug)]

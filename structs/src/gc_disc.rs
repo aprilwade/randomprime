@@ -54,6 +54,7 @@ pub trait ProgressNotifier
     fn notify_total_bytes(&mut self, total_size: usize);
     fn notify_writing_file(&mut self, file_name: &CStr, file_bytes: usize);
     fn notify_writing_header(&mut self);
+    fn notify_flushing_to_disk(&mut self);
 }
 
 impl<'a> GcDisc<'a>
