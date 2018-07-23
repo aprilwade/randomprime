@@ -4,6 +4,11 @@ extern crate rand;
 extern crate sha2;
 extern crate winapi;
 
+#[macro_use] extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
+
 pub extern crate structs;
 
 pub use structs::reader_writer;
@@ -20,6 +25,7 @@ pub mod elevators;
 pub mod mlvl_wrapper;
 pub mod pickup_meta;
 pub mod patcher;
+pub mod c_interface;
 
 pub trait GcDiscLookupExtensions<'a>
 {

@@ -8,6 +8,9 @@ clap = "2.9"
 flate2 = "0.2"
 memmap = "0.4"
 preferences = "1.1"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
 sha2 = "0.7"
 rand = "0.4"
 winapi = "0.3"
@@ -16,7 +19,12 @@ structs = { path = "structs" }
 
 [profile.release]
 lto = true
-panic = "abort"
+panic = "unwind"
 
 [workspace]
 members = ["structs", "reader_writer", "auto_struct_macros"]
+
+[lib]
+name = "randomprime"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
