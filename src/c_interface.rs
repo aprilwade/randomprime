@@ -26,25 +26,65 @@ struct Config
     comment: String,
 }
 
-#[repr(u32)]
-pub enum MessageType
+#[derive(Serialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+enum CbMessage<'a>
 {
-    Success = 0,
-    Error = 1,
-    Progress = 2,
+    Success,
+    Error {
+        msg: &'a str,
+    },
+    Progress {
+        percent: f64,
+        msg: &'a str,
+    },
 }
+
+impl<'a> CbMessage<'a>
+{
+    fn success_json() -> CString
+    {
+        CString::new(serde_json::to_string(&CbMessage::Success).unwrap()).unwrap()
+    }
+
+    fn error_json(msg: &str) -> CString
+    {
+        let msg = CbMessage::fix_msg(msg);
+        let cbmsg = CbMessage::Error { msg };
+        CString::new(serde_json::to_string(&cbmsg).unwrap()).unwrap()
+    }
+
+    fn progress_json(percent: f64, msg: &str) -> CString
+    {
+        let msg = CbMessage::fix_msg(msg);
+        let cbmsg = CbMessage::Progress { percent, msg };
+        CString::new(serde_json::to_string(&cbmsg).unwrap()).unwrap()
+    }
+
+    /// Remove all of the bytes after the first null byte
+    fn fix_msg(msg: &str) -> &str
+    {
+        if let Some(pos) = msg.bytes().position(|i| i == b'\0') {
+            &msg[..pos]
+        } else {
+            msg
+        }
+    }
+}
+
 
 struct ProgressNotifier
 {
     total_size: usize,
     bytes_so_far: usize,
     cb_data: *const (),
-    cb: extern fn(*const (), MessageType, *const c_char)
+    cb: extern fn(*const (), *const c_char)
 }
 
 impl ProgressNotifier
 {
-    fn new(cb_data: *const (), cb: extern fn(*const (), MessageType, *const c_char))
+    fn new(cb_data: *const (), cb: extern fn(*const (), *const c_char))
         -> ProgressNotifier
     {
         ProgressNotifier {
@@ -65,35 +105,27 @@ impl structs::ProgressNotifier for ProgressNotifier
     fn notify_writing_file(&mut self, file_name: &reader_writer::CStr, file_bytes: usize)
     {
         let percent = self.bytes_so_far as f64 / self.total_size as f64 * 100.;
-        (self.cb)(
-            self.cb_data,
-            MessageType::Progress,
-            CString::new(format!("{:01.0}% -- Writing file {:?}", percent, file_name)).unwrap().as_ptr()
-        );
+        let msg = format!("Writing file {:?}", file_name);
+        (self.cb)(self.cb_data, CbMessage::progress_json(percent, &msg).as_ptr());
         self.bytes_so_far += file_bytes;
     }
 
     fn notify_writing_header(&mut self)
     {
         let percent = self.bytes_so_far as f64 / self.total_size as f64 * 100.;
-        (self.cb)(
-            self.cb_data,
-            MessageType::Progress,
-            CString::new(format!("{:02.0}% -- Writing ISO header", percent)).unwrap().as_ptr()
-        );
+        (self.cb)(self.cb_data, CbMessage::progress_json(percent, "Writing ISO header").as_ptr());
     }
 
     fn notify_flushing_to_disk(&mut self)
     {
         (self.cb)(
             self.cb_data,
-            MessageType::Progress,
-            CString::new(format!("Flushing written data to the disk...")).unwrap().as_ptr()
+            CbMessage::progress_json(100., "Flushing written data to the disk").as_ptr(),
         );
     }
 }
 
-fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const (), MessageType, *const c_char))
+fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const (), *const c_char))
     -> Result<(), String>
 {
     let config_json = unsafe { CStr::from_ptr(config_json) }.to_str()
@@ -140,7 +172,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
 #[no_mangle]
 pub extern fn randomprime_patch_iso(config_json: *const c_char , cb_data: *const (),
-                                    cb: extern fn(*const (), MessageType, *const c_char))
+                                    cb: extern fn(*const (), *const c_char))
 {
     let r = panic::catch_unwind(|| inner(config_json, cb_data, cb))
         .map_err(|e| {
@@ -156,11 +188,9 @@ pub extern fn randomprime_patch_iso(config_json: *const c_char , cb_data: *const
         .and_then(|i| i);
 
     match r {
-        Ok(()) => cb(cb_data, MessageType::Success, &[0i8] as *const c_char),
+        Ok(()) => cb(cb_data, CbMessage::success_json().as_ptr()),
         Err(s) => {
-            let msg = CString::new(s)
-                .unwrap_or_else(|_| CString::new("Unknown error").unwrap());
-            cb(cb_data, MessageType::Error, msg.as_ptr())
+            cb(cb_data, CbMessage::error_json(&s).as_ptr())
         },
     };
 }
