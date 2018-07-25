@@ -96,9 +96,11 @@ impl structs::ProgressNotifier for ProgressNotifier
 fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const (), MessageType, *const c_char))
     -> Result<(), String>
 {
-    let config_json = unsafe { CStr::from_ptr(config_json) }.to_str().map_err(|e| e.to_string())?;
+    let config_json = unsafe { CStr::from_ptr(config_json) }.to_str()
+        .map_err(|e| format!("JSON parse failed: {}", e))?;
 
-    let config: Config = serde_json::from_str(&config_json).map_err(|e| e.to_string())?;
+    let config: Config = serde_json::from_str(&config_json)
+        .map_err(|e| format!("JSON parse failed: {}", e))?;
 
     let input_iso_file = File::open(config.input_iso.trim())
                 .map_err(|e| format!("Failed to open {}: {}", config.input_iso, e))?;
@@ -142,13 +144,14 @@ pub extern fn randomprime_patch_iso(config_json: *const c_char , cb_data: *const
 {
     let r = panic::catch_unwind(|| inner(config_json, cb_data, cb))
         .map_err(|e| {
-            if let Some(e) = e.downcast_ref::<&'static str>() {
+            let msg = if let Some(e) = e.downcast_ref::<&'static str>() {
                 e.to_string()
             } else if let Some(e) = e.downcast_ref::<String>() {
                 e.clone()
             } else {
                 format!("{:?}", e)
-            }
+            };
+            format!("parsing input iso failed: {}", msg)
         })
         .and_then(|i| i);
 
