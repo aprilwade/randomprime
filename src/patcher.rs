@@ -1046,8 +1046,33 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
     }
 }
 
-fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
+fn patch_dol<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom, version: Version)
 {
+    struct Offsets
+    {
+        load_mlvl_upper: usize,
+        load_mlvl_lower: usize,
+        load_mrea_idx: usize,
+        disable_hints: usize,
+    }
+
+    let offsets = match version {
+        Version::V0_00 => Offsets {
+                load_mlvl_upper: 0x1ff1c,// 80022fbc
+                load_mlvl_lower: 0x1ff28,// 80022fc8
+                load_mrea_idx: 0x1d1fe0,// 801d5080
+                disable_hints: 0x20c1cc,// 8020f26c
+            },
+        Version::V0_01 => unreachable!(),
+        Version::V0_02 => Offsets {
+                load_mlvl_upper: 0x20208,// 800232a8
+                load_mlvl_lower: 0x20214,// 800232b4
+                load_mrea_idx: 0x1d2830,// 801d58d0
+                disable_hints: 0x20ca44,// 8020fae4
+            },
+    };
+
+
     let mrea_idx = {
         let file_entry = gc_disc.find_file_mut(spawn_room.pak_name);
         file_entry.guess_kind();
@@ -1079,15 +1104,19 @@ fn patch_dol_skip_frigate<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
     // Replace some of the bytes in the main dol. By using chain() like this, we
     // can avoid copying the contents of the whole dol onto the heap.
 
-    let data = reader[..0x1FF1E]
+    let data= reader[..(offsets.load_mlvl_upper + 2)]
         .chain(io::Cursor::new(vec![mlvl_bytes[0], mlvl_bytes[1]]))
-        .chain(&reader[0x1FF20..0x1FF2A])
+        .chain(&reader[(offsets.load_mlvl_upper + 4)..(offsets.load_mlvl_lower + 2)])
         .chain(io::Cursor::new(vec![mlvl_bytes[2], mlvl_bytes[3]]))
-        .chain(&reader[0x1FF2C..0x1D1FE3])
+        .chain(&reader[(offsets.load_mlvl_lower + 4)..(offsets.load_mrea_idx + 3)])
         .chain(io::Cursor::new(vec![mrea_idx as u8]))
-        .chain(&reader[0x1D1FE4..]);
+        .chain(&reader[(offsets.load_mrea_idx + 4)..(offsets.disable_hints + 1)])
+        .chain(&[0xC0u8] as &[u8])
+        .chain(&reader[(offsets.disable_hints + 2)..]);
+
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
+
 
 const FMV_NAMES: &'static [&'static [u8]] = &[
     b"attract0.thp",
@@ -1135,6 +1164,14 @@ pub struct ParsedConfig
 }
 
 
+#[derive(PartialEq)]
+enum Version
+{
+    V0_00,
+    V0_01,
+    V0_02,
+}
+
 pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
@@ -1146,6 +1183,16 @@ pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
 
     if &gc_disc.header.game_identifier() != b"GM8E01" {
         Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
+    }
+    let version = match (gc_disc.header.disc_id, gc_disc.header.version) {
+        (0, 0) => Version::V0_00,
+        (0, 1) => Version::V0_01,
+        (0, 2) => Version::V0_02,
+        (a, b) => Err(format!("Unknown game version {}-{}", a, b))?
+    };
+    if config.skip_frigate && version == Version::V0_01 {
+        Err(concat!("The frigate level skip is not currently supported for the ",
+                    "0-01 version of Metroid Prime").to_string())?;
     }
 
     let rng = ChaChaRng::from_seed(&config.seed);
@@ -1159,7 +1206,7 @@ pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
 
     let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
     if config.skip_frigate {
-        patch_dol_skip_frigate(&mut gc_disc, spawn_room);
+        patch_dol(&mut gc_disc, spawn_room, version);
 
         // To reduce the amount of data that needs to be copied, empty the contents of the pak
         let file_entry = gc_disc.find_file_mut("Metroid1.pak");
@@ -1173,8 +1220,9 @@ pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
         //     The details can be found in a comment on issue #5.
         let res = pickup_meta::build_resource(0, structs::ResourceKind::External(vec![0; 64],
                                                                                  b"XXXX".into()));
-        pak.resources = ::std::iter::once(res).collect();
+        pak.resources = iter::once(res).collect();
     } else {
+        patch_dol(&mut gc_disc, SpawnRoom::frigate_spawn_room(), version);
         patch_frigate_teleporter(&mut gc_disc, spawn_room);
     }
 
