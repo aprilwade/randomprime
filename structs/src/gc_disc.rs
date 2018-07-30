@@ -10,6 +10,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use ::pak::Pak;
 use ::thp::Thp;
+use ::bnr::Bnr;
 
 // Based on http://hitmen.c02.at/files/yagcd/yagcd/chap13.html
 
@@ -308,6 +309,7 @@ pub enum FstEntryFile<'a>
 {
     Pak(Pak<'a>),
     Thp(Thp<'a>),
+    Bnr(Bnr<'a>),
     ExternalFile(ReadWrapper<'a>, usize),
     Unknown(Reader<'a>),
 }
@@ -363,6 +365,15 @@ impl<'a> FstEntry<'a>
                 _ => panic!("Unexpected fst file type while trying to guess thp."),
             }
         }
+
+        if ext == *b"bnr" {
+            self.file = match self.file {
+                FstEntryFile::Unknown(ref reader)
+                    => FstEntryFile::Bnr(reader.clone().read(())),
+                FstEntryFile::Bnr(_) => return,
+                _ => panic!("Unexpected fst file type while trying to guess bnr."),
+            }
+        }
     }
 }
 
@@ -373,6 +384,7 @@ impl<'a> FstEntryFile<'a>
         match *self {
             FstEntryFile::Pak(ref pak) => pak.size(),
             FstEntryFile::Thp(ref thp) => thp.size(),
+            FstEntryFile::Bnr(ref bnr) => bnr.size(),
             FstEntryFile::ExternalFile(_, size) => size,
             FstEntryFile::Unknown(ref reader) => reader.len(),
         }
@@ -383,6 +395,7 @@ impl<'a> FstEntryFile<'a>
         match *self {
             FstEntryFile::Pak(ref pak) => pak.write(writer),
             FstEntryFile::Thp(ref thp) => thp.write(writer),
+            FstEntryFile::Bnr(ref bnr) => bnr.write(writer),
             FstEntryFile::ExternalFile(ref file, _) => {
                 let mut file = file.0.borrow_mut();
                 io::copy(&mut **file, writer).map(|_| ())

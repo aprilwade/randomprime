@@ -7,6 +7,17 @@ use std::panic;
 use std::os::raw::c_char;
 
 #[derive(Deserialize)]
+struct ConfigBanner
+{
+    game_name: Option<String>,
+    developer: Option<String>,
+
+    game_name_full: Option<String>,
+    developer_full: Option<String>,
+    description: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct Config
 {
     input_iso: String,
@@ -24,11 +35,13 @@ struct Config
     starting_items: Option<u64>,
     #[serde(default)]
     comment: String,
+
+    banner: Option<ConfigBanner>,
 }
 
 #[derive(Serialize)]
 #[serde(tag = "type")]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 enum CbMessage<'a>
 {
     Success,
@@ -149,6 +162,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
     let (pickup_layout, elevator_layout, seed) = ::parse_layout(&config.layout_string)?;
 
+    let mut config = config;
     let parsed_config = patcher::ParsedConfig {
         input_iso, output_iso,
         pickup_layout, elevator_layout, seed,
@@ -163,6 +177,12 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         starting_items: config.starting_items,
         comment: config.comment,
 
+        bnr_game_name: config.banner.as_mut().and_then(|b| b.game_name.take()),
+        bnr_developer: config.banner.as_mut().and_then(|b| b.developer.take()),
+
+        bnr_game_name_full: config.banner.as_mut().and_then(|b| b.game_name_full.take()),
+        bnr_developer_full: config.banner.as_mut().and_then(|b| b.developer_full.take()),
+        bnr_description: config.banner.as_mut().and_then(|b| b.description.take()),
     };
 
     let pn = ProgressNotifier::new(cb_data, cb);

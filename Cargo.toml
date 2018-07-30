@@ -5,6 +5,7 @@ authors = ["April Wade <wayedt@gmail.com>"]
 
 [dependencies]
 clap = "2.9"
+encoding = "0.2"
 flate2 = "0.2"
 memmap = "0.4"
 preferences = "1.1"

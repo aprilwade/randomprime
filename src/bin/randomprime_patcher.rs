@@ -263,6 +263,13 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
 
         starting_items: None,
         comment: "".to_string(),
+
+        bnr_game_name: None,
+        bnr_developer: None,
+
+        bnr_game_name_full: None,
+        bnr_developer_full: None,
+        bnr_description: None,
     })
 }
 
@@ -343,6 +350,13 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
                                    .map(|s| s.parse::<u64>().unwrap()),
 
             comment: matches.value_of("text file comment").unwrap_or("").to_string(),
+
+            bnr_game_name: None,
+            bnr_developer: None,
+
+            bnr_game_name_full: None,
+            bnr_developer_full: None,
+            bnr_description: None,
         })
 
     }

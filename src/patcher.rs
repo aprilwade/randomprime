@@ -1,5 +1,7 @@
 
 use rand::{ChaChaRng, SeedableRng, Rng, Rand};
+use encoding::{Encoding, EncoderTrap};
+use encoding::all::WINDOWS_1252;
 
 use ::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
        GcDiscLookupExtensions, ResourceData};
@@ -1143,6 +1145,42 @@ fn replace_fmvs(gc_disc: &mut structs::GcDisc)
     }
 }
 
+fn patch_bnr(gc_disc: &mut structs::GcDisc, config: &ParsedConfig) -> Result<(), String>
+{
+    let file_entry = gc_disc.find_file_mut("opening.bnr");
+    file_entry.guess_kind();
+    let bnr = match *file_entry.file_mut().unwrap() {
+        structs::FstEntryFile::Bnr(ref mut bnr) => bnr,
+        _ => panic!(),
+    };
+
+    bnr.pixels.clone_from_slice(include_bytes!("../extra_assets/banner_image.bin"));
+
+    fn write_encoded_str(field: &str, s: &Option<String>, slice: &mut [u8]) -> Result<(), String>
+    {
+        if let Some(s) = s {
+            let mut bytes = WINDOWS_1252.encode(&s, EncoderTrap::Strict)
+                .map_err(|e| format!("Failed to encode banner field {}: {}", field, e))?;
+            if bytes.len() >= (slice.len() - 1) {
+                Err(format!("Invalid encoded length for banner field {}: expect {}, got {}",
+                            field, slice.len() - 1, bytes.len()))?
+            }
+            bytes.resize(slice.len(), 0u8);
+            slice.clone_from_slice(&bytes);
+        }
+        Ok(())
+    }
+
+    write_encoded_str("game_name", &config.bnr_game_name, &mut bnr.game_name)?;
+    write_encoded_str("developer", &config.bnr_developer, &mut bnr.developer)?;
+    write_encoded_str("game_name_full", &config.bnr_game_name_full, &mut bnr.game_name_full)?;
+    write_encoded_str("developer_full", &config.bnr_developer_full, &mut bnr.developer_full)?;
+    write_encoded_str("description", &config.bnr_description, &mut bnr.description)?;
+
+    Ok(())
+}
+
+
 
 pub struct ParsedConfig
 {
@@ -1161,6 +1199,13 @@ pub struct ParsedConfig
 
     pub starting_items: Option<u64>,
     pub comment: String,
+
+    pub bnr_game_name: Option<String>,
+    pub bnr_developer: Option<String>,
+
+    pub bnr_game_name_full: Option<String>,
+    pub bnr_developer_full: Option<String>,
+    pub bnr_description: Option<String>,
 }
 
 
@@ -1194,6 +1239,8 @@ pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
         Err(concat!("The frigate level skip is not currently supported for the ",
                     "0-01 version of Metroid Prime").to_string())?;
     }
+
+    patch_bnr(&mut gc_disc, &config)?;
 
     let rng = ChaChaRng::from_seed(&config.seed);
     modify_pickups(&mut gc_disc, &config.pickup_layout, rng, config.skip_hudmenus);

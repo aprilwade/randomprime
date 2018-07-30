@@ -1,3 +1,4 @@
+extern crate encoding;
 extern crate flate2;
 extern crate memmap;
 extern crate rand;
