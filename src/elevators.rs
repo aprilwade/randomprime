@@ -43,6 +43,16 @@ impl SpawnRoom
             }
         }
     }
+
+    pub fn frigate_spawn_room() -> SpawnRoom
+    {
+        SpawnRoom {
+            pak_name: "Metroid1.pak",
+            name: "...",
+            mlvl: 0x158EFE17,
+            mrea: 0xD1241219,
+        }
+    }
 }
 
 pub const ELEVATORS: &'static [Elevator] = &[
