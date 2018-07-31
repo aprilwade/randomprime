@@ -1065,7 +1065,7 @@ fn patch_dol<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom, versi
                 load_mrea_idx: 0x1d1fe0,// 801d5080
                 disable_hints: 0x20c1cc,// 8020f26c
             },
-        Version::V0_01 => unreachable!(),
+        Version::V0_01 => return,
         Version::V0_02 => Offsets {
                 load_mlvl_upper: 0x20208,// 800232a8
                 load_mlvl_lower: 0x20214,// 800232b4
