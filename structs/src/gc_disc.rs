@@ -4,9 +4,8 @@ use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
 use std::fmt;
-use std::io;
 use std::cell::RefCell;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{self, Read, Write};
 
 use ::pak::Pak;
 use ::thp::Thp;
@@ -58,45 +57,54 @@ pub trait ProgressNotifier
     fn notify_flushing_to_disk(&mut self);
 }
 
+pub trait WriteExt
+{
+    fn skip_bytes(&mut self, bytes: u64) -> io::Result<()>;
+}
+
+impl<W> WriteExt for W
+    where W: Write + io::Seek
+{
+    fn skip_bytes(&mut self, bytes: u64) -> io::Result<()>
+    {
+        self.seek(io::SeekFrom::Current(bytes as i64)).map(|_| ())
+    }
+}
+
 impl<'a> GcDisc<'a>
 {
     pub fn write<W, N>(&mut self, writer: &mut W, notifier: &mut N)
         -> io::Result<()>
-        where W: Write + Seek,
+        where W: Write + WriteExt,
               N: ProgressNotifier,
     {
-        let total_size = self.file_system_table.recalculate_offsets_and_lengths()
-            + self.header.size()
-            + self.header_info.size()
-            + self.apploader.size()
-            + self.file_system_table.size();
-        notifier.notify_total_bytes(total_size);
-        self.file_system_table.write_files(writer, notifier)?;
+        let (fs_size, fs_offset) = self.file_system_table.recalculate_offsets_and_lengths();
+        let header_size = self.header.size() + self.header_info.size() + self.apploader.size();
 
-        // XXX Although using except here is sub optimal, it is acceptable for the time
-        //     being as it does represent an error in the input file and not an I/O error
+        let total_size = fs_size + header_size + self.file_system_table.size();
+        notifier.notify_total_bytes(total_size);
+
         let main_dol_offset = self.file_system_table.fst_entries.iter()
             .find(|e| e.name.to_bytes() == "default.dol".as_bytes())
             .map(|e| e.offset)
-            .expect("Couldn't find default.dol");
-
-        // XXX It simplifies life a bit to just assume that the fst is at the same
-        //     is the same length as before...
-
-        notifier.notify_writing_header();
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other,
+                                          "Couldn't find default.dol".to_owned()))?;
 
         self.header.main_dol_offset = main_dol_offset;
         self.header.fst_length = self.file_system_table.size() as u32;
         self.header.fst_max_length = self.header.fst_length;
 
-        writer.seek(SeekFrom::Start(0))?;
-
+        notifier.notify_writing_header();
         self.header.write(writer)?;
         self.header_info.write(writer)?;
         self.apploader.write(writer)?;
 
-        writer.seek(SeekFrom::Start(self.header.fst_offset as u64))?;
-        self.file_system_table.write(writer)
+        writer.skip_bytes(self.header.fst_offset as u64 - header_size as u64)?;
+        self.file_system_table.write(writer)?;
+
+        let fst_end = (self.header.fst_offset + self.header.fst_length) as u64;
+        writer.skip_bytes(fs_offset as u64 - fst_end)?;
+        self.file_system_table.write_files(writer, notifier)
     }
 }
 
@@ -218,7 +226,7 @@ impl<'a> FileSystemTable<'a>
 {
     /// Updates the length and offset fields
     /// Returns the total size of all the files in the FST.
-    fn recalculate_offsets_and_lengths(&mut self) -> usize
+    fn recalculate_offsets_and_lengths(&mut self) -> (usize, usize)
     {
         self.fst_entries[0].length = self.fst_entries.len() as u32;
 
@@ -230,7 +238,7 @@ impl<'a> FileSystemTable<'a>
 
         // Get a list of all of the files in reverse order of their offsets' from
         // the start of the disc.
-        let mut entries : Vec<_> = self.fst_entries.iter_mut()
+        let mut entries: Vec<_> = self.fst_entries.iter_mut()
             .filter(|e| !e.is_folder())
             .collect();
         entries.sort_by(|l, r| l.offset.cmp(&r.offset).reverse());
@@ -242,21 +250,31 @@ impl<'a> FileSystemTable<'a>
             last_file_offset -= (e.length + 31) & (u32::max_value() - 31);
             e.offset = last_file_offset;
         }
-        GC_DISC_LENGTH - last_file_offset as usize
+
+        (GC_DISC_LENGTH - last_file_offset as usize, last_file_offset as usize)
     }
 
     fn write_files<W, N>(&self, writer: &mut W, notifier: &mut N)
         -> io::Result<()>
-        where W: Write + Seek,
+        where W: Write,
               N: ProgressNotifier,
     {
-        // TODO: If the files were sorted by offset, would that improve
-        //       peformance?
-        for e in self.fst_entries.iter() {
+        let mut entries: Vec<_> = self.fst_entries.iter()
+            .filter(|e| !e.is_folder())
+            .collect();
+        entries.sort_by(|l, r| l.offset.cmp(&r.offset));
+
+        let mut entries_and_zeroes: Vec<_> = entries[0..entries.len() - 1].iter().zip(entries[1..].iter())
+            .map(|(e1, e2)| (*e1, e2.offset - (e1.offset + e1.length)))
+            .collect();
+        entries_and_zeroes.push((entries[entries.len() - 1], 0));
+
+        let zero_bytes = [0u8; 32];
+        for (e, zeroes) in entries_and_zeroes {
             if let Some(f) = e.file() {
                 notifier.notify_writing_file(&e.name, e.length as usize);
-                writer.seek(SeekFrom::Start(e.offset as u64))?;
-                f.write(writer)?
+                f.write(writer)?;
+                writer.write_all(&zero_bytes[0..zeroes as usize])?;
             }
         }
         Ok(())
