@@ -234,6 +234,8 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
     let (output_iso_path, out_iso) = read_option(
         "Output file name", prefs.get("output_iso").map(|x| x.as_str()).unwrap_or(""),
         concat!("\nThis is the location where the randomized ISO will be written.",
+                "\nIf the file name you provide ends in .gcz, the iso will automatically",
+                "\nbe compressed as it is written.",
                 "\nWarning: This will silently overwrite the file at the given location."),
         |output_iso_path| {
             let out_iso = OpenOptions::new()
@@ -241,11 +243,10 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
                 .create(true)
                 .open(output_iso_path)
                 .map_err(|e| format!("Failed to open output file: {}", e))?;
-            out_iso.set_len(structs::GC_DISC_LENGTH as u64)
-                .map_err(|e| format!("Failed to open output file: {}", e))?;
             Ok((output_iso_path.to_string(), out_iso))
     })?;
 
+    let write_gcz = output_iso_path.ends_with(".gcz");
     prefs.insert("input_iso".to_string(), input_iso_path);
     prefs.insert("output_iso".to_string(), output_iso_path);
     prefs.insert("skip_frigate".to_string(), if skip_frigate { "Y" } else { "N" }.to_string());
@@ -256,6 +257,7 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
         output_iso: out_iso,
         pickup_layout, elevator_layout, seed, layout_string,
 
+        write_gcz,
         skip_hudmenus: true,
         skip_frigate,
         keep_fmvs: false,
@@ -329,8 +331,6 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
             .create(true)
             .open(output_iso_path)
             .map_err(|e| format!("Failed to open output file: {}", e))?;
-        out_iso.set_len(structs::GC_DISC_LENGTH as u64)
-            .map_err(|e| format!("Failed to open output file: {}", e))?;
 
         let layout_string = matches.value_of("pickup layout").unwrap().to_string();
         let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
@@ -340,6 +340,7 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
             output_iso: out_iso,
             pickup_layout, elevator_layout, seed, layout_string,
 
+            write_gcz: output_iso_path.ends_with(".gcz"),
             skip_hudmenus: matches.is_present("skip hudmenus"),
             skip_frigate: matches.is_present("skip frigate"),
             keep_fmvs: matches.is_present("keep attract mode"),

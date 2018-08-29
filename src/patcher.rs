@@ -6,6 +6,7 @@ use encoding::all::WINDOWS_1252;
 use ::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
        GcDiscLookupExtensions, ResourceData};
 use elevators::{ELEVATORS, SpawnRoom};
+use gcz_writer::GczWriter;
 
 use asset_ids;
 use reader_writer::{CStrConversionExtension, FourCC, Reader, Writable};
@@ -30,17 +31,6 @@ const METROID_PAK_NAMES: [&'static str; 5] = [
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 
-
-fn write_gc_disc<T>(gc_disc: &mut structs::GcDisc, mut file: File, mut pn: T)
-    -> Result<(), String>
-    where T: structs::ProgressNotifier
-{
-    gc_disc.write(&mut file, &mut pn)
-        .map_err(|e| format!("Error writing output file: {}", e))?;
-
-    pn.notify_flushing_to_disk();
-    Ok(())
-}
 
 // When changing a pickup, we need to give the room a copy of the resources/
 // assests used by the pickup. Create a cache of all the resources needed by
@@ -1192,6 +1182,7 @@ pub struct ParsedConfig
     pub elevator_layout: Vec<u8>,
     pub seed: [u32; 16],
 
+    pub write_gcz: bool,
     pub skip_frigate: bool,
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -1217,7 +1208,7 @@ enum Version
     V0_02,
 }
 
-pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
+pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
     pickup_meta::setup_pickup_meta_table();
@@ -1289,6 +1280,19 @@ pub fn patch_iso<T>(config: ParsedConfig, pn: T) -> Result<(), String>
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
 
-    write_gc_disc(&mut gc_disc, config.output_iso, pn)?;
+    if config.write_gcz {
+        let mut gcz_writer = GczWriter::new(config.output_iso, structs::GC_DISC_LENGTH as u64)
+            .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
+        gc_disc.write(&mut gcz_writer as &mut GczWriter<_>, &mut pn)
+            .map_err(|e| format!("Error writing output file: {}", e))?;
+        pn.notify_flushing_to_disk();
+    } else {
+        let mut file = config.output_iso;
+        file.set_len(structs::GC_DISC_LENGTH as u64)
+            .map_err(|e| format!("Failed to resize output file: {}", e))?;
+        gc_disc.write(&mut file, &mut pn)
+            .map_err(|e| format!("Error writing output file: {}", e))?;
+        pn.notify_flushing_to_disk();
+    }
     Ok(())
 }

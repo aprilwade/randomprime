@@ -25,6 +25,9 @@ struct Config
     layout_string: String,
 
     #[serde(default)]
+    write_gcz: bool,
+
+    #[serde(default)]
     skip_frigate: bool,
     #[serde(default)]
     skip_hudmenus: bool,
@@ -157,8 +160,6 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         .create(true)
         .open(&config.output_iso)
         .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
-    output_iso.set_len(structs::GC_DISC_LENGTH as u64)
-        .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
 
     let (pickup_layout, elevator_layout, seed) = ::parse_layout(&config.layout_string)?;
 
@@ -169,6 +170,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
         layout_string: config.layout_string,
 
+        write_gcz: config.write_gcz,
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
         keep_fmvs: config.keep_fmvs,

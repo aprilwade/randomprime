@@ -1,4 +1,4 @@
-extern crate byteorder;
+pub extern crate byteorder;
 pub extern crate generic_array;
 pub extern crate num;
 

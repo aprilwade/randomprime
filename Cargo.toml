@@ -4,9 +4,10 @@ version = "0.2.2"
 authors = ["April Wade <wayedt@gmail.com>"]
 
 [dependencies]
+adler32 = "1.0"
 clap = "2.9"
 encoding = "0.2"
-flate2 = "0.2"
+flate2 = "1.0"
 memmap = "0.4"
 preferences = "1.1"
 serde = "1.0"

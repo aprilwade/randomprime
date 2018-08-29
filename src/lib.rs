@@ -1,3 +1,4 @@
+extern crate adler32;
 extern crate encoding;
 extern crate flate2;
 extern crate memmap;
@@ -16,7 +17,7 @@ pub use structs::reader_writer;
 use reader_writer::{LCow, Reader};
 use reader_writer::num::{BigUint, Integer, ToPrimitive};
 
-use flate2::{Decompress, Flush};
+use flate2::{Decompress, FlushDecompress};
 use sha2::{Digest, Sha512};
 
 use std::borrow::Cow;
@@ -27,6 +28,7 @@ pub mod mlvl_wrapper;
 pub mod pickup_meta;
 pub mod patcher;
 pub mod c_interface;
+pub mod gcz_writer;
 
 pub trait GcDiscLookupExtensions<'a>
 {
@@ -234,7 +236,7 @@ impl<'a> ResourceData<'a>
             let _header: u16 = reader.read(());
             // TODO: We could use Vec::set_len to avoid initializing the whole array.
             let mut output = vec![0; size as usize];
-            Decompress::new(false).decompress(&reader, &mut output, Flush::Finish).unwrap();
+            Decompress::new(false).decompress(&reader, &mut output, FlushDecompress::Finish).unwrap();
 
             Cow::Owned(output)
         } else {
