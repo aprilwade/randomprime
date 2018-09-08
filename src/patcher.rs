@@ -7,6 +7,7 @@ use ::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
        GcDiscLookupExtensions, ResourceData};
 use elevators::{ELEVATORS, SpawnRoom};
 use gcz_writer::GczWriter;
+use ciso_writer::CisoWriter;
 
 use asset_ids;
 use reader_writer::{CStrConversionExtension, FourCC, Reader, Writable};
@@ -1171,6 +1172,26 @@ fn patch_bnr(gc_disc: &mut structs::GcDisc, config: &ParsedConfig) -> Result<(),
 }
 
 
+// XXX Deserialize is implemented here for c_interface. Ideally this could be done in
+//     c_interface.rs itself...
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum IsoFormat
+{
+    Iso,
+    Gcz,
+    Ciso,
+}
+
+impl Default for IsoFormat
+{
+    fn default() -> IsoFormat
+    {
+        IsoFormat::Iso
+    }
+}
+
+
 
 pub struct ParsedConfig
 {
@@ -1182,7 +1203,7 @@ pub struct ParsedConfig
     pub elevator_layout: Vec<u8>,
     pub seed: [u32; 16],
 
-    pub write_gcz: bool,
+    pub iso_format: IsoFormat,
     pub skip_frigate: bool,
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -1280,19 +1301,33 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
 
-    if config.write_gcz {
-        let mut gcz_writer = GczWriter::new(config.output_iso, structs::GC_DISC_LENGTH as u64)
-            .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
-        gc_disc.write(&mut gcz_writer as &mut GczWriter<_>, &mut pn)
-            .map_err(|e| format!("Error writing output file: {}", e))?;
-        pn.notify_flushing_to_disk();
-    } else {
-        let mut file = config.output_iso;
-        file.set_len(structs::GC_DISC_LENGTH as u64)
-            .map_err(|e| format!("Failed to resize output file: {}", e))?;
-        gc_disc.write(&mut file, &mut pn)
-            .map_err(|e| format!("Error writing output file: {}", e))?;
-        pn.notify_flushing_to_disk();
-    }
+    match config.iso_format {
+        IsoFormat::Iso => {
+            let mut file = config.output_iso;
+            file.set_len(structs::GC_DISC_LENGTH as u64)
+                .map_err(|e| format!("Failed to resize output file: {}", e))?;
+            gc_disc.write(&mut file, &mut pn)
+                .map_err(|e| format!("Error writing output file: {}", e))?;
+            pn.notify_flushing_to_disk();
+        },
+        IsoFormat::Gcz => {
+            config.output_iso.set_len(0)
+                .map_err(|e| format!("Failed to resize output file: {}", e))?;
+            let mut gcz_writer = GczWriter::new(config.output_iso, structs::GC_DISC_LENGTH as u64)
+                .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
+            gc_disc.write(&mut gcz_writer as &mut GczWriter<_>, &mut pn)
+                .map_err(|e| format!("Error writing output file: {}", e))?;
+            pn.notify_flushing_to_disk();
+        },
+        IsoFormat::Ciso => {
+            config.output_iso.set_len(0)
+                .map_err(|e| format!("Failed to resize output file: {}", e))?;
+            let mut ciso_writer = CisoWriter::new(config.output_iso)
+                .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
+            gc_disc.write(&mut ciso_writer, &mut pn)
+                .map_err(|e| format!("Error writing output file: {}", e))?;
+            pn.notify_flushing_to_disk();
+        }
+    };
     Ok(())
 }

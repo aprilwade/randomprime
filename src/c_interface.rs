@@ -25,7 +25,7 @@ struct Config
     layout_string: String,
 
     #[serde(default)]
-    write_gcz: bool,
+    iso_format: patcher::IsoFormat,
 
     #[serde(default)]
     skip_frigate: bool,
@@ -170,7 +170,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
         layout_string: config.layout_string,
 
-        write_gcz: config.write_gcz,
+        iso_format: config.iso_format,
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
         keep_fmvs: config.keep_fmvs,

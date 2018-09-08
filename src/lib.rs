@@ -29,6 +29,7 @@ pub mod pickup_meta;
 pub mod patcher;
 pub mod c_interface;
 pub mod gcz_writer;
+pub mod ciso_writer;
 
 pub trait GcDiscLookupExtensions<'a>
 {
