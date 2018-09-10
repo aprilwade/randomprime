@@ -1311,8 +1311,6 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
             pn.notify_flushing_to_disk();
         },
         IsoFormat::Gcz => {
-            config.output_iso.set_len(0)
-                .map_err(|e| format!("Failed to resize output file: {}", e))?;
             let mut gcz_writer = GczWriter::new(config.output_iso, structs::GC_DISC_LENGTH as u64)
                 .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
             gc_disc.write(&mut gcz_writer as &mut GczWriter<_>, &mut pn)
@@ -1320,8 +1318,6 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
             pn.notify_flushing_to_disk();
         },
         IsoFormat::Ciso => {
-            config.output_iso.set_len(0)
-                .map_err(|e| format!("Failed to resize output file: {}", e))?;
             let mut ciso_writer = CisoWriter::new(config.output_iso)
                 .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
             gc_disc.write(&mut ciso_writer, &mut pn)

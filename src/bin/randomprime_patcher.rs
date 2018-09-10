@@ -241,6 +241,7 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
             let out_iso = OpenOptions::new()
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(output_iso_path)
                 .map_err(|e| format!("Failed to open output file: {}", e))?;
             Ok((output_iso_path.to_string(), out_iso))
@@ -335,6 +336,7 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
         let out_iso = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(output_iso_path)
             .map_err(|e| format!("Failed to open output file: {}", e))?;
 

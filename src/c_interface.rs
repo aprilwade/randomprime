@@ -158,6 +158,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     let output_iso = OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(&config.output_iso)
         .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
 

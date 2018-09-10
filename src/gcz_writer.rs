@@ -77,9 +77,6 @@ impl<W: Write + Seek> Write for GczWriter<W>
 
     fn write_all(&mut self, mut buf: &[u8]) -> io::Result<()>
     {
-        // XXX Maybe move the loop body into a function and then unroll this once manually?
-        //     I imagine the fixed 0 of self.input_buf_used in subsequent iterations will
-        //     have a nontrival impact (assuming the compiler doesn't do the unrolling itself)
         while buf.len() as u64 + self.input_buf_used as u64 >= block_size!() {
             let (left_buf, right_buf) = buf.split_at(block_size!() - self.input_buf_used as usize);
             self.input_buf[self.input_buf_used as usize..block_size!()].copy_from_slice(left_buf);
@@ -121,7 +118,6 @@ impl<W: Write + Seek> Write for GczWriter<W>
     }
 }
 
-// 811136336
 impl<W: Write + Seek> structs::WriteExt for GczWriter<W>
 {
     fn skip_bytes(&mut self, mut bytes: u64) -> io::Result<()>

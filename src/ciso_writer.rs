@@ -75,12 +75,6 @@ impl<W: Write + Seek + 'static> structs::WriteExt for CisoWriter<W>
     fn skip_bytes(&mut self, bytes: u64) -> io::Result<()>
     {
         let pos = self.file.seek(io::SeekFrom::Current(0))?;
-
-        // TODO: If we specialize this for file use, we could potentially use set_len and seek
-        //       instead of manually writing the zeroes. It's a thought...
-        //       In fact, we could do it with three syscalls - check position, resize to finish
-        //       current block and start the next, seek to the end of the file.
-
         let pos_rounded_up = (pos + block_size!() - 1) & !(block_size!() - 1);
 
         // Finish out the current block with zeroes
