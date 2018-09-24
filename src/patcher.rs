@@ -898,6 +898,50 @@ fn patch_research_lab_hydra_barrier<'a>(gc_disc: &mut structs::GcDisc<'a>)
     actor.actor_params.visor_params.target_passthrough = 1;
 }
 
+fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    // The room we're actually patching is Research Core..
+    let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0xA49B2544);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let ref mut layer = scly.layers.as_mut_vec()[0];
+
+    {
+        let obj = layer.objects.as_mut_vec().iter_mut()
+            .find(|obj| obj.instance_id == 2622568)
+            .unwrap();
+        obj.connections.as_mut_vec().push( structs::Connection {
+            state: 9,
+            message: 5,
+            target_object_id: 0xDEEFFFFE,
+        });
+    }
+
+    layer.objects.as_mut_vec().push(structs::SclyObject {
+        instance_id: 0xDEEFFFFE,
+        property_data: structs::SclyProperty:: SpecialFunction(structs::SpecialFunction {
+                name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
+                position: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                rotation: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                type_: 16,
+                unknown0: b"\0".as_cstr(),
+                unknown1: 0.0,
+                unknown2: 0.0,
+                unknown3: 0.0,
+                layer_change_room_id: 893946318,
+                layer_change_layer_id: 3,
+                item_id: 0,
+                unknown4: 1,
+                unknown5: 0.0,
+                unknown6: 4294967295,
+                unknown7: 4294967295,
+                unknown8: 4294967295
+            }
+        ),
+        connections: vec![].into(),
+    });
+}
+
 fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
     let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
@@ -906,7 +950,7 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc
     let ref mut layer = scly.layers.as_mut_vec()[0];
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: 1,
+        instance_id: 0xDEEFFFFD,
         property_data: structs::SclyProperty::Trigger(structs::Trigger {
                 name: b"Trigger_DoorOpen-component\0".as_cstr(),
                 position: *GenericArray::from_slice(&[
@@ -1300,6 +1344,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_elevators(&mut gc_disc, &config.elevator_layout);
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
+    patch_research_lab_aether_exploding_wall(&mut gc_disc);
 
     match config.iso_format {
         IsoFormat::Iso => {
@@ -1313,7 +1358,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
         IsoFormat::Gcz => {
             let mut gcz_writer = GczWriter::new(config.output_iso, structs::GC_DISC_LENGTH as u64)
                 .map_err(|e| format!("Failed to prepare output file for writing: {}", e))?;
-            gc_disc.write(&mut gcz_writer as &mut GczWriter<_>, &mut pn)
+            gc_disc.write(&mut *gcz_writer, &mut pn)
                 .map_err(|e| format!("Error writing output file: {}", e))?;
             pn.notify_flushing_to_disk();
         },
