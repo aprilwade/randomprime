@@ -463,7 +463,6 @@ fn trace_pickup_deps(
             );
             if let Some(hudmemo) = hudmemo {
                 let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
-                deps.insert(ResourceKey::new(strg, b"STRG".into()));
                 hudmemo_strg = strg;
                 hudmemo_loc = ScriptObjectLocation {
                     layer: scly_db[&hudmemo.instance_id].0 as u32,
@@ -742,7 +741,6 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::new(0x00656374, b"CSKR".into()));
     } else if pickup_kind == 23 {
         // Phazon suit.
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG, b"STRG".into()));
         deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_SCAN, b"SCAN".into()));
         deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_STRG, b"STRG".into()));
 
@@ -783,7 +781,6 @@ fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>)
         .collect();
     nothing_deps.remove(&ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
     nothing_deps.extend(&[
-        ResourceKey::new(asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, b"STRG".into()),
         ResourceKey::new(asset_ids::NOTHING_SCAN_STRG, b"STRG".into()),
         ResourceKey::new(asset_ids::NOTHING_SCAN, b"SCAN".into()),
         ResourceKey::new(asset_ids::NOTHING_CMDL, b"CMDL".into()),

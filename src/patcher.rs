@@ -41,6 +41,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
 {
     let mut looking_for: HashSet<_> = pickup_meta::pickup_meta_table().iter()
         .flat_map(|meta| meta.deps.iter().map(|key| *key))
+        .chain(pickup_meta::pickup_meta_table().iter().map(|meta| (meta.hudmemo_strg, b"STRG".into())))
         .collect();
 
     let mut found = HashMap::with_capacity(looking_for.len());
@@ -481,16 +482,15 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
         area.add_layer(Cow::Owned(name));
 
         let new_layer_idx = area.layer_flags.layer_count as usize - 1;
-        if !skip_hudmenus {
-            area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
-        } else {
-            // Add our custom STRG
-            let deps_iter = deps_iter.chain(iter::once(structs::Dependency {
-                    asset_id: pickup_meta.skip_hudmemos_strg,
-                    asset_type: b"STRG".into(),
-                }));
-            area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
-        }
+
+        // Add our custom STRG
+        let hudmemo_dep = structs::Dependency {
+            asset_id: if skip_hudmenus { pickup_meta.skip_hudmemos_strg }
+                                  else { pickup_meta.hudmemo_strg },
+            asset_type: b"STRG".into(),
+        };
+        let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
+        area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
 
         if area.mrea_file_id() == asset_ids::ARTIFACT_TEMPLE_MREA {
             // If this room is the Artifact Temple, patch it.
