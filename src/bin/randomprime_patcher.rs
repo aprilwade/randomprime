@@ -223,6 +223,14 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
         &match_bool
     )?;
 
+    let obfuscate_items = read_option(
+        "Obfuscate items?", prefs.get("obfuscate_items").map(|x| x.as_str()).unwrap_or("No"),
+        concat!("\nIf yes, all item models will be replaced with an obfuscated model to prevent",
+                "\ndetermining an item's identity from a distance (ie without collecting it)."),
+        &match_bool
+    )?;
+
+
     /* let keep_fmvs = read_option(
         "Remove attract mode?", "Yes", "If yes, the attract mode FMVs are remov",
         &match_bool
@@ -268,6 +276,7 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
         skip_hudmenus: true,
         skip_frigate,
         keep_fmvs: false,
+        obfuscate_items,
         quiet: false,
 
         starting_items: None,
@@ -311,6 +320,9 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
             .arg(Arg::with_name("keep attract mode")
                 .long("keep-attract-mode")
                 .help("Keeps the attract mode FMVs, which are removed by default"))
+            .arg(Arg::with_name("obfuscate items")
+                .long("obfuscate-items")
+                .help("Replace all item models with an obfuscated one"))
             .arg(Arg::with_name("quiet")
                 .long("quiet")
                 .help("Don't print the progress messages"))
@@ -359,6 +371,7 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
             skip_hudmenus: matches.is_present("skip hudmenus"),
             skip_frigate: matches.is_present("skip frigate"),
             keep_fmvs: matches.is_present("keep attract mode"),
+            obfuscate_items: matches.is_present("obfuscate items"),
             quiet: matches.is_present("quiet"),
 
             // XXX We can unwrap safely because we verified the parse earlier

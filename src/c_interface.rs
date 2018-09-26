@@ -31,6 +31,8 @@ struct Config
     skip_frigate: bool,
     #[serde(default)]
     skip_hudmenus: bool,
+    #[serde(default)]
+    obfuscate_items: bool,
 
     #[serde(default)]
     keep_fmvs: bool,
@@ -175,6 +177,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
         keep_fmvs: config.keep_fmvs,
+        obfuscate_items: config.obfuscate_items,
         quiet: false,
 
         starting_items: config.starting_items,

@@ -10,7 +10,7 @@ use gcz_writer::GczWriter;
 use ciso_writer::CisoWriter;
 
 use asset_ids;
-use reader_writer::{CStrConversionExtension, FourCC, Reader, Writable};
+use reader_writer::{CStrConversionExtension, FourCC, LCow, Reader, Writable};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
 
@@ -41,7 +41,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
 {
     let mut looking_for: HashSet<_> = pickup_meta::pickup_meta_table().iter()
         .flat_map(|meta| meta.deps.iter().map(|key| *key))
-        .chain(pickup_meta::pickup_meta_table().iter().map(|meta| (meta.hudmemo_strg, b"STRG".into())))
+        .chain(pickup_meta::pickup_meta_table().iter().map(|m| (m.hudmemo_strg, b"STRG".into())))
         .collect();
 
     let mut found = HashMap::with_capacity(looking_for.len());
@@ -316,7 +316,8 @@ fn modify_pickups<R: Rng + Rand>(
     gc_disc: &mut structs::GcDisc,
     pickup_layout: &[u8],
     mut rng: R,
-    skip_hudmenus: bool
+    skip_hudmenus: bool,
+    obfuscate_items: bool,
 ) {
     let mut pickup_resources = collect_pickup_resources(&gc_disc);
     if skip_hudmenus {
@@ -346,7 +347,8 @@ fn modify_pickups<R: Rng + Rand>(
             layout_iter.by_ref(),
             &artifact_totem_strings,
             &mut fresh_instance_id_range,
-            skip_hudmenus
+            skip_hudmenus,
+            obfuscate_items,
         );
     }
 }
@@ -376,6 +378,7 @@ fn modify_pickups_in_pak<'a, I, J>(
     artifact_totem_strings: &[String; 12],
     fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
+    obfuscate_items: bool,
 )
     where I: Iterator<Item = &'static pickup_meta::RoomInfo>,
           J: Iterator<Item = (usize, usize)>,
@@ -435,7 +438,8 @@ fn modify_pickups_in_pak<'a, I, J>(
                             pickup_resources,
                             layout_iter,
                             fresh_instance_id_range,
-                            skip_hudmenus
+                            skip_hudmenus,
+                            obfuscate_items
                         );
                     }
                 }
@@ -446,6 +450,32 @@ fn modify_pickups_in_pak<'a, I, J>(
     }
 }
 
+fn make_obfuscated_pickup_meta<'a>(meta: &'a pickup_meta::PickupMeta, obfuscate: bool)
+    -> LCow<'a, pickup_meta::PickupMeta>
+{
+    if !obfuscate {
+        LCow::Borrowed(meta)
+    } else {
+        let nothing_meta = &pickup_meta::pickup_meta_table()[35];
+        let pickup = structs::Pickup {
+            name: meta.pickup.name.clone(),
+            kind: meta.pickup.kind,
+            max_increase: meta.pickup.max_increase,
+            curr_increase: meta.pickup.curr_increase,
+            ..nothing_meta.pickup.clone()
+        };
+
+        LCow::Owned(pickup_meta::PickupMeta {
+            name: meta.name,
+            pickup: pickup,
+            deps: nothing_meta.deps,
+            hudmemo_strg: meta.hudmemo_strg,
+            skip_hudmemos_strg: meta.skip_hudmemos_strg,
+            attainment_audio_file_name: meta.attainment_audio_file_name,
+        })
+    }
+}
+
 fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
     mut area: mlvl_wrapper::MlvlArea<'a, 'mlvl, 'cursor, 'list>,
     room_info: pickup_meta::RoomInfo,
@@ -453,6 +483,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
     layout_iter: &mut I,
     fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
+    obfuscate_items: bool,
 )
     where I: Iterator<Item = (usize, usize)>,
 {
@@ -469,7 +500,11 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
     for &pickup_location in room_info.pickup_locations {
 
         let (location_idx, pickup_meta_idx) = layout_iter.next().unwrap();
-        let pickup_meta = &pickup_meta::pickup_meta_table()[pickup_meta_idx];
+        let pickup_meta = make_obfuscated_pickup_meta(
+            &pickup_meta::pickup_meta_table()[pickup_meta_idx],
+            obfuscate_items
+        );
+        let pickup_meta = &*pickup_meta;
         let deps_iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
                 asset_type: fourcc,
@@ -1251,6 +1286,7 @@ pub struct ParsedConfig
     pub skip_frigate: bool,
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
+    pub obfuscate_items: bool,
     pub quiet: bool,
 
     pub starting_items: Option<u64>,
@@ -1299,7 +1335,8 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_bnr(&mut gc_disc, &config)?;
 
     let rng = ChaChaRng::from_seed(&config.seed);
-    modify_pickups(&mut gc_disc, &config.pickup_layout, rng, config.skip_hudmenus);
+    modify_pickups(&mut gc_disc, &config.pickup_layout, rng, config.skip_hudmenus,
+                   config.obfuscate_items);
 
     if config.elevator_layout[20] != 20 {
         // If we have a non-default start point, patch the landing site to avoid
