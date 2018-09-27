@@ -1,12 +1,14 @@
 # randomprime
 
+**A GUI frontend for this program is available [here](https://randomizer.metroidprime.run).** I highly recommend using it.
+
 [Download latest version](https://github.com/aprilwade/randomprime/releases/latest)
 
 This is a program to randomize/customize the layout of pickups in Metroid Prime.
 It does _not_ generate layouts, it merely patches the ISO.
 You need a to use a separate utility to generate a "layout descriptor" that you feed to the patcher.
-I recommend using [Bash's randomizer](https://etaylor8086.github.io/randomizer/).
-I also wrote a [generator](https://aprilwade.github.io/randomprime/generator.html), but its not as featureful as Bash's.
+There is a layout generator built into the aforementioned GUI.
+I've also written a [generator webpage](https://aprilwade.github.io/randomprime/generator.html), though it is less featureful.
 There's an [editor webpage](https://aprilwade.github.io/randomprime/editor.html) that can be used to customize or create a layout.
 
 ## How to use the ISO patcher
@@ -25,11 +27,10 @@ If you file an issue, please include the layout descriptor you used, a hash of t
 ## Faq
 
 ##### Q: Which versions of Metroid Prime are supported?
-A: Only the NTSC original print run 0-00 version has been tested, because it's the only one I own.
-The other two NTSCs versions (0-01 and 0-02 (Player's Choice)) may work, but no promises.
-It is highly unlikely that any non-NTSC version will work.
-The trilogy version is right out.
-Hashes of a known good ISO dump are:
+A:
+Only the NTSC 0-00 and 0-02 (aka 1.00 and 1.02) versions are supported.
+The 00-1 NTSC version, non-NTSC versions and the trilogy version will not work.
+Hashes of a known good 0-00 ISO dump are:
 ```
 MD5:  eeacd0ced8e2bae491eca14f141a4b7c
 SHA1: ac20c744db18fdf0339f37945e880708fd317231
@@ -45,8 +46,7 @@ Because ~~I'm lazy~~ I wanted to allow other people to write their own generator
 
 ## To do
 
-* A GUI
-
+* Support Prime 2???
 
 ## Thanks
 
