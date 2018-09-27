@@ -32,7 +32,6 @@ impl<'a, T> Readable<'a> for Uncached<'a, T>
         (res, after_reader)
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         self.0.len()

@@ -14,7 +14,6 @@ impl<'a, T> Readable<'a> for Vec<T>
           T::Args: Clone,
 {
     type Args = (usize, T::Args);
-    #[inline]
     fn read(mut reader: Reader<'a>, (len, args): Self::Args) -> (Self, Reader<'a>)
     {
         let mut res = Vec::with_capacity(len);
@@ -24,7 +23,6 @@ impl<'a, T> Readable<'a> for Vec<T>
         (res, reader)
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         T::fixed_size()
@@ -36,7 +34,6 @@ impl<'a, T> Readable<'a> for Vec<T>
 impl<'a, T> Writable for Vec<T>
     where T: Writable,
 {
-    #[inline]
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         for i in self {
@@ -60,7 +57,6 @@ impl<'a, T> LazyArray<'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    #[inline]
     pub fn len(&self) -> usize
     {
         match *self {
@@ -69,19 +65,16 @@ impl<'a, T> LazyArray<'a, T>
         }
     }
 
-    #[inline]
     pub fn iter<'s>(&'s self) -> LazyArrayIter<'s, 'a, T>
     {
         self.into_iter()
     }
 
-    #[inline]
     pub fn iter_mut<'s>(&'s mut self) -> SliceIterMut<'s, T>
     {
         self.as_mut_vec().iter_mut()
     }
 
-    #[inline]
     pub fn get(&self, index: usize) -> Option<LCow<T>>
     {
         match *self {
@@ -125,14 +118,12 @@ impl<'a, T> Readable<'a> for LazyArray<'a, T>
 {
     type Args = (usize, T::Args);
 
-    #[inline]
     fn read(reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>)
     {
         let (array, reader) = RoArray::read(reader, args);
         (LazyArray::Borrowed(array), reader)
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         T::fixed_size()
@@ -166,7 +157,6 @@ impl<'s, 'a, T> Iterator for LazyArrayIter<'s, 'a, T>
           T::Args: Clone,
 {
     type Item = LCow<'s, T>;
-    #[inline]
     fn next(&mut self) -> Option<Self::Item>
     {
         match *self {
@@ -175,7 +165,6 @@ impl<'s, 'a, T> Iterator for LazyArrayIter<'s, 'a, T>
         }
     }
 
-    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>)
     {
         match *self {
@@ -189,7 +178,6 @@ impl<'s, 'a, T> ExactSizeIterator for LazyArrayIter<'s, 'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    #[inline]
     fn len(&self) -> usize
     {
         match *self {
@@ -205,7 +193,6 @@ impl<'s, 'a, T: 's> IntoIterator for &'s LazyArray<'a, T>
 {
     type Item = LCow<'s, T>;
     type IntoIter = LazyArrayIter<'s, 'a, T>;
-    #[inline]
     fn into_iter(self) -> Self::IntoIter
     {
         match *self {
@@ -220,7 +207,6 @@ impl<'a, T> Writable for LazyArray<'a, T>
     where T: Readable<'a> + Writable,
           T::Args: Clone,
 {
-    #[inline]
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         match *self {

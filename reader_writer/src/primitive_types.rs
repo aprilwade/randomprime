@@ -18,14 +18,12 @@ macro_rules! define_arith_readable {
             impl<'a> Readable<'a> for $T
             {
                 type Args = ();
-                #[inline]
                 fn read(mut reader: Reader<'a>, (): ()) -> ($T, Reader<'a>)
                 {
                     let res = reader.$rf::<BigEndian>();
                     (res.unwrap(), reader)
                 }
 
-                #[inline]
                 fn fixed_size() -> Option<usize>
                 {
                     Some(mem::size_of::<$T>())
@@ -48,14 +46,12 @@ macro_rules! define_byte_readable {
             impl<'a> Readable<'a> for $T
             {
                 type Args = ();
-                #[inline]
                 fn read(mut reader: Reader<'a>, (): ()) -> ($T, Reader<'a>)
                 {
                     let res = reader.$rf();
                     (res.unwrap(), reader)
                 }
 
-                #[inline]
                 fn fixed_size() -> Option<usize>
                 {
                     Some(mem::size_of::<$T>())
@@ -86,7 +82,6 @@ pub struct FourCC([u8; 4]);
 
 impl FourCC
 {
-    #[inline]
     pub fn new(val: u32) -> FourCC
     {
         let mut data = [0u8; 4];
@@ -94,19 +89,16 @@ impl FourCC
         FourCC(data)
     }
 
-    #[inline]
     pub fn from_bytes(bytes: &[u8; 4]) -> FourCC
     {
         FourCC(*bytes)
     }
 
-    #[inline]
     pub fn as_bytes(&self) -> &[u8; 4]
     {
         &self.0
     }
 
-    #[inline]
     pub fn to_u32(&self) -> u32
     {
         (&self.0 as &[u8]).read_u32::<BigEndian>().unwrap()
@@ -116,7 +108,6 @@ impl FourCC
 impl<'a> Readable<'a> for FourCC
 {
     type Args = ();
-    #[inline]
     fn read(mut reader: Reader<'a>, (): ()) -> (FourCC, Reader<'a>)
     {
         // TODO: Verify ordering
@@ -125,7 +116,6 @@ impl<'a> Readable<'a> for FourCC
         (FourCC::from_bytes(&res), reader)
     }
 
-    #[inline]
     fn fixed_size() -> Option<usize>
     {
         Some(4)
@@ -171,7 +161,6 @@ impl<'a, T> Readable<'a> for Option<T>
     where T: Readable<'a>
 {
     type Args = Option<T::Args>;
-    #[inline]
     fn read(mut reader: Reader<'a>, args: Self::Args)
         -> (Option<T>, Reader<'a>)
     {
@@ -183,7 +172,6 @@ impl<'a, T> Readable<'a> for Option<T>
         }
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         self.as_ref().map(|i| i.size()).unwrap_or(0)
@@ -207,19 +195,16 @@ impl<'a, T> Readable<'a> for Box<T>
     where T: Readable<'a>
 {
     type Args = T::Args;
-    #[inline]
     fn read(mut reader: Reader<'a>, args: T::Args) -> (Box<T>, Reader<'a>)
     {
         (Box::new(reader.read(args)), reader)
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         <T as Readable>::size(&self)
     }
 
-    #[inline]
     fn fixed_size() -> Option<usize>
     {
         T::fixed_size()
@@ -239,13 +224,11 @@ impl<T> Writable for Box<T>
 impl<'a, T> Readable<'a> for PhantomData<T>
 {
     type Args = ();
-    #[inline]
     fn read(reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
     {
         (PhantomData, reader)
     }
 
-    #[inline]
     fn fixed_size() -> Option<usize>
     {
         Some(0)

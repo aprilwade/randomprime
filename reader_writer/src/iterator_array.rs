@@ -20,7 +20,6 @@ impl<'a, T, I> IteratorArray<'a, T, I>
     where T: Readable<'a>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    #[inline]
     pub fn len(&self) -> usize
     {
         match *self {
@@ -29,7 +28,6 @@ impl<'a, T, I> IteratorArray<'a, T, I>
         }
     }
 
-    #[inline]
     pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'a, T, I>
     {
         match *self {

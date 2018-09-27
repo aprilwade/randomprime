@@ -21,13 +21,11 @@ impl<'a, T> RoArray<'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    #[inline]
     pub fn len(&self) -> usize
     {
         self.length
     }
 
-    #[inline]
     pub fn iter(&self) -> RoArrayIter<'a, T>
     {
         RoArrayIter {
@@ -59,7 +57,6 @@ impl<'a, T> RoArray<'a, T>
         res
     }
 
-    #[inline]
     pub fn get(&self, at: usize) -> Option<T>
     {
         let fixed_size = T::fixed_size().expect(
@@ -71,7 +68,6 @@ impl<'a, T> RoArray<'a, T>
         }
     }
 
-    #[inline]
     pub fn data_start(&self) -> Reader<'a>
     {
         self.data_start.clone()
@@ -85,7 +81,6 @@ impl<'a, T> Readable<'a> for RoArray<'a, T>
     type Args = (usize, T::Args);
 
     // TODO: It would be cool to cache the size in the reader's length field.
-    #[inline]
     fn read(reader: Reader<'a>, (length, args): Self::Args) -> (Self, Reader<'a>)
     {
         let size = T::fixed_size()
@@ -106,7 +101,6 @@ impl<'a, T> Readable<'a> for RoArray<'a, T>
         (array, reader.offset(size))
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         self.data_start.len()
@@ -139,7 +133,6 @@ impl<'a, T> Iterator for RoArrayIter<'a, T>
           T::Args: Clone,
 {
     type Item = T;
-    #[inline]
     fn next(&mut self) -> Option<Self::Item>
     {
         if self.length == 0 {
@@ -150,7 +143,6 @@ impl<'a, T> Iterator for RoArrayIter<'a, T>
         }
     }
 
-    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>)
     {
         (self.length, Some(self.length))
@@ -161,7 +153,6 @@ impl<'a, T> ExactSizeIterator for RoArrayIter<'a, T>
     where T: Readable<'a>,
           T::Args: Clone,
 {
-    #[inline]
     fn len(&self) -> usize
     {
         self.length
@@ -173,7 +164,6 @@ impl<'a, T> Writable for RoArray<'a, T>
     where T: Readable<'a> + Writable,
           T::Args: Clone,
 {
-    #[inline]
     fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
     {
         // TODO: Could this be done more efficently by using the length component of

@@ -14,7 +14,6 @@ impl<'a, T, N> Readable<'a> for FixedArray<T, N>
     type Args = T::Args;
 
 
-    #[inline]
     fn read(mut reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>)
     {
         let array = {
@@ -24,7 +23,6 @@ impl<'a, T, N> Readable<'a> for FixedArray<T, N>
         (array, reader)
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         <Self as Readable>::fixed_size()
@@ -32,7 +30,6 @@ impl<'a, T, N> Readable<'a> for FixedArray<T, N>
     }
 
 
-    #[inline]
     fn fixed_size() -> Option<usize>
     {
         T::fixed_size().map(|i| i * N::to_usize())

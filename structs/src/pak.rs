@@ -83,7 +83,6 @@ pub struct ResourceSourceCursor<'a>
 impl<'a> AsDiffListSourceCursor for ResourceSource<'a>
 {
     type Cursor = ResourceSourceCursor<'a>;
-    #[inline]
     fn as_cursor(&self) -> Self::Cursor
     {
         ResourceSourceCursor {
@@ -93,7 +92,6 @@ impl<'a> AsDiffListSourceCursor for ResourceSource<'a>
         }
     }
 
-    #[inline]
     fn len(&self) -> usize
     {
         self.1.len()
@@ -104,7 +102,6 @@ impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
 {
     type Item = Resource<'a>;
     type Source = ResourceSource<'a>;
-    #[inline]
     fn next(&mut self) -> bool
     {
         if self.index == self.info_array.len() - 1 {
@@ -115,14 +112,12 @@ impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
         }
     }
 
-    #[inline]
     fn get(&self) -> Self::Item
     {
         let info = self.info_array.get(self.index).unwrap();
         self.pak_start.offset(info.offset as usize).read(info.clone())
     }
 
-    #[inline]
     fn split(mut self) -> (Option<Self::Source>, Self::Source)
     {
         let pak_start = self.pak_start;
@@ -135,7 +130,6 @@ impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
         }
    }
 
-    #[inline]
     fn split_around(mut self) -> (Option<Self::Source>, Self::Item, Option<Self::Source>)
     {
         let item = self.get();
@@ -168,7 +162,6 @@ impl<'a, 'list> Readable<'a> for ResourceInfoProxy<'a, 'list>
         panic!("This proxy shouldn't be read.")
     }
 
-    #[inline]
     fn size(&self) -> usize
     {
         ResourceInfo::fixed_size().unwrap() * self.0.len()
