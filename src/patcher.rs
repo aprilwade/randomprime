@@ -181,8 +181,8 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
         property_data: structs::SclyProperty::SpecialFunction(
             structs::SpecialFunction {
                 name: b"Artifact Layer Switch\0".as_cstr(),
-                position: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
-                rotation: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                position: [0., 0., 0.].into(),
+                rotation: [0., 0., 0.].into(),
                 type_: 16,
                 // TODO Working around a compiler bug. Switch this back to being checked later.
                 unknown0: b"\0".as_cstr(),
@@ -603,17 +603,17 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
     *pickup = structs::Pickup {
-        position: *GenericArray::from_slice(&[
+        position: [
             original_pickup.position[0] - (new_center[0] - original_center[0]),
             original_pickup.position[1] - (new_center[1] - original_center[1]),
             original_pickup.position[2] - (new_center[2] - original_center[2]),
-        ]),
+        ].into(),
         hitbox: original_pickup.hitbox,
-        scan_offset: *GenericArray::from_slice(&[
+        scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
             original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
-        ]),
+        ].into(),
 
         fade_in_timer: original_pickup.fade_in_timer,
         unknown: original_pickup.unknown,
@@ -956,8 +956,8 @@ fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a
         instance_id: 0xDEEFFFFE,
         property_data: structs::SclyProperty:: SpecialFunction(structs::SpecialFunction {
                 name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
-                position: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
-                rotation: GenericArray::map_slice(&[0., 0., 0.], Clone::clone),
+                position: [0., 0., 0.].into(),
+                rotation: [0., 0., 0.].into(),
                 type_: 16,
                 unknown0: b"\0".as_cstr(),
                 unknown1: 0.0,
@@ -988,27 +988,15 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc
         instance_id: 0xDEEFFFFD,
         property_data: structs::SclyProperty::Trigger(structs::Trigger {
                 name: b"Trigger_DoorOpen-component\0".as_cstr(),
-                position: *GenericArray::from_slice(&[
-                    31.232622,
-                    442.69165,
-                    -64.20529
-                ]),
-                scale: *GenericArray::from_slice(&[
-                    6.0,
-                    17.0,
-                    6.0
-                ]),
+                position: [31.232622, 442.69165, -64.20529].into(),
+                scale: [6.0, 17.0, 6.0].into(),
                 damage_info: structs::structs::DamageInfo {
                     weapon_type: 0,
                     damage: 0.0,
                     radius: 0.0,
                     knockback_power: 0.0
                 },
-                unknown0: *GenericArray::from_slice(&[
-                    0.0,
-                    0.0,
-                    0.0
-                ]),
+                unknown0: [0.0, 0.0, 0.0].into(),
                 unknown1: 1,
                 active: 1,
                 unknown2: 0,
