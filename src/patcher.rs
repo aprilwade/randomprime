@@ -18,7 +18,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::iter;
 use std::ops::RangeFrom;
 
@@ -1302,6 +1302,17 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 {
     pickup_meta::setup_pickup_meta_table();
 
+    let mut ct = Vec::new();
+    writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION"));
+    writeln!(ct, "").unwrap();
+    writeln!(ct, "Options used:").unwrap();
+    writeln!(ct, "configuration string: {}", config.layout_string).unwrap();
+    writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
+    writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
+    writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
+    writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
+    writeln!(ct, "{}", config.comment).unwrap();
+
     let mut reader = Reader::new(unsafe { config.input_iso.as_slice() });
 
     let mut gc_disc: structs::GcDisc = reader.read(());
@@ -1370,6 +1381,11 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
     patch_research_lab_aether_exploding_wall(&mut gc_disc);
+
+    gc_disc.file_system_table.add_file(
+        b"randomprime.txt\0".as_cstr(),
+        structs::FstEntryFile::Unknown(Reader::new(&ct)),
+    );
 
     match config.iso_format {
         IsoFormat::Iso => {
