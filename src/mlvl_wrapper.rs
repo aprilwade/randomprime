@@ -24,7 +24,7 @@ impl<'a> MlvlEditor<'a>
 {
     pub fn new(mlvl: Mlvl<'a>) -> MlvlEditor<'a>
     {
-        MlvlEditor { mlvl: mlvl }
+        MlvlEditor { mlvl }
     }
 
     pub fn get_area<'s, 'cursor, 'list: 'cursor>(
@@ -40,7 +40,7 @@ impl<'a> MlvlEditor<'a>
             .find(|&(_, ref a)| a.mrea == file_id)
             .unwrap();
         MlvlArea {
-            mrea_cursor: mrea_cursor,
+            mrea_cursor,
             mlvl_area: area,
             layer_flags: self.mlvl.area_layer_flags.as_mut_vec().get_mut(i).unwrap(),
             layer_names: self.mlvl.area_layer_names.mut_names_for_area(i).unwrap(),

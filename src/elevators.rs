@@ -55,7 +55,7 @@ impl SpawnRoom
     }
 }
 
-pub const ELEVATORS: &'static [Elevator] = &[
+pub const ELEVATORS: &[Elevator] = &[
     Elevator {
         pak_name: "Metroid2.pak",
         name: "Chozo Ruins West",// "Transport to Tallon Overworld North",

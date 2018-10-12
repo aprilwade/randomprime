@@ -127,7 +127,7 @@ pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, chec
     // The upper `checksum_size` bits are a checksum, so seperate them from the sum.
     let checksum_bitmask = (1u8 << checksum_size) - 1;
     let checksum = sum.clone() & (BigUint::from(checksum_bitmask) << layout_data_size);
-    sum = sum - checksum.clone();
+    sum -= checksum.clone();
     let checksum = (checksum >> layout_data_size).to_u8().unwrap();
 
     let mut computed_checksum = 0;
@@ -136,7 +136,7 @@ pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, chec
         while sum > 0u8.into() {
             let remainder = (sum.clone() & BigUint::from(checksum_bitmask)).to_u8().unwrap();
             computed_checksum = (computed_checksum + remainder) & checksum_bitmask;
-            sum = sum >> checksum_size;
+            sum >>= checksum_size;
         }
     }
     if checksum != computed_checksum {

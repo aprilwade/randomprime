@@ -14,7 +14,7 @@ pub struct PickupMeta
     pub attainment_audio_file_name: &'static str,
 }
 
-static mut _PICKUP_META: &'static [PickupMeta] = &[];
+static mut _PICKUP_META: &[PickupMeta] = &[];
 
 /// Leaks the memory held by a Vec and returns a static lifetime slice with that
 /// data.
@@ -36,7 +36,7 @@ pub fn setup_pickup_meta_table()
                 pickup: Reader::new(meta.pickup).read(()),
                 deps: leak_vec(meta.deps.iter().map(|&(fid, ref b)| (fid, b.into())).collect()),
                 hudmemo_strg: meta.hudmemo_strg,
-                skip_hudmemos_strg: skip_hudmemos_strg,
+                skip_hudmemos_strg,
                 attainment_audio_file_name: meta.attainment_audio_file_name,
             }
         })
@@ -81,7 +81,7 @@ pub struct ScriptObjectLocation
     pub instance_id: u32,
 }
 
-const EXTRA_ASSETS: &'static [(u32, [u8; 4], &'static [u8])] = &[
+const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
     // Phazon Suit SCAN
     (asset_ids::PHAZON_SUIT_SCAN, *b"SCAN",
      include_bytes!("../extra_assets/phazon_suit_scan.scan")),
@@ -113,8 +113,8 @@ pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
 {
     Resource {
         compressed: false,
-        file_id: file_id,
-        kind: kind,
+        file_id,
+        kind,
     }
 }
 
@@ -123,8 +123,8 @@ pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
 {
     Resource {
         compressed: false,
-        file_id: file_id,
-        kind: kind,
+        file_id,
+        kind,
         original_offset: 0,
     }
 }

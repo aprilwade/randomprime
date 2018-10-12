@@ -113,9 +113,9 @@ impl<W: Write + Seek> Drop for CisoWriter<W>
 
             // Write header (We can use Writable because of big-endianness)
             self.file.seek(io::SeekFrom::Start(0))?;
-            self.file.write(b"CISO")?;
+            self.file.write_all(b"CISO")?;
             self.file.write_u32::<LittleEndian>(BLOCK_SIZE)?;
-            self.file.write(&self.blocks_map[..])?;
+            self.file.write_all(&self.blocks_map[..])?;
             Ok(())
         }();
         // We really don't want to panic from a destructor, so just write a warning instead

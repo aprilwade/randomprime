@@ -13,7 +13,6 @@ use preferences::{AppInfo, PreferencesMap, Preferences};
 use randomprime::{parse_layout, patcher, pickup_meta, reader_writer, structs};
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
@@ -35,7 +34,7 @@ impl ProgressNotifier
         ProgressNotifier {
             total_size: 0,
             bytes_so_far: 0,
-            quiet: quiet,
+            quiet,
         }
     }
 }
@@ -111,7 +110,7 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
 
             match res {
                 // XXX: Do I really want stderr?
-                Err(s) => writeln!(io::stderr(), "{} {}", Format::Error("error:"), s).unwrap(),
+                Err(s) => eprintln!("{} {}", Format::Error("error:"), s),
                 Ok(ret) => return Ok(ret),
             };
 
@@ -124,11 +123,11 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
     };
 
     let prefs_key = "mp1";
-    let mut prefs = PreferencesMap::<String>::load(&APP_INFO, prefs_key).unwrap_or(HashMap::new());
+    let mut prefs = PreferencesMap::<String>::load(&APP_INFO, prefs_key).unwrap_or_default();
 
     println!("Metroid Prime Randomizer ISO Patcher");
     println!("Version {}", crate_version!());
-    println!("");
+    println!();
     println!("Interactive mode");
     println!("I need to collect some information from you before I can modify your ISO.");
     println!("If you want more information about any given option, you may enter a ?.");
@@ -445,7 +444,7 @@ fn main()
     // user-friendly one
     if !cfg!(debug_assertions) {
         panic::set_hook(Box::new(|_| {
-            let _ = writeln!(io::stderr(), "{} \
+            let _ = eprintln!("{} \
 An error occurred while parsing the input ISO. \
 This most likely means your ISO is corrupt. \
 Please verify that your ISO matches one of the following hashes:
@@ -459,9 +458,9 @@ SHA1: ac20c744db18fdf0339f37945e880708fd317231
 
     pickup_meta::setup_pickup_meta_table();
 
-    let _ = match main_inner() {
-        Err(s) => writeln!(io::stderr(), "{} {}", Format::Error("error:"), s),
-        Ok(()) => Ok(()),
+    match main_inner() {
+        Err(s) => eprintln!("{} {}", Format::Error("error:"), s),
+        Ok(()) => (),
     };
 
     maybe_pause_at_exit();

@@ -22,7 +22,7 @@ use std::io::{self, Read, Write};
 use std::iter;
 use std::ops::RangeFrom;
 
-const METROID_PAK_NAMES: [&'static str; 5] = [
+const METROID_PAK_NAMES: [&str; 5] = [
     "Metroid2.pak",
     "Metroid3.pak",
     "Metroid4.pak",
@@ -40,7 +40,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     -> HashMap<(u32, FourCC), structs::Resource<'a>>
 {
     let mut looking_for: HashSet<_> = pickup_meta::pickup_meta_table().iter()
-        .flat_map(|meta| meta.deps.iter().map(|key| *key))
+        .flat_map(|meta| meta.deps.iter().cloned())
         .chain(pickup_meta::pickup_meta_table().iter().map(|m| (m.hudmemo_strg, b"STRG".into())))
         .collect();
 
@@ -52,7 +52,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         assert!(found.insert((res.file_id, res.fourcc()), res.clone()).is_none());
     }
 
-    for pak_name in METROID_PAK_NAMES.iter() {
+    for pak_name in &METROID_PAK_NAMES {
         let file_entry = gc_disc.find_file(pak_name);
         let pak = match *file_entry.file().unwrap() {
             structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
@@ -176,7 +176,7 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
         ARTIFACT_OF_TRUTH_REQ_LAYER
     };
     structs::SclyObject {
-        instance_id: instance_id,
+        instance_id,
         connections: vec![].into(),
         property_data: structs::SclyProperty::SpecialFunction(
             structs::SpecialFunction {
@@ -206,7 +206,7 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
     -> structs::SclyObject<'a>
 {
     structs::SclyObject {
-        instance_id: instance_id,
+        instance_id,
         connections: connections.to_owned().into(),
         property_data: structs::SclyProperty::Relay(structs::Relay {
             name: b"Randomizer Post Pickup Relay\0".as_cstr(),
@@ -265,7 +265,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
         // Artifact Temple
         (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
-    for rt in specific_room_templates.iter_mut() {
+    for rt in &mut specific_room_templates {
         rng.shuffle(&mut rt.1);
     }
 
@@ -355,7 +355,7 @@ fn modify_pickups<R: Rng + Rand>(
 
 // TODO: It might be nice for this list to be generataed by resource_tracing, but
 //       the sorting is probably non-trivial.
-const ARTIFACT_TOTEM_SCAN_STRGS: &'static [u32] = &[
+const ARTIFACT_TOTEM_SCAN_STRGS: &[u32] = &[
     0x61729798,// Lifegiver
     0xAA2E443D,// Wild
     0x8E9C7387,// World
@@ -467,7 +467,7 @@ fn make_obfuscated_pickup_meta<'a>(meta: &'a pickup_meta::PickupMeta, obfuscate:
 
         LCow::Owned(pickup_meta::PickupMeta {
             name: meta.name,
-            pickup: pickup,
+            pickup,
             deps: nothing_meta.deps,
             hudmemo_strg: meta.hudmemo_strg,
             skip_hudmemos_strg: meta.skip_hudmemos_strg,
@@ -675,7 +675,7 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     }
 
     for i in 0..3 {
-        let original = coordinate.clone();
+        let original = coordinate;
         let x = (i + 1) % 3;
         let y = (i + 2) % 3;
         coordinate[x] = original[x] * rotation[i].cos() - original[y] * rotation[i].sin();
@@ -924,7 +924,7 @@ fn patch_research_lab_hydra_barrier<'a>(gc_disc: &mut structs::GcDisc<'a>)
     let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0x43e4cc25);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
-    let ref mut layer = scly.layers.as_mut_vec()[3];
+    let layer = &mut scly.layers.as_mut_vec()[3];
 
     let obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 202965810)
@@ -939,13 +939,13 @@ fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a
     let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0xA49B2544);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
-    let ref mut layer = scly.layers.as_mut_vec()[0];
+    let layer = &mut scly.layers.as_mut_vec()[0];
 
     {
         let obj = layer.objects.as_mut_vec().iter_mut()
             .find(|obj| obj.instance_id == 2622568)
             .unwrap();
-        obj.connections.as_mut_vec().push( structs::Connection {
+        obj.connections.as_mut_vec().push(structs::Connection {
             state: 9,
             message: 5,
             target_object_id: 0xDEEFFFFE,
@@ -1001,7 +1001,7 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc
     let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
-    let ref mut layer = scly.layers.as_mut_vec()[0];
+    let layer = &mut scly.layers.as_mut_vec()[0];
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: 0xDEEFFFFD,
@@ -1058,7 +1058,7 @@ fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: Spa
 
             let mut fetch_bits = move |bits: u8| {
                 let ret = starting_items & ((1 << bits) - 1);
-                starting_items = starting_items >> bits;
+                starting_items >>= bits;
                 ret as u32
             };
 
@@ -1175,8 +1175,8 @@ fn patch_dol<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom, versi
 
     let dol = gc_disc.find_file_mut("default.dol");
     let file = dol.file_mut().unwrap();
-    let reader = match file {
-        &mut structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
+    let reader = match *file {
+        structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
         _ => panic!(),
     };
 
@@ -1197,7 +1197,7 @@ fn patch_dol<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom, versi
 }
 
 
-const FMV_NAMES: &'static [&'static [u8]] = &[
+const FMV_NAMES: &[&[u8]] = &[
     b"attract0.thp",
     b"attract1.thp",
     b"attract2.thp",
@@ -1211,7 +1211,7 @@ const FMV_NAMES: &'static [&'static [u8]] = &[
 ];
 fn replace_fmvs(gc_disc: &mut structs::GcDisc)
 {
-    const FMV: &'static [u8] = include_bytes!("../extra_assets/attract_mode.thp");
+    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
     let fst = &mut gc_disc.file_system_table;
     let fmv_entries = fst.fst_entries.iter_mut()
         .filter(|e| FMV_NAMES.contains(&e.name.to_bytes()));
@@ -1323,7 +1323,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
     let mut ct = Vec::new();
     writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION"));
-    writeln!(ct, "").unwrap();
+    writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "configuration string: {}", config.layout_string).unwrap();
     writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
