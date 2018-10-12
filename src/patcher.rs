@@ -977,6 +977,25 @@ fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a
     });
 }
 
+fn patch_observatory_2nd_pass_solvablility<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0x3FB4A34E);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[2];
+
+    let iter = layer.objects.as_mut_vec().iter_mut()
+        .filter(|obj| obj.instance_id == 0x81E0460 || obj.instance_id == 0x81E0461);
+    for obj in iter {
+        obj.connections.as_mut_vec().push(structs::Connection {
+            state: 20,
+            message: 7,
+            target_object_id: 0x1E02EA,// Counter - dead pirates active panel
+        });
+    }
+
+}
+
 fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
     let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
@@ -1381,6 +1400,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
     patch_research_lab_hydra_barrier(&mut gc_disc);
     patch_research_lab_aether_exploding_wall(&mut gc_disc);
+    patch_observatory_2nd_pass_solvablility(&mut gc_disc);
 
     gc_disc.file_system_table.add_file(
         b"randomprime.txt\0".as_cstr(),
