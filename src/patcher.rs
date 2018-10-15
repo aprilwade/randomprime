@@ -31,6 +31,7 @@ const METROID_PAK_NAMES: [&str; 5] = [
 ];
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
+const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 
 
 // When changing a pickup, we need to give the room a copy of the resources/
@@ -520,8 +521,11 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
 
         // Add our custom STRG
         let hudmemo_dep = structs::Dependency {
-            asset_id: if skip_hudmenus { pickup_meta.skip_hudmemos_strg }
-                                  else { pickup_meta.hudmemo_strg },
+            asset_id: if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+                    pickup_meta.skip_hudmemos_strg
+                } else {
+                    pickup_meta.hudmemo_strg
+                },
             asset_type: b"STRG".into(),
         };
         let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
@@ -632,7 +636,6 @@ fn update_hudmemo(
     // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
     // (Artifact of Truth) should always have modal hudmenus to because a cutscene plays
     // immediately after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
-    const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         hudmemo.first_message_timer = 5.;
