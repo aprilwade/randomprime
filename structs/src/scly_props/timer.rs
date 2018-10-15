@@ -22,8 +22,5 @@ auto_struct! {
 
 impl<'a> SclyPropertyData for Timer<'a>
 {
-    fn object_type() -> u8
-    {
-        0x5
-    }
+    const OBJECT_TYPE: u8 = 0x5;
 }

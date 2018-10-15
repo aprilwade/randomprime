@@ -22,8 +22,5 @@ auto_struct! {
 
 impl<'a> SclyPropertyData for HudMemo<'a>
 {
-    fn object_type() -> u8
-    {
-        0x17
-    }
+    const OBJECT_TYPE: u8 = 0x17;
 }

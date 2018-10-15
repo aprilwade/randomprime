@@ -43,8 +43,5 @@ auto_struct! {
 
 impl<'a> SclyPropertyData for Pickup<'a>
 {
-    fn object_type() -> u8
-    {
-        0x11
-    }
+    const OBJECT_TYPE: u8 = 0x11;
 }

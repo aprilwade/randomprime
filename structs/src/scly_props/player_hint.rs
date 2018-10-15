@@ -40,8 +40,5 @@ auto_struct! {
 
 impl<'a> SclyPropertyData for PlayerHint<'a>
 {
-    fn object_type() -> u8
-    {
-        0x3E
-    }
+    const OBJECT_TYPE: u8 = 0x3E;
 }

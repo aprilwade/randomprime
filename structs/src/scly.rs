@@ -97,7 +97,7 @@ macro_rules! build_scly_property {
                 match *self {
                     SclyProperty::Unknown { object_type, .. } => object_type,
                     $(SclyProperty::$name(_) =>
-                      <scly_props::$name as SclyPropertyData>::object_type(),)*
+                      <scly_props::$name as SclyPropertyData>::OBJECT_TYPE,)*
                 }
             }
 
@@ -110,7 +110,7 @@ macro_rules! build_scly_property {
                 };
                 *self = if false {
                     return
-                } $(else if object_type == <scly_props::$name as SclyPropertyData>::object_type() {
+                } $(else if object_type == <scly_props::$name as SclyPropertyData>::OBJECT_TYPE {
                     SclyProperty::$name(reader.read(()))
                 })* else {
                     return
@@ -123,7 +123,7 @@ macro_rules! build_scly_property {
                     match *self {
                         SclyProperty::$name(_) => true,
                         SclyProperty::Unknown { object_type, .. } =>
-                            object_type == <scly_props::$name as SclyPropertyData>::object_type(),
+                            object_type == <scly_props::$name as SclyPropertyData>::OBJECT_TYPE,
                         _ => false,
                     }
                 }
@@ -133,7 +133,7 @@ macro_rules! build_scly_property {
                     match *self {
                         SclyProperty::$name(ref inst) => Some(Cow::Borrowed(inst)),
                         SclyProperty::Unknown { ref data, object_type, .. } => {
-                            if object_type == <scly_props::$name as SclyPropertyData>::object_type() {
+                            if object_type == <scly_props::$name as SclyPropertyData>::OBJECT_TYPE {
                                 Some(Cow::Owned(data.clone().read(())))
                             } else {
                                 None
@@ -151,7 +151,7 @@ macro_rules! build_scly_property {
                         SclyProperty::$name(ref mut inst) => return Some(inst),
                         _ => return None,
                     };
-                    if object_type != <scly_props::$name as SclyPropertyData>::object_type() {
+                    if object_type != <scly_props::$name as SclyPropertyData>::OBJECT_TYPE {
                         return None
                     }
                     *self = SclyProperty::$name(data.read(()));
@@ -221,7 +221,7 @@ build_scly_property!(
 
 pub trait SclyPropertyData
 {
-    fn object_type() -> u8;
+    const OBJECT_TYPE: u8;
 }
 
 
