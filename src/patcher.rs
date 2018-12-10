@@ -623,7 +623,7 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
         ].into(),
 
         fade_in_timer: original_pickup.fade_in_timer,
-        unknown: original_pickup.unknown,
+        spawn_delay: original_pickup.spawn_delay,
         active: original_pickup.active,
 
         ..(pickup_meta.pickup.clone())

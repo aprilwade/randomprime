@@ -36,7 +36,7 @@ auto_struct! {
         actor_params: ActorParameters,
 
         active: u8,
-        unknown: f32,
+        spawn_delay: f32,
         part: u32,
     }
 }
