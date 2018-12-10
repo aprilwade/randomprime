@@ -1052,6 +1052,28 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(
     });
 }
 
+fn patch_mines_security_station_soft_lock<'a>(gc_disc: &mut structs::GcDisc<'a>)
+{
+    let res = gc_disc.find_resource_mut("metroid5.pak", |res| res.file_id == 0x956f1552);
+    let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
+    let scly = mrea.scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    // Disable the the trigger when all the pirates are killed
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 460074)
+        .unwrap();
+    obj.connections.as_mut_vec().push(structs::Connection {
+            state: 7,
+            message: 4,
+            target_object_id: 67568447,
+        });
+    // TODO: Trigger a MemoryRelay too
+
+    // TODO: Instead of the above, when you pass through a trigger near the "other" door, disable
+    // the all of triggers related to the cutscenes in the room.
+}
+
 
 fn patch_starting_pickups<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom,
                               mut starting_items: u64, debug_print: bool)
@@ -1430,6 +1452,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_research_lab_hydra_barrier(&mut gc_disc);
     patch_research_lab_aether_exploding_wall(&mut gc_disc, &mut fresh_instance_id_range);
     patch_observatory_2nd_pass_solvablility(&mut gc_disc);
+    patch_mines_security_station_soft_lock(&mut gc_disc);
 
     gc_disc.file_system_table.add_file(
         b"randomprime.txt\0".as_cstr(),
