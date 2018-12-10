@@ -317,6 +317,7 @@ fn modify_pickups<R: Rng + Rand>(
     gc_disc: &mut structs::GcDisc,
     pickup_layout: &[u8],
     mut rng: R,
+    fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
     obfuscate_items: bool,
 ) {
@@ -331,8 +332,6 @@ fn modify_pickups<R: Rng + Rand>(
         .map(|n| *n as usize)
         .enumerate();
 
-    let mut fresh_instance_id_range = 0xDEEF0000..;
-
     for (i, pak_name) in METROID_PAK_NAMES.iter().enumerate() {
         let file_entry = gc_disc.find_file_mut(pak_name);
         file_entry.guess_kind();
@@ -345,9 +344,10 @@ fn modify_pickups<R: Rng + Rand>(
             pak,
             pickup_meta::PICKUP_LOCATIONS[i].iter(),
             &pickup_resources,
+            pickup_layout,
             layout_iter.by_ref(),
             &artifact_totem_strings,
-            &mut fresh_instance_id_range,
+            fresh_instance_id_range,
             skip_hudmenus,
             obfuscate_items,
         );
@@ -375,6 +375,7 @@ fn modify_pickups_in_pak<'a, I, J>(
     pak: &mut structs::Pak<'a>,
     room_list_iter: I,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
+    pickup_layout: &[u8],
     layout_iter: &mut J,
     artifact_totem_strings: &[String; 12],
     fresh_instance_id_range: &mut RangeFrom<u32>,
@@ -437,6 +438,7 @@ fn modify_pickups_in_pak<'a, I, J>(
                             area,
                             room_info,
                             pickup_resources,
+                            pickup_layout,
                             layout_iter,
                             fresh_instance_id_range,
                             skip_hudmenus,
@@ -481,6 +483,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
     mut area: mlvl_wrapper::MlvlArea<'a, 'mlvl, 'cursor, 'list>,
     room_info: pickup_meta::RoomInfo,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
+    pickup_layout: &[u8],
     layout_iter: &mut I,
     fresh_instance_id_range: &mut RangeFrom<u32>,
     skip_hudmenus: bool,
@@ -534,7 +537,7 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
         if area.mrea_file_id() == asset_ids::ARTIFACT_TEMPLE_MREA {
             // If this room is the Artifact Temple, patch it.
             assert_eq!(room_info.pickup_locations.len(), 1, "Sanity check");
-            fix_artifact_of_truth_requirement(&mut area, pickup_meta.pickup.kind,
+            fix_artifact_of_truth_requirements(&mut area, pickup_layout,
                                                 fresh_instance_id_range);
         }
 
@@ -814,13 +817,9 @@ fn patch_frigate_teleporter<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: S
     wt.mrea = spawn_room.mrea;
 }
 
-// Patches the current room to make the Artifact of Truth required to complete
-// the game. This logic is based on the observed behavior of Claris's randomizer.
-// XXX I still don't entirely understand why there needs to be a special case
-//     if an artifact is placed in this room.
-fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
-                                     pickup_kind: u32,
-                                     fresh_instance_id_range: &mut RangeFrom<u32>)
+fn fix_artifact_of_truth_requirements(area: &mut mlvl_wrapper::MlvlArea,
+                                      pickup_layout: &[u8],
+                                      fresh_instance_id_range: &mut RangeFrom<u32>)
 {
     let truth_req_layer_id = area.layer_flags.layer_count;
     assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
@@ -828,22 +827,34 @@ fn fix_artifact_of_truth_requirement(area: &mut mlvl_wrapper::MlvlArea,
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
     area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
 
-    // TODO: Manually verify the correct layers are being toggled
-    if pickup_kind != 29 {
-        // If the item in the Artifact Temple isn't the artifact of truth, mark
-        // the new layer inactive. Note, the layer is active when created.
-        area.layer_flags.flags &= !(1 << truth_req_layer_id);
+    let pmt = pickup_meta::pickup_meta_table();
+
+    let at_pickup_kind = pmt[pickup_layout[7] as usize].pickup.kind;
+    for i in 0..12 {
+        let layer_number = if i == 0 {
+            truth_req_layer_id
+        } else {
+            i + 1
+        };
+        let exists = pickup_layout.iter()
+            .any(|meta_idx| i + 29 == pmt[*meta_idx as usize].pickup.kind);
+        if exists && at_pickup_kind != 29 + i {
+            // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
+            // layer as inactive. It will be activated when the item is collected.
+            area.layer_flags.flags &= !(1 << layer_number);
+        } else {
+            // Either the artifact doesn't exist or it does and it is in the Artifact Temple, so
+            // mark this layer as active. In the former case, it needs to always be active since it
+            // will never be collect and in the latter case it needs to be active so the Ridley
+            // fight can start immediately if its the last artifact collected.
+            area.layer_flags.flags |= 1 << layer_number;
+        }
     }
-    if pickup_kind >= 30 && pickup_kind <= 40 {
-        // If the item in the Artfact Temple is an artifact (other than Truth)
-        // mark its layer as active.
-        area.layer_flags.flags |= 1 << (pickup_kind - 28);
-    }
-    // TODO: Re-randomizing: the other Got Artifact layers need to be marked inactive
 
     let scly = area.mrea().scly_section_mut();
 
-    // A relay is created and connected to "Relay Show Progress 1"
+    // A relay on the new layer is created and connected to "Relay Show Progress 1"
+    let hd_id = fresh_instance_id_range.next().unwrap();
     let new_relay_instance_id = fresh_instance_id_range.next().unwrap();
     let new_relay = structs::SclyObject {
         instance_id: new_relay_instance_id,
@@ -936,7 +947,10 @@ fn patch_research_lab_hydra_barrier<'a>(gc_disc: &mut structs::GcDisc<'a>)
     actor.actor_params.visor_params.target_passthrough = 1;
 }
 
-fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a>)
+fn patch_research_lab_aether_exploding_wall<'a>(
+    gc_disc: &mut structs::GcDisc<'a>,
+    fresh_instance_id_range: &mut RangeFrom<u32>,
+)
 {
     // The room we're actually patching is Research Core..
     let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0xA49B2544);
@@ -944,6 +958,7 @@ fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a
     let scly = mrea.scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
 
+    let id = fresh_instance_id_range.next().unwrap();
     {
         let obj = layer.objects.as_mut_vec().iter_mut()
             .find(|obj| obj.instance_id == 2622568)
@@ -951,12 +966,12 @@ fn patch_research_lab_aether_exploding_wall<'a>(gc_disc: &mut structs::GcDisc<'a
         obj.connections.as_mut_vec().push(structs::Connection {
             state: 9,
             message: 5,
-            target_object_id: 0xDEEFFFFE,
+            target_object_id: id,
         });
     }
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: 0xDEEFFFFE,
+        instance_id: id,
         property_data: structs::SclyProperty:: SpecialFunction(structs::SpecialFunction {
                 name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
                 position: [0., 0., 0.].into(),
@@ -999,7 +1014,10 @@ fn patch_observatory_2nd_pass_solvablility<'a>(gc_disc: &mut structs::GcDisc<'a>
 
 }
 
-fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc<'a>)
+fn patch_main_ventilation_shaft_section_b_door<'a>(
+    gc_disc: &mut structs::GcDisc<'a>,
+    fresh_instance_id_range: &mut RangeFrom<u32>,
+)
 {
     let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xAFD4E038);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
@@ -1007,7 +1025,7 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(gc_disc: &mut structs::GcDisc
     let layer = &mut scly.layers.as_mut_vec()[0];
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: 0xDEEFFFFD,
+        instance_id: fresh_instance_id_range.next().unwrap(),
         property_data: structs::SclyProperty::Trigger(structs::Trigger {
                 name: b"Trigger_DoorOpen-component\0".as_cstr(),
                 position: [31.232622, 442.69165, -64.20529].into(),
@@ -1356,8 +1374,16 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_bnr(&mut gc_disc, &config)?;
 
     let rng = ChaChaRng::from_seed(&config.seed);
-    modify_pickups(&mut gc_disc, &config.pickup_layout, rng, config.skip_hudmenus,
-                   config.obfuscate_items);
+    let mut fresh_instance_id_range = 0xDEEF0000..;
+
+    modify_pickups(
+        &mut gc_disc,
+        &config.pickup_layout,
+        rng,
+        &mut fresh_instance_id_range,
+        config.skip_hudmenus,
+        config.obfuscate_items
+    );
 
     if config.elevator_layout[20] != 20 {
         // If we have a non-default start point, patch the landing site to avoid
@@ -1400,9 +1426,9 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     patch_temple_security_station_cutscene_trigger(&mut gc_disc);
     patch_elite_research_fight_prereq(&mut gc_disc);
     patch_elevators(&mut gc_disc, &config.elevator_layout);
-    patch_main_ventilation_shaft_section_b_door(&mut gc_disc);
+    patch_main_ventilation_shaft_section_b_door(&mut gc_disc, &mut fresh_instance_id_range);
     patch_research_lab_hydra_barrier(&mut gc_disc);
-    patch_research_lab_aether_exploding_wall(&mut gc_disc);
+    patch_research_lab_aether_exploding_wall(&mut gc_disc, &mut fresh_instance_id_range);
     patch_observatory_2nd_pass_solvablility(&mut gc_disc);
 
     gc_disc.file_system_table.add_file(
