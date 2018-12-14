@@ -29,6 +29,10 @@ fn leak_vec<T>(vec: Vec<T>) -> &'static [T]
 /// This must be called before pickup_meta can be used.
 pub fn setup_pickup_meta_table()
 {
+    if unsafe { _PICKUP_META.len() } > 0 {
+        return;
+    }
+
     let vec = PICKUP_RAW_META.iter()
         .zip(asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
         .map(|(meta, skip_hudmemos_strg)| {
