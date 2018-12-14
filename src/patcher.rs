@@ -190,14 +190,14 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
                 unknown1: 0.,
                 unknown2: 0.,
                 unknown3: 0.,
-                layer_change_room_id: 3442151074,
+                layer_change_room_id: 0xCD2B0EA2,
                 layer_change_layer_id: layer,
                 item_id: 0,
                 unknown4: 1,
                 unknown5: 0.,
-                unknown6: 4294967295,
-                unknown7: 4294967295,
-                unknown8: 4294967295
+                unknown6: 0xFFFFFFFF,
+                unknown7: 0xFFFFFFFF,
+                unknown8: 0xFFFFFFFF,
             }
         ),
     }
@@ -746,21 +746,23 @@ fn patch_elevators<'a>(gc_disc: &mut structs::GcDisc<'a>, layout: &[u8])
     }
 }
 
-fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
+fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>,
+                                            fresh_instance_id_range: &mut RangeFrom<u32>)
 {
     // XXX I'd like to do this some other way than inserting a timer to trigger
     //     the memory relay, but I couldn't figure out how to make the memory
     //     relay default to on/enabled.
-    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xb2701146);
+    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xB2701146);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let layer = scly.layers.iter_mut().next().unwrap();
+    let timer_id = fresh_instance_id_range.next().unwrap();
     for obj in layer.objects.iter_mut() {
         if obj.instance_id == 427 {
             obj.connections.as_mut_vec().push(structs::Connection {
                 state: 0,
                 message: 4,
-                target_object_id: 0xDEEFFFFF,
+                target_object_id: timer_id,
             });
         }
         if obj.instance_id == 221 {
@@ -768,7 +770,7 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
         }
     }
     layer.objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: 0xDEEFFFFF,
+        instance_id: timer_id,
         property_data: structs::SclyProperty::Timer(structs::Timer {
             name: b"Cutscene fixup timer\0".as_cstr(),
 
@@ -805,7 +807,7 @@ fn patch_landing_site_cutscene_triggers<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 fn patch_frigate_teleporter<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom)
 {
-    let res = gc_disc.find_resource_mut("Metroid1.pak", |res| res.file_id == 0xd1241219);
+    let res = gc_disc.find_resource_mut("Metroid1.pak", |res| res.file_id == 0xD1241219);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let wt = scly.layers.iter_mut()
@@ -886,7 +888,7 @@ fn fix_artifact_of_truth_requirements(area: &mut mlvl_wrapper::MlvlArea,
 
 fn patch_temple_security_station_cutscene_trigger<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 3182558380);
+    let res = gc_disc.find_resource_mut("Metroid4.pak", |res| res.file_id == 0xBDB1FCAC);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let trigger = scly.layers.iter_mut()
@@ -909,24 +911,24 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
     let elite_research_idx =  pak.resources.iter()
         .filter(|res| res.fourcc() == b"MREA".into())
-        .position(|res| res.file_id == 2325199700)
+        .position(|res| res.file_id == 0x8A97BB54)
         .unwrap();
 
     let mut cursor = pak.resources.cursor();
     loop {
         if cursor.peek().is_none() {
             break;
-        } else if cursor.peek().unwrap().file_id == 0xb1ac4d65 {
+        } else if cursor.peek().unwrap().file_id == 0xB1AC4D65 {
             let mlvl = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
             let flags = &mut mlvl.area_layer_flags.as_mut_vec()[elite_research_idx].flags;
             *flags |= 1 << 1; // Turn on "3rd pass elite bustout"
             *flags &= !(1 << 5); // Turn off the "dummy elite"
 
-        } else if cursor.peek().unwrap().file_id == 4272124642 {
+        } else if cursor.peek().unwrap().file_id == 0xFEA372E2 {
             let mrea = cursor.value().unwrap().kind.as_mrea_mut().unwrap();
             let scly = mrea.scly_section_mut();
             scly.layers.as_mut_vec()[0].objects.as_mut_vec()
-                .retain(|obj| obj.instance_id != 0x1b0525 && obj.instance_id != 0x1b0522);
+                .retain(|obj| obj.instance_id != 0x1B0525 && obj.instance_id != 0x1B0522);
         }
         cursor.next();
     }
@@ -935,7 +937,7 @@ fn patch_elite_research_fight_prereq<'a>(gc_disc: &mut structs::GcDisc<'a>)
 
 fn patch_research_lab_hydra_barrier<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0x43e4cc25);
+    let res = gc_disc.find_resource_mut("Metroid3.pak", |res| res.file_id == 0x43E4CC25);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[3];
@@ -981,14 +983,14 @@ fn patch_research_lab_aether_exploding_wall<'a>(
                 unknown1: 0.0,
                 unknown2: 0.0,
                 unknown3: 0.0,
-                layer_change_room_id: 893946318,
+                layer_change_room_id: 0x354889CE,
                 layer_change_layer_id: 3,
                 item_id: 0,
                 unknown4: 1,
                 unknown5: 0.0,
-                unknown6: 4294967295,
-                unknown7: 4294967295,
-                unknown8: 4294967295
+                unknown6: 0xFFFFFFFF,
+                unknown7: 0xFFFFFFFF,
+                unknown8: 0xFFFFFFFF
             }
         ),
         connections: vec![].into(),
@@ -1054,7 +1056,7 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(
 
 fn patch_mines_security_station_soft_lock<'a>(gc_disc: &mut structs::GcDisc<'a>)
 {
-    let res = gc_disc.find_resource_mut("metroid5.pak", |res| res.file_id == 0x956f1552);
+    let res = gc_disc.find_resource_mut("metroid5.pak", |res| res.file_id == 0x956F1552);
     let mrea = res.unwrap().kind.as_mrea_mut().unwrap();
     let scly = mrea.scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
