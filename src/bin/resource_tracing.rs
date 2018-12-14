@@ -570,7 +570,7 @@ fn trace_pickup_deps(
                     objects_to_remove: HashMap::new(),
                 });
             }
-            let mut objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
+            let objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
             for r in removals {
                 objects_to_remove.entry(r.layer).or_insert_with(Vec::new).push(r.instance_id);
             }
@@ -881,8 +881,8 @@ fn main()
     println!("];");
 
     println!("");
-    println!("// Because const fns aren't stable yet, we can't construct the actual array");
-    println!("// at compile-time. So, instead, these are the building-blocks for that");
+    println!("// Because const fns aren't powerful enough yet, we can't construct the actual");
+    println!("// array at compile-time. So, instead, these are the building-blocks for that");
     println!("// actual array.");
     println!("const PICKUP_RAW_META: [PickupMetaRaw; {}] = [", pickup_table.len());
     const BYTES_PER_LINE: usize = 8;
@@ -906,7 +906,8 @@ fn main()
         let mut deps: Vec<_> = pickup_data.deps.iter().collect();
         deps.sort();
         for dep in deps {
-            println!("            (0x{:08X}, *b\"{}\"),", dep.file_id, dep.fourcc);
+            println!("            (0x{:08X}, FourCC::from_bytes(b\"{}\")),", dep.file_id,
+                                                                             dep.fourcc);
         }
         println!("        ],");
         println!("        hudmemo_strg: {:?},", pickup_data.hudmemo_strg);

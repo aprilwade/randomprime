@@ -89,12 +89,12 @@ impl FourCC
         FourCC(data)
     }
 
-    pub fn from_bytes(bytes: &[u8; 4]) -> FourCC
+    pub const fn from_bytes(bytes: &[u8; 4]) -> FourCC
     {
         FourCC(*bytes)
     }
 
-    pub fn as_bytes(&self) -> &[u8; 4]
+    pub const fn as_bytes(&self) -> &[u8; 4]
     {
         &self.0
     }

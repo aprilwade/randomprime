@@ -39,7 +39,7 @@ pub fn setup_pickup_meta_table()
             PickupMeta {
                 name: meta.name,
                 pickup: Reader::new(meta.pickup).read(()),
-                deps: leak_vec(meta.deps.iter().map(|&(fid, ref b)| (fid, b.into())).collect()),
+                deps: meta.deps,
                 hudmemo_strg: meta.hudmemo_strg,
                 skip_hudmemos_strg,
                 attainment_audio_file_name: meta.attainment_audio_file_name,
@@ -144,7 +144,7 @@ struct PickupMetaRaw
 {
     name: &'static str,
     pickup: &'static [u8],
-    deps: &'static [(u32, [u8; 4])],
+    deps: &'static [(u32, FourCC)],
     hudmemo_strg: u32,
     attainment_audio_file_name: &'static str,
 }
