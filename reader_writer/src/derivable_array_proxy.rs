@@ -1,9 +1,9 @@
-use reader::{Reader, Readable};
-use writer::Writable;
-
 use std::marker::PhantomData;
 use std::io;
 use std::borrow::Borrow;
+
+use crate::reader::{Reader, Readable};
+use crate::writer::Writable;
 
 /// Derivable Array Proxy - wraps an iterator for derived array.
 ///

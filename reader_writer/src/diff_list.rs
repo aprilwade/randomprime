@@ -6,9 +6,9 @@ use std::ops::{Deref, DerefMut};
 
 use std::slice::Iter as SliceIter;
 
-use reader::{Reader, Readable};
-use writer::Writable;
-use lcow::LCow;
+use crate::reader::{Reader, Readable};
+use crate::writer::Writable;
+use crate::lcow::LCow;
 
 pub trait DiffListSourceCursor
 {

@@ -1,15 +1,10 @@
 #[macro_use] extern crate clap;
-extern crate preferences;
-extern crate memmap;
-extern crate randomprime;
-extern crate winapi;
 
 use clap::{Arg, App};
 // XXX This is an undocumented enum
 use clap::Format;
 use preferences::{AppInfo, PreferencesMap, Preferences};
 
-// pub use randomprime::*;
 use randomprime::{parse_layout, patcher, pickup_meta, reader_writer, structs};
 
 use std::borrow::Cow;

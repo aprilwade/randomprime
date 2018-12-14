@@ -2,7 +2,8 @@ use std::mem;
 
 use reader_writer::{FourCC, Reader};
 use structs::{Connection, Pickup, Resource, ResourceKind};
-use asset_ids;
+
+use crate::asset_ids;
 
 pub struct PickupMeta
 {

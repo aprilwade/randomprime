@@ -21,23 +21,23 @@ mod padding;
 mod utf16_string;
 
 
-pub use generic_array::typenum;
+pub use crate::generic_array::typenum;
 
-pub use reader::{Reader, Readable};
-pub use writer::Writable;
+pub use crate::reader::{Reader, Readable};
+pub use crate::writer::Writable;
 
-pub use primitive_types::{FourCC, CStr, CStrConversionExtension};
-pub use array::{LazyArray, LazyArrayIter};
-pub use read_only_array::{RoArray, RoArrayIter};
-pub use fixed_array::FixedArray;
-pub use iterator_array::{IteratorArray, IteratorArrayIterator};
-pub use derivable_array_proxy::Dap;
-pub use uncached::Uncached;
+pub use crate::primitive_types::{FourCC, CStr, CStrConversionExtension};
+pub use crate::array::{LazyArray, LazyArrayIter};
+pub use crate::read_only_array::{RoArray, RoArrayIter};
+pub use crate::fixed_array::FixedArray;
+pub use crate::iterator_array::{IteratorArray, IteratorArrayIterator};
+pub use crate::derivable_array_proxy::Dap;
+pub use crate::uncached::Uncached;
 
-pub use lcow::LCow;
+pub use crate::lcow::LCow;
 
 // XXX There are > 5 items in these modules. Do I want to use * imports everywhere for
 //     consistency?
-pub use padding::*;
-pub use diff_list::*;
-pub use utf16_string:: *;
+pub use crate::padding::*;
+pub use crate::diff_list::*;
+pub use crate::utf16_string:: *;

@@ -1,19 +1,10 @@
-extern crate adler32;
-extern crate encoding;
-extern crate flate2;
-extern crate memmap;
-extern crate rand;
-extern crate sha2;
-extern crate winapi;
-
 #[macro_use] extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
 
 
 pub extern crate structs;
+pub extern crate reader_writer;
+pub extern crate memmap;
 
-pub use structs::reader_writer;
 use reader_writer::{LCow, Reader};
 use reader_writer::num::{BigUint, Integer, ToPrimitive};
 

@@ -3,8 +3,8 @@ use std::fmt;
 use std::char::{DecodeUtf16, decode_utf16};
 use std::str::Chars;
 
-use reader::{Readable, Reader};
-use writer::Writable;
+use crate::reader::{Readable, Reader};
+use crate::writer::Writable;
 
 #[derive(Clone)]
 pub struct Utf16beStr<'a>(Reader<'a>);

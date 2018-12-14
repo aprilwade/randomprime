@@ -1,11 +1,10 @@
-use structs;
 use reader_writer::byteorder::{LittleEndian, WriteBytesExt};
 
 use std::cmp::min;
 use std::io::{self, Seek, Write};
 use std::iter;
 
-use gcz_writer::ZEROES;
+use crate::gcz_writer::ZEROES;
 
 // Implementation examples
 // https://github.com/FIX94/Nintendont/blob/3e81dadcfc4b19129f08a947905331f1d45a1b0b/kernel/ISO.c

@@ -2,6 +2,7 @@
 name = "randomprime"
 version = "0.2.3"
 authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 adler32 = "1.0"
@@ -18,6 +19,7 @@ rand = "0.4"
 winapi = "0.3"
 
 structs = { path = "structs" }
+reader_writer = { path = "reader_writer" }
 
 [profile.release]
 lto = true

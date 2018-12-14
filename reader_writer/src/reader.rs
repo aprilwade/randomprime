@@ -2,7 +2,7 @@ use std::io;
 use std::fmt::{Debug, Formatter, Error};
 use std::ops::{Deref, DerefMut};
 
-use writer::Writable;
+use crate::writer::Writable;
 
 #[derive(Clone)]
 pub struct Reader<'a>(&'a [u8]);

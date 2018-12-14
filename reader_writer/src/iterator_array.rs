@@ -2,9 +2,9 @@ use std::fmt;
 use std::io;
 use std::slice::Iter as SliceIter;
 
-use lcow::LCow;
-use reader::{Reader, Readable};
-use writer::Writable;
+use crate::lcow::LCow;
+use crate::reader::{Reader, Readable};
+use crate::writer::Writable;
 
 
 #[derive(Clone)]

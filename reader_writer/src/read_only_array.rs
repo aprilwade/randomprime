@@ -2,8 +2,8 @@
 use std::fmt;
 use std::io;
 
-use reader::{Reader, Readable};
-use writer::Writable;
+use crate::reader::{Reader, Readable};
+use crate::writer::Writable;
 
 /// Read only array
 #[derive(Clone)]

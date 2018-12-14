@@ -1,4 +1,4 @@
-pub extern crate reader_writer;
+extern crate reader_writer;
 
 mod ancs;
 mod bnr;

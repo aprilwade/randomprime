@@ -1,5 +1,5 @@
 
-use ::{memmap, patcher, reader_writer, serde_json, structs};
+use crate::patcher;
 
 use std::ffi::{CStr, CString};
 use std::fs::{File, OpenOptions};
@@ -164,7 +164,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         .open(&config.output_iso)
         .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
 
-    let (pickup_layout, elevator_layout, seed) = ::parse_layout(&config.layout_string)?;
+    let (pickup_layout, elevator_layout, seed) = crate::parse_layout(&config.layout_string)?;
 
     let mut config = config;
     let parsed_config = patcher::ParsedConfig {

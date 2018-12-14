@@ -9,8 +9,8 @@ use std::marker::PhantomData;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
 
-use reader::{Readable, Reader};
-use writer::Writable;
+use crate::reader::{Readable, Reader};
+use crate::writer::Writable;
 
 macro_rules! define_arith_readable {
     ( $(($T: ty, $rf: ident, $wf: ident)),* ) => {

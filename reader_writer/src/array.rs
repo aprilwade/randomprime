@@ -3,11 +3,10 @@ use std::io;
 use std::slice::Iter as SliceIter;
 use std::slice::IterMut as SliceIterMut;
 
-use lcow::LCow;
-use reader::{Reader, Readable};
-use writer::Writable;
-
-use read_only_array::{RoArray, RoArrayIter};
+use crate::lcow::LCow;
+use crate::reader::{Reader, Readable};
+use crate::writer::Writable;
+use crate::read_only_array::{RoArray, RoArrayIter};
 
 impl<'a, T> Readable<'a> for Vec<T>
     where T: Readable<'a>,

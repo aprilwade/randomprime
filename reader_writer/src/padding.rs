@@ -1,6 +1,6 @@
 //! Utilities for padding for alignment
-use read_only_array::RoArray;
-use reader::Reader;
+use crate::read_only_array::RoArray;
+use crate::reader::Reader;
 
 
 pub fn align_byte_count(align_to: usize, n: usize) -> usize

@@ -3,13 +3,13 @@ use rand::{ChaChaRng, SeedableRng, Rng, Rand};
 use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 
-use ::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
-       GcDiscLookupExtensions, ResourceData};
-use elevators::{ELEVATORS, SpawnRoom};
-use gcz_writer::GczWriter;
-use ciso_writer::CisoWriter;
+use crate::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
+            GcDiscLookupExtensions, ResourceData};
+use crate::elevators::{ELEVATORS, SpawnRoom};
+use crate::gcz_writer::GczWriter;
+use crate::ciso_writer::CisoWriter;
 
-use asset_ids;
+use crate::asset_ids;
 use reader_writer::{CStrConversionExtension, FourCC, LCow, Reader, Writable};
 use reader_writer::generic_array::GenericArray;
 use reader_writer::typenum::U3;
@@ -406,14 +406,14 @@ fn modify_pickups_in_pak<'a, I, J>(
             None => panic!("Unexpectedly reached the end of the pak"),
             Some((_, fourcc)) if fourcc == b"MLVL".into() => {
                 // Update the Mlvl in the table with version we've been updating
-                let mut res = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
+                let res = cursor.value().unwrap().kind.as_mlvl_mut().unwrap();
                 *res = editor.mlvl;
                 // The Mlvl is the last entry in the PAK, so break here.
                 break;
             },
             Some((asset_ids::PHAZON_MINES_SAVW, fourcc)) if fourcc == b"SAVW".into() => {
                 // Add a scan for the Phazon suit.
-                let mut savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
+                let savw = cursor.value().unwrap().kind.as_savw_mut().unwrap();
                 savw.scan_array.as_mut_vec().push(structs::ScannableObject {
                     scan: asset_ids::PHAZON_SUIT_SCAN,
                     logbook_category: 0,
@@ -422,7 +422,7 @@ fn modify_pickups_in_pak<'a, I, J>(
             Some((file_id, fourcc)) if fourcc == b"STRG".into() => {
                 if let Some(pos) = ARTIFACT_TOTEM_SCAN_STRGS.iter().position(|id| *id == file_id) {
                     // Replace the text of the scans of the totems in the Artifact Temple
-                    let mut strg = cursor.value().unwrap().kind.as_strg_mut().unwrap();
+                    let strg = cursor.value().unwrap().kind.as_strg_mut().unwrap();
                     for st in strg.string_tables.as_mut_vec().iter_mut() {
                         let strings = st.strings.as_mut_vec();
                         *strings.last_mut().unwrap() = artifact_totem_strings[pos].clone().into();
@@ -570,28 +570,25 @@ fn modify_pickups_in_mrea<'a, 'mlvl, 'cursor, 'list, I>(
             });
         }
 
-        {
-            let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
-                .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
-                .unwrap();
-            update_pickup(pickup, &pickup_meta);
-            if additional_connections.len() > 0 {
-                pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
-            }
+        let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
+            .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
+            .unwrap();
+        update_pickup(pickup, &pickup_meta);
+        if additional_connections.len() > 0 {
+            pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
         }
-        {
-            let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
-                .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
-                .unwrap();
-            update_hudmemo(hudmemo, &pickup_meta, location_idx, skip_hudmenus);
-        }
-        {
-            let location = pickup_location.attainment_audio;
-            let attainment_audio = layers[location.layer as usize].objects.iter_mut()
-                .find(|obj| obj.instance_id ==  location.instance_id)
-                .unwrap();
-            update_attainment_audio(attainment_audio, &pickup_meta);
-        }
+
+        let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
+            .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
+            .unwrap();
+        update_hudmemo(hudmemo, &pickup_meta, location_idx, skip_hudmenus);
+
+
+        let location = pickup_location.attainment_audio;
+        let attainment_audio = layers[location.layer as usize].objects.iter_mut()
+            .find(|obj| obj.instance_id ==  location.instance_id)
+            .unwrap();
+        update_attainment_audio(attainment_audio, &pickup_meta);
     }
 }
 
@@ -856,7 +853,6 @@ fn fix_artifact_of_truth_requirements(area: &mut mlvl_wrapper::MlvlArea,
     let scly = area.mrea().scly_section_mut();
 
     // A relay on the new layer is created and connected to "Relay Show Progress 1"
-    let hd_id = fresh_instance_id_range.next().unwrap();
     let new_relay_instance_id = fresh_instance_id_range.next().unwrap();
     let new_relay = structs::SclyObject {
         instance_id: new_relay_instance_id,
@@ -961,16 +957,14 @@ fn patch_research_lab_aether_exploding_wall<'a>(
     let layer = &mut scly.layers.as_mut_vec()[0];
 
     let id = fresh_instance_id_range.next().unwrap();
-    {
-        let obj = layer.objects.as_mut_vec().iter_mut()
-            .find(|obj| obj.instance_id == 2622568)
-            .unwrap();
-        obj.connections.as_mut_vec().push(structs::Connection {
-            state: 9,
-            message: 5,
-            target_object_id: id,
-        });
-    }
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 2622568)
+        .unwrap();
+    obj.connections.as_mut_vec().push(structs::Connection {
+        state: 9,
+        message: 5,
+        target_object_id: id,
+    });
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: id,
@@ -1367,7 +1361,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     pickup_meta::setup_pickup_meta_table();
 
     let mut ct = Vec::new();
-    writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION"));
+    writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION")).unwrap();
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "configuration string: {}", config.layout_string).unwrap();
@@ -1412,7 +1406,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     if config.elevator_layout[20] != 20 {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
-        patch_landing_site_cutscene_triggers(&mut gc_disc);
+        patch_landing_site_cutscene_triggers(&mut gc_disc, &mut fresh_instance_id_range);
     }
 
     let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
