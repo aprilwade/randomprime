@@ -1,8 +1,10 @@
 use std::io;
 
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
-use crate::generic_array::{GenericArray, ArrayLength};
+use crate::{
+    reader::{Reader, Readable},
+    writer::Writable,
+    generic_array::{GenericArray, ArrayLength},
+};
 
 pub type FixedArray<T, N> = GenericArray<T, N>;
 

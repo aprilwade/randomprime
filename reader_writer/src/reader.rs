@@ -1,6 +1,8 @@
-use std::io;
-use std::fmt::{Debug, Formatter, Error};
-use std::ops::{Deref, DerefMut};
+use std::{
+    io,
+    fmt::{Debug, Formatter, Error},
+    ops::{Deref, DerefMut},
+};
 
 use crate::writer::Writable;
 

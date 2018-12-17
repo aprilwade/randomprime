@@ -1,6 +1,8 @@
-use std::fmt;
-use std::ops::Deref;
-use std::borrow::Borrow;
+use std::{
+    fmt,
+    ops::Deref,
+    borrow::Borrow,
+};
 
 /// A lenient Cow
 ///

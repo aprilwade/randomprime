@@ -1,14 +1,17 @@
 
-use std::fmt;
-use std::io;
-use std::iter::{once, FromIterator};
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt,
+    io,
+    iter::{once, FromIterator},
+    ops::{Deref, DerefMut},
+    slice::Iter as SliceIter,
+};
 
-use std::slice::Iter as SliceIter;
-
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
-use crate::lcow::LCow;
+use crate::{
+    reader::{Reader, Readable},
+    writer::Writable,
+    lcow::LCow,
+};
 
 pub trait DiffListSourceCursor
 {

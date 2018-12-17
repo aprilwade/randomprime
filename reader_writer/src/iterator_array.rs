@@ -1,10 +1,14 @@
-use std::fmt;
-use std::io;
-use std::slice::Iter as SliceIter;
+use std::{
+    fmt,
+    io,
+    slice::Iter as SliceIter,
+};
 
-use crate::lcow::LCow;
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
+use crate::{
+    lcow::LCow,
+    reader::{Reader, Readable},
+    writer::Writable,
+};
 
 
 #[derive(Clone)]

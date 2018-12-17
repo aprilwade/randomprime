@@ -4,8 +4,10 @@ use structs;
 use flate2::{self, Compress, Compression, FlushCompress};
 use adler32::adler32;
 
-use std::cmp::min;
-use std::io::{self, Seek, Write};
+use std::{
+    cmp::min,
+    io::{self, Seek, Write},
+};
 
 // constants are fixed to one integer type...
 macro_rules! block_size {

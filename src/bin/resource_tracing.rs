@@ -1,22 +1,21 @@
 //! This program traces the dependencies of each pickup in a Metroid Prime ISO.
 //! The location of the ISO should be provided as a command line argument.
 
-extern crate memmap;
-extern crate randomprime;
-
 pub use randomprime::*;
 use randomprime::pickup_meta::ScriptObjectLocation;
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
 
-use std::mem;
-use std::env::args;
-use std::fs::File;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::ffi::CStr;
-use std::str as stdstr;
+use std::{
+    mem,
+    env::args,
+    fs::File,
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    ffi::CStr,
+    str as stdstr,
+};
 
 // Duplicated from pickup_meta. This version needs owned-lists instead of borrowed.
 #[derive(Clone, Debug)]

@@ -1,9 +1,13 @@
 
-use std::fmt;
-use std::io;
+use std::{
+    fmt,
+    io,
+};
 
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
+use crate::{
+    reader::{Reader, Readable},
+    writer::Writable,
+};
 
 /// Read only array
 #[derive(Clone)]

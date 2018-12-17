@@ -1,26 +1,45 @@
 
 use rand::{ChaChaRng, SeedableRng, Rng, Rand};
-use encoding::{Encoding, EncoderTrap};
-use encoding::all::WINDOWS_1252;
+use encoding::{
+    all::WINDOWS_1252,
+    Encoding,
+    EncoderTrap,
+};
+use serde_derive::Deserialize;
 
-use crate::{memmap, mlvl_wrapper, pickup_meta, reader_writer, structs,
-            GcDiscLookupExtensions, ResourceData};
-use crate::elevators::{ELEVATORS, SpawnRoom};
-use crate::gcz_writer::GczWriter;
-use crate::ciso_writer::CisoWriter;
+use crate::{
+    asset_ids,
+    ciso_writer::CisoWriter,
+    elevators::{ELEVATORS, SpawnRoom},
+    gcz_writer::GczWriter,
+    memmap,
+    mlvl_wrapper,
+    pickup_meta,
+    reader_writer,
+    structs,
+    GcDiscLookupExtensions,
+    ResourceData,
+};
 
-use crate::asset_ids;
-use reader_writer::{CStrConversionExtension, FourCC, LCow, Reader, Writable};
-use reader_writer::generic_array::GenericArray;
-use reader_writer::typenum::U3;
+use reader_writer::{
+    generic_array::GenericArray,
+    typenum::U3,
+    CStrConversionExtension,
+    FourCC,
+    LCow,
+    Reader,
+    Writable,
+};
 
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::ffi::CString;
-use std::fs::File;
-use std::io::{self, Read, Write};
-use std::iter;
-use std::ops::RangeFrom;
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    ffi::CString,
+    fs::File,
+    io::{self, Read, Write},
+    iter,
+    ops::RangeFrom,
+};
 
 const METROID_PAK_NAMES: [&str; 5] = [
     "Metroid2.pak",
@@ -1235,21 +1254,20 @@ fn patch_dol<'a>(gc_disc: &mut structs::GcDisc<'a>, spawn_room: SpawnRoom, versi
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
 }
 
-
-const FMV_NAMES: &[&[u8]] = &[
-    b"attract0.thp",
-    b"attract1.thp",
-    b"attract2.thp",
-    b"attract3.thp",
-    b"attract4.thp",
-    b"attract5.thp",
-    b"attract6.thp",
-    b"attract7.thp",
-    b"attract8.thp",
-    b"attract9.thp",
-];
 fn replace_fmvs(gc_disc: &mut structs::GcDisc)
 {
+    const FMV_NAMES: &[&[u8]] = &[
+        b"attract0.thp",
+        b"attract1.thp",
+        b"attract2.thp",
+        b"attract3.thp",
+        b"attract4.thp",
+        b"attract5.thp",
+        b"attract6.thp",
+        b"attract7.thp",
+        b"attract8.thp",
+        b"attract9.thp",
+    ];
     const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
     let fst = &mut gc_disc.file_system_table;
     let fmv_entries = fst.fst_entries.iter_mut()

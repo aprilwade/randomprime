@@ -1,10 +1,14 @@
 
+use serde_derive::{Serialize, Deserialize};
+
 use crate::patcher;
 
-use std::ffi::{CStr, CString};
-use std::fs::{File, OpenOptions};
-use std::panic;
-use std::os::raw::c_char;
+use std::{
+    ffi::{CStr, CString},
+    fs::{File, OpenOptions},
+    panic,
+    os::raw::c_char,
+};
 
 #[derive(Deserialize)]
 struct ConfigBanner

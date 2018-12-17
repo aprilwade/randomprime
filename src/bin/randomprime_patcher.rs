@@ -1,18 +1,21 @@
-#[macro_use] extern crate clap;
-
-use clap::{Arg, App};
-// XXX This is an undocumented enum
-use clap::Format;
+use clap::{
+    Arg,
+    App,
+    Format, // XXX This is an undocumented enum
+    crate_version,
+};
 use preferences::{AppInfo, PreferencesMap, Preferences};
 
 use randomprime::{parse_layout, patcher, pickup_meta, reader_writer, structs};
 
-use std::borrow::Cow;
-use std::env;
-use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
-use std::panic;
-use std::process::Command;
+use std::{
+    borrow::Cow,
+    env,
+    fs::{File, OpenOptions},
+    io::{self, Write},
+    panic,
+    process::Command,
+};
 
 
 struct ProgressNotifier

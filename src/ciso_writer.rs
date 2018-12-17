@@ -1,8 +1,10 @@
 use reader_writer::byteorder::{LittleEndian, WriteBytesExt};
 
-use std::cmp::min;
-use std::io::{self, Seek, Write};
-use std::iter;
+use std::{
+    cmp::min,
+    io::{self, Seek, Write},
+    iter,
+};
 
 use crate::gcz_writer::ZEROES;
 

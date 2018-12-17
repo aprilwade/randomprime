@@ -1,43 +1,46 @@
-pub extern crate byteorder;
-pub extern crate generic_array;
-pub extern crate num;
+// Rexport these crates to make syncing version numbers less of a pain
+pub use byteorder;
+pub use generic_array;
+pub use num;
 
-mod reader;
-mod writer;
+pub mod reader;
+pub mod writer;
 
-mod primitive_types;
-mod fixed_array;
-mod array;
-mod read_only_array;
-mod iterator_array;
-mod diff_list;
+pub mod primitive_types;
+pub mod fixed_array;
+pub mod array;
+pub mod read_only_array;
+pub mod iterator_array;
+pub mod diff_list;
 
-mod lcow;
-mod derivable_array_proxy;
-mod uncached;
+pub mod lcow;
+pub mod derivable_array_proxy;
+pub mod uncached;
 
-mod padding;
+pub mod padding;
 
-mod utf16_string;
+pub mod utf16_string;
 
 
-pub use crate::generic_array::typenum;
+pub use crate::{
+    generic_array::typenum,
 
-pub use crate::reader::{Reader, Readable};
-pub use crate::writer::Writable;
+    reader::{Reader, Readable},
+    writer::Writable,
 
-pub use crate::primitive_types::{FourCC, CStr, CStrConversionExtension};
-pub use crate::array::{LazyArray, LazyArrayIter};
-pub use crate::read_only_array::{RoArray, RoArrayIter};
-pub use crate::fixed_array::FixedArray;
-pub use crate::iterator_array::{IteratorArray, IteratorArrayIterator};
-pub use crate::derivable_array_proxy::Dap;
-pub use crate::uncached::Uncached;
+    primitive_types::{FourCC, CStr, CStrConversionExtension},
+    array::{LazyArray, LazyArrayIter},
+    read_only_array::{RoArray, RoArrayIter},
+    fixed_array::FixedArray,
+    iterator_array::{IteratorArray, IteratorArrayIterator},
+    derivable_array_proxy::Dap,
+    uncached::Uncached,
 
-pub use crate::lcow::LCow;
+    lcow::LCow,
 
-// XXX There are > 5 items in these modules. Do I want to use * imports everywhere for
-//     consistency?
-pub use crate::padding::*;
-pub use crate::diff_list::*;
-pub use crate::utf16_string:: *;
+    // XXX There are > 5 items in these modules. Do I want to use * imports everywhere for
+    //     consistency?
+    padding::*,
+    diff_list::*,
+    utf16_string:: *,
+};

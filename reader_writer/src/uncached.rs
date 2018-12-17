@@ -1,8 +1,12 @@
-use std::io;
-use std::fmt::{Debug, Formatter, Error};
+use std::{
+    io,
+    fmt::{Debug, Formatter, Error},
+};
 
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
+use crate::{
+    reader::{Reader, Readable},
+    writer::Writable,
+};
 
 pub struct Uncached<'a, T>(Reader<'a>, T::Args)
     where T: Readable<'a>;

@@ -1,18 +1,21 @@
-#[macro_use] extern crate serde_derive;
 
+pub use structs;
+pub use reader_writer;
+pub use memmap;
 
-pub extern crate structs;
-pub extern crate reader_writer;
-pub extern crate memmap;
-
-use reader_writer::{LCow, Reader};
-use reader_writer::num::{BigUint, Integer, ToPrimitive};
+use reader_writer::{
+    LCow,
+    Reader,
+    num::{BigUint, Integer, ToPrimitive},
+};
 
 use flate2::{Decompress, FlushDecompress};
 use sha2::{Digest, Sha512};
 
-use std::borrow::Cow;
-use std::iter;
+use std::{
+    borrow::Cow,
+    iter,
+};
 
 pub mod elevators;
 pub mod mlvl_wrapper;
