@@ -4,6 +4,7 @@ pub struct Elevator {
     pub name: &'static str,
     pub mlvl: u32,
     pub mrea: u32,
+    pub mrea_idx: u32,
     pub scly_id: u32,
 
     pub room_strg: u32,
@@ -20,6 +21,7 @@ pub struct SpawnRoom
     pub name: &'static str,
     pub mlvl: u32,
     pub mrea: u32,
+    pub mrea_idx: u32,
 }
 
 impl SpawnRoom
@@ -32,6 +34,7 @@ impl SpawnRoom
                 name: "Landing Site",
                 mlvl: 0x39f2de28,
                 mrea: 0xb2701146,
+                mrea_idx: 0,
             }
         } else {
             let elv = &ELEVATORS[idx];
@@ -40,6 +43,7 @@ impl SpawnRoom
                 name: elv.name,
                 mlvl: elv.mlvl,
                 mrea: elv.mrea,
+                mrea_idx: elv.mrea_idx,
             }
         }
     }
@@ -51,6 +55,7 @@ impl SpawnRoom
             name: "...",
             mlvl: 0x158EFE17,
             mrea: 0xD1241219,
+            mrea_idx: 0,
         }
     }
 }
@@ -61,6 +66,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Chozo Ruins West",// "Transport to Tallon Overworld North",
         mlvl: 0x83f6ff6f,
         mrea: 0x3e6b2bb7,
+        mrea_idx: 0,
         scly_id: 0x007d,
 
         room_strg: 0xF747143D,
@@ -74,6 +80,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Chozo Ruins North",// "Transport to Magmoor Caverns North",
         mlvl: 0x83f6ff6f,
         mrea: 0x8316edf5,
+        mrea_idx: 24,
         scly_id: 0x180027,
 
         room_strg: 0x71D36693,
@@ -87,6 +94,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Chozo Ruins East",// "Transport to Tallon Overworld East",
         mlvl: 0x83f6ff6f,
         mrea: 0xa5fa69a1,
+        mrea_idx: 62,
         scly_id: 0x3e002c,
 
         room_strg: 0x1CE1DDBC,
@@ -100,6 +108,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Chozo Ruins South",// "Transport to Tallon Overworld South",
         mlvl: 0x83f6ff6f,
         mrea: 0x236e1b0f,
+        mrea_idx: 63,
         scly_id: 0x3f0028,
 
         room_strg: 0x9A75AF12,
@@ -114,6 +123,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Phendrana Drifts North",// "Transport to Magmoor Caverns West",
         mlvl: 0xa8be6291,
         mrea: 0xc00e3781,
+        mrea_idx: 0,
         scly_id: 0x002d,
 
         room_strg: 0xF7D14F4D,
@@ -127,6 +137,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Phendrana Drifts South",// "Transport to Magmoor Caverns South",
         mlvl: 0xa8be6291,
         mrea: 0xdd0b0739,
+        mrea_idx: 29,
         scly_id: 0x1d005a,
 
         room_strg: 0xEAD47FF5,
@@ -141,6 +152,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Tallon Overworld North",// "Transport to Chozo Ruins West",
         mlvl: 0x39f2de28,
         mrea: 0x11a02448,
+        mrea_idx: 14,
         scly_id: 0xe0005,
 
         room_strg: 0x9EE2172A,
@@ -155,6 +167,7 @@ pub const ELEVATORS: &[Elevator] = &[
         pak_name: "Metroid4.pak",
         mlvl: 0x39f2de28,
         mrea: 0x2398e906,
+        mrea_idx: 0,
         scly_id: 0x1002d1, // Artifact Temple
 
         room_strg: 0xFFFFFFFF,
@@ -167,6 +180,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Artifact Temple",
         mlvl: 0x39f2de28,
         mrea: 0x2398e906,
+        mrea_idx: 16,
         scly_id: 0x1002da,
 
         room_strg: 0xFFFFFFFF,
@@ -180,6 +194,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Tallon Overworld East",// "Transport to Chozo Ruins East",
         mlvl: 0x39f2de28,
         mrea: 0x8a31665e,
+        mrea_idx: 22,
         scly_id: 0x160038,
 
         room_strg: 0x0573553C,
@@ -193,6 +208,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Tallon Overworld West",// "Transport to Magmoor Caverns East",
         mlvl: 0x39f2de28,
         mrea: 0x15d6ff8b,
+        mrea_idx: 23,
         scly_id: 0x170032,
 
         room_strg: 0xF92C2264,
@@ -206,6 +222,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Tallon Overworld South",// "Transport to Chozo Ruins South",
         mlvl: 0x39f2de28,
         mrea: 0xca514f0,
+        mrea_idx: 41,
         scly_id: 0x290024,
 
         room_strg: 0x630EA5FC,
@@ -219,6 +236,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Tallon Overworld South",// "Transport to Phazon Mines East",
         mlvl: 0x39f2de28,
         mrea: 0x7d106670,
+        mrea_idx: 43,
         scly_id: 0x2b0023,
 
         room_strg: 0xF2525512,
@@ -233,6 +251,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Phazon Mines East",// "Transport to Tallon Overworld South",
         mlvl: 0xb1ac4d65,
         mrea: 0x430e999c,
+        mrea_idx: 0,
         scly_id: 0x001c,
 
         room_strg: 0x8D7B16B4,
@@ -246,6 +265,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Phazon Mines West",// "Transport to Magmoor Caverns South",
         mlvl: 0xb1ac4d65,
         mrea: 0xe2c2cf38,
+        mrea_idx: 25,
         scly_id: 0x190011,
 
         room_strg: 0x47C4108D,
@@ -260,6 +280,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns North",// "Transport to Chozo Ruins North",
         mlvl: 0x3ef8237c,
         mrea: 0x3beaadc9,
+        mrea_idx: 0,
         scly_id: 0x001f,
 
         room_strg: 0x1BEFC19B,
@@ -273,6 +294,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns West",// "Transport to Phendrana Drifts North",
         mlvl: 0x3ef8237c,
         mrea: 0xdca9a28b,
+        mrea_idx: 0,
         scly_id: 0xd0022,
 
         room_strg: 0xE0E1C4DA,
@@ -286,6 +308,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns East",// "Transport to Tallon Overworld West",
         mlvl: 0x3ef8237c,
         mrea: 0x4c3d244c,
+        mrea_idx: 0,
         scly_id: 0x100020,
 
         room_strg: 0xBD4E14B9,
@@ -299,6 +322,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns South",// "Transport to Phazon Mines West",
         mlvl: 0x3ef8237c,
         mrea: 0xef2f1440,
+        mrea_idx: 26,
         scly_id: 0x1a0024,
 
         room_strg: 0xFF5F6594,
@@ -312,6 +336,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns South",// "Transport to Phendrana Drifts South",
         mlvl: 0x3ef8237c,
         mrea: 0xc1ac9233,
+        mrea_idx: 27,
         scly_id: 0x1b0028,
 
         room_strg: 0x66DEBE97,
@@ -326,6 +351,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Crater Entry Point",
         mlvl: 0xc13b09d1,
         mrea: 0x93668996,
+        mrea_idx: 0,
         scly_id: 0x0098,
 
         room_strg: 0xFFFFFFFF,
@@ -338,6 +364,7 @@ pub const ELEVATORS: &[Elevator] = &[
         pak_name: "Metroid7.pak",
         mlvl: 0xc13b09d1,
         mrea: 0x1a666c55,
+        mrea_idx: 0,
         scly_id: 0xb0182,// Metroid Prime Lair
 
         room_strg: 0xFFFFFFFF,

@@ -21,6 +21,7 @@ pub mod elevators;
 pub mod mlvl_wrapper;
 pub mod pickup_meta;
 pub mod patcher;
+pub mod patches;
 pub mod c_interface;
 pub mod gcz_writer;
 pub mod ciso_writer;

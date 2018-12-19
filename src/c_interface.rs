@@ -1,7 +1,7 @@
 
 use serde_derive::{Serialize, Deserialize};
 
-use crate::patcher;
+use crate::patches;
 
 use std::{
     ffi::{CStr, CString},
@@ -29,7 +29,7 @@ struct Config
     layout_string: String,
 
     #[serde(default)]
-    iso_format: patcher::IsoFormat,
+    iso_format: patches::IsoFormat,
 
     #[serde(default)]
     skip_frigate: bool,
@@ -171,7 +171,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     let (pickup_layout, elevator_layout, seed) = crate::parse_layout(&config.layout_string)?;
 
     let mut config = config;
-    let parsed_config = patcher::ParsedConfig {
+    let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
         pickup_layout, elevator_layout, seed,
 
@@ -196,7 +196,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     };
 
     let pn = ProgressNotifier::new(cb_data, cb);
-    patcher::patch_iso(parsed_config, pn)?;
+    patches::patch_iso(parsed_config, pn)?;
     Ok(())
 }
 

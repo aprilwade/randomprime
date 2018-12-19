@@ -6,7 +6,7 @@ use clap::{
 };
 use preferences::{AppInfo, PreferencesMap, Preferences};
 
-use randomprime::{parse_layout, patcher, pickup_meta, reader_writer, structs};
+use randomprime::{parse_layout, patches, pickup_meta, reader_writer, structs};
 
 use std::{
     borrow::Cow,
@@ -72,7 +72,7 @@ impl structs::ProgressNotifier for ProgressNotifier
     }
 }
 
-fn interactive() -> Result<patcher::ParsedConfig, String>
+fn interactive() -> Result<patches::ParsedConfig, String>
 {
     fn read_option<R, F>(prompt: &str, default: &str, question: &str, f: F) -> Result<R, String>
         where F: Fn(&str) -> Result<R, String>
@@ -253,18 +253,18 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
     })?;
 
     let iso_format = if output_iso_path.ends_with(".gcz") {
-        patcher::IsoFormat::Gcz
+        patches::IsoFormat::Gcz
     } else if output_iso_path.ends_with(".ciso") {
-        patcher::IsoFormat::Ciso
+        patches::IsoFormat::Ciso
     } else {
-        patcher::IsoFormat::Iso
+        patches::IsoFormat::Iso
     };
     prefs.insert("input_iso".to_string(), input_iso_path);
     prefs.insert("output_iso".to_string(), output_iso_path);
     prefs.insert("skip_frigate".to_string(), if skip_frigate { "Y" } else { "N" }.to_string());
     let _ = prefs.save(&APP_INFO, prefs_key); // Throw away any error; its fine if this fails
 
-    Ok(patcher::ParsedConfig {
+    Ok(patches::ParsedConfig {
         input_iso: input_iso_mmap,
         output_iso: out_iso,
         pickup_layout, elevator_layout, seed, layout_string,
@@ -288,7 +288,7 @@ fn interactive() -> Result<patcher::ParsedConfig, String>
     })
 }
 
-fn get_config() -> Result<patcher::ParsedConfig, String>
+fn get_config() -> Result<patches::ParsedConfig, String>
 {
     if env::args().len() <= 1 || (was_launched_by_windows_explorer() && env::args().len() <= 2) {
         interactive()
@@ -350,16 +350,16 @@ fn get_config() -> Result<patcher::ParsedConfig, String>
             .map_err(|e| format!("Failed to open output file: {}", e))?;
 
         let iso_format = if output_iso_path.ends_with(".gcz") {
-            patcher::IsoFormat::Gcz
+            patches::IsoFormat::Gcz
         } else if output_iso_path.ends_with(".ciso") {
-            patcher::IsoFormat::Ciso
+            patches::IsoFormat::Ciso
         } else {
-            patcher::IsoFormat::Iso
+            patches::IsoFormat::Iso
         };
         let layout_string = matches.value_of("pickup layout").unwrap().to_string();
         let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
 
-        Ok(patcher::ParsedConfig {
+        Ok(patches::ParsedConfig {
             input_iso: input_iso_mmap,
             output_iso: out_iso,
             pickup_layout, elevator_layout, seed, layout_string,
@@ -427,7 +427,7 @@ fn main_inner() -> Result<(), String>
 {
     let config = get_config()?;
     let pn = ProgressNotifier::new(config.quiet);
-    patcher::patch_iso(config, pn)?;
+    patches::patch_iso(config, pn)?;
     println!("Done");
     Ok(())
 }
