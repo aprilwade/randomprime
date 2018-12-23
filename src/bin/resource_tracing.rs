@@ -340,7 +340,7 @@ fn trace_pickup_deps(
     cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
 )
 {
-    let file_entry = gc_disc.find_file(pak_name);
+    let file_entry = gc_disc.find_file(pak_name).unwrap();
     let pak = match *file_entry.file().unwrap() {
         structs::FstEntryFile::Pak(ref pak) => pak.clone(),
         structs::FstEntryFile::Unknown(ref reader) => reader.clone().read(()),

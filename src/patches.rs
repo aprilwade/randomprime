@@ -73,7 +73,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     }
 
     for pak_name in &METROID_PAK_NAMES {
-        let file_entry = gc_disc.find_file(pak_name);
+        let file_entry = gc_disc.find_file(pak_name).unwrap();
         let pak = match *file_entry.file().unwrap() {
             structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
             structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
@@ -1206,7 +1206,12 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     let mut gc_disc: structs::GcDisc = reader.read(());
 
     if &gc_disc.header.game_identifier() != b"GM8E01" {
-        Err("The input ISO doesn't appear to be Metroid Prime.".to_string())?
+        Err("The input ISO doesn't appear to be NTSC-US Metroid Prime.".to_string())?
+    }
+    if gc_disc.find_file("randomprime.txt").is_some() {
+        Err(concat!("The input ISO has already been randomized once before. ",
+                    "You must start from an unmodified ISO every time."
+        ))?
     }
     let version = match (gc_disc.header.disc_id, gc_disc.header.version) {
         (0, 0) => Version::V0_00,
