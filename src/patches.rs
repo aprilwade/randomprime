@@ -921,6 +921,55 @@ fn patch_mines_security_station_soft_lock<'a>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_credits(res: &mut structs::Resource, pickup_layout: &[u8])
+    -> Result<(), String>
+{
+    use std::fmt::Write;
+    const PICKUPS_TO_PRINT: &[u8] = &[
+        2, // Thermal Visor
+        3, // X-Ray Visor
+        4, // Varia Suit
+        5, // Gravity Suit
+        8, // Boost Ball
+        9, // Spider Ball
+        13, // Charge Beam
+        14, // Space Jump Boots
+        15, // Grapple Beam
+        16, // Super Missile
+    ];
+
+    let mut output = concat!(
+        "\n\n\n\n\n\n\n",
+        "&push;&font=C29C51F1;&main-color=#89D6FF;",
+        "Major Item Locations",
+        "&pop;",
+    ).to_owned();
+    for pickup_meta_idx in PICKUPS_TO_PRINT {
+        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_meta_idx) {
+            i
+        } else {
+            continue
+        };
+        let room_name = pickup_meta::PICKUP_LOCATIONS.iter()
+            .flat_map(|pak_locs| pak_locs.iter())
+            .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
+            .nth(room_idx)
+            .unwrap();
+        let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
+        write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+    }
+    output += "\n\n\n\n\0";
+    res.kind.as_strg_mut().unwrap().string_tables
+        .as_mut_vec()
+        .iter_mut()
+        .find(|table| table.lang == b"ENGL".into())
+        .unwrap()
+        .strings
+        .as_mut_vec()
+        .push(output.into());
+    Ok(())
+}
+
 
 fn patch_starting_pickups(
     area: &mut mlvl_wrapper::MlvlArea,
@@ -1376,6 +1425,12 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
+    patcher.add_resource_patch(
+        b"NoARAM.pak",
+        b"STRG".into(),
+        0x324D0835,
+        move |res| patch_credits(res, &pickup_layout)
+    );
 
     patcher.add_resource_patch(b"Metroid4.pak", b"SAVW".into(), asset_ids::PHAZON_MINES_SAVW,
                                patch_mines_savw_for_phazon_suit_scan);
