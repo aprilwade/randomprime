@@ -697,16 +697,17 @@ fn fix_artifact_of_truth_requirements(
 
     let pmt = pickup_meta::pickup_meta_table();
 
-    let at_pickup_kind = pmt[pickup_layout[7] as usize].pickup.kind;
+    let at_pickup_kind = pmt[pickup_layout[63] as usize].pickup.kind;
     for i in 0..12 {
         let layer_number = if i == 0 {
             truth_req_layer_id
         } else {
             i + 1
         };
+        let kind = i + 29;
         let exists = pickup_layout.iter()
-            .any(|meta_idx| i + 29 == pmt[*meta_idx as usize].pickup.kind);
-        if exists && at_pickup_kind != 29 + i {
+            .any(|meta_idx| kind == pmt[*meta_idx as usize].pickup.kind);
+        if exists && at_pickup_kind != kind {
             // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
             // layer as inactive. It will be activated when the item is collected.
             area.layer_flags.flags &= !(1 << layer_number);
