@@ -308,7 +308,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns East",// "Transport to Tallon Overworld West",
         mlvl: 0x3ef8237c,
         mrea: 0x4c3d244c,
-        mrea_idx: 0,
+        mrea_idx: 16,
         scly_id: 0x100020,
 
         room_strg: 0xBD4E14B9,
