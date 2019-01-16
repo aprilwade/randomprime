@@ -36,6 +36,8 @@ struct Config
     #[serde(default)]
     skip_hudmenus: bool,
     #[serde(default)]
+    nonvaria_heat_damage: bool,
+    #[serde(default)]
     obfuscate_items: bool,
 
     #[serde(default)]
@@ -180,6 +182,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         iso_format: config.iso_format,
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
+        nonvaria_heat_damage: config.nonvaria_heat_damage,
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
         quiet: false,

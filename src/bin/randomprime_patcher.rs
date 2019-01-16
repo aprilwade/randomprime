@@ -219,6 +219,14 @@ fn interactive() -> Result<patches::ParsedConfig, String>
                 "\ninstead of the Space Pirate Frigate."),
         &match_bool
     )?;
+    let nonvaria_heat_damage = read_option(
+        "Enable heat damage for suits other than Varia?",
+        prefs.get("nonvaria_heat_damage").map(|x| x.as_str()).unwrap_or("Yes"),
+        concat!("\nIf yes, you will recieve heat damage in heated rooms unless you have",
+                "\ncollected the Varia Suit. IE, the Phazon Suit and Gravity will no",
+                "\nlonger provide protection from heat damage."),
+        &match_bool
+    )?;
 
     let obfuscate_items = read_option(
         "Obfuscate items?", prefs.get("obfuscate_items").map(|x| x.as_str()).unwrap_or("No"),
@@ -262,6 +270,7 @@ fn interactive() -> Result<patches::ParsedConfig, String>
     prefs.insert("input_iso".to_string(), input_iso_path);
     prefs.insert("output_iso".to_string(), output_iso_path);
     prefs.insert("skip_frigate".to_string(), if skip_frigate { "Y" } else { "N" }.to_string());
+    prefs.insert("nonvaria_heat_damage".to_string(), if nonvaria_heat_damage { "Y" } else { "N" }.to_string());
     let _ = prefs.save(&APP_INFO, prefs_key); // Throw away any error; its fine if this fails
 
     Ok(patches::ParsedConfig {
@@ -272,6 +281,7 @@ fn interactive() -> Result<patches::ParsedConfig, String>
         iso_format,
         skip_hudmenus: true,
         skip_frigate,
+        nonvaria_heat_damage,
         keep_fmvs: false,
         obfuscate_items,
         quiet: false,
@@ -314,6 +324,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .arg(Arg::with_name("skip hudmenus")
                 .long("non-modal-item-messages")
                 .help("Display a non-modal message when an item is is acquired"))
+            .arg(Arg::with_name("nonvaria heat damage")
+                .long("enable-nonvaria-heat-damage")
+                .help("If the Varia Suit has not been collect, heat damage applies"))
             .arg(Arg::with_name("keep attract mode")
                 .long("keep-attract-mode")
                 .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -367,6 +380,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             iso_format,
             skip_hudmenus: matches.is_present("skip hudmenus"),
             skip_frigate: matches.is_present("skip frigate"),
+            nonvaria_heat_damage: matches.is_present("nonvaria heat damage"),
             keep_fmvs: matches.is_present("keep attract mode"),
             obfuscate_items: matches.is_present("obfuscate items"),
             quiet: matches.is_present("quiet"),

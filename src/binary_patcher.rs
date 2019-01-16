@@ -36,7 +36,7 @@ impl<'a> PatchedBinaryBuilder<'a>
     pub fn build(mut self) -> PatchedBinary<'a>
     {
         let mut segments = vec![];
-        self.patches.sort();
+        self.patches.sort_by_key(|p| p.0);
 
         let mut pos = 0;
         for patch in self.patches {

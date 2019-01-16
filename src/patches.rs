@@ -1073,8 +1073,19 @@ fn patch_starting_pickups(
     Ok(())
 }
 
-fn patch_dol<'a>(file: &mut structs::FstEntryFile, spawn_room: SpawnRoom, version: Version)
-    -> Result<(), String>
+fn u32_to_be(x: u32) -> [u8; 4]
+{
+    let mut bytes = [0u8; 4];
+    x.write(&mut io::Cursor::new(&mut bytes as &mut [u8])).unwrap();
+    bytes
+}
+
+fn patch_dol<'a>(
+    file: &mut structs::FstEntryFile,
+    spawn_room: SpawnRoom,
+    version: Version,
+    patch_heat_damage: bool,
+) -> Result<(), String>
 {
     struct Offsets
     {
@@ -1082,12 +1093,14 @@ fn patch_dol<'a>(file: &mut structs::FstEntryFile, spawn_room: SpawnRoom, versio
         load_mlvl_lower: usize,
         load_mrea_idx: usize,
         disable_hints: usize,
+        heat_damage_check: usize,
     }
 
     let offsets = match version {
         Version::V0_00 => Offsets {
                 load_mlvl_upper: 0x1ff1c,// 80022fbc
                 load_mlvl_lower: 0x1ff28,// 80022fc8
+                heat_damage_check: 0x14c6e4,// 0x8014f784
                 load_mrea_idx: 0x1d1fe0,// 801d5080
                 disable_hints: 0x20c1cc,// 8020f26c
             },
@@ -1095,6 +1108,7 @@ fn patch_dol<'a>(file: &mut structs::FstEntryFile, spawn_room: SpawnRoom, versio
         Version::V0_02 => Offsets {
                 load_mlvl_upper: 0x20208,// 800232a8
                 load_mlvl_lower: 0x20214,// 800232b4
+                heat_damage_check: 0x14cec8,// 0x8014ff68
                 load_mrea_idx: 0x1d2830,// 801d58d0
                 disable_hints: 0x20ca44,// 8020fae4
             },
@@ -1103,28 +1117,39 @@ fn patch_dol<'a>(file: &mut structs::FstEntryFile, spawn_room: SpawnRoom, versio
 
     let mrea_idx = spawn_room.mrea_idx;
 
-    let mut mlvl_bytes = [0u8; 4];
-    spawn_room.mlvl.write(&mut io::Cursor::new(&mut mlvl_bytes as &mut [u8])).unwrap();
+    let mut mlvl_bytes = u32_to_be(spawn_room.mlvl);
     // PPC addi encoding shenanigans
     if mlvl_bytes[2] & 0x80 == 0x80 {
         mlvl_bytes[1] += 1;
     }
+
+    const HEAT_DAMAGE_PATCH: &[u8] = &[
+        0x80, 0x84, 0x00, 0xdc, //   0:   lwz     r4,220(r4)
+        0x60, 0x00, 0x00, 0x00, //   4:   nop
+        0x7c, 0x06, 0x28, 0x50, //   8:   subf    r0,r6,r5
+        0x7c, 0x00, 0x00, 0x34, //   c:   cntlzw  r0,r0
+        0x60, 0x00, 0x00, 0x00, //  10:   nop
+    ];
+
 
     let reader = match *file {
         structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
         _ => panic!(),
     };
 
-    // Replace some of the bytes in the main dol. By using chain() like this, we
-    // can avoid copying the contents of the whole dol onto the heap.
-    let data = PatchedBinaryBuilder::new(&reader[..])
+    let dol_builder = PatchedBinaryBuilder::new(&reader[..])
         .patch(offsets.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))
         .patch(offsets.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))
         .patch(offsets.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))
-        .patch(offsets.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))
-        .build();
+        .patch(offsets.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]));
 
-    *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
+    let dol_builder = if !patch_heat_damage { dol_builder} else {
+        dol_builder
+            .patch(offsets.heat_damage_check, Cow::Borrowed(HEAT_DAMAGE_PATCH))
+    };
+
+    let dol = dol_builder.build();
+    *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(dol), reader.len());
     Ok(())
 }
 
@@ -1216,6 +1241,7 @@ pub struct ParsedConfig
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
+    pub nonvaria_heat_damage: bool,
     pub quiet: bool,
 
     pub starting_items: Option<u64>,
@@ -1378,12 +1404,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
     if config.skip_frigate {
-        patcher.add_file_patch(b"default.dol", move |file| patch_dol(file, spawn_room, version));
+        patcher.add_file_patch(b"default.dol", move |file| patch_dol(file, spawn_room, version,
+                                                                     config.nonvaria_heat_damage));
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
     } else {
         patcher.add_file_patch(
             b"default.dol",
-            |file| patch_dol(file, SpawnRoom::frigate_spawn_room(), version)
+            |file| patch_dol(file, SpawnRoom::frigate_spawn_room(), version,
+                             config.nonvaria_heat_damage)
         );
         patcher.add_scly_patch(
             b"Metroid1.pak",
