@@ -41,15 +41,12 @@ impl<'a> PatchedBinaryBuilder<'a>
         let mut pos = 0;
         for patch in self.patches {
             if pos < patch.0 {
-                println!("{}-{}", pos, patch.0);
                 segments.push(Cow::Borrowed(&self.data[pos..patch.0]));
             }
-            println!("{}-{}", patch.0, patch.0 + patch.1.len());
             pos = patch.0 + patch.1.len();
             segments.push(patch.1);
         }
         if pos < self.data.len() {
-            println!("{}-{}", pos, self.data.len());
             segments.push(Cow::Borrowed(&self.data[pos..]));
         }
 

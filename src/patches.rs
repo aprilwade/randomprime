@@ -1040,6 +1040,9 @@ fn patch_starting_pickups(
             spawn_point.boost_ball = fetch_bits(1);
             print_maybe!(first, "    boost_ball: {}", spawn_point.boost_ball);
 
+            spawn_point.varia_suit = fetch_bits(1);
+            print_maybe!(first, "    varia_suit: {}", spawn_point.varia_suit);
+
             spawn_point.gravity_suit = fetch_bits(1);
             print_maybe!(first, "    gravity_suit: {}", spawn_point.gravity_suit);
 
@@ -1060,6 +1063,9 @@ fn patch_starting_pickups(
 
             spawn_point.super_missile = fetch_bits(1);
             print_maybe!(first, "    super_missile: {}", spawn_point.super_missile);
+
+            spawn_point.wavebuster = fetch_bits(1);
+            print_maybe!(first, "    wavebuster: {}", spawn_point.super_missile);
 
             first = false;
         }
@@ -1320,7 +1326,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
 
-    patcher.add_file_patch(b"opening.bnr", move |file| patch_bnr(file, config));
+    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
     if !config.keep_fmvs {
         // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
         // copy and to make compressed ISOs smaller.
@@ -1377,7 +1383,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     } else {
         patcher.add_file_patch(
             b"default.dol",
-            move |file| patch_dol(file, SpawnRoom::frigate_spawn_room(), version)
+            |file| patch_dol(file, SpawnRoom::frigate_spawn_room(), version)
         );
         patcher.add_scly_patch(
             b"Metroid1.pak",
@@ -1426,7 +1432,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         b"NoARAM.pak",
         b"STRG".into(),
         0x324D0835,
-        move |res| patch_credits(res, &pickup_layout)
+        |res| patch_credits(res, &pickup_layout)
     );
 
     patcher.add_resource_patch(b"Metroid4.pak", b"SAVW".into(), asset_ids::PHAZON_MINES_SAVW,
@@ -1434,7 +1440,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         b"Metroid4.pak",
         asset_ids::ARTIFACT_TEMPLE_MREA,
-        move |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
+        |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
     );
 
     make_elevators_patch(&mut patcher, &config.elevator_layout);
