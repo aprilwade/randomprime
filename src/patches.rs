@@ -9,6 +9,7 @@ use serde_derive::Deserialize;
 
 use crate::{
     asset_ids,
+    binary_patcher::PatchedBinaryBuilder,
     ciso_writer::CisoWriter,
     elevators::{ELEVATORS, SpawnRoom},
     gcz_writer::GczWriter,
@@ -37,7 +38,7 @@ use std::{
     collections::{HashMap, HashSet},
     ffi::CString,
     fs::File,
-    io::{self, Read, Write},
+    io::{self, Write},
     iter,
 };
 
@@ -1110,16 +1111,12 @@ fn patch_dol<'a>(file: &mut structs::FstEntryFile, spawn_room: SpawnRoom, versio
 
     // Replace some of the bytes in the main dol. By using chain() like this, we
     // can avoid copying the contents of the whole dol onto the heap.
-
-    let data= reader[..(offsets.load_mlvl_upper + 2)]
-        .chain(io::Cursor::new(vec![mlvl_bytes[0], mlvl_bytes[1]]))
-        .chain(&reader[(offsets.load_mlvl_upper + 4)..(offsets.load_mlvl_lower + 2)])
-        .chain(io::Cursor::new(vec![mlvl_bytes[2], mlvl_bytes[3]]))
-        .chain(&reader[(offsets.load_mlvl_lower + 4)..(offsets.load_mrea_idx + 3)])
-        .chain(io::Cursor::new(vec![mrea_idx as u8]))
-        .chain(&reader[(offsets.load_mrea_idx + 4)..(offsets.disable_hints + 1)])
-        .chain(&[0xC0u8] as &[u8])
-        .chain(&reader[(offsets.disable_hints + 2)..]);
+    let data = PatchedBinaryBuilder::new(&reader[..])
+        .patch(offsets.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))
+        .patch(offsets.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))
+        .patch(offsets.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))
+        .patch(offsets.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))
+        .build();
 
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(data), reader.len());
     Ok(())
