@@ -227,6 +227,14 @@ fn interactive() -> Result<patches::ParsedConfig, String>
                 "\nlonger provide protection from heat damage."),
         &match_bool
     )?;
+    let staggered_suit_damage = read_option(
+        "Enable staggered suit damage reduction?",
+        prefs.get("staggered_suit_damage").map(|x| x.as_str()).unwrap_or("Yes"),
+        concat!("\nIf yes, the amount of damage reduction granted will be determined by the ",
+                "\number of suit pickups collected instead of the most powerful one",
+                "\ncollected."),
+        &match_bool
+    )?;
 
     let obfuscate_items = read_option(
         "Obfuscate items?", prefs.get("obfuscate_items").map(|x| x.as_str()).unwrap_or("No"),
@@ -271,6 +279,7 @@ fn interactive() -> Result<patches::ParsedConfig, String>
     prefs.insert("output_iso".to_string(), output_iso_path);
     prefs.insert("skip_frigate".to_string(), if skip_frigate { "Y" } else { "N" }.to_string());
     prefs.insert("nonvaria_heat_damage".to_string(), if nonvaria_heat_damage { "Y" } else { "N" }.to_string());
+    prefs.insert("staggered_suit_damage".to_string(), if staggered_suit_damage { "Y" } else { "N" }.to_string());
     let _ = prefs.save(&APP_INFO, prefs_key); // Throw away any error; its fine if this fails
 
     Ok(patches::ParsedConfig {
@@ -282,6 +291,7 @@ fn interactive() -> Result<patches::ParsedConfig, String>
         skip_hudmenus: true,
         skip_frigate,
         nonvaria_heat_damage,
+        staggered_suit_damage,
         keep_fmvs: false,
         obfuscate_items,
         quiet: false,
@@ -325,8 +335,12 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                 .long("non-modal-item-messages")
                 .help("Display a non-modal message when an item is is acquired"))
             .arg(Arg::with_name("nonvaria heat damage")
-                .long("enable-nonvaria-heat-damage")
+                .long("nonvaria-heat-damage")
                 .help("If the Varia Suit has not been collect, heat damage applies"))
+            .arg(Arg::with_name("staggered suit damage")
+                .long("staggered-suit-damage")
+                .help(concat!("The suit damage reduction is determinted by the number of suits ",
+                              "collected rather than the most powerful one collected.")))
             .arg(Arg::with_name("keep attract mode")
                 .long("keep-attract-mode")
                 .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -381,6 +395,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             skip_hudmenus: matches.is_present("skip hudmenus"),
             skip_frigate: matches.is_present("skip frigate"),
             nonvaria_heat_damage: matches.is_present("nonvaria heat damage"),
+            staggered_suit_damage: matches.is_present("staggered suit damage"),
             keep_fmvs: matches.is_present("keep attract mode"),
             obfuscate_items: matches.is_present("obfuscate items"),
             quiet: matches.is_present("quiet"),

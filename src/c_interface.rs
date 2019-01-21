@@ -38,6 +38,8 @@ struct Config
     #[serde(default)]
     nonvaria_heat_damage: bool,
     #[serde(default)]
+    staggered_suit_damage: bool,
+    #[serde(default)]
     obfuscate_items: bool,
 
     #[serde(default)]
@@ -183,6 +185,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
         nonvaria_heat_damage: config.nonvaria_heat_damage,
+        staggered_suit_damage: config.staggered_suit_damage,
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
         quiet: false,

@@ -1085,6 +1085,7 @@ fn patch_dol<'a>(
     spawn_room: SpawnRoom,
     version: Version,
     patch_heat_damage: bool,
+    patch_suit_damage: bool,
 ) -> Result<(), String>
 {
     struct Offsets
@@ -1094,6 +1095,7 @@ fn patch_dol<'a>(
         load_mrea_idx: usize,
         disable_hints: usize,
         heat_damage_check: usize,
+        suit_damage_reduction_calc: usize,
     }
 
     let offsets = match version {
@@ -1103,6 +1105,7 @@ fn patch_dol<'a>(
                 heat_damage_check: 0x14c6e4,// 0x8014f784
                 load_mrea_idx: 0x1d1fe0,// 801d5080
                 disable_hints: 0x20c1cc,// 8020f26c
+                suit_damage_reduction_calc: 0x46e5c,// 80049efc
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
         Version::V0_02 => Offsets {
@@ -1111,6 +1114,7 @@ fn patch_dol<'a>(
                 heat_damage_check: 0x14cec8,// 0x8014ff68
                 load_mrea_idx: 0x1d2830,// 801d58d0
                 disable_hints: 0x20ca44,// 8020fae4
+                suit_damage_reduction_calc: 0x47148,// 8004a1e8,
             },
     };
 
@@ -1123,6 +1127,25 @@ fn patch_dol<'a>(
         mlvl_bytes[1] += 1;
     }
 
+    const STAGGERED_SUIT_DAMAGE_PATCH: &[u8] = &[
+        0x80, 0x79, 0x08, 0xb8, // 0:    lwz     r3, 2232(r25)
+        0x80, 0x63, 0x00, 0x00, // 4:    lwz     r3, 0(r3)
+        0x80, 0x83, 0x00, 0xdc, // 8:    lwz     r4, 220(r3)
+        0x80, 0xa3, 0x00, 0xd4, // c:    lwz     r5, 212(r3)
+        0x7c, 0x84, 0x28, 0x14, // 10:   addc    r4, r4, r5
+        0x80, 0xa3, 0x00, 0xe4, // 14:   lwz     r5, 228(r3)
+        0x7c, 0x84, 0x28, 0x14, // 18:   addc    r4, r4, r5
+        0x54, 0x84, 0x10, 0x3a, // 1c:   rlwinm  r4, r4, 2, 0, 29
+        0x48, 0x00, 0x00, 0x05, // 20:   bl      24 0x4
+        0x7c, 0xc8, 0x02, 0xa6, // 24:   mflr    r6
+        0x7c, 0xc4, 0x30, 0x14, // 28:   addc    r6, r4, r6
+        0xc0, 0x06, 0x00, 0x10, // 2c:   lfs     f0, 16(r6)
+        0x48, 0x00, 0x00, 0x6c, // 30:   b       9c done
+        0x00, 0x00, 0x00, 0x00, // 34:   .float 0.0
+        0x3d, 0xcc, 0xcc, 0xcd, // 38:   .float 0.1
+        0x3e, 0x4c, 0xcc, 0xcd, // 3c:   .float 0.2
+        0x3f, 0x00, 0x00, 0x00, // 40:   .float 0.5
+    ];
     const HEAT_DAMAGE_PATCH: &[u8] = &[
         0x80, 0x84, 0x00, 0xdc, //   0:   lwz     r4,220(r4)
         0x60, 0x00, 0x00, 0x00, //   4:   nop
@@ -1148,6 +1171,10 @@ fn patch_dol<'a>(
             .patch(offsets.heat_damage_check, Cow::Borrowed(HEAT_DAMAGE_PATCH))
     };
 
+    let dol_builder = if !patch_suit_damage { dol_builder } else {
+        dol_builder
+            .patch(offsets.suit_damage_reduction_calc, Cow::Borrowed(STAGGERED_SUIT_DAMAGE_PATCH))
+    };
     let dol = dol_builder.build();
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(dol), reader.len());
     Ok(())
@@ -1242,6 +1269,7 @@ pub struct ParsedConfig
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
     pub nonvaria_heat_damage: bool,
+    pub staggered_suit_damage: bool,
     pub quiet: bool,
 
     pub starting_items: Option<u64>,
@@ -1404,14 +1432,27 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
     if config.skip_frigate {
-        patcher.add_file_patch(b"default.dol", move |file| patch_dol(file, spawn_room, version,
-                                                                     config.nonvaria_heat_damage));
+        patcher.add_file_patch(
+            b"default.dol",
+            move |file| patch_dol(
+                file,
+                spawn_room,
+                version,
+                config.nonvaria_heat_damage,
+                config.staggered_suit_damage,
+            )
+        );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
     } else {
         patcher.add_file_patch(
             b"default.dol",
-            |file| patch_dol(file, SpawnRoom::frigate_spawn_room(), version,
-                             config.nonvaria_heat_damage)
+            |file| patch_dol(
+                file,
+                SpawnRoom::frigate_spawn_room(),
+                version,
+                config.nonvaria_heat_damage,
+                config.staggered_suit_damage,
+            )
         );
         patcher.add_scly_patch(
             b"Metroid1.pak",
