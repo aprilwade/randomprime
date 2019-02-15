@@ -3,6 +3,7 @@ use reader_writer::{Dap, FourCC, LCow, RoArray, LazyArray, Readable, Reader, Wri
 
 use std::io;
 use std::borrow::Cow;
+use std::fmt;
 
 use scly_props;
 
@@ -230,8 +231,107 @@ auto_struct! {
     #[derive(Debug, Clone)]
     pub struct Connection
     {
-        state: u32,
-        message: u32,
+        state: ConnectionState,
+        message: ConnectionMsg,
         target_object_id: u32,
     }
 }
+
+macro_rules! build_scly_conn_field {
+    ($struct_name:ident { $($field:ident = $value:expr,)+ }) => {
+        impl $struct_name
+        {
+            $(pub const $field: $struct_name = $struct_name($value);)+
+        }
+
+        impl fmt::Debug for $struct_name
+        {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+            {
+                match self.0 {
+                    $(
+                    $value => f.write_fmt(format_args!("{}::{}", stringify!($struct_name), stringify!($field))),
+                    )+
+                    n => f.write_fmt(format_args!("{}(0x{:x})", stringify!($struct_name), n)),
+                }
+            }
+        }
+
+        impl<'a> Readable<'a> for $struct_name
+        {
+            type Args = ();
+
+            fn read(mut reader: Reader<'a>, (): Self::Args) -> (Self, Reader<'a>)
+            {
+                let i = reader.read(());
+                ($struct_name(i), reader)
+            }
+
+            fn fixed_size() -> Option<usize>
+            {
+                u32::fixed_size()
+            }
+        }
+
+        impl Writable for $struct_name
+        {
+            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+            {
+                self.0.write(writer)
+            }
+        }
+    };
+}
+
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct ConnectionState(pub u32);
+build_scly_conn_field!(ConnectionState {
+    ACTIVE = 0x0,
+    ARRIVED = 0x1,
+    CLOSED = 0x2,
+    ENTERED = 0x3,
+    EXITED = 0x4,
+    INACTIVE = 0x5,
+    INSIDE = 0x6,
+    MAX_REACHED = 0x7,
+    OPEN = 0x8,
+    ZERO = 0x9,
+    ATTACK = 0xA,
+    RETREAT = 0xC,
+    PATROL = 0xD,
+    DEAD = 0xE,
+    CAMERA_PATH = 0xF,
+    CAMERA_TARGET = 0x10,
+    PLAY = 0x12,
+    DEATH_RATTLE = 0x14,
+    DAMAGE = 0x16,
+    MODIFY = 0x19,
+    SCAN_DONE = 0x1C,
+    REFLECTED_DAMAGE = 0x1F,
+    INHERIT_BOUNDS = 0x20,
+});
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct ConnectionMsg(pub u32);
+build_scly_conn_field!(ConnectionMsg {
+    ACTIVATE = 0x1,
+    CLOSE = 0x3,
+    DEACTIVATE = 0x4,
+    DECREMENT = 0x5,
+    FOLLOW = 0x6,
+    INCREMENT = 0x7,
+    NEXT = 0x8,
+    OPEN = 0x9,
+    RESET = 0xA,
+    RESET_AND_START = 0xB,
+    SET_TO_MAX = 0xC,
+    SET_TO_ZERO = 0xD,
+    START = 0xE,
+    STOP = 0xF,
+    STOP_AND_RESET = 0x10,
+    TOGGLE_ACTIVE = 0x11,
+    ACTION = 0x13,
+    PLAY = 0x14,
+    ALERT = 0x15,
+});

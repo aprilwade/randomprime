@@ -424,8 +424,8 @@ fn modify_pickups_in_mrea<'a>(
                                             pickup_location.post_pickup_relay_connections);
     layers[new_layer_idx].objects.as_mut_vec().push(relay);
     additional_connections.push(structs::Connection {
-        state: 1,
-        message: 13,
+        state: structs::ConnectionState::ARRIVED,
+        message: structs::ConnectionMsg::SET_TO_ZERO,
         target_object_id: instance_id,
     });
 
@@ -436,8 +436,8 @@ fn modify_pickups_in_mrea<'a>(
         let function = artifact_layer_change_template(instance_id, pickup_kind);
         layers[new_layer_idx].objects.as_mut_vec().push(function);
         additional_connections.push(structs::Connection {
-            state: 1,
-            message: 7,
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::INCREMENT,
             target_object_id: instance_id,
         });
     }
@@ -616,8 +616,8 @@ fn patch_landing_site_cutscene_triggers(
     for obj in layer.objects.iter_mut() {
         if obj.instance_id == 427 {
             obj.connections.as_mut_vec().push(structs::Connection {
-                state: 0,
-                message: 4,
+                state: structs::ConnectionState::ACTIVE,
+                message: structs::ConnectionMsg::DEACTIVATE,
                 target_object_id: timer_id,
             });
         }
@@ -638,23 +638,23 @@ fn patch_landing_site_cutscene_triggers(
         }),
         connections: vec![
             structs::Connection {
-                state: 9,
-                message: 1,
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::ACTIVATE,
                 target_object_id: 323,// "Memory Relay Set For Load"
             },
             structs::Connection {
-                state: 9,
-                message: 1,
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::ACTIVATE,
                 target_object_id: 427,// "Memory Relay Ship"
             },
             structs::Connection {
-                state: 9,
-                message: 1,
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::ACTIVATE,
                 target_object_id: 484,// "Effect_BaseLights"
             },
             structs::Connection {
-                state: 9,
-                message: 1,
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::ACTIVATE,
                 target_object_id: 463,// "Actor Save Station Beam"
             },
         ].into(),
@@ -721,8 +721,8 @@ fn fix_artifact_of_truth_requirements(
         instance_id: new_relay_instance_id,
         connections: vec![
             structs::Connection {
-                state: 9,
-                message: 13,
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
                 target_object_id: 1048869,
             },
         ].into(),
@@ -739,8 +739,8 @@ fn fix_artifact_of_truth_requirements(
         .find(|i| i.instance_id == 68158836).unwrap();
     relay.connections.as_mut_vec().retain(|i| i.target_object_id != 1048869);
     relay.connections.as_mut_vec().push(structs::Connection {
-        state: 9,
-        message: 13,
+        state: structs::ConnectionState::ZERO,
+        message: structs::ConnectionMsg::SET_TO_ZERO,
         target_object_id: new_relay_instance_id,
     });
     Ok(())
@@ -805,8 +805,8 @@ fn patch_research_lab_aether_exploding_wall<'a>(
         .find(|obj| obj.instance_id == 2622568)
         .unwrap();
     obj.connections.as_mut_vec().push(structs::Connection {
-        state: 9,
-        message: 5,
+        state: structs::ConnectionState::ZERO,
+        message: structs::ConnectionMsg::DECREMENT,
         target_object_id: id,
     });
 
@@ -846,8 +846,8 @@ fn patch_observatory_2nd_pass_solvablility<'a>(_ps: &mut PatcherState, area: &mu
         .filter(|obj| obj.instance_id == 0x81E0460 || obj.instance_id == 0x81E0461);
     for obj in iter {
         obj.connections.as_mut_vec().push(structs::Connection {
-            state: 20,
-            message: 7,
+            state: structs::ConnectionState::DEATH_RATTLE,
+            message: structs::ConnectionMsg::INCREMENT,
             target_object_id: 0x1E02EA,// Counter - dead pirates active panel
         });
     }
@@ -883,8 +883,8 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(
             }),
         connections: vec![
             structs::Connection {
-                state: 6,
-                message: 13,
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
                 target_object_id: 1376367,
             },
         ].into(),
@@ -903,8 +903,8 @@ fn patch_mines_security_station_soft_lock<'a>(_ps: &mut PatcherState, area: &mut
         .find(|obj| obj.instance_id == 460074)
         .unwrap();
     obj.connections.as_mut_vec().push(structs::Connection {
-            state: 7,
-            message: 4,
+            state: structs::ConnectionState::MAX_REACHED,
+            message: structs::ConnectionMsg::DEACTIVATE,
             target_object_id: 67568447,
         });
     // TODO: Trigger a MemoryRelay too
