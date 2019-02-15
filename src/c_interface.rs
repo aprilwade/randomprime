@@ -4,9 +4,11 @@ use serde_derive::{Serialize, Deserialize};
 use crate::patches;
 
 use std::{
+    cell::Cell,
     ffi::{CStr, CString},
     fs::{File, OpenOptions},
     panic,
+    path::Path,
     os::raw::c_char,
 };
 
@@ -210,6 +212,14 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 pub extern fn randomprime_patch_iso(config_json: *const c_char , cb_data: *const (),
                                     cb: extern fn(*const (), *const c_char))
 {
+    thread_local! {
+        static PANIC_DETAILS: Cell<Option<(String, u32)>> = Cell::new(None);
+    }
+    panic::set_hook(Box::new(|pinfo| {
+        PANIC_DETAILS.with(|pd| {
+            pd.set(pinfo.location().map(|l| (l.file().to_owned(), l.line())));
+        });
+    }));
     let r = panic::catch_unwind(|| inner(config_json, cb_data, cb))
         .map_err(|e| {
             let msg = if let Some(e) = e.downcast_ref::<&'static str>() {
@@ -219,14 +229,31 @@ pub extern fn randomprime_patch_iso(config_json: *const c_char , cb_data: *const
             } else {
                 format!("{:?}", e)
             };
-            format!("parsing input iso failed: {}", msg)
+
+            if let Some(pd) = PANIC_DETAILS.with(|pd| pd.replace(None)) {
+                let path = Path::new(&pd.0);
+                let mut comp = path.components();
+                let found = path.components()
+                    .skip(1)
+                    .zip(&mut comp)
+                    .find(|(c, _)| c.as_os_str() == "randomprime")
+                    .is_some();
+                // If possible, include the section of the path starting with the directory named
+                // "randomprime". If no such directoy exists, just use the file name.
+                let shortened_path = if found {
+                    comp.as_path().as_os_str()
+                } else {
+                    path.file_name().unwrap_or("".as_ref())
+                };
+                format!("{} at {}:{}", msg, shortened_path.to_string_lossy(), pd.1)
+            } else {
+                msg
+            }
         })
         .and_then(|i| i);
 
     match r {
         Ok(()) => cb(cb_data, CbMessage::success_json().as_ptr()),
-        Err(s) => {
-            cb(cb_data, CbMessage::error_json(&s).as_ptr())
-        },
+        Err(msg) => cb(cb_data, CbMessage::error_json(&msg).as_ptr()),
     };
 }
