@@ -1,7 +1,7 @@
 use std::mem;
 
 use reader_writer::{FourCC, Reader};
-use structs::{Connection, Pickup, Resource, ResourceKind};
+use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, Resource, ResourceKind};
 
 use crate::asset_ids;
 

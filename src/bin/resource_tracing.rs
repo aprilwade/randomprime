@@ -832,10 +832,10 @@ fn main()
     println!("");
     println!("");
 
-    println!("pub const PICKUP_LOCATIONS: &'static [&'static [RoomInfo]; 5] = &[");
+    println!("pub const PICKUP_LOCATIONS: &[(&str, &[RoomInfo]); 5] = &[");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
-        println!("    // {}", fname);
-        println!("    &[");
+        // println!("    // {}", fname);
+        println!("    ({:?}, &[", fname);
         for room_info in locations {
             println!("        RoomInfo {{");
             println!("            room_id: 0x{:08X},", room_info.room_id);
@@ -851,7 +851,12 @@ fn main()
                 } else {
                     println!("                    post_pickup_relay_connections: &[");
                     for conn in &location.post_pickup_relay_connections {
-                        println!("                        {:?},", conn);
+                        println!("                        Connection {{");
+                        println!("                            state: {:?},", conn.state);
+                        println!("                            message: {:?},", conn.message);
+                        println!("                            target_object_id: 0x{:x},",
+                                 conn.target_object_id);
+                        println!("                        }},");
                     }
                     println!("                    ],");
                 }
@@ -875,7 +880,7 @@ fn main()
             }
             println!("        }},");
         }
-        println!("    ],");
+        println!("    ]),");
     }
     println!("];");
 

@@ -42,14 +42,6 @@ use std::{
     iter,
 };
 
-const METROID_PAK_NAMES: [&str; 5] = [
-    "Metroid2.pak",
-    "Metroid3.pak",
-    "Metroid4.pak",
-    "metroid5.pak",
-    "Metroid6.pak",
-];
-
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 
@@ -73,7 +65,7 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
         assert!(found.insert((res.file_id, res.fourcc()), res.clone()).is_none());
     }
 
-    for pak_name in &METROID_PAK_NAMES {
+    for pak_name in pickup_meta::PICKUP_LOCATIONS.iter().map(|(name, _)| name) {
         let file_entry = gc_disc.find_file(pak_name).unwrap();
         let pak = match *file_entry.file().unwrap() {
             structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
@@ -297,7 +289,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
     ];
 
     let names_iter = pickup_meta::PICKUP_LOCATIONS.iter()
-        .flat_map(|i| i.iter()) // Flatten out the rooms of the paks
+        .flat_map(|i| i.1.iter()) // Flatten out the rooms of the paks
         .flat_map(|l| iter::repeat((l.room_id, l.name)).take(l.pickup_locations.len()));
     let iter = pickup_layout.iter()
         .zip(names_iter)
@@ -952,7 +944,7 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[u8])
             continue
         };
         let room_name = pickup_meta::PICKUP_LOCATIONS.iter()
-            .flat_map(|pak_locs| pak_locs.iter())
+            .flat_map(|pak_locs| pak_locs.1.iter())
             .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
             .nth(room_idx)
             .unwrap();
@@ -1408,10 +1400,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     // Patch pickups
     let mut layout_iterator = pickup_layout.iter();
-    for (i, rooms) in pickup_meta::PICKUP_LOCATIONS.iter().enumerate() {
-        let name = METROID_PAK_NAMES[i].as_bytes();
+    for (name, rooms) in pickup_meta::PICKUP_LOCATIONS.iter() {
         for room_info in rooms.iter() {
-             patcher.add_scly_patch(name, room_info.room_id, move |_, area| {
+             patcher.add_scly_patch(name.as_bytes(), room_info.room_id, move |_, area| {
                 // Remove objects
                 let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
                 for otr in room_info.objects_to_remove {
@@ -1422,7 +1413,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             });
             for (&pickup_location, &pickup_meta_idx) in room_info.pickup_locations.iter().zip(&mut layout_iterator) {
                 patcher.add_scly_patch(
-                    name,
+                    name.as_bytes(),
                     room_info.room_id,
                     move |ps, area| modify_pickups_in_mrea(ps, area, pickup_meta_idx, pickup_location, pickup_resources, config)
                 );
