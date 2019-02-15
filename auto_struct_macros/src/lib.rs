@@ -433,6 +433,11 @@ fn build_read_method(cx: &ExtCtxt, struct_ident: Ident, fields: &[FieldData],
                 let mut tokens = cx.expr_ident(DUMMY_SP, get_pat_ident(&f.name)).to_tokens(cx);
                 tokens.push(TokenTree::Token(DUMMY_SP, Comma));
                 tokens.append(&mut expr.to_tokens(cx));
+                tokens.push(TokenTree::Token(DUMMY_SP, Comma));
+                tokens.append(&mut cx.parse_tts(format!(
+                    "\"\n(Deserializing field {}::{})\"",
+                    struct_ident, get_pat_ident(&f.name)
+                )));
                 stmts.push(cx.stmt_semi(cx.expr_mac(
                     DUMMY_SP,
                     cx.path_ident(DUMMY_SP, cx.ident_of("assert_eq")),
