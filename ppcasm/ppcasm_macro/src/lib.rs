@@ -1,0 +1,346 @@
+extern crate proc_macro;
+
+use proc_macro_hack::proc_macro_hack;
+
+use proc_macro::TokenStream;
+use quote::{quote, TokenStreamExt, ToTokens};
+use syn::{
+    braced, parenthesized, parse_macro_input, parse_quote, token, Error, Expr,
+    Ident, LitFloat, LitInt, Token, Result
+};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+
+use std::collections::{HashMap, HashSet};
+
+struct AsmBlock
+{
+    starting_address: Expr,
+    _comma: Token![,],
+    _brace: token::Brace,
+    asm: Punctuated<AsmInstr, Token![;]>,
+}
+
+impl Parse for AsmBlock
+{
+    fn parse(input: ParseStream) -> Result<Self>
+    {
+        let content;
+        let block = AsmBlock {
+            starting_address: input.parse()?,
+            _comma: input.parse()?,
+            _brace: braced!(content in input),
+            asm: Punctuated::parse_terminated(&content)?
+        };
+
+        // Detect duplicate labels
+        let mut seen_labels = HashSet::new();
+        for instr in &block.asm {
+            for label in &instr.labels {
+                if !seen_labels.insert(label.clone()) {
+                    Err(Error::new(label.span(), "Duplicate label"))?
+                }
+            }
+        }
+        Ok(block)
+    }
+}
+
+impl ToTokens for AsmBlock
+{
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream)
+    {
+        let mut label_map = HashMap::<Ident, u32>::new();
+
+        for (i, instr) in self.asm.iter().enumerate() {
+            for label in &instr.labels {
+                label_map.insert(label.clone(), i as u32);
+            }
+        }
+
+        let labels_iter = self.asm.iter()
+            .enumerate()
+            .flat_map(|(i, instr)| {
+                let sa = &self.starting_address;
+                let i = (i * 4) as u32;
+                instr.labels.iter().map(move |id| quote!(let #id = #sa + #i;))
+            });
+
+        let instrs_iter = self.asm.iter()
+            .enumerate()
+            .map(|(i, instr)| {
+                let iter = instr.parts.iter().map(|(width, op)| {
+                    match op {
+                        AsmOp::Expr(e) => quote! { ppcasm::AsmInstrPart(#width, #e) },
+                        AsmOp::BranchExpr(e) => {
+                            let instr_offset = i as i64 * 4;
+                            let sa = &self.starting_address;
+                            quote! {
+                                ppcasm::AsmInstrPart(
+                                    #width,
+                                    (((#e) as i64 - (#sa) as i64 - (#instr_offset)) >> 2) as i32
+                                )
+                            }
+                        },
+                        AsmOp::AtBranchExpr(e) => {
+                            quote! { ppcasm::AsmInstrPart(#width, ((#e) as u32 >> 2) as i32) }
+                        },
+                    }
+                });
+                quote! { ppcasm::AsmInstrPart::assemble(&[#(#iter),*]) }
+            });
+
+        tokens.append_all(quote! {
+            {
+                use ::ppcasm::macro_rexport::{arr, arr_impl};
+                #(#labels_iter)*
+                ppcasm::AsmBlock::new(arr![u32; #(#instrs_iter),* ])
+            }
+        })
+    }
+}
+
+#[derive(Clone)]
+enum AsmOp
+{
+    Expr(Expr),
+    BranchExpr(Expr),
+    AtBranchExpr(Expr),
+}
+
+impl ToTokens for AsmOp
+{
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream)
+    {
+        match self {
+            AsmOp::Expr(e) => e.to_tokens(tokens),
+            _ => unreachable!(),
+        }
+    }
+}
+
+struct AsmInstr
+{
+    labels: Vec<Ident>,
+    parts: Vec<(u8, AsmOp)>,
+}
+
+const GPR_NAMES: &[&str] = &[
+    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9",
+    "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19",
+    "r20", "r21", "r22", "r23", "r24", "r25", "r26", "r27", "r28", "r29",
+    "r30", "r31",
+];
+
+const FPR_NAMES: &[&str] = &[
+    "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9",
+    "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17", "f18", "f19",
+    "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27", "f28", "f29",
+    "f30", "f31",
+];
+
+macro_rules! flag_ident {
+    ($dotname:ident, $id:ident) => { $id };
+    ($dotname:ident, .) => { $dotname };
+}
+
+
+macro_rules! parse_part {
+    ($dotname:ident, (?$flag:tt)) => {
+        {
+            let ident = flag_ident!($dotname, $flag);
+            (1, AsmOp::Expr(parse_quote! { #ident }))
+        }
+    };
+    ($dotname:ident, ($width:expr ; $value:ident)) => {
+        ($width, $value)
+    };
+    ($dotname:ident, ($width:expr ; {$($value:tt)+})) => {
+        {
+            ($width, AsmOp::Expr(parse_quote! { $($value)+ }))
+        }
+    };
+    ($dotname:ident, ($width:expr ; $value:expr)) => {
+        {
+            let v = &$value;
+            ($width, AsmOp::Expr(parse_quote! { #v }))
+
+        }
+    };
+    ($dotname:ident, $id:ident) => { $id.clone() };
+}
+
+fn parse_immediate(input: ParseStream) -> Result<Expr>
+{
+    if input.peek(token::Brace) {
+        let content;
+        let _ = braced!(content in input);
+        Ok(content.parse()?)
+    } else if let Ok(id) = input.parse::<Ident>() {
+        Ok(parse_quote! { #id })
+    } else {
+        let lit: LitInt = input.parse()?;
+        let v = lit.value() as i32;
+        Ok(parse_quote! { #v })
+    }
+}
+
+macro_rules! parse_operand {
+    ($input:ident, (r:$i:ident:$d:ident)) => {
+        let ($d, $i) = if !$input.peek(Ident) {
+            let $d = AsmOp::Expr(parse_immediate($input)?);
+            let content;
+            let _: token::Paren = parenthesized!(content in $input);
+            parse_operand!(content, (r:$i));
+            ($d, $i)
+        } else {
+            parse_operand!($input, (r:$i));
+            (AsmOp::Expr(parse_quote! { 0 }), $i)
+        };
+    };
+    ($input:ident, (r:$i:ident)) => {
+        let ident: Ident = $input.parse()?;
+        let $i = if let Some(i) = GPR_NAMES.iter().position(|n| ident == n) {
+            let i = i as i32;
+            (5, AsmOp::Expr(parse_quote! { #i }))
+        } else {
+            Err(Error::new(ident.span(), format!("Expected GP register name, got {}", ident)))?
+        };
+    };
+    ($input:ident, (f:$i:ident)) => {
+        let ident: Ident = $input.parse()?;
+        let $i = if let Some(i) = FPR_NAMES.iter().position(|n| ident == n) {
+            let i = i as i32;
+            (5, AsmOp::Expr(parse_quote! { #i }))
+        } else {
+            Err(Error::new(ident.span(), format!("Expected FP register name, got {}", ident)))?
+        };
+    };
+    ($input:ident, (i:$i:ident)) => {
+        let $i = AsmOp::Expr(parse_immediate($input)?);
+    };
+    ($input:ident, (l:$i:ident)) => {
+        let ctor = if let Ok(_) = $input.parse::<Token![@]>() {
+            AsmOp::AtBranchExpr
+        } else {
+            AsmOp::BranchExpr
+        };
+        let $i = ctor(parse_immediate($input)?);
+    };
+}
+
+mod kw {
+    syn::custom_keyword!(float);
+    syn::custom_keyword!(long);
+}
+
+macro_rules! decl_instrs {
+    ($( $nm:ident $([$flag:tt])* $(, $arg:tt)* => $($part:tt)|* ;)+) => {
+        impl Parse for AsmInstr
+        {
+            fn parse(input: ParseStream) -> Result<Self>
+            {
+                let mut labels = vec![];
+                // XXX Peeking for Idents is way to dumb :(
+                while input.peek(|_| -> Ident { unreachable!() }) && input.peek2(Token![:]) {
+                    labels.push(input.parse()?);
+                    let _: Token![:] = input.parse()?;
+                }
+
+                if let Ok(_) = input.parse::<Token![.]>() {
+                    let e = if let Ok(_) = input.parse::<kw::float>() {
+                        let f = input.parse::<LitFloat>()?.value() as f32;
+                        parse_quote! { #f.to_bits() as i32 }
+                    } else if let Ok(_) = input.parse::<kw::long>() {
+                        let i = input.parse::<LitInt>()?.value();
+                        parse_quote! { #i }
+                    } else {
+                        Err(input.error("Unsupported directive"))?
+                    };
+                    return Ok(AsmInstr {
+                        labels,
+                        parts: vec![(32, AsmOp::Expr(e))],
+                    });
+                }
+
+                let ident: Ident = input.parse()?;
+                let maybe_dot = input.parse::<Token![.]>();
+                let opname = ident.to_string() + maybe_dot.as_ref().map(|_| ".").unwrap_or("");
+
+                $(
+                if opname.starts_with(stringify!($nm)) {
+                    let flags_str = &opname[stringify!($nm).len()..];
+                    $(
+                    let mut flags_str = flags_str;
+                    let flag_ident!(__dot__, $flag) = if flags_str.starts_with(stringify!($flag)) {
+                        flags_str = &{ flags_str }[stringify!($flag).len()..];
+                        1i32
+                    } else {
+                        0i32
+                    };
+                    )*
+
+                    if flags_str.len() == 0 {
+                        let mut _first = true;
+                        $(
+                        if !_first {
+                            let _comma: Token![,] = input.parse()?;
+                        }
+                        _first = false;
+                        parse_operand!(input, $arg);
+                        )*
+                        let parts = vec![
+                            $(parse_part!(__dot__, $part),)*
+                        ];
+                        return Ok(AsmInstr {
+                            labels,
+                            parts
+                        });
+                    }
+                }
+                )*
+                Err(Error::new(ident.span(), format!("Invalid opcode {}", opname)))
+            }
+        }
+    };
+}
+
+// const BO_FALSE: i32 = 4;
+// const BO_TRUE: i32 = 12;
+
+decl_instrs! {
+    add[o][.],  (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;266) | (?.);
+    addc[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;10) | (?.);
+    addi,       (r:d), (r:a), (i:imm)   => (6;14) | d | a | (16;imm);
+    b[l][a],    (l:li)                  => (6;18) | (24;li) | (?a) | (?l);
+    blt[l][a],  (l:li)                  => (6;16) | (5;12) | (5;0) | (14;li) | (?a) | (?l);
+    bge[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;0) | (14;li) | (?a) | (?l);
+    bgt[l][a],  (l:li)                  => (6;16) | (5;12) | (5;1) | (14;li) | (?a) | (?l);
+    ble[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;1) | (14;li) | (?a) | (?l);
+    beq[l][a],  (l:li)                  => (6;16) | (5;12) | (5;2) | (14;li) | (?a) | (?l);
+    bne[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;2) | (14;li) | (?a) | (?l);
+    bso[l][a],  (l:li)                  => (6;16) | (5;12) | (5;3) | (14;li) | (?a) | (?l);
+    bns[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;3) | (14;li) | (?a) | (?l);
+    cmplwi,     (r:a), (i:imm)          => (6;10) | (4;3) | (1;0) | (1;0) | a | (16;imm);
+    cntlzw[.],  (r:a), (r:s)            => (6;31) | s | a | (5;0) | (10;26) | (?.);
+    lbz,        (r:d), (r:a:dis)        => (6;34) | d | a | (16;dis);
+    lfs,        (f:d), (r:a:dis)        => (6;48) | d | a | (16;dis);
+    li,         (r:d), (i:imm)          => (6;14) | d | (5;0) | (16;imm);
+    lis,        (r:d), (i:imm)          => (6;15) | d | (5;0) | (16;imm);
+    lwz,        (r:d), (r:a:dis)        => (6;32) | d | a | (16;dis);
+    mflr,       (r:d)                   => (6;31) | d | (10;0x100) | (10;339) | (1;0);
+    mr,         (r:d), (r:a)            => (6;31) | d | a | a | (10;444) | (1;0);
+    nop                                 => (32;0x60000000);
+    slwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{#n}) | (5;0) |(5;{31 - #n}) | (1;0);
+    srwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{32 - #n}) | (5;n) |(5;31) | (1;0);
+    rlwinm[.],  (r:a), (r:s), (i:sh), (i:mb), (i:me) =>
+        (6;21) | s | a | (5;sh) | (5;mb) |(5;me) | (?.);
+    stfs,       (f:d), (r:a:dis)        => (6;52) | d | a | (16;dis);
+    subf[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;40) | (?.);
+}
+
+#[proc_macro_hack]
+pub fn ppcasm(tokens: TokenStream) -> TokenStream {
+    let block = parse_macro_input!(tokens as AsmBlock);
+    block.into_token_stream().into()
+}

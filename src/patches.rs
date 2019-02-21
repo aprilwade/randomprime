@@ -23,6 +23,8 @@ use crate::{
     ResourceData,
 };
 
+use ppcasm::ppcasm;
+
 use reader_writer::{
     generic_array::GenericArray,
     typenum::U3,
@@ -1086,27 +1088,27 @@ fn patch_dol<'a>(
         load_mlvl_lower: usize,
         load_mrea_idx: usize,
         disable_hints: usize,
-        heat_damage_check: usize,
-        suit_damage_reduction_calc: usize,
+        heat_damage_check: (usize, u32),
+        suit_damage_reduction_calc: (usize, u32),
     }
 
     let offsets = match version {
         Version::V0_00 => Offsets {
                 load_mlvl_upper: 0x1ff1c,// 80022fbc
                 load_mlvl_lower: 0x1ff28,// 80022fc8
-                heat_damage_check: 0x14c6e4,// 0x8014f784
+                heat_damage_check: (0x14c6e4, 0x8014f784),
                 load_mrea_idx: 0x1d1fe0,// 801d5080
                 disable_hints: 0x20c1cc,// 8020f26c
-                suit_damage_reduction_calc: 0x46e5c,// 80049efc
+                suit_damage_reduction_calc: (0x46e5c, 0x80049efc),
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
         Version::V0_02 => Offsets {
                 load_mlvl_upper: 0x20208,// 800232a8
                 load_mlvl_lower: 0x20214,// 800232b4
-                heat_damage_check: 0x14cec8,// 0x8014ff68
+                heat_damage_check: (0x14cec8, 0x8014ff68),
                 load_mrea_idx: 0x1d2830,// 801d58d0
                 disable_hints: 0x20ca44,// 8020fae4
-                suit_damage_reduction_calc: 0x47148,// 8004a1e8,
+                suit_damage_reduction_calc: (0x47148, 0x8004a1e8,),
             },
     };
 
@@ -1119,32 +1121,34 @@ fn patch_dol<'a>(
         mlvl_bytes[1] += 1;
     }
 
-    const STAGGERED_SUIT_DAMAGE_PATCH: &[u8] = &[
-        0x80, 0x79, 0x08, 0xb8, // 0:    lwz     r3, 2232(r25)
-        0x80, 0x63, 0x00, 0x00, // 4:    lwz     r3, 0(r3)
-        0x80, 0x83, 0x00, 0xdc, // 8:    lwz     r4, 220(r3)
-        0x80, 0xa3, 0x00, 0xd4, // c:    lwz     r5, 212(r3)
-        0x7c, 0x84, 0x28, 0x14, // 10:   addc    r4, r4, r5
-        0x80, 0xa3, 0x00, 0xe4, // 14:   lwz     r5, 228(r3)
-        0x7c, 0x84, 0x28, 0x14, // 18:   addc    r4, r4, r5
-        0x54, 0x84, 0x10, 0x3a, // 1c:   rlwinm  r4, r4, 2, 0, 29
-        0x48, 0x00, 0x00, 0x05, // 20:   bl      24 0x4
-        0x7c, 0xc8, 0x02, 0xa6, // 24:   mflr    r6
-        0x7c, 0xc4, 0x30, 0x14, // 28:   addc    r6, r4, r6
-        0xc0, 0x06, 0x00, 0x10, // 2c:   lfs     f0, 16(r6)
-        0x48, 0x00, 0x00, 0x6c, // 30:   b       9c done
-        0x00, 0x00, 0x00, 0x00, // 34:   .float 0.0
-        0x3d, 0xcc, 0xcc, 0xcd, // 38:   .float 0.1
-        0x3e, 0x4c, 0xcc, 0xcd, // 3c:   .float 0.2
-        0x3f, 0x00, 0x00, 0x00, // 40:   .float 0.5
-    ];
-    const HEAT_DAMAGE_PATCH: &[u8] = &[
-        0x80, 0x84, 0x00, 0xdc, //   0:   lwz     r4,220(r4)
-        0x60, 0x00, 0x00, 0x00, //   4:   nop
-        0x7c, 0x06, 0x28, 0x50, //   8:   subf    r0,r6,r5
-        0x7c, 0x00, 0x00, 0x34, //   c:   cntlzw  r0,r0
-        0x60, 0x00, 0x00, 0x00, //  10:   nop
-    ];
+    let staggered_suit_damage_patch = ppcasm!(offsets.suit_damage_reduction_calc.1, {
+            lwz     r3, 2232(r25);
+            lwz     r3, 0(r3);
+            lwz     r4, 220(r3);
+            lwz     r5, 212(r3);
+            addc    r4, r4, r5;
+            lwz     r5, 228(r3);
+            addc    r4, r4, r5;
+            rlwinm  r4, r4, 2, 0, 29;
+            bl      next;
+        next:
+            mflr    r6;
+            addc    r6, r4, r6;
+            lfs     f0, 16(r6);
+            b       { offsets.suit_damage_reduction_calc.1 as i32 + 0x9c };
+            .float 0.0;
+            .float 0.1;
+            .float 0.2;
+            .float 0.5;
+    }).encoded_bytes();
+
+    let heat_damage_patch = ppcasm!(offsets.heat_damage_check.1, {
+            lwz     r4, 0xdc(r4);
+            nop;
+            subf    r0, r6, r5;
+            cntlzw  r0, r0;
+            nop;
+    }).encoded_bytes();
 
 
     let reader = match *file {
@@ -1160,12 +1164,12 @@ fn patch_dol<'a>(
 
     let dol_builder = if !patch_heat_damage { dol_builder} else {
         dol_builder
-            .patch(offsets.heat_damage_check, Cow::Borrowed(HEAT_DAMAGE_PATCH))
+            .patch(offsets.heat_damage_check.0, Cow::Owned(heat_damage_patch))
     };
 
     let dol_builder = if !patch_suit_damage { dol_builder } else {
         dol_builder
-            .patch(offsets.suit_damage_reduction_calc, Cow::Borrowed(STAGGERED_SUIT_DAMAGE_PATCH))
+            .patch(offsets.suit_damage_reduction_calc.0, Cow::Owned(staggered_suit_damage_patch))
     };
     let dol = dol_builder.build();
     *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(dol), reader.len());
