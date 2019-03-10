@@ -337,6 +337,15 @@ fn patch_artifact_totem_scan_strg(res: &mut structs::Resource, text: &str)
     Ok(())
 }
 
+fn patch_save_banner_txtr(res: &mut structs::Resource)
+    -> Result<(), String>
+{
+    const TXTR_BYTES: &[u8] = include_bytes!("../extra_assets/save_banner.txtr");
+    res.compressed = false;
+    res.kind = structs::ResourceKind::Unknown(Reader::new(TXTR_BYTES), b"TXTR".into());
+    Ok(())
+}
+
 
 fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
     -> Result<(), String>
@@ -1217,6 +1226,10 @@ fn patch_dol<'a>(
         disable_hints: u32,
         heat_damage_check: u32,
         suit_damage_reduction_calc: u32,
+        save_filename_a: u32,
+        save_filename_b: u32,
+        cinematic_skip: u32,
+        unlockables: u32,
     }
 
     let addrs = match version {
@@ -1227,6 +1240,10 @@ fn patch_dol<'a>(
                 load_mrea_idx: 0x801d5080,
                 disable_hints: 0x8020f26c,
                 suit_damage_reduction_calc: 0x80049efc,
+                save_filename_a: 0x803d47cc,
+                save_filename_b: 0x803d47db,
+                cinematic_skip: 0x80151868,
+                unlockables: 0x801d5c6c,
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
         Version::V0_02 => Addrs {
@@ -1236,6 +1253,10 @@ fn patch_dol<'a>(
                 load_mrea_idx: 0x801d58d0,
                 disable_hints: 0x8020fae4,
                 suit_damage_reduction_calc: 0x8004a1e8,
+                save_filename_a: 0x803d588c,
+                save_filename_b: 0x803d589b,
+                cinematic_skip: 0x8015204c,
+                unlockables: 0x801d64bc,
             },
     };
 
@@ -1268,6 +1289,20 @@ fn patch_dol<'a>(
             .float 0.5;
     });
 
+    let cinematic_skip_patch = ppcasm!(addrs.cinematic_skip, {
+            li      r3, 0x1;
+            blr;
+    });
+    let unlockables_patch = ppcasm!(addrs.unlockables, {
+            li      r6, 100;
+            stw     r6, 0xcc(r28);
+            lis     r6, { 0xF7FFFFFF }@h;
+            addi    r6, r6, { 0xF7FFFFFF }@l;
+            stw     r6, 0xd0(r28);
+            mr      r3, r29;
+            li      r4, 2;
+    });
+
     let heat_damage_patch = ppcasm!(addrs.heat_damage_check, {
             lwz     r4, 0xdc(r4);
             nop;
@@ -1287,7 +1322,11 @@ fn patch_dol<'a>(
         .patch(addrs.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))?
         .patch(addrs.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))?
         .patch(addrs.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))?
-        .patch(addrs.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))?;
+        .patch(addrs.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))?
+        .patch(addrs.save_filename_a, b"randomprime A\0"[..].into())?
+        .patch(addrs.save_filename_b, b"randomprime B\0"[..].into())?
+        .ppcasm_patch(&cinematic_skip_patch)?
+        .ppcasm_patch(&unlockables_patch)?;
 
     if patch_heat_damage {
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
@@ -1630,6 +1669,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         asset_ids::ARTIFACT_TEMPLE_MREA,
         |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
     );
+
+    patcher.add_resource_patch(b"NoARAM.pak", b"TXTR".into(), 0x4CAD3BCC, patch_save_banner_txtr);
 
     make_elevators_patch(&mut patcher, &config.elevator_layout);
 
