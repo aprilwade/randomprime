@@ -3,6 +3,7 @@ extern crate reader_writer;
 mod ancs;
 mod bnr;
 mod cmdl;
+mod dol;
 mod evnt;
 mod gc_disc;
 mod hint;
@@ -16,6 +17,7 @@ mod scly;
 mod strg;
 mod thp;
 mod txtr;
+
 
 mod scly_props
 {
@@ -65,6 +67,7 @@ pub use scly_props::*;
 pub use ancs::*;
 pub use bnr::*;
 pub use cmdl::*;
+pub use dol::*;
 pub use evnt::*;
 pub use gc_disc::*;
 pub use hint::*;

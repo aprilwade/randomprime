@@ -319,8 +319,25 @@ auto_struct! {
     }
 }
 
-// A wrapper around Box<Read> to make it impl Debug
-pub struct ReadWrapper<'a>(RefCell<Box<Read + 'a>>);
+pub trait ToRead: fmt::Debug
+{
+    fn to_read<'a>(&'a self) -> Box<Read + 'a>;
+    fn len(&self) -> usize;
+}
+
+impl<T> ToRead for T
+    where T: AsRef<[u8]> + fmt::Debug
+{
+    fn to_read<'a>(&'a self) -> Box<Read + 'a>
+    {
+        Box::new(io::Cursor::new(self.as_ref()))
+    }
+
+    fn len(&self) -> usize
+    {
+        self.as_ref().len()
+    }
+}
 
 #[derive(Debug)]
 pub enum FstEntryFile<'a>
@@ -328,7 +345,7 @@ pub enum FstEntryFile<'a>
     Pak(Pak<'a>),
     Thp(Thp<'a>),
     Bnr(Bnr<'a>),
-    ExternalFile(ReadWrapper<'a>, usize),
+    ExternalFile(Box<ToRead + 'a>),
     Unknown(Reader<'a>),
 }
 
@@ -403,7 +420,7 @@ impl<'a> FstEntryFile<'a>
             FstEntryFile::Pak(ref pak) => pak.size(),
             FstEntryFile::Thp(ref thp) => thp.size(),
             FstEntryFile::Bnr(ref bnr) => bnr.size(),
-            FstEntryFile::ExternalFile(_, size) => size,
+            FstEntryFile::ExternalFile(ref i) => i.len(),
             FstEntryFile::Unknown(ref reader) => reader.len(),
         }
     }
@@ -414,26 +431,10 @@ impl<'a> FstEntryFile<'a>
             FstEntryFile::Pak(ref pak) => pak.write(writer),
             FstEntryFile::Thp(ref thp) => thp.write(writer),
             FstEntryFile::Bnr(ref bnr) => bnr.write(writer),
-            FstEntryFile::ExternalFile(ref file, _) => {
-                let mut file = file.0.borrow_mut();
-                io::copy(&mut **file, writer).map(|_| ())
+            FstEntryFile::ExternalFile(ref i) => {
+                io::copy(&mut *i.to_read(), writer).map(|_| ())
             },
             FstEntryFile::Unknown(ref reader) => writer.write_all(&reader),
         }
-    }
-}
-
-impl<'a> ReadWrapper<'a>
-{
-    pub fn new<R: Read + 'a>(r: R) -> ReadWrapper<'a>
-    {
-        ReadWrapper(RefCell::new(Box::new(r) as Box<Read>))
-    }
-}
-impl<'a> fmt::Debug for ReadWrapper<'a>
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
-    {
-        write!(f, "Box<Read>")
     }
 }

@@ -29,19 +29,24 @@ pub fn lower_bits(n: u32) -> i32
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AsmBlock<A>(A);
+pub struct AsmBlock<A, L>
+{
+    addr: u32,
+    instrs: A,
+    labels: L,
+}
 
-impl<A> AsmBlock<A>
+impl<A, L> AsmBlock<A, L>
     where A: AsRef<[u32]>
 {
-    pub fn new(instrs: A) -> AsmBlock<A>
+    pub fn new(addr: u32, instrs: A, labels: L) -> AsmBlock<A, L>
     {
-        AsmBlock(instrs)
+        AsmBlock { addr, instrs, labels }
     }
 
     pub fn write_encoded<W: io::Write>(&self, w: &mut W) -> io::Result<()>
     {
-        for instr in self.0.as_ref().iter() {
+        for instr in self.instrs.as_ref().iter() {
             w.write_u32::<BigEndian>(*instr)?
         }
         Ok(())
@@ -49,9 +54,19 @@ impl<A> AsmBlock<A>
 
     pub fn encoded_bytes(&self) -> Vec<u8>
     {
-        let mut v = Vec::with_capacity(self.0.as_ref().len() * 4);
+        let mut v = Vec::with_capacity(self.instrs.as_ref().len() * 4);
         self.write_encoded(&mut v).unwrap();
         v
+    }
+
+    pub fn addr(&self) -> u32
+    {
+        self.addr
+    }
+
+    pub fn labels(&self) -> &L
+    {
+        &self.labels
     }
 }
 

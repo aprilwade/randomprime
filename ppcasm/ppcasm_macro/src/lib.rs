@@ -50,6 +50,7 @@ impl ToTokens for AsmBlock
 {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream)
     {
+        let sa = &self.starting_address;
         let mut label_map = HashMap::<Ident, u32>::new();
 
         for (i, instr) in self.asm.iter().enumerate() {
@@ -58,13 +59,17 @@ impl ToTokens for AsmBlock
             }
         }
 
-        let labels_iter = self.asm.iter()
+        let labels_let_iter = self.asm.iter()
             .enumerate()
             .flat_map(|(i, instr)| {
                 let sa = &self.starting_address;
                 let i = (i * 4) as u32;
                 instr.labels.iter().map(move |id| quote!(let #id = #sa + #i;))
             });
+        let labels_name_iter = self.asm.iter()
+            .flat_map(|instr| instr.labels.iter());
+        let labels_field_iter = self.asm.iter()
+            .flat_map(|instr| instr.labels.iter());
 
         let instrs_iter = self.asm.iter()
             .enumerate()
@@ -74,7 +79,6 @@ impl ToTokens for AsmBlock
                         AsmOp::Expr(e) => quote! { ppcasm::AsmInstrPart(#width, #e) },
                         AsmOp::BranchExpr(e) => {
                             let instr_offset = i as i64 * 4;
-                            let sa = &self.starting_address;
                             quote! {
                                 ppcasm::AsmInstrPart(
                                     #width,
@@ -93,8 +97,14 @@ impl ToTokens for AsmBlock
         tokens.append_all(quote! {
             {
                 use ::ppcasm::macro_rexport::{arr, arr_impl};
-                #(#labels_iter)*
-                ppcasm::AsmBlock::new(arr![u32; #(#instrs_iter),* ])
+                #(#labels_let_iter)*
+                struct Labels {
+                    #(#labels_name_iter: u32, )*
+                }
+                let __labels__ = Labels {
+                    #(#labels_field_iter,)*
+                };
+                ppcasm::AsmBlock::new(#sa, arr![u32; #(#instrs_iter),* ], __labels__)
             }
         })
     }
@@ -172,16 +182,28 @@ macro_rules! parse_part {
 
 fn parse_immediate(input: ParseStream) -> Result<Expr>
 {
-    if input.peek(token::Brace) {
+    let expr = if input.peek(token::Brace) {
         let content;
         let _ = braced!(content in input);
-        Ok(content.parse()?)
+        content.parse()?
     } else if let Ok(id) = input.parse::<Ident>() {
-        Ok(parse_quote! { #id })
+        parse_quote! { #id }
     } else {
         let lit: LitInt = input.parse()?;
         let v = lit.value() as i32;
-        Ok(parse_quote! { #v })
+        parse_quote! { #v }
+    };
+    if let Ok(_) = input.parse::<Token![@]>() {
+        let id: Ident = input.parse()?;
+        if id == "h" {
+            Ok(parse_quote! { ppcasm::upper_bits(#expr) })
+        } else if id == "l" {
+            Ok(parse_quote! { ppcasm::lower_bits(#expr) })
+        } else {
+            Err(Error::new(id.span(), "Expected either 'h' or 'l'"))
+        }
+    } else {
+        Ok(expr)
     }
 }
 
@@ -312,7 +334,10 @@ decl_instrs! {
     add[o][.],  (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;266) | (?.);
     addc[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;10) | (?.);
     addi,       (r:d), (r:a), (i:imm)   => (6;14) | d | a | (16;imm);
+    addic,      (r:d), (r:a), (i:imm)   => (6;12) | d | a | (16;imm);
+    // addic.,     (r:d), (r:a), (i:imm)   => (6;13) | d | a | (16;imm);
     b[l][a],    (l:li)                  => (6;18) | (24;li) | (?a) | (?l);
+    blr                                 => (32;0x4e800020);
     blt[l][a],  (l:li)                  => (6;16) | (5;12) | (5;0) | (14;li) | (?a) | (?l);
     bge[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;0) | (14;li) | (?a) | (?l);
     bgt[l][a],  (l:li)                  => (6;16) | (5;12) | (5;1) | (14;li) | (?a) | (?l);
@@ -321,21 +346,27 @@ decl_instrs! {
     bne[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;2) | (14;li) | (?a) | (?l);
     bso[l][a],  (l:li)                  => (6;16) | (5;12) | (5;3) | (14;li) | (?a) | (?l);
     bns[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;3) | (14;li) | (?a) | (?l);
-    cmplwi,     (r:a), (i:imm)          => (6;10) | (4;3) | (1;0) | (1;0) | a | (16;imm);
+    cmplwi,     (r:a), (i:imm)          => (6;10) | (3;0) | (1;0) | (1;0) | a | (16;imm);
     cntlzw[.],  (r:a), (r:s)            => (6;31) | s | a | (5;0) | (10;26) | (?.);
     lbz,        (r:d), (r:a:dis)        => (6;34) | d | a | (16;dis);
     lfs,        (f:d), (r:a:dis)        => (6;48) | d | a | (16;dis);
+    lfsx,       (f:d), (r:a), (r:b)     => (6;31) | d | a | b | (10;535) | (1;0);
     li,         (r:d), (i:imm)          => (6;14) | d | (5;0) | (16;imm);
     lis,        (r:d), (i:imm)          => (6;15) | d | (5;0) | (16;imm);
+    lha,        (r:d), (r:a:dis)        => (6;42) | d | a | (16;dis);
+    lhz,        (r:d), (r:a:dis)        => (6;40) | d | a | (16;dis);
     lwz,        (r:d), (r:a:dis)        => (6;32) | d | a | (16;dis);
+    lwzx,       (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (10;23) | (1;0);
     mflr,       (r:d)                   => (6;31) | d | (10;0x100) | (10;339) | (1;0);
-    mr,         (r:d), (r:a)            => (6;31) | d | a | a | (10;444) | (1;0);
+    mr,         (r:a), (r:s)            => (6;31) | s | a | s | (10;444) | (1;0);
+    mullw[o][.],(r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;235) | (?.);
     nop                                 => (32;0x60000000);
     slwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{#n}) | (5;0) |(5;{31 - #n}) | (1;0);
     srwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{32 - #n}) | (5;n) |(5;31) | (1;0);
     rlwinm[.],  (r:a), (r:s), (i:sh), (i:mb), (i:me) =>
         (6;21) | s | a | (5;sh) | (5;mb) |(5;me) | (?.);
     stfs,       (f:d), (r:a:dis)        => (6;52) | d | a | (16;dis);
+    stw,        (r:s), (r:a:dis)        => (6;36) | s | a | (16;dis);
     subf[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;40) | (?.);
 }
 

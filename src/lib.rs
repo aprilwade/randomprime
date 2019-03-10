@@ -25,7 +25,7 @@ pub mod patches;
 pub mod c_interface;
 pub mod gcz_writer;
 pub mod ciso_writer;
-pub mod binary_patcher;
+pub mod dol_patcher;
 
 pub trait GcDiscLookupExtensions<'a>
 {

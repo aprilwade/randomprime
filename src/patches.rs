@@ -9,7 +9,7 @@ use serde_derive::Deserialize;
 
 use crate::{
     asset_ids,
-    binary_patcher::PatchedBinaryBuilder,
+    dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{ELEVATORS, SpawnRoom},
     gcz_writer::GczWriter,
@@ -1209,33 +1209,33 @@ fn patch_dol<'a>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
-    struct Offsets
+    struct Addrs
     {
-        load_mlvl_upper: usize,
-        load_mlvl_lower: usize,
-        load_mrea_idx: usize,
-        disable_hints: usize,
-        heat_damage_check: (usize, u32),
-        suit_damage_reduction_calc: (usize, u32),
+        load_mlvl_upper: u32,
+        load_mlvl_lower: u32,
+        load_mrea_idx: u32,
+        disable_hints: u32,
+        heat_damage_check: u32,
+        suit_damage_reduction_calc: u32,
     }
 
-    let offsets = match version {
-        Version::V0_00 => Offsets {
-                load_mlvl_upper: 0x1ff1c,// 80022fbc
-                load_mlvl_lower: 0x1ff28,// 80022fc8
-                heat_damage_check: (0x14c6e4, 0x8014f784),
-                load_mrea_idx: 0x1d1fe0,// 801d5080
-                disable_hints: 0x20c1cc,// 8020f26c
-                suit_damage_reduction_calc: (0x46e5c, 0x80049efc),
+    let addrs = match version {
+        Version::V0_00 => Addrs {
+                load_mlvl_upper: 0x80022fbc,
+                load_mlvl_lower: 0x80022fc8,
+                heat_damage_check: 0x8014f784,
+                load_mrea_idx: 0x801d5080,
+                disable_hints: 0x8020f26c,
+                suit_damage_reduction_calc: 0x80049efc,
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
-        Version::V0_02 => Offsets {
-                load_mlvl_upper: 0x20208,// 800232a8
-                load_mlvl_lower: 0x20214,// 800232b4
-                heat_damage_check: (0x14cec8, 0x8014ff68),
-                load_mrea_idx: 0x1d2830,// 801d58d0
-                disable_hints: 0x20ca44,// 8020fae4
-                suit_damage_reduction_calc: (0x47148, 0x8004a1e8,),
+        Version::V0_02 => Addrs {
+                load_mlvl_upper: 0x800232a8,
+                load_mlvl_lower: 0x800232b4,
+                heat_damage_check: 0x8014ff68,
+                load_mrea_idx: 0x801d58d0,
+                disable_hints: 0x8020fae4,
+                suit_damage_reduction_calc: 0x8004a1e8,
             },
     };
 
@@ -1248,8 +1248,8 @@ fn patch_dol<'a>(
         mlvl_bytes[1] += 1;
     }
 
-    let staggered_suit_damage_patch = ppcasm!(offsets.suit_damage_reduction_calc.1, {
-            lwz     r3, 2232(r25);
+    let staggered_suit_damage_patch = ppcasm!(addrs.suit_damage_reduction_calc, {
+            lwz     r3, 0x8b8(r25);
             lwz     r3, 0(r3);
             lwz     r4, 220(r3);
             lwz     r5, 212(r3);
@@ -1257,25 +1257,24 @@ fn patch_dol<'a>(
             lwz     r5, 228(r3);
             addc    r4, r4, r5;
             rlwinm  r4, r4, 2, 0, 29;
-            bl      next;
-        next:
-            mflr    r6;
-            addc    r6, r4, r6;
-            lfs     f0, 16(r6);
-            b       { offsets.suit_damage_reduction_calc.1 as i32 + 0x9c };
+            lis     r6, data@h;
+            addi    r6, r6, data@l;
+            lfsx     f0, r4, r6;
+            b       { addrs.suit_damage_reduction_calc as i32 + 0x9c };
+        data:
             .float 0.0;
             .float 0.1;
             .float 0.2;
             .float 0.5;
-    }).encoded_bytes();
+    });
 
-    let heat_damage_patch = ppcasm!(offsets.heat_damage_check.1, {
+    let heat_damage_patch = ppcasm!(addrs.heat_damage_check, {
             lwz     r4, 0xdc(r4);
             nop;
             subf    r0, r6, r5;
             cntlzw  r0, r0;
             nop;
-    }).encoded_bytes();
+    });
 
 
     let reader = match *file {
@@ -1283,23 +1282,22 @@ fn patch_dol<'a>(
         _ => panic!(),
     };
 
-    let dol_builder = PatchedBinaryBuilder::new(&reader[..])
-        .patch(offsets.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))
-        .patch(offsets.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))
-        .patch(offsets.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))
-        .patch(offsets.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]));
+    let mut dol_patcher = DolPatcher::new(reader);
+    dol_patcher
+        .patch(addrs.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))?
+        .patch(addrs.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))?
+        .patch(addrs.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))?
+        .patch(addrs.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))?;
 
-    let dol_builder = if !patch_heat_damage { dol_builder} else {
-        dol_builder
-            .patch(offsets.heat_damage_check.0, Cow::Owned(heat_damage_patch))
-    };
+    if patch_heat_damage {
+        dol_patcher.ppcasm_patch(&heat_damage_patch)?;
+    }
 
-    let dol_builder = if !patch_suit_damage { dol_builder } else {
-        dol_builder
-            .patch(offsets.suit_damage_reduction_calc.0, Cow::Owned(staggered_suit_damage_patch))
-    };
-    let dol = dol_builder.build();
-    *file = structs::FstEntryFile::ExternalFile(structs::ReadWrapper::new(dol), reader.len());
+    if patch_suit_damage {
+        dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
+    }
+
+    *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
 }
 
@@ -1522,8 +1520,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
         for name in FMV_NAMES {
             patcher.add_file_patch(name, |file| {
-                let rw = structs::ReadWrapper::new(FMV);
-                *file = structs::FstEntryFile::ExternalFile(rw, FMV.len());
+                *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
                 Ok(())
             });
         }
