@@ -1537,9 +1537,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         add_skip_hudmemos_strgs(&mut pickup_resources);
     }
 
+    // XXX These values need to outlife the patcher
+    let select_game_fmv_suffix = rng.choose(&["A", "B", "C"]).unwrap();
+    let n = format!("02_start_fileselect_{}.thp", select_game_fmv_suffix);
+    let start_file_select_fmv = gc_disc.find_file(&n).unwrap().file.clone();
+    let n = format!("04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
+    let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file.clone();
+
     let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
-
     patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
     if !config.keep_fmvs {
         // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
@@ -1564,6 +1570,28 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             });
         }
     }
+
+    // Replace the FMVs that play when you select a file so each ISO always plays the only one.
+    const SELECT_GAMES_FMVS: &[&[u8]] = &[
+        b"02_start_fileselect_A.thp",
+        b"02_start_fileselect_B.thp",
+        b"02_start_fileselect_C.thp",
+        b"04_fileselect_playgame_A.thp",
+        b"04_fileselect_playgame_B.thp",
+        b"04_fileselect_playgame_C.thp",
+    ];
+    for fmv_name in SELECT_GAMES_FMVS {
+        let fmv_ref = if fmv_name[1] == b'2' {
+            &start_file_select_fmv
+        } else {
+            &file_select_play_game_fmv
+        };
+        patcher.add_file_patch(fmv_name, move |file| {
+            *file = fmv_ref.clone();
+            Ok(())
+        });
+    }
+
 
     // Patch pickups
     let mut layout_iterator = pickup_layout.iter();

@@ -4,7 +4,6 @@ use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
 use std::fmt;
-use std::cell::RefCell;
 use std::io::{self, Read, Write};
 
 use ::pak::Pak;
@@ -323,10 +322,20 @@ pub trait ToRead: fmt::Debug
 {
     fn to_read<'a>(&'a self) -> Box<Read + 'a>;
     fn len(&self) -> usize;
+    fn boxed<'a>(&self) -> Box<ToRead + 'a>
+        where Self: 'a;
+}
+
+impl<'a> Clone for Box<ToRead + 'a>
+{
+    fn clone(&self) -> Self
+    {
+        self.boxed()
+    }
 }
 
 impl<T> ToRead for T
-    where T: AsRef<[u8]> + fmt::Debug
+    where T: AsRef<[u8]> + fmt::Debug + Clone
 {
     fn to_read<'a>(&'a self) -> Box<Read + 'a>
     {
@@ -337,9 +346,15 @@ impl<T> ToRead for T
     {
         self.as_ref().len()
     }
+
+    fn boxed<'a>(&self) -> Box<ToRead + 'a>
+        where Self: 'a
+    {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FstEntryFile<'a>
 {
     Pak(Pak<'a>),

@@ -8,7 +8,7 @@ use std::{
     vec,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct BinaryPatcher<'a>
 {
     data: &'a [u8],
@@ -144,7 +144,7 @@ impl<'a> io::Read for PatchedBinary<'a>
 //     }
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum DolSegment<'a>
 {
     PatchedSegment(u32, BinaryPatcher<'a>),
@@ -194,7 +194,7 @@ impl<'a> DolSegment<'a>
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DolPatcher<'a>
 {
     bss_addr: u32,
@@ -358,6 +358,12 @@ impl<'a> structs::ToRead for DolPatcher<'a>
             .map(|seg| seg.len())
             .sum();
         0x100 + contents_len as usize
+    }
+
+    fn boxed<'s>(&self) -> Box<structs::ToRead + 's>
+        where Self: 's
+    {
+        Box::new(self.clone())
     }
 }
 

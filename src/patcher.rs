@@ -26,9 +26,9 @@ struct MreaKey<'a>
 type SclyPatch<'a, 'r> = dyn FnMut(&mut PatcherState, &mut MlvlArea<'a, '_, '_, '_>) -> Result<(), String> + 'r;
 pub struct PrimePatcher<'a, 'r>
 {
-    file_patches: HashMap<&'r [u8], Box<dyn FnMut(&mut FstEntryFile) -> Result<(), String> + 'r>>,
+    file_patches: HashMap<&'r [u8], Box<dyn FnMut(&mut FstEntryFile<'a>) -> Result<(), String> + 'r>>,
     // TODO: Come up with a better data structure for this. A per PAK list of patches, for example.
-    resource_patches: Vec<(ResourceKey<'r>, Box<dyn FnMut(&mut Resource) -> Result<(), String> + 'r>)>,
+    resource_patches: Vec<(ResourceKey<'r>, Box<dyn FnMut(&mut Resource<'a>) -> Result<(), String> + 'r>)>,
     scly_patches: Vec<(MreaKey<'r>, Vec<Box<SclyPatch<'a, 'r>>>)>,
 }
 
@@ -49,13 +49,13 @@ impl<'a, 'r> PrimePatcher<'a, 'r>
     }
 
     pub fn add_file_patch<F>(&mut self, name: &'r [u8], f: F)
-        where F: FnMut(&mut FstEntryFile) -> Result<(), String> + 'r
+        where F: FnMut(&mut FstEntryFile<'a>) -> Result<(), String> + 'r
     {
         self.file_patches.insert(name, Box::new(f));
     }
 
     pub fn add_resource_patch<F>(&mut self, pak_name: &'r [u8], kind: FourCC, id: u32, f: F)
-        where F: FnMut(&mut Resource) -> Result<(), String> + 'r
+        where F: FnMut(&mut Resource<'a>) -> Result<(), String> + 'r
     {
         let key = ResourceKey { pak_name, kind, id, };
         self.resource_patches.push((key, Box::new(f)));
