@@ -1229,7 +1229,8 @@ fn patch_dol<'a>(
         save_filename_a: u32,
         save_filename_b: u32,
         cinematic_skip: u32,
-        unlockables: u32,
+        unlockables_default_ctor: u32,
+        unlockables_read_ctor: u32,
     }
 
     let addrs = match version {
@@ -1243,7 +1244,8 @@ fn patch_dol<'a>(
                 save_filename_a: 0x803d47cc,
                 save_filename_b: 0x803d47db,
                 cinematic_skip: 0x80151868,
-                unlockables: 0x801d5c6c,
+                unlockables_read_ctor: 0x801d5c70,
+                unlockables_default_ctor: 0x801d609c,
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
         Version::V0_02 => Addrs {
@@ -1256,7 +1258,8 @@ fn patch_dol<'a>(
                 save_filename_a: 0x803d588c,
                 save_filename_b: 0x803d589b,
                 cinematic_skip: 0x8015204c,
-                unlockables: 0x801d64bc,
+                unlockables_read_ctor: 0x801d64c0,
+                unlockables_default_ctor: 0x801d68ec,
             },
     };
 
@@ -1293,15 +1296,21 @@ fn patch_dol<'a>(
             li      r3, 0x1;
             blr;
     });
-    let unlockables_patch = ppcasm!(addrs.unlockables, {
+    let unlockables_default_ctor_patch = ppcasm!(addrs.unlockables_default_ctor, {
+            li      r6, 100;
+            stw     r6, 0xcc(r3);
+            lis     r6, 0xF7FF;
+            stw     r6, 0xd0(r3);
+    });
+    let unlockables_read_ctor_patch = ppcasm!(addrs.unlockables_read_ctor, {
             li      r6, 100;
             stw     r6, 0xcc(r28);
-            lis     r6, { 0xF7FFFFFF }@h;
-            addi    r6, r6, { 0xF7FFFFFF }@l;
+            lis     r6, 0xF7FF;
             stw     r6, 0xd0(r28);
             mr      r3, r29;
             li      r4, 2;
     });
+
 
     let heat_damage_patch = ppcasm!(addrs.heat_damage_check, {
             lwz     r4, 0xdc(r4);
@@ -1326,7 +1335,8 @@ fn patch_dol<'a>(
         .patch(addrs.save_filename_a, b"randomprime A\0"[..].into())?
         .patch(addrs.save_filename_b, b"randomprime B\0"[..].into())?
         .ppcasm_patch(&cinematic_skip_patch)?
-        .ppcasm_patch(&unlockables_patch)?;
+        .ppcasm_patch(&unlockables_default_ctor_patch)?
+        .ppcasm_patch(&unlockables_read_ctor_patch)?;
 
     if patch_heat_damage {
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
