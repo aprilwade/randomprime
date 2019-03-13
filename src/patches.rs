@@ -249,7 +249,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R, showHints: bool)
+fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R, show_hints: bool)
     -> [String; 12]
     where R: Rng + Rand
 {
@@ -309,7 +309,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
         }
 
         // If artifact hints are allowed, proceed with spoiler message handling. Else, use a default, non-spoiler string.
-        if showHints {
+        if show_hints {
             // If there are specific messages for this room, choose one, other wise choose a generic
             // message.
             let template = specific_room_templates.iter_mut()
