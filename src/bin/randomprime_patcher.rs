@@ -356,7 +356,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                 .long("obfuscate-items")
                 .help("Replace all item models with an obfuscated one"))
             .arg(Arg::with_name("show artifact location hints")
-                .long("show-artifact-hint-locations")
+                .long("show-artifact-location-hints")
                 .help("Allow Chozo Artifact location hints via Artifact Temple totem scans"))
             .arg(Arg::with_name("quiet")
                 .long("quiet")
