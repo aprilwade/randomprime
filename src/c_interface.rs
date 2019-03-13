@@ -43,6 +43,8 @@ struct Config
     staggered_suit_damage: bool,
     #[serde(default)]
     obfuscate_items: bool,
+    #[serde(default)]
+    show_artifact_location_hints: bool,
 
     #[serde(default)]
     keep_fmvs: bool,
@@ -190,6 +192,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         staggered_suit_damage: config.staggered_suit_damage,
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
+        show_artifact_location_hints: config.show_artifact_location_hints,
         quiet: false,
 
         starting_items: config.starting_items,

@@ -249,7 +249,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R)
+fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R, showHints: bool)
     -> [String; 12]
     where R: Rng + Rand
 {
@@ -267,6 +267,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
         "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you well, that you may find a key lost to our cause... Alright, whatever. It's at the &push;&main-color=#43CD80;{room}&pop;.\0",
         "I kind of just played Frisbee with mine. It flew and landed too far so I didn't want to walk over and grab it because I was lazy. It's in the &push;&main-color=#43CD80;{room}&pop; if you want to find it.\0",
     ];
+
     rng.shuffle(&mut generic_text_templates);
     let mut generic_templates_iter = generic_text_templates.iter();
 
@@ -307,14 +308,19 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
             continue;
         }
 
-        // If there are specific messages for this room, choose one, other wise choose a generic
-        // message.
-        let template = specific_room_templates.iter_mut()
-            .find(|row| row.0 == room_id)
-            .and_then(|row| row.1.pop())
-            .unwrap_or_else(|| generic_templates_iter.next().unwrap());
-        let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
-        scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
+        // If artifact hints are allowed, proceed with spoiler message handling. Else, use a default, non-spoiler string.
+        if showHints {
+            // If there are specific messages for this room, choose one, other wise choose a generic
+            // message.
+            let template = specific_room_templates.iter_mut()
+                .find(|row| row.0 == room_id)
+                .and_then(|row| row.1.pop())
+                .unwrap_or_else(|| generic_templates_iter.next().unwrap());
+            let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
+            scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
+        } else {
+            scan_text[artifact_id] = "Unable to read totem scan data. Local electrical interference is preventing data access. Interference is of an unknown origin.\0".to_string();
+        }
     }
 
     // Set a default value for any artifacts that we didn't find.
@@ -1456,6 +1462,7 @@ pub struct ParsedConfig
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
+    pub show_artifact_location_hints: bool,
     pub nonvaria_heat_damage: bool,
     pub staggered_suit_damage: bool,
     pub quiet: bool,
@@ -1494,6 +1501,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
+    writeln!(ct, "artifact hints: {}", config.show_artifact_location_hints).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(unsafe { config.input_iso.as_slice() });
@@ -1558,7 +1566,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 {
     let pickup_layout = &config.pickup_layout;
     let mut rng = ChaChaRng::from_seed(&config.seed);
-    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
+    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng, config.show_artifact_location_hints);
 
     let mut pickup_resources = collect_pickup_resources(gc_disc);
     if config.skip_hudmenus {
