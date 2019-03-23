@@ -1719,7 +1719,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(b"Metroid4.pak", 0xAFD4E038, patch_main_ventilation_shaft_section_b_door);
     patcher.add_scly_patch(b"Metroid3.pak", 0x43E4CC25, patch_research_lab_hydra_barrier);
     patcher.add_scly_patch(b"Metroid3.pak", 0xA49B2544, patch_research_lab_aether_exploding_wall);
-    patcher.add_scly_patch(b"Metroid3.pak", 0x3FB4A33E, patch_observatory_2nd_pass_solvablility);
+    patcher.add_scly_patch(b"Metroid3.pak", 0x3FB4A34E, patch_observatory_2nd_pass_solvablility);
     patcher.add_scly_patch(b"metroid5.pak", 0x956F1552, patch_mines_security_station_soft_lock);
 
 
