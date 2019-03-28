@@ -1030,6 +1030,24 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(
     Ok(())
 }
 
+fn patch_ore_processing_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    layer.objects.as_mut_vec().retain(|obj| obj.instance_id != 132563);
+    Ok(())
+}
+
+fn patch_geothermal_core_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    layer.objects.as_mut_vec().retain(|obj| obj.instance_id != 1311646);
+    Ok(())
+}
+
 fn patch_mines_security_station_soft_lock<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -1723,6 +1741,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(b"metroid5.pak", 0x956F1552, patch_mines_security_station_soft_lock);
 
 
+    if version == Version::V0_02 {
+        patcher.add_scly_patch(b"metroid5.pak", 0x643d038f, patch_ore_processing_door_lock_0_02);
+        patcher.add_scly_patch(b"Metroid6.pak", 0xc0498676, patch_geothermal_core_door_lock_0_02);
+    }
 
     if config.elevator_layout[20] != 20 {
         // If we have a non-default start point, patch the landing site to avoid
