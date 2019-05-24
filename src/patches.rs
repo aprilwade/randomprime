@@ -15,7 +15,7 @@ use crate::{
     gcz_writer::GczWriter,
     memmap,
     mlvl_wrapper,
-    pickup_meta,
+    pickup_meta::{self, PickupType},
     reader_writer,
     patcher::{PatcherState, PrimePatcher},
     structs,
@@ -54,9 +54,9 @@ const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
     -> HashMap<(u32, FourCC), structs::Resource<'a>>
 {
-    let mut looking_for: HashSet<_> = pickup_meta::pickup_meta_table().iter()
-        .flat_map(|meta| meta.deps.iter().cloned())
-        .chain(pickup_meta::pickup_meta_table().iter().map(|m| (m.hudmemo_strg, b"STRG".into())))
+    let mut looking_for: HashSet<_> = PickupType::iter()
+        .flat_map(|pt| pt.dependencies().iter().cloned())
+        .chain(PickupType::iter().map(|pt| (pt.hudmemo_strg(), b"STRG".into())))
         .collect();
 
     let mut found = HashMap::with_capacity(looking_for.len());
@@ -231,8 +231,8 @@ fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [struc
 
 fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs::Resource>)
 {
-    for pickup_meta in pickup_meta::pickup_meta_table().iter() {
-        let id = pickup_meta.skip_hudmemos_strg;
+    for pt in PickupType::iter() {
+        let id = pt.skip_hudmemos_strg();
         let res = pickup_meta::build_resource(
             id,
             structs::ResourceKind::Strg(structs::Strg {
@@ -240,7 +240,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
                     structs::StrgStringTable {
                         lang: b"ENGL".into(),
                         strings: vec![format!("&just=center;{} acquired!\u{0}",
-                                              pickup_meta.name).into()].into(),
+                                              pt.name()).into()].into(),
                     },
                 ].into(),
             })
@@ -249,7 +249,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R)
+fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng: &mut R)
     -> [String; 12]
     where R: Rng + Rand
 {
@@ -296,11 +296,11 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
     let iter = pickup_layout.iter()
         .zip(names_iter)
         // ▼▼▼▼ Only yield artifacts ▼▼▼▼
-        .filter(|&(pickup_meta_idx, _)| *pickup_meta_idx >= 23 && *pickup_meta_idx <= 34);
+        .filter(|&(pt, _)| pt.is_artifact());
 
     // Shame there isn't a way to flatten tuples automatically
-    for (pickup_meta_idx, (room_id, name)) in iter {
-        let artifact_id = *pickup_meta_idx as usize - 23;
+    for (pt, (room_id, name)) in iter {
+        let artifact_id = pt.idx() - PickupType::ArtifactOfLifegiver.idx();
         if scan_text[artifact_id].len() != 0 {
             // If there are multiple of this particular artifact, then we use the first instance
             // for the location of the artifact.
@@ -313,7 +313,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[u8], rng: &mut R
             .find(|row| row.0 == room_id)
             .and_then(|row| row.1.pop())
             .unwrap_or_else(|| generic_templates_iter.next().unwrap());
-        let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
+        let pickup_name = pt.name();
         scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
     }
 
@@ -360,54 +360,96 @@ fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
     Ok(())
 }
 
-fn make_obfuscated_pickup_meta<'a>(meta: &'a pickup_meta::PickupMeta, obfuscate: bool)
-    -> LCow<'a, pickup_meta::PickupMeta>
+#[derive(Copy, Clone, Debug)]
+enum MaybeObfuscatedPickup
 {
-    if !obfuscate {
-        LCow::Borrowed(meta)
-    } else {
-        let nothing_meta = &pickup_meta::pickup_meta_table()[35];
-        let pickup = structs::Pickup {
-            name: meta.pickup.name.clone(),
-            kind: meta.pickup.kind,
-            max_increase: meta.pickup.max_increase,
-            curr_increase: meta.pickup.curr_increase,
-            ..nothing_meta.pickup.clone()
-        };
+    Unobfuscated(PickupType),
+    Obfuscated(PickupType),
+}
 
-        LCow::Owned(pickup_meta::PickupMeta {
-            name: meta.name,
-            pickup,
-            deps: nothing_meta.deps,
-            hudmemo_strg: meta.hudmemo_strg,
-            skip_hudmemos_strg: meta.skip_hudmemos_strg,
-            attainment_audio_file_name: meta.attainment_audio_file_name,
-        })
+impl MaybeObfuscatedPickup
+{
+    fn orig(&self) -> PickupType
+    {
+        match self {
+            MaybeObfuscatedPickup::Unobfuscated(pt) => *pt,
+            MaybeObfuscatedPickup::Obfuscated(pt) => *pt,
+        }
+    }
+
+    // fn name(&self) -> &'static str
+    // {
+    //     self.orig().name()
+    // }
+
+    fn dependencies(&self) -> &'static [(u32, FourCC)]
+    {
+        match self {
+            MaybeObfuscatedPickup::Unobfuscated(pt) => pt.dependencies(),
+            MaybeObfuscatedPickup::Obfuscated(_) => PickupType::Nothing.dependencies(),
+        }
+    }
+
+    fn hudmemo_strg(&self) -> u32
+    {
+        self.orig().hudmemo_strg()
+    }
+
+    fn skip_hudmemos_strg(&self) -> u32
+    {
+        self.orig().skip_hudmemos_strg()
+    }
+
+    pub fn attainment_audio_file_name(&self) -> &'static str
+    {
+        self.orig().attainment_audio_file_name()
+    }
+
+    pub fn pickup_data<'a>(&self) -> LCow<'a, structs::Pickup<'static>>
+    {
+        match self {
+            MaybeObfuscatedPickup::Unobfuscated(pt) => LCow::Borrowed(pt.pickup_data()),
+            MaybeObfuscatedPickup::Obfuscated(original) => {
+                let original = original.pickup_data();
+                let nothing = PickupType::Nothing.pickup_data();
+
+                LCow::Owned(structs::Pickup {
+                    name: original.name.clone(),
+                    kind: original.kind,
+                    max_increase: original.max_increase,
+                    curr_increase: original.curr_increase,
+                    ..nothing.clone()
+                })
+            },
+        }
     }
 }
 
 fn modify_pickups_in_mrea<'a>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'a, '_, '_, '_>,
-    pickup_meta_idx: u8,
+    pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
     config: &ParsedConfig,
 ) -> Result<(), String>
 {
     let location_idx = 0;
-    let pickup_meta = make_obfuscated_pickup_meta(
-        &pickup_meta::pickup_meta_table()[pickup_meta_idx as usize],
-        config.obfuscate_items
-    );
-    let pickup_meta = &*pickup_meta;
-    let deps_iter = pickup_meta.deps.iter().map(|&(file_id, fourcc)| structs::Dependency {
-            asset_id: file_id,
-            asset_type: fourcc,
-        });
+
+    let pickup_type = if config.obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_type)
+    } else {
+        MaybeObfuscatedPickup::Unobfuscated(pickup_type)
+    };
+
+    let deps_iter = pickup_type.dependencies().iter()
+        .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            });
 
     let name = CString::new(format!(
-            "Randomizer - Pickup {} ({:?})", location_idx, pickup_meta.pickup.name)).unwrap();
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
@@ -415,9 +457,9 @@ fn modify_pickups_in_mrea<'a>(
     // Add our custom STRG
     let hudmemo_dep = structs::Dependency {
         asset_id: if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
-                pickup_meta.skip_hudmemos_strg
+                pickup_type.skip_hudmemos_strg()
             } else {
-                pickup_meta.hudmemo_strg
+                pickup_type.hudmemo_strg()
             },
         asset_type: b"STRG".into(),
     };
@@ -441,7 +483,7 @@ fn modify_pickups_in_mrea<'a>(
     });
 
     // If this is an artifact, insert a layer change function
-    let pickup_kind = pickup_meta.pickup.kind;
+    let pickup_kind = pickup_type.pickup_data().kind;
     if pickup_kind >= 29 && pickup_kind <= 40 {
         let instance_id = ps.fresh_instance_id_range.next().unwrap();
         let function = artifact_layer_change_template(instance_id, pickup_kind);
@@ -456,7 +498,7 @@ fn modify_pickups_in_mrea<'a>(
     let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup, &pickup_meta);
+    update_pickup(pickup, pickup_type);
     if additional_connections.len() > 0 {
         pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
     }
@@ -464,28 +506,28 @@ fn modify_pickups_in_mrea<'a>(
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
         .unwrap();
-    update_hudmemo(hudmemo, &pickup_meta, location_idx, config.skip_hudmenus);
+    update_hudmemo(hudmemo, pickup_type, location_idx, config.skip_hudmenus);
 
 
     let location = pickup_location.attainment_audio;
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  location.instance_id)
         .unwrap();
-    update_attainment_audio(attainment_audio, &pickup_meta);
+    update_attainment_audio(attainment_audio, pickup_type);
     Ok(())
 }
 
-fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::PickupMeta)
+fn update_pickup(pickup: &mut structs::SclyObject, pickup_type: MaybeObfuscatedPickup)
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
     let original_pickup = pickup.clone();
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_meta.pickup.cmdl).unwrap();
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_type.pickup_data().cmdl).unwrap();
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
-    let new_center = calculate_center(new_aabb, pickup_meta.pickup.rotation,
-                                        pickup_meta.pickup.scale);
+    let new_center = calculate_center(new_aabb, pickup_type.pickup_data().rotation,
+                                        pickup_type.pickup_data().scale);
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
@@ -506,13 +548,13 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_meta: &pickup_meta::Pi
         spawn_delay: original_pickup.spawn_delay,
         active: original_pickup.active,
 
-        ..(pickup_meta.pickup.clone())
+        ..(pickup_type.pickup_data().into_owned())
     };
 }
 
 fn update_hudmemo(
     hudmemo: &mut structs::SclyObject,
-    pickup_meta: &pickup_meta::PickupMeta,
+    pickup_type: MaybeObfuscatedPickup,
     location_idx: usize,
     skip_hudmenus: bool)
 {
@@ -523,17 +565,17 @@ fn update_hudmemo(
     if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = pickup_meta.skip_hudmemos_strg;
+        hudmemo.strg = pickup_type.skip_hudmemos_strg();
     } else {
-        hudmemo.strg = pickup_meta.hudmemo_strg;
+        hudmemo.strg = pickup_type.hudmemo_strg();
     }
 }
 
 fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
-                           pickup_meta: &pickup_meta::PickupMeta)
+                           pickup_type: MaybeObfuscatedPickup)
 {
     let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
-    let bytes = pickup_meta.attainment_audio_file_name.as_bytes();
+    let bytes = pickup_type.attainment_audio_file_name().as_bytes();
     attainment_audio.audio_file_name = bytes.as_cstr();
 }
 
@@ -690,7 +732,7 @@ fn patch_frigate_teleporter<'a>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: S
 fn fix_artifact_of_truth_requirements(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
-    pickup_layout: &[u8],
+    pickup_layout: &[PickupType],
 ) -> Result<(), String>
 {
     let truth_req_layer_id = area.layer_flags.layer_count;
@@ -699,9 +741,7 @@ fn fix_artifact_of_truth_requirements(
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
     area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
 
-    let pmt = pickup_meta::pickup_meta_table();
-
-    let at_pickup_kind = pmt[pickup_layout[63] as usize].pickup.kind;
+    let at_pickup_kind = pickup_layout[63].pickup_data().kind;
     for i in 0..12 {
         let layer_number = if i == 0 {
             truth_req_layer_id
@@ -710,7 +750,7 @@ fn fix_artifact_of_truth_requirements(
         };
         let kind = i + 29;
         let exists = pickup_layout.iter()
-            .any(|meta_idx| kind == pmt[*meta_idx as usize].pickup.kind);
+            .any(|pt| kind == pt.pickup_data().kind);
         if exists && at_pickup_kind != kind {
             // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
             // layer as inactive. It will be activated when the item is collected.
@@ -1070,21 +1110,21 @@ fn patch_mines_security_station_soft_lock<'a>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
-fn patch_credits(res: &mut structs::Resource, pickup_layout: &[u8])
+fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
     -> Result<(), String>
 {
     use std::fmt::Write;
-    const PICKUPS_TO_PRINT: &[u8] = &[
-        2, // Thermal Visor
-        3, // X-Ray Visor
-        4, // Varia Suit
-        5, // Gravity Suit
-        8, // Boost Ball
-        9, // Spider Ball
-        13, // Charge Beam
-        14, // Space Jump Boots
-        15, // Grapple Beam
-        16, // Super Missile
+    const PICKUPS_TO_PRINT: &[PickupType] = &[
+        PickupType::ThermalVisor,
+        PickupType::XRayVisor,
+        PickupType::VariaSuit,
+        PickupType::GravitySuit,
+        PickupType::BoostBall,
+        PickupType::SpiderBall,
+        PickupType::ChargeBeam,
+        PickupType::SpaceJumpBoots,
+        PickupType::GrappleBeam,
+        PickupType::SuperMissile,
     ];
 
     let mut output = concat!(
@@ -1093,8 +1133,8 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[u8])
         "Major Item Locations",
         "&pop;",
     ).to_owned();
-    for pickup_meta_idx in PICKUPS_TO_PRINT {
-        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_meta_idx) {
+    for pickup_type in PICKUPS_TO_PRINT {
+        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_type) {
             i
         } else {
             continue
@@ -1104,7 +1144,7 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[u8])
             .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
             .nth(room_idx)
             .unwrap();
-        let pickup_name = pickup_meta::pickup_meta_table()[*pickup_meta_idx as usize].name;
+        let pickup_name = pickup_type.name();
         write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
     }
     output += "\n\n\n\n\0";
@@ -1483,8 +1523,6 @@ enum Version
 pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
-    pickup_meta::setup_pickup_meta_table();
-
     let mut ct = Vec::new();
     writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION")).unwrap();
     writeln!(ct).unwrap();
@@ -1556,7 +1594,10 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, version: Version) -> Result<(), String>
 {
-    let pickup_layout = &config.pickup_layout;
+    let pickup_layout: Vec<_> = config.pickup_layout.iter()
+        .map(|i| PickupType::from_idx(*i as usize).unwrap())
+        .collect();
+    let pickup_layout = &pickup_layout[..];
     let mut rng = ChaChaRng::from_seed(&config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
@@ -1620,7 +1661,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         });
     }
 
-
     // Patch pickups
     let mut layout_iterator = pickup_layout.iter();
     for (name, rooms) in pickup_meta::PICKUP_LOCATIONS.iter() {
@@ -1634,11 +1674,19 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 }
                 Ok(())
             });
-            for (&pickup_location, &pickup_meta_idx) in room_info.pickup_locations.iter().zip(&mut layout_iterator) {
+            let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
+            for (&pickup_location, &pickup_type) in iter {
                 patcher.add_scly_patch(
                     name.as_bytes(),
                     room_info.room_id,
-                    move |ps, area| modify_pickups_in_mrea(ps, area, pickup_meta_idx, pickup_location, pickup_resources, config)
+                    move |ps, area| modify_pickups_in_mrea(
+                            ps,
+                            area,
+                            pickup_type,
+                            pickup_location,
+                            pickup_resources,
+                            config
+                        )
                 );
             }
         }
