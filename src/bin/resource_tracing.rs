@@ -2,7 +2,7 @@
 //! The location of the ISO should be provided as a command line argument.
 
 pub use randomprime::*;
-use randomprime::pickup_meta::ScriptObjectLocation;
+use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
@@ -32,6 +32,7 @@ struct ResourceDb<'a>
     map: HashMap<ResourceKey, ResourceDbRecord<'a>>,
 }
 
+#[derive(Debug)]
 struct ResourceDbRecord<'a>
 {
     data: ResourceData<'a>,
@@ -205,59 +206,52 @@ impl ResourceKey
     }
 }
 
-
-pub struct PickupType
+fn pickup_type_for_pickup(pickup: &structs::Pickup) -> Option<PickupType>
 {
-    pub name: &'static str,
-    pub first_loc: usize,
+    if pickup.max_increase == 0 {
+        return None
+    }
+    match pickup.kind {
+        4 => Some(PickupType::Missile),
+        24 => Some(PickupType::EnergyTank),
+        9 => Some(PickupType::ThermalVisor),
+        13 => Some(PickupType::XRayVisor),
+        22 => Some(PickupType::VariaSuit),
+        21 => Some(PickupType::GravitySuit),
+        // XXX There's two PhazonSuit objects floating around, we want the one with a model
+        23 if pickup.cmdl != 0xFFFFFFFF => Some(PickupType::PhazonSuit),
+        16 => Some(PickupType::MorphBall),
+        18 => Some(PickupType::BoostBall),
+        19 => Some(PickupType::SpiderBall),
+        6 => Some(PickupType::MorphBallBomb),
+        7 if pickup.max_increase == 1 => Some(PickupType::PowerBombExpansion),
+        7 if pickup.max_increase == 4 => Some(PickupType::PowerBomb),
+        10 => Some(PickupType::ChargeBeam),
+        15 => Some(PickupType::SpaceJumpBoots),
+        12 => Some(PickupType::GrappleBeam),
+        11 => Some(PickupType::SuperMissile),
+        28 => Some(PickupType::Wavebuster),
+        14 => Some(PickupType::IceSpreader),
+        8 => Some(PickupType::Flamethrower),
+        2 => Some(PickupType::WaveBeam),
+        1 => Some(PickupType::IceBeam),
+        3 => Some(PickupType::PlasmaBeam),
+        33 => Some(PickupType::ArtifactOfLifegiver),
+        32 => Some(PickupType::ArtifactOfWild),
+        38 => Some(PickupType::ArtifactOfWorld),
+        37 => Some(PickupType::ArtifactOfSun),
+        31 => Some(PickupType::ArtifactOfElder),
+        39 => Some(PickupType::ArtifactOfSpirit),
+        29 => Some(PickupType::ArtifactOfTruth),
+        35 => Some(PickupType::ArtifactOfChozo),
+        34 => Some(PickupType::ArtifactOfWarrior),
+        40 => Some(PickupType::ArtifactOfNewborn),
+        36 => Some(PickupType::ArtifactOfNature),
+        30 => Some(PickupType::ArtifactOfStrength),
+        _ => None,
+    }
 }
-// A map from pickup type -> pickup name and location
-// Note, the ordering matters here
-const PICKUP_TYPES: &'static [PickupType] = &[
-    PickupType { name: "Missile", first_loc: 1 },
-    PickupType { name: "Energy Tank", first_loc: 9, },
 
-    PickupType { name: "Thermal Visor", first_loc: 50, },
-    PickupType { name: "X-Ray Visor", first_loc: 71, },
-
-    PickupType { name: "Varia Suit", first_loc: 20, },
-    PickupType { name: "Gravity Suit", first_loc: 54, },
-    PickupType { name: "Phazon Suit", first_loc: 83, },
-
-    PickupType { name: "Morph Ball", first_loc: 5, },
-    PickupType { name: "Boost Ball", first_loc: 43, },
-    PickupType { name: "Spider Ball", first_loc: 44, },
-
-    PickupType { name: "Morph Ball Bomb", first_loc: 28, },
-    PickupType { name: "Power Bomb Expansion", first_loc: 12, },
-    PickupType { name: "Power Bomb", first_loc: 85, },
-
-    PickupType { name: "Charge Beam", first_loc: 23, },
-    PickupType { name: "Space Jump Boots", first_loc: 59, },
-    PickupType { name: "Grapple Beam", first_loc: 75, },
-
-    PickupType { name: "Super Missile", first_loc: 47, },
-    PickupType { name: "Wavebuster", first_loc: 13, },
-    PickupType { name: "Ice Spreader", first_loc: 96, },
-    PickupType { name: "Flamethrower", first_loc: 76, },
-
-    PickupType { name: "Wave Beam", first_loc: 41, },
-    PickupType { name: "Ice Beam", first_loc: 34, },
-    PickupType { name: "Plasma Beam", first_loc: 99, },
-
-    PickupType { name: "Artifact of Lifegiver", first_loc: 14, },
-    PickupType { name: "Artifact of Wild", first_loc: 21, },
-    PickupType { name: "Artifact of World", first_loc: 33, },
-    PickupType { name: "Artifact of Sun", first_loc: 37, },
-    PickupType { name: "Artifact of Elder", first_loc: 49, },
-    PickupType { name: "Artifact of Spirit", first_loc: 56, },
-    PickupType { name: "Artifact of Truth", first_loc: 63, },
-    PickupType { name: "Artifact of Chozo", first_loc: 72, },
-    PickupType { name: "Artifact of Warrior", first_loc: 77, },
-    PickupType { name: "Artifact of Newborn", first_loc: 89, },
-    PickupType { name: "Artifact of Nature", first_loc: 91, },
-    PickupType { name: "Artifact of Strength", first_loc: 95, },
-];
 
 static CUT_SCENE_PICKUPS: &'static [(u32, u32)] = &[
     (0x3C785450, 589860), // Morph Ball
@@ -330,253 +324,195 @@ struct RoomInfo
     objects_to_remove: HashMap<u32, Vec<u32>>,
 }
 
-
-fn trace_pickup_deps(
-    gc_disc: &mut structs::GcDisc,
-    pak_name: &str,
-    counter: &mut usize,
-    pickup_table: &mut HashMap<usize, PickupData>,
-    locations: &mut Vec<Vec<RoomInfo>>,
-    cmdl_aabbs: &mut HashMap<u32, [f32; 6]>,
-)
+fn build_scly_db<'a>(scly: &structs::Scly<'a>) -> HashMap<u32, (usize, structs::SclyObject<'a>)>
 {
-    let file_entry = gc_disc.find_file(pak_name).unwrap();
-    let pak = match *file_entry.file().unwrap() {
-        structs::FstEntryFile::Pak(ref pak) => pak.clone(),
-        structs::FstEntryFile::Unknown(ref reader) => reader.clone().read(()),
-        _ => panic!(),
+    let mut scly_db = HashMap::new();
+    for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
+        for obj in scly_layer.objects.iter() {
+            let obj = obj.into_owned();
+            assert!(scly_db.insert(obj.instance_id, (layer_num, obj)).is_none());
+        }
+    }
+    scly_db
+}
+
+fn find_audio_attainment<'a>(
+    obj: &structs::SclyObject<'a>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+) -> Option<structs::SclyObject<'a>>
+{
+    let post_pickup_relay = search_for_scly_object(&obj.connections, scly_db, |o| {
+        o.property_data.as_relay()
+            .map(|i| i.name.to_bytes() == b"Relay Post Pickup")
+            .unwrap_or(false)
+    })?;
+
+    const ATTAINMENT_AUDIO_FILES: &'static [&'static [u8]] = &[
+        b"/audio/itm_x_short_02.dsp",
+        b"audio/jin_artifact.dsp",
+        b"audio/jin_itemattain.dsp",
+    ];
+    search_for_scly_object(&post_pickup_relay.connections, scly_db,
+        |obj| obj.property_data.as_streamed_audio()
+            .map(|sa| ATTAINMENT_AUDIO_FILES.contains(&sa.audio_file_name.to_bytes()))
+            .unwrap_or(false)
+    )
+}
+
+fn extract_pickup_data<'a>(
+    scly: &structs::Scly<'a>,
+    obj: &structs::SclyObject<'a>,
+    res_db: &mut ResourceDb<'a>
+) -> PickupData
+{
+    let mut pickup = obj.property_data.as_pickup().unwrap().into_owned();
+
+    // XXX It's important to collect the dependencies before we modify the pickup object
+    let mut deps = res_db.get_dependencies(&pickup);
+    patch_dependencies(pickup.kind, &mut deps);
+
+    let scly_db = build_scly_db(&scly);
+
+    let attainment_audio_file_name = if let Some(aa) = find_audio_attainment(&obj, &scly_db) {
+        let streamed_audio = aa.property_data.as_streamed_audio().unwrap();
+        streamed_audio.audio_file_name.to_bytes_with_nul().to_owned()
+    } else {
+        // The Phazon Suit is weird: the audio object isn't directly connected to the
+        // Pickup. So, hardcode its location.
+        assert_eq!(pickup.kind, 23);
+        b"audio/jin_itemattain.dsp\0".to_vec()
     };
 
-    let resources = &pak.resources;
+    if pickup.kind == 23 {
+        pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
+        pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
+        pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
+    }
+    let mut bytes = vec![];
+    pickup.write(&mut bytes).unwrap();
 
-    let mut res_db = ResourceDb::new();
-    for res in resources.iter() {
-        res_db.add_resource(res.into_owned());
+    let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_hud_memo()
+            .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
+            .unwrap_or(false)
+    );
+    let hudmemo_strg = if let Some(hudmemo) = hudmemo {
+        hudmemo.property_data.as_hud_memo().unwrap().strg
+    } else {
+        asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG
+    };
+
+    PickupData {
+        name: "",
+        bytes,
+        deps,
+        hudmemo_strg,
+        attainment_audio_file_name,
+    }
+}
+
+fn extract_pickup_location<'a>(
+    mrea_id: u32,
+    scly: &structs::Scly<'a>,
+    obj: &structs::SclyObject<'a>,
+    obj_location: ScriptObjectLocation,
+) -> (PickupLocation, Vec<ScriptObjectLocation>)
+{
+    let pickup = obj.property_data.as_pickup().unwrap();
+
+    let scly_db = build_scly_db(scly);
+
+    let attainment_audio_location = if let Some(aa) = find_audio_attainment(&obj, &scly_db) {
+        ScriptObjectLocation {
+            layer: scly_db[&aa.instance_id].0 as u32,
+            instance_id: aa.instance_id,
+        }
+    } else {
+        // Phazon suit override
+        assert_eq!(pickup.kind, 23);
+        ScriptObjectLocation {
+            layer: 1,
+            instance_id: 68813644,
+        }
+    };
+
+    let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_hud_memo()
+            .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
+            .unwrap_or(false)
+    );
+    let hudmemo_loc = if let Some(hudmemo) = hudmemo {
+        ScriptObjectLocation {
+            layer: scly_db[&hudmemo.instance_id].0 as u32,
+            instance_id: hudmemo.instance_id,
+        }
+    } else {
+        // Phazon suit override
+        ScriptObjectLocation {
+            layer: scly_db[&68813640].0 as u32,
+            instance_id: 68813640,
+        }
+    };
+
+    let mut removals = Vec::new();
+    if pickup.kind >= 29 && pickup.kind <= 40 {
+        // If this is an artifact...
+        let layer_switch_function = search_for_scly_object(&obj.connections, &scly_db,
+                |obj| obj.property_data.as_special_function()
+                    .map(|hm| hm.name.to_str().unwrap()
+                            == "SpecialFunction ScriptLayerController -- Stonehenge Totem")
+                    .unwrap_or(false),
+            ).unwrap();
+        removals.push(ScriptObjectLocation {
+            layer: scly_db[&layer_switch_function.instance_id].0 as u32,
+            instance_id: layer_switch_function.instance_id,
+        });
+
+        let pause_function = search_for_scly_object(&obj.connections, &scly_db,
+                |obj| obj.property_data.as_special_function()
+                    .map(|hm| hm.name.to_str().unwrap()
+                            == "SpecialFunction - Enter Logbook Screen")
+                    .unwrap_or(false),
+            ).unwrap();
+        removals.push(ScriptObjectLocation {
+            layer: scly_db[&pause_function.instance_id].0 as u32,
+            instance_id: pause_function.instance_id,
+        });
     }
 
-    let mrea_name_strg_map: HashMap<_, _> = resources.iter()
-        .find(|res| res.fourcc() == b"MLVL".into())
-        .unwrap()
-        .kind.as_mlvl().unwrap()
-        .areas.iter()
-        .map(|area| (area.mrea, area.area_name_strg))
-        .collect();
+    // Remove the PlayerHint objects that disable control when collecting an item.
+    let player_hint = search_for_scly_object(&obj.connections, &scly_db,
+            |obj| obj.property_data.as_player_hint()
+                .map(|hm| hm.name.to_str().unwrap() == "Player Hint Disable Controls")
+                .unwrap_or(false),
+        );
+    if let Some(player_hint) = player_hint {
+        removals.push(ScriptObjectLocation {
+            layer: scly_db[&player_hint.instance_id].0 as u32,
+            instance_id: player_hint.instance_id,
+        });
+    };
 
+    // If this is a pickup with an associated cutscene, find the connections we want to
+    // preserve and the objects we want to remove.
+    let post_pickup_relay_connections = if CUT_SCENE_PICKUPS.contains(&(mrea_id, obj.instance_id)) {
+        removals.push(find_cutscene_trigger_relay(pickup.kind, &obj.connections, &scly_db));
+        build_skip_cutscene_relay_connections(pickup.kind, &obj.connections, &scly_db)
+    } else {
+        vec![]
+    };
 
-    locations.push(vec![]);
-    let locations = locations.last_mut().unwrap();
+    let location = PickupLocation {
+        location: ScriptObjectLocation {
+            layer: obj_location.layer as u32,
+            instance_id: obj.instance_id,
+        },
+        attainment_audio: attainment_audio_location,
+        hudmemo: hudmemo_loc,
+        post_pickup_relay_connections: post_pickup_relay_connections,
+    };
 
-    for res in resources.iter() {
-        if res.fourcc() != b"MREA".into() {
-            continue;
-        };
-
-        let mut res = res.into_owned();
-        let mrea = res.kind.as_mrea_mut().unwrap();
-
-        let scly = mrea.sections.iter()
-            .nth(mrea.scly_section_idx as usize)
-            .unwrap();
-        let scly: structs::Scly = match *scly {
-            structs::MreaSection::Unknown(ref reader) => reader.clone().read(()),
-            structs::MreaSection::Scly(ref scly) => scly.clone(),
-        };
-
-        let mut pickups = vec![];
-        let mut scly_db = HashMap::new();
-        for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
-            for obj in scly_layer.objects.iter() {
-                let obj = obj.into_owned();
-                if let Some(pickup) = obj.property_data.as_pickup() {
-                    // We're only interested in "real" pickups
-                    if pickup.max_increase > 0 {
-                        pickups.push((layer_num, obj.clone()));
-
-                        if pickup.cmdl != u32::max_value() {
-                            // Add an aabb entry for this pickup's cmdl
-                            cmdl_aabbs.entry(pickup.cmdl).or_insert_with(|| {
-                                let cmdl_key = ResourceKey::new(pickup.cmdl, b"CMDL".into());
-                                // Cmdls are compressed
-                                let res_data = res_db.map[&cmdl_key].data.decompress();
-                                let cmdl: Cmdl = Reader::new(&res_data).read(());
-                                let aabb = cmdl.maab;
-                                // Convert from GenericArray to [f32; 6]
-                                [aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]]
-                            });
-                        }
-                    }
-                }
-                assert!(scly_db.insert(obj.instance_id, (layer_num, obj)).is_none());
-            }
-        }
-
-        for (layer_num, mut obj) in pickups {
-            if *counter == 84 {
-                // Skip the extra phazon suit-thing
-                *counter += 1;
-                continue
-            }
-
-            let pickup = obj.property_data.as_pickup_mut().unwrap();
-            let mut deps = res_db.get_dependencies(&pickup);
-            patch_dependencies(pickup.kind, &mut deps);
-
-            const ATTAINMENT_AUDIO_FILES: &'static [&'static [u8]] = &[
-                b"/audio/itm_x_short_02.dsp",
-                b"audio/jin_artifact.dsp",
-                b"audio/jin_itemattain.dsp",
-            ];
-            let attainment_audio = search_for_scly_object(&obj.connections, &scly_db,
-                |obj| obj.property_data.as_streamed_audio()
-                    .map(|sa| ATTAINMENT_AUDIO_FILES.contains(&sa.audio_file_name.to_bytes()))
-                    .unwrap_or(false)
-            );
-
-            let attainment_audio_location;
-            let attainment_audio_file_name;
-            if let Some(attainment_audio) = attainment_audio {
-                attainment_audio_location = ScriptObjectLocation {
-                    layer: scly_db[&attainment_audio.instance_id].0 as u32,
-                    instance_id: attainment_audio.instance_id,
-                };
-                let streamed_audio = attainment_audio.property_data.as_streamed_audio().unwrap();
-                attainment_audio_file_name = streamed_audio.audio_file_name.to_bytes_with_nul()
-                                                           .to_owned();
-            } else {
-                // The Phazon Suit is weird: the audio object isn't directly connected to the
-                // Pickup. So, hardcode its location.
-                assert!(*counter == 83);
-                attainment_audio_location = ScriptObjectLocation {
-                    layer: 1,
-                    instance_id: 68813644,
-                };
-                attainment_audio_file_name = b"audio/jin_itemattain.dsp\0".to_vec();
-            };
-
-            let hudmemo_loc;
-            let hudmemo_strg;
-            let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
-                |obj| obj.property_data.as_hud_memo()
-                    .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
-                    .unwrap_or(false)
-            );
-            if let Some(hudmemo) = hudmemo {
-                let strg = hudmemo.property_data.as_hud_memo().unwrap().strg;
-                hudmemo_strg = strg;
-                hudmemo_loc = ScriptObjectLocation {
-                    layer: scly_db[&hudmemo.instance_id].0 as u32,
-                    instance_id: hudmemo.instance_id,
-                };
-            } else {
-                // Overrides for the Phazon Suit
-                assert_eq!(pickup.kind, 23);
-                hudmemo_strg = asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG;
-                pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
-
-                pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
-                pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
-
-                hudmemo_loc = ScriptObjectLocation {
-                    layer: scly_db[&68813640].0 as u32,
-                    instance_id: 68813640,
-                };
-            }
-
-            let mut removals = Vec::new();
-            if pickup.kind >= 29 && pickup.kind <= 40 {
-                // If this is an artifact...
-                let layer_switch_function = search_for_scly_object(&obj.connections, &scly_db,
-                        |obj| obj.property_data.as_special_function()
-                            .map(|hm| hm.name.to_str().unwrap()
-                                    == "SpecialFunction ScriptLayerController -- Stonehenge Totem")
-                            .unwrap_or(false),
-                    ).unwrap();
-                removals.push(ScriptObjectLocation {
-                    layer: scly_db[&layer_switch_function.instance_id].0 as u32,
-                    instance_id: layer_switch_function.instance_id,
-                });
-
-                let pause_function = search_for_scly_object(&obj.connections, &scly_db,
-                        |obj| obj.property_data.as_special_function()
-                            .map(|hm| hm.name.to_str().unwrap()
-                                    == "SpecialFunction - Enter Logbook Screen")
-                            .unwrap_or(false),
-                    ).unwrap();
-                removals.push(ScriptObjectLocation {
-                    layer: scly_db[&pause_function.instance_id].0 as u32,
-                    instance_id: pause_function.instance_id,
-                });
-            }
-
-            // Remove the PlayerHint objects that disable control when collecting an item.
-            let player_hint = search_for_scly_object(&obj.connections, &scly_db,
-                    |obj| obj.property_data.as_player_hint()
-                        .map(|hm| hm.name.to_str().unwrap() == "Player Hint Disable Controls")
-                        .unwrap_or(false),
-                );
-            if let Some(player_hint) = player_hint {
-                removals.push(ScriptObjectLocation {
-                    layer: scly_db[&player_hint.instance_id].0 as u32,
-                    instance_id: player_hint.instance_id,
-                });
-            };
-
-            // If this is a pickup with an associated cutscene, find the connections we want to
-            // preserve and the objects we want to remove.
-            let mut post_pickup_relay_connections = vec![];
-            if CUT_SCENE_PICKUPS.contains(&(res.file_id, obj.instance_id)) {
-                post_pickup_relay_connections = build_skip_cutscene_relay_connections(
-                    pickup.kind, &obj.connections, &scly_db);
-                removals.push(find_cutscene_trigger_relay(pickup.kind, &obj.connections, &scly_db))
-            }
-
-            if let Some(kind_id) = PICKUP_TYPES.iter().position(|pt| *counter == pt.first_loc) {
-                let mut data = vec![];
-                pickup.write(&mut data).unwrap();
-                pickup_table.insert(kind_id, PickupData {
-                    name: PICKUP_TYPES[kind_id].name,
-                    bytes: data,
-                    deps: deps,
-                    hudmemo_strg: hudmemo_strg,
-                    attainment_audio_file_name: attainment_audio_file_name,
-                });
-            }
-
-            let location = PickupLocation {
-                location: ScriptObjectLocation {
-                    layer: layer_num as u32,
-                    instance_id: obj.instance_id,
-                },
-                attainment_audio: attainment_audio_location,
-                hudmemo: hudmemo_loc,
-                post_pickup_relay_connections: post_pickup_relay_connections,
-            };
-            let fid = res.file_id; // Ugh, the borrow checker...
-            if locations.last().map(|i| i.room_id == fid).unwrap_or(false) {
-                locations.last_mut().unwrap().pickups.push(location);
-            } else {
-                let strg_id = mrea_name_strg_map[&res.file_id];
-                let strg: structs::Strg = res_db.map[&ResourceKey::new(strg_id, b"STRG".into())]
-                    .data.data.clone().read(());
-                let name = strg
-                    .string_tables.iter().next().unwrap()
-                    .strings.iter().next().unwrap()
-                    .into_owned().into_string();
-                locations.push(RoomInfo {
-                    room_id: res.file_id,
-                    name: name,
-                    pickups: vec![location],
-                    objects_to_remove: HashMap::new(),
-                });
-            }
-            let objects_to_remove = &mut locations.last_mut().unwrap().objects_to_remove;
-            for r in removals {
-                objects_to_remove.entry(r.layer).or_insert_with(Vec::new).push(r.instance_id);
-            }
-
-            *counter += 1;
-        }
-    }
+    (location, removals)
 }
 
 fn search_for_scly_object<'a, F>(
@@ -699,7 +635,7 @@ fn find_cutscene_trigger_relay<'a>(
     scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
 ) -> ScriptObjectLocation
 {
-    // We need to look for specific layer names depending on the pickup type. This is mostly the
+    // We need to look for specific object names depending on the pickup type. This is mostly the
     // result of the non-cutscene artifacts, for which the relay we're looking for is simply titled
     // "Relay".
     // We need this seperate static in order to get static lifetimes. Its kinda awful.
@@ -757,12 +693,12 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
     };
 }
 
-fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>)
+fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
 {
     // Special case for Nothing
     let mut nothing_bytes = Vec::new();
     {
-        let mut nothing_pickup = Reader::new(&pickup_table[&6].bytes)
+        let mut nothing_pickup = Reader::new(&pickup_table[&PickupType::PhazonSuit].bytes)
                                         .read::<Pickup>(()).clone();
         nothing_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Nothing\0").unwrap());
         nothing_pickup.kind = 26; // This kind matches an energy refill
@@ -773,7 +709,7 @@ fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>)
         nothing_pickup.actor_params.scan_params.scan = asset_ids::NOTHING_SCAN;
         nothing_pickup.write(&mut nothing_bytes).unwrap();
     }
-    let mut nothing_deps: HashSet<_> = pickup_table[&6].deps.iter()
+    let mut nothing_deps: HashSet<_> = pickup_table[&PickupType::PhazonSuit].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into(),
                       b"CMDL".into(), b"ANCS".into()].contains(&i.fourcc))
         .cloned()
@@ -786,8 +722,7 @@ fn create_nothing(pickup_table: &mut HashMap<usize, PickupData>)
         ResourceKey::new(asset_ids::NOTHING_ANCS, b"ANCS".into()),
         ResourceKey::new(asset_ids::NOTHING_TXTR, b"TXTR".into()),
     ]);
-    let len = pickup_table.len();
-    assert!(pickup_table.insert(len, PickupData {
+    assert!(pickup_table.insert(PickupType::Nothing, PickupData {
         name: "Nothing",
         bytes: nothing_bytes,
         deps: nothing_deps,
@@ -802,7 +737,7 @@ fn main()
     let file = File::open(args().nth(1).unwrap()).unwrap();
     let mmap = memmap::Mmap::open(&file, memmap::Protection::Read).unwrap();
     let mut reader = Reader::new(unsafe { mmap.as_slice() });
-    let mut gc_disc: structs::GcDisc = reader.read(());
+    let gc_disc: structs::GcDisc = reader.read(());
 
     let filenames = [
         "Metroid2.pak",
@@ -812,14 +747,130 @@ fn main()
         "Metroid6.pak",
     ];
 
-    let mut i = 0;
     let mut pickup_table = HashMap::new();
     let mut cmdl_aabbs = HashMap::new();
-    let mut locations = Vec::new();
+    let mut locations: Vec<Vec<RoomInfo>> = Vec::new();
+
     for f in &filenames {
-        trace_pickup_deps(&mut gc_disc, f, &mut i, &mut pickup_table, &mut locations,
-                          &mut cmdl_aabbs);
+        let file_entry = gc_disc.find_file(f).unwrap();
+        let pak = match *file_entry.file().unwrap() {
+            structs::FstEntryFile::Pak(ref pak) => pak.clone(),
+            structs::FstEntryFile::Unknown(ref reader) => reader.clone().read(()),
+            _ => panic!(),
+        };
+
+        let resources = &pak.resources;
+
+        let mut res_db = ResourceDb::new();
+        for res in resources.iter() {
+            res_db.add_resource(res.into_owned());
+        }
+
+        let mrea_name_strg_map: HashMap<_, _> = resources.iter()
+            .find(|res| res.fourcc() == b"MLVL".into())
+            .unwrap()
+            .kind.as_mlvl().unwrap()
+            .areas.iter()
+            .map(|area| (area.mrea, area.area_name_strg))
+            .collect();
+
+        locations.push(vec![]);
+        let pak_locations = locations.last_mut().unwrap();
+
+        for res in resources.iter() {
+            if res.fourcc() != b"MREA".into() {
+                continue;
+            };
+
+            let mut res = res.into_owned();
+            let mrea = res.kind.as_mrea_mut().unwrap();
+            let scly = mrea.scly_section_mut();
+
+            let mut room_locations = vec![];
+            let mut room_removals = HashMap::new();
+            for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
+                for obj in scly_layer.objects.iter() {
+                    let obj = obj.into_owned();
+                    let pickup = if let Some(pickup) = obj.property_data.as_pickup() {
+                        pickup
+                    } else {
+                        continue
+                    };
+                    let pickup_type = if let Some(pt) = pickup_type_for_pickup(&pickup) {
+                        pt
+                    } else {
+                        continue
+                    };
+
+                    let obj_loc = ScriptObjectLocation {
+                        instance_id: obj.instance_id,
+                        layer: layer_num as u32,
+                    };
+                    let (pickup_loc, removals) = extract_pickup_location(
+                        res.file_id,
+                        &scly,
+                        &obj,
+                        obj_loc,
+                    );
+
+                    for loc in removals {
+                        room_removals.entry(loc.layer)
+                            .or_insert_with(Vec::new)
+                            .push(loc.instance_id);
+                    }
+                    room_locations.push(pickup_loc);
+
+                    // XXX There's a couple of pickups where the first occurances don't have scans,
+                    // so skip those for the pickup_table
+                    if (pickup_type == PickupType::Missile || pickup_type == PickupType::EnergyTank)
+                        && pickup.actor_params.scan_params.scan == 0xFFFFFFFF {
+                        continue
+                    }
+
+                    if pickup_table.contains_key(&pickup_type) {
+                        continue
+                    }
+
+                    pickup_table.insert(
+                        pickup_type,
+                        extract_pickup_data(&scly, &obj, &mut res_db)
+                    );
+
+                    if pickup.cmdl != u32::max_value() {
+                        // Add an aabb entry for this pickup's cmdl
+                        cmdl_aabbs.entry(pickup.cmdl).or_insert_with(|| {
+                            let cmdl_key = ResourceKey::new(pickup.cmdl, b"CMDL".into());
+                            // Cmdls are compressed
+                            let res_data = res_db.map[&cmdl_key].data.decompress();
+                            let cmdl: Cmdl = Reader::new(&res_data).read(());
+                            let aabb = cmdl.maab;
+                            // Convert from GenericArray to [f32; 6]
+                            [aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]]
+                        });
+                    }
+                }
+            }
+
+            if room_locations.len() != 0 {
+                let strg_id = mrea_name_strg_map[&res.file_id];
+                let strg: structs::Strg = res_db.map[&ResourceKey::new(strg_id, b"STRG".into())]
+                    .data.data.clone().read(());
+                let name = strg
+                    .string_tables.iter().next().unwrap()
+                    .strings.iter().next().unwrap()
+                    .into_owned().into_string();
+
+                pak_locations.push(RoomInfo {
+                    room_id: res.file_id,
+                    name,
+                    pickups: room_locations,
+                    objects_to_remove: room_removals,
+                })
+            }
+        }
     }
+
+
 
     // Special case of Nothing and Phazon Suits' custom CMDLs
     let aabb = *cmdl_aabbs.get(&asset_ids::GRAVITY_SUIT_CMDL).unwrap();
@@ -884,45 +935,6 @@ fn main()
     }
     println!("];");
 
-    println!("");
-    println!("// Because const fns aren't powerful enough yet, we can't construct the actual");
-    println!("// array at compile-time. So, instead, these are the building-blocks for that");
-    println!("// actual array.");
-    println!("const PICKUP_RAW_META: [PickupMetaRaw; {}] = [", pickup_table.len());
-    const BYTES_PER_LINE: usize = 8;
-    // Iterate using an explicit indexer so the output is sorted.
-    for i in 0..pickup_table.len() {
-        let ref pickup_data = pickup_table[&i];
-        let pickup_bytes = &pickup_data.bytes;
-        println!("    PickupMetaRaw {{");
-        println!("        name: {:?},", pickup_data.name);
-        println!("        pickup: &[");
-        for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
-            let len = ::std::cmp::min(BYTES_PER_LINE, pickup_bytes.len() - y * BYTES_PER_LINE);
-            print!("           ");
-            for x in 0..len {
-                print!(" 0x{:02X},", pickup_bytes[y * BYTES_PER_LINE + x]);
-            }
-            println!("");
-        }
-        println!("        ],");
-        println!("        deps: &[");
-        let mut deps: Vec<_> = pickup_data.deps.iter().collect();
-        deps.sort();
-        for dep in deps {
-            println!("            (0x{:08X}, FourCC::from_bytes(b\"{}\")),", dep.file_id,
-                                                                             dep.fourcc);
-        }
-        println!("        ],");
-        println!("        hudmemo_strg: {:?},", pickup_data.hudmemo_strg);
-        let filename = stdstr::from_utf8(&pickup_data.attainment_audio_file_name).unwrap();
-        println!("        attainment_audio_file_name: {:?},", filename);
-        println!("    }},");
-
-    }
-    println!("];");
-    println!("");
-
     let mut cmdl_aabbs: Vec<_> = cmdl_aabbs.iter().collect();
     cmdl_aabbs.sort_by_key(|&(k, _)| k);
     println!("const PICKUP_CMDL_AABBS: [(u32, [u32; 6]); {}] = [", cmdl_aabbs.len());
@@ -932,4 +944,70 @@ fn main()
                     cmdl_id, aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]);
     }
     println!("];");
+
+    println!("impl PickupType");
+    println!("{{");
+
+    println!("    pub fn hudmemo_strg(&self) -> u32");
+    println!("    {{");
+    println!("        match self {{");
+    for pt in PickupType::iter() {
+        println!("            PickupType::{:?} => 0x{:x},", pt, pickup_table[&pt].hudmemo_strg);
+    }
+    println!("        }}");
+    println!("    }}");
+
+    println!("    pub fn attainment_audio_file_name(&self) -> &'static str");
+    println!("    {{");
+    println!("        match self {{");
+    for pt in PickupType::iter() {
+        let filename = stdstr::from_utf8(&pickup_table[&pt].attainment_audio_file_name).unwrap();
+        println!("            PickupType::{:?} => {:?},", pt, filename);
+    }
+    println!("        }}");
+    println!("    }}");
+
+    println!("    pub fn dependencies(&self) -> &'static [(u32, FourCC)]");
+    println!("    {{");
+    println!("        match self {{");
+    for pt in PickupType::iter() {
+        let mut deps: Vec<_> = pickup_table[&pt].deps.iter().collect();
+        deps.sort();
+        println!("            PickupType::{:?} => {{", pt);
+        println!("                const DATA: &[(u32, FourCC)] = &[");
+        for dep in deps {
+            println!(
+                "                    (0x{:08X}, FourCC::from_bytes(b\"{}\")),",
+                dep.file_id,
+                dep.fourcc
+            );
+        }
+        println!("                ];");
+        println!("                DATA");
+        println!("            }},");
+    }
+    println!("        }}");
+    println!("    }}");
+
+    const BYTES_PER_LINE: usize = 8;
+    println!("    fn raw_pickup_data(&self) -> &'static [u8]");
+    println!("    {{");
+    println!("        match self {{");
+    for pt in PickupType::iter() {
+        println!("            PickupType::{:?} => &[", pt);
+        let pickup_bytes = &pickup_table[&pt].bytes;
+        for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
+            let len = ::std::cmp::min(BYTES_PER_LINE, pickup_bytes.len() - y * BYTES_PER_LINE);
+            print!("               ");
+            for x in 0..len {
+                print!(" 0x{:02X},", pickup_bytes[y * BYTES_PER_LINE + x]);
+            }
+            println!("");
+        }
+        println!("            ],");
+    }
+    println!("        }}");
+    println!("    }}");
+
+    println!("}}");
 }

@@ -5,17 +5,7 @@ use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, Resource, Reso
 
 use crate::asset_ids;
 
-pub struct PickupMetadata
-{
-    pub name: &'static str,
-    pub pickup: Pickup<'static>,
-    pub deps: &'static [(u32, FourCC)],
-    pub hudmemo_strg: u32,
-    pub skip_hudmemos_strg: u32,
-    pub attainment_audio_file_name: &'static str,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PickupType
 {
     Missile,
@@ -204,29 +194,16 @@ impl PickupType
         }
     }
 
-    pub fn hudmemo_strg(&self) -> u32
-    {
-        PickupMetadataTable::get()[*self].hudmemo_strg
-    }
-
     pub fn skip_hudmemos_strg(&self) -> u32
     {
-        PickupMetadataTable::get()[*self].skip_hudmemos_strg
-    }
-
-    pub fn dependencies(&self) -> &'static [(u32, FourCC)]
-    {
-        PickupMetadataTable::get()[*self].deps
-    }
-
-    pub fn attainment_audio_file_name(&self) -> &'static str
-    {
-        PickupMetadataTable::get()[*self].attainment_audio_file_name
+        (asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
+            .nth(self.idx())
+            .unwrap()
     }
 
     pub fn pickup_data<'a>(&self) -> &'a Pickup<'static>
     {
-        &PickupMetadataTable::get()[*self].pickup
+        &PickupTable::get()[*self]
     }
 
     pub fn iter() -> impl Iterator<Item = PickupType>
@@ -272,42 +249,31 @@ impl PickupType
     }
 }
 
-struct PickupMetadataTable(Vec<PickupMetadata>);
+struct PickupTable(Vec<structs::Pickup<'static>>);
 
-impl PickupMetadataTable
+impl PickupTable
 {
-    fn new() -> PickupMetadataTable
+    fn new() -> PickupTable
     {
-        PickupMetadataTable(PICKUP_RAW_META.iter()
-            .zip(asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
-            .map(|(meta, skip_hudmemos_strg)| {
-                PickupMetadata {
-                    name: meta.name,
-                    pickup: Reader::new(meta.pickup).read(()),
-                    deps: meta.deps,
-                    hudmemo_strg: meta.hudmemo_strg,
-                    skip_hudmemos_strg,
-                    attainment_audio_file_name: meta.attainment_audio_file_name,
-                }
-            })
-            .collect()
-        )
+        PickupTable(PickupType::iter()
+            .map(|pt| Reader::new(pt.raw_pickup_data()).read(()))
+            .collect())
     }
 
-    fn get<'a>() -> &'a PickupMetadataTable
+    fn get<'a>() -> &'a PickupTable
     {
-        static mut CACHED: Option<PickupMetadataTable> = None;
+        static mut CACHED: Option<PickupTable> = None;
         if unsafe { CACHED.is_none() } {
-            let pmt = PickupMetadataTable::new();
+            let pmt = PickupTable::new();
             unsafe { CACHED = Some(pmt) };
         }
         unsafe { CACHED.as_ref().unwrap() }
     }
 }
 
-impl std::ops::Index<PickupType> for PickupMetadataTable
+impl std::ops::Index<PickupType> for PickupTable
 {
-    type Output = PickupMetadata;
+    type Output = structs::Pickup<'static>;
     fn index(&self, ptype: PickupType) -> &Self::Output
     {
         &self.0[ptype.idx()]
@@ -337,7 +303,7 @@ pub struct PickupLocation
     pub post_pickup_relay_connections: &'static [Connection]
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct ScriptObjectLocation
 {
     pub layer: u32,
@@ -396,15 +362,6 @@ pub fn extra_assets<'a>() -> Vec<Resource<'a>>
     EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
         build_resource(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
     }).collect()
-}
-
-struct PickupMetaRaw
-{
-    name: &'static str,
-    pickup: &'static [u8],
-    deps: &'static [(u32, FourCC)],
-    hudmemo_strg: u32,
-    attainment_audio_file_name: &'static str,
 }
 
 #[derive(Clone, Copy, Debug)]
