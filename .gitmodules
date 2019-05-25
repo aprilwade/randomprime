@@ -1,0 +1,3 @@
+[submodule "nod_wrapper/nod"]
+	path = nod_wrapper/nod
+	url = https://github.com/AxioDL/nod.git

@@ -45,6 +45,9 @@ struct Config
     obfuscate_items: bool,
 
     #[serde(default)]
+    trilogy_disc_path: Option<String>,
+
+    #[serde(default)]
     keep_fmvs: bool,
 
     starting_items: Option<u64>,
@@ -176,6 +179,12 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
     let (pickup_layout, elevator_layout, seed) = crate::parse_layout(&config.layout_string)?;
 
+    let flaahgra_music_files = if let Some(path) = &config.trilogy_disc_path {
+        Some(crate::extract_flaahgra_music_files(&path)?)
+    } else {
+        None
+    };
+
     let mut config = config;
     let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
@@ -191,6 +200,8 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
         quiet: false,
+
+        flaahgra_music_files,
 
         starting_items: config.starting_items,
         comment: config.comment,

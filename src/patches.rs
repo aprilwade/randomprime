@@ -797,7 +797,7 @@ fn fix_artifact_of_truth_requirements(
     Ok(())
 }
 
-fn patch_flaaghra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_flaahgra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     // Create a new layer. We want it to be active until Flaahgra is killed. It will contain
@@ -1500,6 +1500,8 @@ pub struct ParsedConfig
     pub staggered_suit_damage: bool,
     pub quiet: bool,
 
+    pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
+
     pub starting_items: Option<u64>,
     pub comment: String,
 
@@ -1598,6 +1600,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         .map(|i| PickupType::from_idx(*i as usize).unwrap())
         .collect();
     let pickup_layout = &pickup_layout[..];
+
     let mut rng = ChaChaRng::from_seed(&config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
@@ -1635,6 +1638,19 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         for name in FMV_NAMES {
             patcher.add_file_patch(name, |file| {
                 *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+                Ok(())
+            });
+        }
+    }
+
+    if let Some(flaahgra_music_files) = &config.flaahgra_music_files {
+        const MUSIC_FILE_NAME: &[&[u8]] = &[
+            b"rui_flaaghraR.dsp",
+            b"rui_flaaghraL.dsp",
+        ];
+        for (file_name, music_file) in MUSIC_FILE_NAME.iter().zip(flaahgra_music_files.iter()) {
+            patcher.add_file_patch(file_name, move |file| {
+                *file = structs::FstEntryFile::ExternalFile(Box::new(music_file.clone()));
                 Ok(())
             });
         }
@@ -1780,7 +1796,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
-    patcher.add_scly_patch(b"Metroid2.pak", 0x9A0A03EB, patch_flaaghra_after_wild);
+    patcher.add_scly_patch(b"Metroid2.pak", 0x9A0A03EB, patch_flaahgra_after_wild);
     patcher.add_scly_patch(b"Metroid4.pak", 0xBDB1FCAC, patch_temple_security_station_cutscene_trigger);
     patcher.add_scly_patch(b"Metroid4.pak", 0xAFD4E038, patch_main_ventilation_shaft_section_b_door);
     patcher.add_scly_patch(b"Metroid3.pak", 0x43E4CC25, patch_research_lab_hydra_barrier);

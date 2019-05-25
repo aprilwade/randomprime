@@ -14,6 +14,7 @@ use sha2::{Digest, Sha512};
 
 use std::{
     borrow::Cow,
+    ffi::CStr,
     iter,
 };
 
@@ -92,6 +93,18 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
         cursor.into_value()
     }
 
+}
+
+pub fn extract_flaahgra_music_files(iso_path: &str) -> Result<[nod_wrapper::FileWrapper; 2], String>
+{
+    let res = (|| {
+        let dw = nod_wrapper::DiscWrapper::new(iso_path)?;
+        Ok([
+            dw.open_file(CStr::from_bytes_with_nul(b"rui_flaaghraR.dsp\0").unwrap())?,
+            dw.open_file(CStr::from_bytes_with_nul(b"rui_flaaghraL.dsp\0").unwrap())?,
+        ])
+    })();
+    res.map_err(|s: String| format!("Failed to extract Flaahgra music files: {}", s))
 }
 
 pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, checksum_size: usize, is: I)

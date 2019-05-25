@@ -6,7 +6,9 @@ use clap::{
 };
 use preferences::{AppInfo, PreferencesMap, Preferences};
 
-use randomprime::{parse_layout, patches, pickup_meta, reader_writer, structs};
+use randomprime::{
+    extract_flaahgra_music_files, parse_layout, patches, reader_writer, structs
+};
 
 use std::{
     borrow::Cow,
@@ -296,6 +298,8 @@ fn interactive() -> Result<patches::ParsedConfig, String>
         obfuscate_items,
         quiet: false,
 
+        flaahgra_music_files: None,
+
         starting_items: None,
         comment: "".to_string(),
 
@@ -341,6 +345,11 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                 .long("staggered-suit-damage")
                 .help(concat!("The suit damage reduction is determinted by the number of suits ",
                               "collected rather than the most powerful one collected.")))
+            .arg(Arg::with_name("trilogy disc path")
+                .long("flaahgra-music-disc-path")
+                .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
+                              "Flaahgra fight music will be used to replace the original"))
+                .takes_value(true))
             .arg(Arg::with_name("keep attract mode")
                 .long("keep-attract-mode")
                 .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -386,6 +395,12 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         let layout_string = matches.value_of("pickup layout").unwrap().to_string();
         let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
 
+        let flaahgra_music_files = if let Some(path) = matches.value_of("trilogy disc path") {
+            Some(extract_flaahgra_music_files(&path)?)
+        } else {
+            None
+        };
+
         Ok(patches::ParsedConfig {
             input_iso: input_iso_mmap,
             output_iso: out_iso,
@@ -399,6 +414,8 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             keep_fmvs: matches.is_present("keep attract mode"),
             obfuscate_items: matches.is_present("obfuscate items"),
             quiet: matches.is_present("quiet"),
+
+            flaahgra_music_files,
 
             // XXX We can unwrap safely because we verified the parse earlier
             starting_items: matches.value_of("change starting items")
@@ -482,8 +499,6 @@ SHA1: ac20c744db18fdf0339f37945e880708fd317231
             maybe_pause_at_exit();
         }));
     }
-
-    pickup_meta::setup_pickup_meta_table();
 
     match main_inner() {
         Err(s) => eprintln!("{} {}", Format::Error("error:"), s),
