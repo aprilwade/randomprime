@@ -308,7 +308,6 @@ static CUT_SCENE_PICKUPS: &'static [(u32, u32)] = &[
 #[derive(Debug)]
 struct PickupData
 {
-    name: &'static str,
     bytes: Vec<u8>,
     deps: HashSet<ResourceKey>,
     hudmemo_strg: u32,
@@ -403,7 +402,6 @@ fn extract_pickup_data<'a>(
     };
 
     PickupData {
-        name: "",
         bytes,
         deps,
         hudmemo_strg,
@@ -723,7 +721,6 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
         ResourceKey::new(asset_ids::NOTHING_TXTR, b"TXTR".into()),
     ]);
     assert!(pickup_table.insert(PickupType::Nothing, PickupData {
-        name: "Nothing",
         bytes: nothing_bytes,
         deps: nothing_deps,
         hudmemo_strg: asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
