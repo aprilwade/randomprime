@@ -2,9 +2,8 @@
 fn main()
 {
     // This is based Nod's cmake files. If those change, this probably needs to too.
-    let mut build = cc::Build::new();
+    let mut build = cpp_build::Config::new();
     build
-        .cpp(true)
         .include("nod/include/")
         .include("nod/logvisor/include/")
         .file("nod/lib/aes.cpp")
@@ -19,13 +18,16 @@ fn main()
         .file("nod/lib/sha1.c")
         .file("nod/logvisor/lib/logvisor.cpp");
 
-    if cfg!(windows) {
+    let target = std::env::var("TARGET").unwrap();
+    let is_windows = target.contains("windows");
+    let is_msvc = target.contains("msvc");
+
+    if is_windows {
         build.file("nod/lib/FileIOWin32.cpp");
     } else {
         build.file("nod/lib/FileIOFILE.cpp");
     }
-
-    if build.get_compiler().is_like_msvc() {
+    if is_msvc {
         build
             .flag("/std:c++17")
             .flag("-DUNICODE=1")
@@ -52,12 +54,5 @@ fn main()
             .flag("-Wno-sign-compare")
             .flag("-maes");
     }
-    build.compile("nod");
-
-    cpp_build::Config::new()
-        .flag("-std=c++14")
-        .flag("-Wno-unused-parameter")
-        .include("nod/include/")
-        .include("nod/logvisor/include/")
-        .build("src/lib.rs");
+    build.build("src/lib.rs");
 }

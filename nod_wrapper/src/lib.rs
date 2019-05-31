@@ -19,7 +19,7 @@ mod os
 
     pub(crate) fn os_str_to_sys_char(s: &OsStr) -> Vec<NodSystemChar>
     {
-        let mut v = s.encode_wide().collect();
+        let mut v: Vec<_> = s.encode_wide().collect();
         v.push(0);
         v
     }
@@ -34,7 +34,7 @@ mod os
 
     pub(crate) fn os_str_to_sys_char(s: &OsStr) -> Vec<NodSystemChar>
     {
-        let mut v = s.as_bytes().to_owned();
+        let mut v: Vec<_> = s.as_bytes().to_owned();
         v.push(0);
         v
     }
@@ -90,13 +90,11 @@ cpp! {{
                 return 0;
             }
 
-            nod::SystemStringView file_name_sys = nod::SystemStringConv(file_name).sys_str();
-
             nod::Node &root = partition->getFSTRoot();
             nod::Node *found = nullptr;
             auto it_end = root.rawEnd();
             for(auto it = root.rawBegin(); it != it_end; ++it) {
-                if(it->getName() == file_name_sys) {
+                if(it->getName() == file_name) {
                     found = &*it;
                     break;
                 }
