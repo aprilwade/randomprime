@@ -11,18 +11,18 @@ use crate::{
 
 /// Read only array
 #[derive(Clone)]
-pub struct RoArray<'a, T>
-    where T: Readable<'a>,
+pub struct RoArray<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     t_args: T::Args,
     length: usize,
-    data_start: Reader<'a>,
+    data_start: Reader<'r>,
 }
 
 
-impl<'a, T> RoArray<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> RoArray<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     pub fn len(&self) -> usize
@@ -30,7 +30,7 @@ impl<'a, T> RoArray<'a, T>
         self.length
     }
 
-    pub fn iter(&self) -> RoArrayIter<'a, T>
+    pub fn iter(&self) -> RoArrayIter<'r, T>
     {
         RoArrayIter {
             t_args: self.t_args.clone(),
@@ -39,7 +39,7 @@ impl<'a, T> RoArray<'a, T>
         }
     }
 
-    pub fn split_off(&mut self, at: usize) -> RoArray<'a, T>
+    pub fn split_off(&mut self, at: usize) -> RoArray<'r, T>
     {
         if at > self.length {
             panic!("`at` ({}) cannot be > the array's length ({}).", at, self.length)
@@ -72,20 +72,20 @@ impl<'a, T> RoArray<'a, T>
         }
     }
 
-    pub fn data_start(&self) -> Reader<'a>
+    pub fn data_start(&self) -> Reader<'r>
     {
         self.data_start.clone()
     }
 }
 
-impl<'a, T> Readable<'a> for RoArray<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Readable<'r> for RoArray<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     type Args = (usize, T::Args);
 
     // TODO: It would be cool to cache the size in the reader's length field.
-    fn read(reader: Reader<'a>, (length, args): Self::Args) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (length, args): Self::Args) -> Self
     {
         let size = T::fixed_size()
             .map(|i| i * length)
@@ -102,7 +102,8 @@ impl<'a, T> Readable<'a> for RoArray<'a, T>
             length: length,
             data_start: reader.truncated(size),
         };
-        (array, reader.offset(size))
+        reader.advance(size);
+        array
     }
 
     fn size(&self) -> usize
@@ -111,8 +112,8 @@ impl<'a, T> Readable<'a> for RoArray<'a, T>
     }
 }
 
-impl<'a, T> fmt::Debug for RoArray<'a, T>
-    where T: Readable<'a> + fmt::Debug,
+impl<'r, T> fmt::Debug for RoArray<'r, T>
+    where T: Readable<'r> + fmt::Debug,
           T::Args: Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
@@ -123,17 +124,17 @@ impl<'a, T> fmt::Debug for RoArray<'a, T>
 
 
 #[derive(Clone, Debug)]
-pub struct RoArrayIter<'a, T>
-    where T: Readable<'a>,
+pub struct RoArrayIter<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
-    data_start: Reader<'a>,
+    data_start: Reader<'r>,
     length: usize,
     t_args: T::Args,
 }
 
-impl<'a, T> Iterator for RoArrayIter<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Iterator for RoArrayIter<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     type Item = T;
@@ -153,8 +154,8 @@ impl<'a, T> Iterator for RoArrayIter<'a, T>
     }
 }
 
-impl<'a, T> ExactSizeIterator for RoArrayIter<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> ExactSizeIterator for RoArrayIter<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     fn len(&self) -> usize
@@ -164,23 +165,24 @@ impl<'a, T> ExactSizeIterator for RoArrayIter<'a, T>
 }
 
 
-impl<'a, T> Writable for RoArray<'a, T>
-    where T: Readable<'a> + Writable,
+impl<'r, T> Writable for RoArray<'r, T>
+    where T: Readable<'r> + Writable,
           T::Args: Clone,
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
         // TODO: Could this be done more efficently by using the length component of
         //       the reader?
         let len = self.size();
-        writer.write_all(&(*self.data_start)[0..len])
+        writer.write_all(&(*self.data_start)[0..len])?;
+        Ok(len as u64)
     }
 }
 
 #[cfg(test)]
 mod tests
 {
-    use ::{Reader, RoArray};
+    use crate::{Reader, RoArray};
     #[test]
     fn test_split_off()
     {

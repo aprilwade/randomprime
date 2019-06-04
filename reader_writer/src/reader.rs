@@ -7,19 +7,19 @@ use std::{
 use crate::writer::Writable;
 
 #[derive(Clone)]
-pub struct Reader<'a>(&'a [u8]);
+pub struct Reader<'r>(&'r [u8]);
 
 
-impl<'a> Deref for Reader<'a>
+impl<'r> Deref for Reader<'r>
 {
-    type Target = &'a [u8];
+    type Target = &'r [u8];
     fn deref(&self) -> &Self::Target
     {
         &self.0
     }
 }
 
-impl<'a> DerefMut for Reader<'a>
+impl<'r> DerefMut for Reader<'r>
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
@@ -27,7 +27,7 @@ impl<'a> DerefMut for Reader<'a>
     }
 }
 
-impl<'a> Debug for Reader<'a>
+impl<'r> Debug for Reader<'r>
 {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error>
     {
@@ -36,24 +36,22 @@ impl<'a> Debug for Reader<'a>
     }
 }
 
-impl <'a> Reader<'a>
+impl <'r> Reader<'r>
 {
-    pub fn new(data: &'a [u8]) -> Reader<'a>
+    pub fn new(data: &'r [u8]) -> Reader<'r>
     {
         Reader(data)
     }
 
-    pub fn dummy() -> Reader<'a>
+    pub fn dummy() -> Reader<'r>
     {
         Reader(&[])
     }
 
     pub fn read<T>(&mut self, args: T::Args) -> T
-        where T : Readable<'a>
+        where T : Readable<'r>
     {
-        let res = T::read(self.clone(), args);
-        *self = res.1;
-        res.0
+        T::read_from(self, args)
     }
 
     pub fn advance(&mut self, len: usize)
@@ -61,7 +59,7 @@ impl <'a> Reader<'a>
         self.0 = self.0.split_at(len).1
     }
 
-    pub fn offset(&self, len: usize) -> Reader<'a>
+    pub fn offset(&self, len: usize) -> Reader<'r>
     {
         Reader(self.0.split_at(len).1)
     }
@@ -71,18 +69,18 @@ impl <'a> Reader<'a>
         *self = Reader(&self.0[0..len])
     }
 
-    pub fn truncated(&self, len: usize) -> Reader<'a>
+    pub fn truncated(&self, len: usize) -> Reader<'r>
     {
         Reader(&self.0[0..len])
     }
 }
 
-impl<'a> Readable<'a> for Reader<'a>
+impl<'r> Readable<'r> for Reader<'r>
 {
     type Args = ();
-    fn read(reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> Self
     {
-        (reader.clone(), reader)
+        reader.clone()
     }
 
     fn fixed_size() -> Option<usize>
@@ -92,18 +90,18 @@ impl<'a> Readable<'a> for Reader<'a>
 }
 
 
-impl<'a> Writable for Reader<'a>
+impl<'r> Writable for Reader<'r>
 {
-    fn write<W: io::Write>(&self, _: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, _: &mut W) -> io::Result<u64>
     {
-        Ok(())
+        Ok(0)
     }
 }
 
-pub trait Readable<'a> : Sized
+pub trait Readable<'r> : Sized
 {
     type Args;
-    fn read(reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>);
+    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self;
 
     fn size(&self) -> usize
     {

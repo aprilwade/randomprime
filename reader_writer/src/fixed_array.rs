@@ -8,21 +8,21 @@ use crate::{
 
 pub type FixedArray<T, N> = GenericArray<T, N>;
 
-impl<'a, T, N> Readable<'a> for FixedArray<T, N>
+impl<'r, T, N> Readable<'r> for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'a>,
+          T: Readable<'r>,
           T::Args: Clone,
 {
     type Args = T::Args;
 
 
-    fn read(mut reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self
     {
         let array = {
             let iter = (0..N::to_usize()).map(|_| reader.read(args.clone()));
             GenericArray::from_exact_iter(iter).unwrap()
         };
-        (array, reader)
+        array
     }
 
     fn size(&self) -> usize
@@ -38,16 +38,17 @@ impl<'a, T, N> Readable<'a> for FixedArray<T, N>
     }
 }
 
-impl<'a, T, N> Writable for FixedArray<T, N>
+impl<'r, T, N> Writable for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'a> + Default + Writable,
+          T: Readable<'r> + Default + Writable,
           T::Args: Clone,
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
+        let mut s = 0;
         for elem in self.iter() {
-            elem.write(writer)?
+            s += elem.write_to(writer)?
         }
-        Ok(())
+        Ok(s)
     }
 }

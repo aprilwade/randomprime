@@ -12,16 +12,16 @@ use crate::{
 
 
 #[derive(Clone)]
-pub enum IteratorArray<'a, T, I>
-    where T: Readable<'a>,
+pub enum IteratorArray<'r, T, I>
+    where T: Readable<'r>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    Borrowed(Reader<'a>, I),
+    Borrowed(Reader<'r>, I),
     Owned(Vec<T>),
 }
 
-impl<'a, T, I> IteratorArray<'a, T, I>
-    where T: Readable<'a>,
+impl<'r, T, I> IteratorArray<'r, T, I>
+    where T: Readable<'r>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
     pub fn len(&self) -> usize
@@ -32,7 +32,7 @@ impl<'a, T, I> IteratorArray<'a, T, I>
         }
     }
 
-    pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'a, T, I>
+    pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'r, T, I>
     {
         match *self {
             IteratorArray::Borrowed(ref reader, ref i)
@@ -60,16 +60,16 @@ impl<'a, T, I> IteratorArray<'a, T, I>
     }
 }
 
-impl<'a, T, I> Readable<'a> for IteratorArray<'a, T, I>
-    where T: Readable<'a>,
+impl<'r, T, I> Readable<'r> for IteratorArray<'r, T, I>
+    where T: Readable<'r>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
     type Args = I;
-    fn read(mut reader: Reader<'a>, i: I) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, i: I) -> Self
     {
         let res = IteratorArray::Borrowed(reader.clone(), i);
         reader.advance(res.size());
-        (res, reader)
+        res
     }
 
     fn size(&self) -> usize
@@ -83,16 +83,16 @@ impl<'a, T, I> Readable<'a> for IteratorArray<'a, T, I>
 }
 
 #[derive(Clone)]
-pub enum IteratorArrayIterator<'s, 'a: 's, T, I>
-    where T: Readable<'a> + 's,
+pub enum IteratorArrayIterator<'s, 'r: 's, T, I>
+    where T: Readable<'r> + 's,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    Borrowed(Reader<'a>, I),
+    Borrowed(Reader<'r>, I),
     Owned(SliceIter<'s, T>),
 }
 
-impl<'s, 'a: 's, T, I> Iterator for IteratorArrayIterator<'s, 'a, T, I>
-    where T: Readable<'a> + 's,
+impl<'s, 'r: 's, T, I> Iterator for IteratorArrayIterator<'s, 'r, T, I>
+    where T: Readable<'r> + 's,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
     type Item = LCow<'s, T>;
@@ -120,8 +120,8 @@ impl<'s, 'a: 's, T, I> Iterator for IteratorArrayIterator<'s, 'a, T, I>
     }
 }
 
-impl<'s, 'a: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, 'a, T, I>
-    where T: Readable<'a> + 's,
+impl<'s, 'r: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, 'r, T, I>
+    where T: Readable<'r> + 's,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
     fn len(&self) -> usize
@@ -133,21 +133,22 @@ impl<'s, 'a: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, 'a, T, I>
     }
 }
 
-impl<'a, T, I> Writable for IteratorArray<'a, T, I>
-    where T: Readable<'a> + Writable,
+impl<'r, T, I> Writable for IteratorArray<'r, T, I>
+    where T: Readable<'r> + Writable,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
+        let mut s = 0;
         for i in self.iter() {
-            i.write(writer)?
+            s += i.write_to(writer)?
         }
-        Ok(())
+        Ok(s)
     }
 }
 
-impl<'a, T, I> fmt::Debug for IteratorArray<'a, T, I>
-    where T: Readable<'a> + fmt::Debug,
+impl<'r, T, I> fmt::Debug for IteratorArray<'r, T, I>
+    where T: Readable<'r> + fmt::Debug,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
@@ -156,11 +157,11 @@ impl<'a, T, I> fmt::Debug for IteratorArray<'a, T, I>
     }
 }
 
-impl<'a, T, I> From<Vec<T>> for IteratorArray<'a, T, I>
-    where T: Readable<'a>,
+impl<'r, T, I> From<Vec<T>> for IteratorArray<'r, T, I>
+    where T: Readable<'r>,
           I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
 {
-    fn from(vec: Vec<T>) -> IteratorArray<'a, T, I>
+    fn from(vec: Vec<T>) -> IteratorArray<'r, T, I>
     {
         IteratorArray::Owned(vec)
     }

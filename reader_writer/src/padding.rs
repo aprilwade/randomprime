@@ -21,12 +21,12 @@ static BYTES_00: [u8; 32] = [0; 32];
 static BYTES_FF: [u8; 32] = [0; 32];
 
 
-pub fn pad_bytes<'a>(align_to: usize, n: usize) -> RoArray<'a, u8>
+pub fn pad_bytes<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
 {
     Reader::new(&BYTES_00).read((pad_bytes_count(align_to, n), ()))
 }
 
-pub fn pad_bytes_ff<'a>(align_to: usize, n: usize) -> RoArray<'a, u8>
+pub fn pad_bytes_ff<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
 {
     Reader::new(&BYTES_FF).read((pad_bytes_count(align_to, n), ()))
 }

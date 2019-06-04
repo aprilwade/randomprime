@@ -7,13 +7,13 @@ use std::{
 /// A lenient Cow
 ///
 /// Similar to std::borrow::Cow, with an optional ToOwned/Clone bound on T.
-pub enum LCow<'a, T: 'a>
+pub enum LCow<'r, T>
 {
-    Borrowed(&'a T),
+    Borrowed(&'r T),
     Owned(T),
 }
 
-impl<'a, T: 'a> Clone for LCow<'a, T>
+impl<'r, T> Clone for LCow<'r, T>
     where T: Clone
 {
     fn clone(&self) -> Self
@@ -25,7 +25,7 @@ impl<'a, T: 'a> Clone for LCow<'a, T>
     }
 }
 
-impl<'a, T: 'a> LCow<'a, T>
+impl<'r, T> LCow<'r, T>
     where T: Clone
 {
     pub fn into_owned(self) -> T
@@ -37,7 +37,7 @@ impl<'a, T: 'a> LCow<'a, T>
     }
 }
 
-impl<'a, T: 'a> Deref for LCow<'a, T>
+impl<'r, T> Deref for LCow<'r, T>
 {
     type Target = T;
     fn deref(&self) -> &Self::Target
@@ -49,7 +49,7 @@ impl<'a, T: 'a> Deref for LCow<'a, T>
     }
 }
 
-impl<'a, T: 'a> Borrow<T> for LCow<'a, T>
+impl<'r, T> Borrow<T> for LCow<'r, T>
 {
     fn borrow(&self) -> &T
     {
@@ -60,7 +60,7 @@ impl<'a, T: 'a> Borrow<T> for LCow<'a, T>
     }
 }
 
-impl<'a, T> fmt::Debug for LCow<'a, T>
+impl<'r, T> fmt::Debug for LCow<'r, T>
     where T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result

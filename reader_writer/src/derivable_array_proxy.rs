@@ -29,13 +29,13 @@ impl<I, T> Dap<I, T>
     }
 }
 
-impl<'a, I, T> Readable<'a> for Dap<I, T>
+impl<'r, I, T> Readable<'r> for Dap<I, T>
     where I: Iterator + Clone,
           I::Item: Borrow<T>,
-          T: Readable<'a>,
+          T: Readable<'r>,
 {
     type Args = ();
-    fn read(_: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(_: &mut Reader<'r>, (): ()) -> Self
     {
         panic!("Dap should not ever be read.")
     }
@@ -51,12 +51,13 @@ impl<I, T> Writable for Dap<I, T>
           I::Item: Borrow<T>,
           T: Writable
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
+        let mut s = 0;
         for e in self.0.clone() {
-            e.borrow().write(writer)?
+            s += e.borrow().write_to(writer)?
         }
-        Ok(())
+        Ok(s)
     }
 }
 

@@ -8,11 +8,11 @@ use crate::{
     writer::Writable,
 };
 
-pub struct Uncached<'a, T>(Reader<'a>, T::Args)
-    where T: Readable<'a>;
+pub struct Uncached<'r, T>(Reader<'r>, T::Args)
+    where T: Readable<'r>;
 
-impl<'a, T> Uncached<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Uncached<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     pub fn get(&self) -> T
@@ -21,19 +21,18 @@ impl<'a, T> Uncached<'a, T>
     }
 }
 
-impl<'a, T> Readable<'a> for Uncached<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Readable<'r> for Uncached<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     type Args = T::Args;
-    fn read(reader: Reader<'a>, args: Self::Args) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self
     {
         let start_reader = reader.clone();
-        let (_, after_reader) = <T as Readable>::read(reader, args.clone());
-        let size = start_reader.len() - after_reader.len();
+        let _ = <T as Readable>::read_from(reader, args.clone());
+        let size = start_reader.len() - reader.len();
 
-        let res = Uncached(start_reader.truncated(size), args);
-        (res, after_reader)
+        Uncached(start_reader.truncated(size), args)
     }
 
     fn size(&self) -> usize
@@ -42,8 +41,8 @@ impl<'a, T> Readable<'a> for Uncached<'a, T>
     }
 }
 
-impl<'a, T> Debug for Uncached<'a, T>
-    where T: Readable<'a> + Debug,
+impl<'r, T> Debug for Uncached<'r, T>
+    where T: Readable<'r> + Debug,
           T::Args: Clone,
 {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error>
@@ -52,8 +51,8 @@ impl<'a, T> Debug for Uncached<'a, T>
     }
 }
 
-impl<'a, T> Clone for Uncached<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Clone for Uncached<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
     fn clone(&self) -> Self
@@ -62,12 +61,13 @@ impl<'a, T> Clone for Uncached<'a, T>
     }
 }
 
-impl<'a, T> Writable for Uncached<'a, T>
-    where T: Readable<'a>,
+impl<'r, T> Writable for Uncached<'r, T>
+    where T: Readable<'r>,
           T::Args: Clone,
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
-        writer.write_all(&self.0)
+        writer.write_all(&self.0)?;
+        Ok(self.0.len() as u64)
     }
 }

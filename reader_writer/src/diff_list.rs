@@ -320,18 +320,18 @@ impl<'list, A> Iterator for DiffListIter<'list, A>
     }
 }
 
-impl<'a, A> Readable<'a> for DiffList<A>
+impl<'r, A> Readable<'r> for DiffList<A>
     where A: AsDiffListSourceCursor,
-          <A::Cursor as DiffListSourceCursor>::Item: Readable<'a>,
+          <A::Cursor as DiffListSourceCursor>::Item: Readable<'r>,
 {
     type Args = A;
-    fn read(reader: Reader<'a>, args: A) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, args: A) -> Self
     {
         let res = DiffList {
             list: Vec::from_iter(once(DiffListElem::Array(args))),
         };
-        let size = res.size();
-        (res, reader.offset(size))
+        reader.advance(res.size());
+        res
     }
 
     fn size(&self) -> usize
@@ -346,12 +346,13 @@ impl<A> Writable for DiffList<A>
     where A: AsDiffListSourceCursor,
           <A::Cursor as DiffListSourceCursor>::Item: Writable,
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
+        let mut s = 0;
         for i in self.iter() {
-            i.write(writer)?
+            s += i.write_to(writer)?
         }
-        Ok(())
+        Ok(s)
     }
 }
 

@@ -11,20 +11,20 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct Utf16beStr<'a>(Reader<'a>);
+pub struct Utf16beStr<'r>(Reader<'r>);
 
-impl<'a> Utf16beStr<'a>
+impl<'r> Utf16beStr<'r>
 {
-    pub fn chars(&self) -> DecodeUtf16<U16beIter<'a>>
+    pub fn chars(&self) -> DecodeUtf16<U16beIter<'r>>
     {
         decode_utf16(U16beIter(self.0.clone()))
     }
 }
 
-impl<'a> Readable<'a> for Utf16beStr<'a>
+impl<'r> Readable<'r> for Utf16beStr<'r>
 {
     type Args = ();
-    fn read(mut reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> Self
     {
         let start_reader = reader.clone();
         loop {
@@ -33,7 +33,7 @@ impl<'a> Readable<'a> for Utf16beStr<'a>
             }
         }
         let read_len = start_reader.len() - reader.len();
-        (Utf16beStr(start_reader.truncated(read_len)), reader)
+        Utf16beStr(start_reader.truncated(read_len))
     }
 
     fn size(&self) -> usize
@@ -42,7 +42,7 @@ impl<'a> Readable<'a> for Utf16beStr<'a>
     }
 }
 
-impl<'a> fmt::Debug for Utf16beStr<'a>
+impl<'r> fmt::Debug for Utf16beStr<'r>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
@@ -50,18 +50,19 @@ impl<'a> fmt::Debug for Utf16beStr<'a>
     }
 }
 
-impl<'a> Writable for Utf16beStr<'a>
+impl<'r> Writable for Utf16beStr<'r>
 {
-    fn write<W: io::Write>(&self, w: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, w: &mut W) -> io::Result<u64>
     {
-        w.write_all(&self.0)
+        w.write_all(&self.0)?;
+        Ok(self.0.len() as u64)
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct U16beIter<'a>(Reader<'a>);
+pub struct U16beIter<'r>(Reader<'r>);
 
-impl<'a> Iterator for U16beIter<'a>
+impl<'r> Iterator for U16beIter<'r>
 {
     type Item = u16;
     fn next(&mut self) -> Option<Self::Item>
@@ -75,13 +76,13 @@ impl<'a> Iterator for U16beIter<'a>
 }
 
 #[derive(Clone, Debug)]
-pub enum LazyUtf16beStr<'a>
+pub enum LazyUtf16beStr<'r>
 {
     Owned(String),
-    Borrowed(Utf16beStr<'a>),
+    Borrowed(Utf16beStr<'r>),
 }
 
-impl<'a> LazyUtf16beStr<'a>
+impl<'r> LazyUtf16beStr<'r>
 {
     pub fn as_mut_string<'s>(&mut self) -> &mut String
     {
@@ -102,7 +103,7 @@ impl<'a> LazyUtf16beStr<'a>
         }
     }
 
-    pub fn chars<'s>(&'s self) -> LazyUtf16beStrChars<'a, 's>
+    pub fn chars<'s>(&'s self) -> LazyUtf16beStrChars<'r, 's>
     {
         match *self {
             LazyUtf16beStr::Owned(ref s) => LazyUtf16beStrChars::Owned(s.chars()),
@@ -111,13 +112,13 @@ impl<'a> LazyUtf16beStr<'a>
     }
 }
 
-impl<'a> Readable<'a> for LazyUtf16beStr<'a>
+impl<'r> Readable<'r> for LazyUtf16beStr<'r>
 {
     type Args = ();
-    fn read(mut reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> Self
     {
         let s = reader.read(());
-        (LazyUtf16beStr::Borrowed(s), reader)
+        LazyUtf16beStr::Borrowed(s)
     }
 
     fn size(&self) -> usize
@@ -129,30 +130,35 @@ impl<'a> Readable<'a> for LazyUtf16beStr<'a>
     }
 }
 
-impl<'a> Writable for LazyUtf16beStr<'a>
+impl<'r> Writable for LazyUtf16beStr<'r>
 {
-    fn write<W: io::Write>(&self, w: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, w: &mut W) -> io::Result<u64>
     {
         match *self {
-            LazyUtf16beStr::Borrowed(ref s) => w.write_all(&s.0),
+            // TODO: This is SUPER WRONG
+            LazyUtf16beStr::Borrowed(ref s) => {
+                w.write_all(&s.0)?;
+                panic!()
+            },
             LazyUtf16beStr::Owned(ref s) => {
+                let mut sum = 0;
                 for i in s.encode_utf16() {
-                    i.write(w)?
+                    sum += i.write_to(w)?
                 }
-                Ok(())
+                Ok(sum)
             },
         }
     }
 }
 
 #[derive(Clone)]
-pub enum LazyUtf16beStrChars<'a, 's>
+pub enum LazyUtf16beStrChars<'r, 's>
 {
     Owned(Chars<'s>),
-    Borrowed(DecodeUtf16<U16beIter<'a>>),
+    Borrowed(DecodeUtf16<U16beIter<'r>>),
 }
 
-impl<'a, 's> Iterator for LazyUtf16beStrChars<'a, 's>
+impl<'r, 's> Iterator for LazyUtf16beStrChars<'r, 's>
 {
     type Item = char;
     fn next(&mut self) -> Option<Self::Item>
@@ -164,9 +170,9 @@ impl<'a, 's> Iterator for LazyUtf16beStrChars<'a, 's>
     }
 }
 
-impl<'a> From<String> for LazyUtf16beStr<'a>
+impl<'r> From<String> for LazyUtf16beStr<'r>
 {
-    fn from(s: String) -> LazyUtf16beStr<'a>
+    fn from(s: String) -> LazyUtf16beStr<'r>
     {
         // Verify null-terminator
         assert!(s.chars().next_back().unwrap() == '\0');
