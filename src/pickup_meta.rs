@@ -338,7 +338,7 @@ const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
 ];
 
 #[cfg(not(debug_assertions))]
-pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
+pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 {
     Resource {
         compressed: false,
@@ -348,7 +348,7 @@ pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
 }
 
 #[cfg(debug_assertions)]
-pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
+pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 {
     Resource {
         compressed: false,
@@ -357,7 +357,7 @@ pub fn build_resource<'a>(file_id: u32, kind: ResourceKind<'a>) -> Resource<'a>
         original_offset: 0,
     }
 }
-pub fn extra_assets<'a>() -> Vec<Resource<'a>>
+pub fn extra_assets<'r>() -> Vec<Resource<'r>>
 {
     EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
         build_resource(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))

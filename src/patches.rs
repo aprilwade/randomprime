@@ -51,8 +51,8 @@ const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 // When changing a pickup, we need to give the room a copy of the resources/
 // assests used by the pickup. Create a cache of all the resources needed by
 // any pickup.
-fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
-    -> HashMap<(u32, FourCC), structs::Resource<'a>>
+fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
+    -> HashMap<(u32, FourCC), structs::Resource<'r>>
 {
     let mut looking_for: HashSet<_> = PickupType::iter()
         .flat_map(|pt| pt.dependencies().iter().cloned())
@@ -103,8 +103,8 @@ fn collect_pickup_resources<'a>(gc_disc: &structs::GcDisc<'a>)
 }
 
 // TODO Reduce duplication between create_phazon_cmdl_and_ancs and create_nothing_cmdl_and_ancs
-fn create_nothing_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
-    -> (structs::Resource<'a>, structs::Resource<'a>)
+fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
+    -> (structs::Resource<'r>, structs::Resource<'r>)
 {
     let nothing_suit_cmdl = {
         let grav_suit_cmdl = ResourceData::new(&resources[&(
@@ -142,8 +142,8 @@ fn create_nothing_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), struc
     (nothing_suit_cmdl, nothing_suit_ancs)
 }
 
-fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'a>>)
-    -> (structs::Resource<'a>, structs::Resource<'a>)
+fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
+    -> (structs::Resource<'r>, structs::Resource<'r>)
 {
     let phazon_suit_cmdl = {
         let grav_suit_cmdl = ResourceData::new(&resources[&(
@@ -181,8 +181,8 @@ fn create_phazon_cmdl_and_ancs<'a>(resources: &mut HashMap<(u32, FourCC), struct
     (phazon_suit_cmdl, phazon_suit_ancs)
 }
 
-fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
-    -> structs::SclyObject<'a>
+fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
+    -> structs::SclyObject<'r>
 {
     let layer = if pickup_kind > 29 {
         pickup_kind - 28
@@ -216,8 +216,8 @@ fn artifact_layer_change_template<'a>(instance_id: u32, pickup_kind: u32)
     }
 }
 
-fn post_pickup_relay_template<'a>(instance_id: u32, connections: &'static [structs::Connection])
-    -> structs::SclyObject<'a>
+fn post_pickup_relay_template<'r>(instance_id: u32, connections: &'static [structs::Connection])
+    -> structs::SclyObject<'r>
 {
     structs::SclyObject {
         instance_id,
@@ -425,12 +425,12 @@ impl MaybeObfuscatedPickup
     }
 }
 
-fn modify_pickups_in_mrea<'a>(
+fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
-    area: &mut mlvl_wrapper::MlvlArea<'a, '_, '_, '_>,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'a>>,
+    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     config: &ParsedConfig,
 ) -> Result<(), String>
 {
@@ -715,7 +715,7 @@ fn patch_landing_site_cutscene_triggers(
     Ok(())
 }
 
-fn patch_frigate_teleporter<'a>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: SpawnRoom)
+fn patch_frigate_teleporter<'r>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: SpawnRoom)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -955,7 +955,7 @@ fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
     });
 }
 
-fn patch_research_lab_hydra_barrier<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_research_lab_hydra_barrier<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -969,7 +969,7 @@ fn patch_research_lab_hydra_barrier<'a>(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
-fn patch_research_lab_aether_exploding_wall<'a>(
+fn patch_research_lab_aether_exploding_wall<'r>(
     ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
 )
     -> Result<(), String>
@@ -1014,7 +1014,7 @@ fn patch_research_lab_aether_exploding_wall<'a>(
     Ok(())
 }
 
-fn patch_observatory_2nd_pass_solvablility<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_observatory_2nd_pass_solvablility<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1033,7 +1033,7 @@ fn patch_observatory_2nd_pass_solvablility<'a>(_ps: &mut PatcherState, area: &mu
     Ok(())
 }
 
-fn patch_main_ventilation_shaft_section_b_door<'a>(
+fn patch_main_ventilation_shaft_section_b_door<'r>(
     ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
 )
     -> Result<(), String>
@@ -1070,7 +1070,7 @@ fn patch_main_ventilation_shaft_section_b_door<'a>(
     Ok(())
 }
 
-fn patch_ore_processing_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_ore_processing_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1079,7 +1079,7 @@ fn patch_ore_processing_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut ml
     Ok(())
 }
 
-fn patch_geothermal_core_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_geothermal_core_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1088,7 +1088,7 @@ fn patch_geothermal_core_door_lock_0_02<'a>(_ps: &mut PatcherState, area: &mut m
     Ok(())
 }
 
-fn patch_mines_security_station_soft_lock<'a>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1268,7 +1268,7 @@ fn u32_to_be(x: u32) -> [u8; 4]
     bytes
 }
 
-fn patch_dol<'a>(
+fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
@@ -1408,7 +1408,7 @@ fn patch_dol<'a>(
     Ok(())
 }
 
-fn empty_frigate_pak<'a>(file: &mut structs::FstEntryFile)
+fn empty_frigate_pak<'r>(file: &mut structs::FstEntryFile)
     -> Result<(), String>
 {
     // To reduce the amount of data that needs to be copied, empty the contents of the pak

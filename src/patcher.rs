@@ -9,27 +9,27 @@ use std::{
 };
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-struct ResourceKey<'a>
+struct ResourceKey<'r>
 {
-    pak_name: &'a [u8],
+    pak_name: &'r [u8],
     kind: FourCC,
     id: u32,
 }
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-struct MreaKey<'a>
+struct MreaKey<'r>
 {
-    pak_name: &'a [u8],
+    pak_name: &'r [u8],
     room_id: u32,
 }
 
-type SclyPatch<'a, 'r> = dyn FnMut(&mut PatcherState, &mut MlvlArea<'a, '_, '_, '_>) -> Result<(), String> + 'r;
-pub struct PrimePatcher<'a, 'r>
+type SclyPatch<'r, 's> = dyn FnMut(&mut PatcherState, &mut MlvlArea<'r, '_, '_, '_>) -> Result<(), String> + 's;
+pub struct PrimePatcher<'r, 's>
 {
-    file_patches: HashMap<&'r [u8], Box<dyn FnMut(&mut FstEntryFile<'a>) -> Result<(), String> + 'r>>,
+    file_patches: HashMap<&'s [u8], Box<dyn FnMut(&mut FstEntryFile<'r>) -> Result<(), String> + 's>>,
     // TODO: Come up with a better data structure for this. A per PAK list of patches, for example.
-    resource_patches: Vec<(ResourceKey<'r>, Box<dyn FnMut(&mut Resource<'a>) -> Result<(), String> + 'r>)>,
-    scly_patches: Vec<(MreaKey<'r>, Vec<Box<SclyPatch<'a, 'r>>>)>,
+    resource_patches: Vec<(ResourceKey<'s>, Box<dyn FnMut(&mut Resource<'r>) -> Result<(), String> + 's>)>,
+    scly_patches: Vec<(MreaKey<'s>, Vec<Box<SclyPatch<'r, 's>>>)>,
 }
 
 pub struct PatcherState
@@ -37,9 +37,9 @@ pub struct PatcherState
     pub fresh_instance_id_range: RangeFrom<u32>,
 }
 
-impl<'a, 'r> PrimePatcher<'a, 'r>
+impl<'r, 's> PrimePatcher<'r, 's>
 {
-    pub fn new() -> PrimePatcher<'a, 'r>
+    pub fn new() -> PrimePatcher<'r, 's>
     {
         PrimePatcher {
             file_patches: HashMap::new(),
@@ -48,21 +48,21 @@ impl<'a, 'r> PrimePatcher<'a, 'r>
         }
     }
 
-    pub fn add_file_patch<F>(&mut self, name: &'r [u8], f: F)
-        where F: FnMut(&mut FstEntryFile<'a>) -> Result<(), String> + 'r
+    pub fn add_file_patch<F>(&mut self, name: &'s [u8], f: F)
+        where F: FnMut(&mut FstEntryFile<'r>) -> Result<(), String> + 's
     {
         self.file_patches.insert(name, Box::new(f));
     }
 
-    pub fn add_resource_patch<F>(&mut self, pak_name: &'r [u8], kind: FourCC, id: u32, f: F)
-        where F: FnMut(&mut Resource<'a>) -> Result<(), String> + 'r
+    pub fn add_resource_patch<F>(&mut self, pak_name: &'s [u8], kind: FourCC, id: u32, f: F)
+        where F: FnMut(&mut Resource<'r>) -> Result<(), String> + 's
     {
         let key = ResourceKey { pak_name, kind, id, };
         self.resource_patches.push((key, Box::new(f)));
     }
 
-    pub fn add_scly_patch<F>(&mut self, pak_name: &'r [u8], room_id: u32, f: F)
-        where F: FnMut(&mut PatcherState, &mut MlvlArea<'a, '_, '_, '_>) -> Result<(), String> + 'r
+    pub fn add_scly_patch<F>(&mut self, pak_name: &'s [u8], room_id: u32, f: F)
+        where F: FnMut(&mut PatcherState, &mut MlvlArea<'r, '_, '_, '_>) -> Result<(), String> + 's
     {
         let key = MreaKey { pak_name, room_id, };
         if let Some((_, v)) = self.scly_patches.iter_mut().find(|p| p.0 == key) {
@@ -72,7 +72,7 @@ impl<'a, 'r> PrimePatcher<'a, 'r>
         }
     }
 
-    pub fn run(&mut self, gc_disc: &mut GcDisc<'a>) -> Result<(), String>
+    pub fn run(&mut self, gc_disc: &mut GcDisc<'r>) -> Result<(), String>
     {
         let mut patcher_state = PatcherState {
             fresh_instance_id_range: 0xDEADBABE..

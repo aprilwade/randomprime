@@ -27,28 +27,28 @@ pub struct PickupLocation
     post_pickup_relay_connections: Vec<structs::Connection>,
 }
 
-struct ResourceDb<'a>
+struct ResourceDb<'r>
 {
-    map: HashMap<ResourceKey, ResourceDbRecord<'a>>,
+    map: HashMap<ResourceKey, ResourceDbRecord<'r>>,
 }
 
 #[derive(Debug)]
-struct ResourceDbRecord<'a>
+struct ResourceDbRecord<'r>
 {
-    data: ResourceData<'a>,
+    data: ResourceData<'r>,
     deps: Option<HashSet<ResourceKey>>,
 }
 
-impl<'a> ResourceDb<'a>
+impl<'r> ResourceDb<'r>
 {
-    fn new() -> ResourceDb<'a>
+    fn new() -> ResourceDb<'r>
     {
         ResourceDb {
             map: HashMap::new(),
         }
     }
 
-    fn add_resource(&mut self, res: Resource<'a>)
+    fn add_resource(&mut self, res: Resource<'r>)
     {
         let key = ResourceKey::new(res.file_id, res.fourcc());
         self.map.entry(key).or_insert_with(move || {
@@ -323,7 +323,7 @@ struct RoomInfo
     objects_to_remove: HashMap<u32, Vec<u32>>,
 }
 
-fn build_scly_db<'a>(scly: &structs::Scly<'a>) -> HashMap<u32, (usize, structs::SclyObject<'a>)>
+fn build_scly_db<'r>(scly: &structs::Scly<'r>) -> HashMap<u32, (usize, structs::SclyObject<'r>)>
 {
     let mut scly_db = HashMap::new();
     for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
@@ -335,10 +335,10 @@ fn build_scly_db<'a>(scly: &structs::Scly<'a>) -> HashMap<u32, (usize, structs::
     scly_db
 }
 
-fn find_audio_attainment<'a>(
-    obj: &structs::SclyObject<'a>,
-    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
-) -> Option<structs::SclyObject<'a>>
+fn find_audio_attainment<'r>(
+    obj: &structs::SclyObject<'r>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'r>)>,
+) -> Option<structs::SclyObject<'r>>
 {
     let post_pickup_relay = search_for_scly_object(&obj.connections, scly_db, |o| {
         o.property_data.as_relay()
@@ -358,10 +358,10 @@ fn find_audio_attainment<'a>(
     )
 }
 
-fn extract_pickup_data<'a>(
-    scly: &structs::Scly<'a>,
-    obj: &structs::SclyObject<'a>,
-    res_db: &mut ResourceDb<'a>
+fn extract_pickup_data<'r>(
+    scly: &structs::Scly<'r>,
+    obj: &structs::SclyObject<'r>,
+    res_db: &mut ResourceDb<'r>
 ) -> PickupData
 {
     let mut pickup = obj.property_data.as_pickup().unwrap().into_owned();
@@ -409,10 +409,10 @@ fn extract_pickup_data<'a>(
     }
 }
 
-fn extract_pickup_location<'a>(
+fn extract_pickup_location<'r>(
     mrea_id: u32,
-    scly: &structs::Scly<'a>,
-    obj: &structs::SclyObject<'a>,
+    scly: &structs::Scly<'r>,
+    obj: &structs::SclyObject<'r>,
     obj_location: ScriptObjectLocation,
 ) -> (PickupLocation, Vec<ScriptObjectLocation>)
 {
@@ -513,12 +513,12 @@ fn extract_pickup_location<'a>(
     (location, removals)
 }
 
-fn search_for_scly_object<'a, F>(
-    connections: &reader_writer::LazyArray<'a, structs::Connection>,
-    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+fn search_for_scly_object<'r, F>(
+    connections: &reader_writer::LazyArray<'r, structs::Connection>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'r>)>,
     f: F
-) -> Option<structs::SclyObject<'a>>
-    where F: Fn(&structs::SclyObject<'a>) -> bool
+) -> Option<structs::SclyObject<'r>>
+    where F: Fn(&structs::SclyObject<'r>) -> bool
 {
     let mut stack = Vec::new();
 
@@ -550,10 +550,10 @@ fn search_for_scly_object<'a, F>(
     None
 }
 
-fn build_skip_cutscene_relay_connections<'a>(
+fn build_skip_cutscene_relay_connections<'r>(
     pickup_type: u32,
-    obj_connections: &reader_writer::LazyArray<'a, structs::Connection>,
-    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+    obj_connections: &reader_writer::LazyArray<'r, structs::Connection>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'r>)>,
 ) -> Vec<structs::Connection>
 {
     let post_pickup_relay = search_for_scly_object(obj_connections, scly_db, |o| {
@@ -627,10 +627,10 @@ fn build_skip_cutscene_relay_connections<'a>(
     connections
 }
 
-fn find_cutscene_trigger_relay<'a>(
+fn find_cutscene_trigger_relay<'r>(
     pickup_type: u32,
-    obj_connections: &reader_writer::LazyArray<'a, structs::Connection>,
-    scly_db: &HashMap<u32, (usize, structs::SclyObject<'a>)>,
+    obj_connections: &reader_writer::LazyArray<'r, structs::Connection>,
+    scly_db: &HashMap<u32, (usize, structs::SclyObject<'r>)>,
 ) -> ScriptObjectLocation
 {
     // We need to look for specific object names depending on the pickup type. This is mostly the
