@@ -52,6 +52,7 @@ fn main()
             .flag("-Wno-unused-parameter")
             .flag("-Wno-unused-variable")
             .flag("-Wno-sign-compare")
+            .flag("-Wno-deprecated")
             .flag("-maes");
     }
     build.build("src/lib.rs");
