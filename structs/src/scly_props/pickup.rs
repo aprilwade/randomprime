@@ -1,47 +1,46 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use scly_props::structs::{ActorParameters, AncsProp};
+use crate::SclyPropertyData;
+use crate::scly_props::structs::{ActorParameters, AncsProp};
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Pickup<'a>
-    {
-        #[expect = 18]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Pickup<'r>
+{
+    #[auto_struct(expect = 18)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        position: GenericArray<f32, U3>,
-        rotation: GenericArray<f32, U3>,
-        scale: GenericArray<f32, U3>,
-        hitbox: GenericArray<f32, U3>,
-        scan_offset: GenericArray<f32, U3>,
+    pub position: GenericArray<f32, U3>,
+    pub rotation: GenericArray<f32, U3>,
+    pub scale: GenericArray<f32, U3>,
+    pub hitbox: GenericArray<f32, U3>,
+    pub scan_offset: GenericArray<f32, U3>,
 
-        kind: u32,
+    pub kind: u32,
 
-        max_increase: u32,
-        curr_increase: u32,
+    pub max_increase: u32,
+    pub curr_increase: u32,
 
-        drop_rate: f32,
-        disappear_timer: f32,
-        fade_in_timer: f32,
+    pub drop_rate: f32,
+    pub disappear_timer: f32,
+    pub fade_in_timer: f32,
 
-        cmdl: u32,
-        ancs: AncsProp,
-        actor_params: ActorParameters,
+    pub cmdl: u32,
+    pub ancs: AncsProp,
+    pub actor_params: ActorParameters,
 
-        active: u8,
-        spawn_delay: f32,
-        part: u32,
-    }
+    pub active: u8,
+    pub spawn_delay: f32,
+    pub part: u32,
 }
 
-impl<'a> SclyPropertyData for Pickup<'a>
+impl<'r> SclyPropertyData for Pickup<'r>
 {
     const OBJECT_TYPE: u8 = 0x11;
 }

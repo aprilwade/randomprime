@@ -1,183 +1,162 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct ActorParameters
-    {
-        #[expect = 14]
-        prop_count: u32,
-        light_params: LightParameters,
-        scan_params: ScannableParameters,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct ActorParameters
+{
+    #[auto_struct(expect = 14)]
+    prop_count: u32,
+    pub light_params: LightParameters,
+    pub scan_params: ScannableParameters,
 
-        xray_cmdl: u32,
-        xray_cskr: u32,
+    pub xray_cmdl: u32,
+    pub xray_cskr: u32,
 
-        // 6 unknown parameters
-        unknown0: GenericArray<u8, U17>,
+    // 6 unknown parameters
+    pub unknown0: GenericArray<u8, U17>,
 
-        visor_params: VisorParameters,
+    pub visor_params: VisorParameters,
 
-        // 4 unknown parameters
-        unknown1: GenericArray<u8, U7>,
-    }
+    // 4 unknown parameters
+    pub unknown1: GenericArray<u8, U7>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct AncsProp
-    {
-        file_id: u32,
-        node_index: u32,
-        unknown: u32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct AncsProp
+{
+    pub file_id: u32,
+    pub node_index: u32,
+    pub unknown: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct LightParameters
-    {
-        #[expect = 14]
-        prop_count: u32,
-        // Details left out for simplicity
-        unknown: GenericArray<u8, U67>,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct LightParameters
+{
+    #[auto_struct(expect = 14)]
+    prop_count: u32,
+    // Details left out for simplicity
+    pub unknown: GenericArray<u8, U67>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct ScannableParameters
-    {
-        #[expect = 1]
-        prop_count: u32,
-        scan: u32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct ScannableParameters
+{
+    #[auto_struct(expect = 1)]
+    prop_count: u32,
+    pub scan: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct VisorParameters
-    {
-        #[expect = 3]
-        prop_count: u32,
-        unknown0: u8,
-        target_passthrough: u8,
-        unknown2: u32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct VisorParameters
+{
+    #[auto_struct(expect = 3)]
+    prop_count: u32,
+    pub unknown0: u8,
+    pub target_passthrough: u8,
+    pub unknown2: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct DamageInfo
-    {
-        #[expect = 4]
-        prop_count: u32,
-        weapon_type: u32,
-        damage: f32,
-        radius: f32,
-        knockback_power: f32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct DamageInfo
+{
+    #[auto_struct(expect = 4)]
+    prop_count: u32,
+    pub weapon_type: u32,
+    pub damage: f32,
+    pub radius: f32,
+    pub knockback_power: f32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct DamageVulnerability
-    {
-        #[expect = 18]
-        prop_count: u32,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct DamageVulnerability
+{
+    #[auto_struct(expect = 18)]
+    prop_count: u32,
 
-        power: u32,
-        ice: u32,
-        wave: u32,
-        plasma: u32,
-        bomb: u32,
-        power_bomb: u32,
-        missile: u32,
-        boost_ball: u32,
-        phazon: u32,
+    pub power: u32,
+    pub ice: u32,
+    pub wave: u32,
+    pub plasma: u32,
+    pub bomb: u32,
+    pub power_bomb: u32,
+    pub missile: u32,
+    pub boost_ball: u32,
+    pub phazon: u32,
 
-        enemy_weapon0: u32,
-        enemy_weapon1: u32,
-        enemy_weapon2: u32,
-        enemy_weapon3: u32,
+    pub enemy_weapon0: u32,
+    pub enemy_weapon1: u32,
+    pub enemy_weapon2: u32,
+    pub enemy_weapon3: u32,
 
-        unknown_weapon0: u32,
-        unknown_weapon1: u32,
-        unknown_weapon2: u32,
+    pub unknown_weapon0: u32,
+    pub unknown_weapon1: u32,
+    pub unknown_weapon2: u32,
 
-        charged_beams: ChargedBeams,
-        beam_combos: BeamCombos,
+    pub charged_beams: ChargedBeams,
+    pub beam_combos: BeamCombos,
 
-    }
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct ChargedBeams
-    {
-        #[expect = 5]
-        prop_count: u32,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct ChargedBeams
+{
+    #[auto_struct(expect = 5)]
+    prop_count: u32,
 
-        power: u32,
-        ice: u32,
-        wave: u32,
-        plasma: u32,
-        phazon: u32,
-    }
+    pub power: u32,
+    pub ice: u32,
+    pub wave: u32,
+    pub plasma: u32,
+    pub phazon: u32,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct BeamCombos
-    {
-        #[expect = 5]
-        prop_count: u32,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct BeamCombos
+{
+    #[auto_struct(expect = 5)]
+    prop_count: u32,
 
-        power: u32,
-        ice: u32,
-        wave: u32,
-        plasma: u32,
-        phazon: u32,
-    }
+    pub power: u32,
+    pub ice: u32,
+    pub wave: u32,
+    pub plasma: u32,
+    pub phazon: u32,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct HealthInfo
-    {
-        #[expect = 2]
-        prop_count: u32,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct HealthInfo
+{
+    #[auto_struct(expect = 2)]
+    prop_count: u32,
 
-        health: f32,
-        knockback_resistance: f32,
-    }
+    pub health: f32,
+    pub knockback_resistance: f32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct PlayerActorParams
-    {
-        #[expect = 5]
-        prop_count: u32,
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct PlayerActorParams
+{
+    #[auto_struct(expect = 5)]
+    prop_count: u32,
 
-        unknown0: u8,
-        unknown1: u8,
-        unknown2: u8,
-        unknown3: u8,
-        unknown4: u8,
-    }
+    pub unknown0: u8,
+    pub unknown1: u8,
+    pub unknown2: u8,
+    pub unknown3: u8,
+    pub unknown4: u8,
 }

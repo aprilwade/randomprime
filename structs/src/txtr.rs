@@ -1,24 +1,24 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::{/* IteratorArray,*/ LazyArray};
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Txtr<'a>
-    {
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Txtr<'r>
+{
 
-        format: u32,
+    pub format: u32,
 
-        width: u16,
-        height: u16,
-        mipmap_count: u32,
+    pub width: u16,
+    pub height: u16,
+    pub mipmap_count: u32,
 
-        // TODO Palettes...
+    // TODO Palettes...
 
-        pixel_data: LazyArray<'a, u8> = (format_pixel_bytes(format, (height * width) as usize), ()),
-        // TODO: Mipmaps
+    #[auto_struct(init = (format_pixel_bytes(format, (height * width) as usize), ()))]
+    pub pixel_data: LazyArray<'r, u8>,
+    // TODO: Mipmaps
 
-    }
 }
 
 fn format_pixel_bytes(format: u32, pixels: usize) -> usize

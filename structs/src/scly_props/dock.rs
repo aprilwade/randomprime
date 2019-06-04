@@ -1,29 +1,28 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
+use crate::SclyPropertyData;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Dock<'a>
-    {
-        #[expect = 7]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Dock<'r>
+{
+    #[auto_struct(expect = 7)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        unknown0: u8,
-        position: GenericArray<f32, U3>,
-        scale: GenericArray<f32, U3>,
-        dock_number: f32,
-        this_room: u8,
-        unknown1: u8,
-    }
+    pub unknown0: u8,
+    pub position: GenericArray<f32, U3>,
+    pub scale: GenericArray<f32, U3>,
+    pub dock_number: f32,
+    pub this_room: u8,
+    pub unknown1: u8,
 }
 
-impl<'a> SclyPropertyData for Dock<'a>
+impl<'r> SclyPropertyData for Dock<'r>
 {
     const OBJECT_TYPE: u8 = 0x0B;
 }

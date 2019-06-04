@@ -1,26 +1,25 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
+use crate::SclyPropertyData;
 use reader_writer::CStr;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct HudMemo<'a>
-    {
-        #[expect = 6]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct HudMemo<'r>
+{
+    #[auto_struct(expect = 6)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        first_message_timer: f32,
-        unknown: u8,
-        memo_type: u32,
-        strg: u32,
-        active: u8,
-    }
+    pub first_message_timer: f32,
+    pub unknown: u8,
+    pub memo_type: u32,
+    pub strg: u32,
+    pub active: u8,
 }
 
-impl<'a> SclyPropertyData for HudMemo<'a>
+impl<'r> SclyPropertyData for HudMemo<'r>
 {
     const OBJECT_TYPE: u8 = 0x17;
 }

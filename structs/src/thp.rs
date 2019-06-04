@@ -1,46 +1,45 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::{FourCC, IteratorArray, LazyArray, Readable, RoArray, RoArrayIter};
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Thp<'a>
-    {
-        #[expect = b"THP\0".into()]
-        magic: FourCC,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Thp<'r>
+{
+    #[auto_struct(expect = b"THP\0".into())]
+    magic: FourCC,
 
-        #[expect = 0x00010000]
-        version: u32,
+    #[auto_struct(expect = 0x00010000)]
+    version: u32,
 
-        max_buffer_size: u32,
-        max_audio_samples: u32,
+    pub max_buffer_size: u32,
+    pub max_audio_samples: u32,
 
-        #[expect = 0x41efc28f]
-        fps: u32,
-        #[derivable = frames.len() as u32]
-        frame_count: u32,
-        #[derivable = frames.iter().next().unwrap().size() as u32]
-        _first_frame_size: u32,
-        #[derivable = frames.size() as u32]
-        _data_size: u32,
+    #[auto_struct(expect = 0x41efc28f)]
+    fps: u32,
+    #[auto_struct(derive = frames.len() as u32)]
+    frame_count: u32,
+    #[auto_struct(derive = frames.iter().next().unwrap().size() as u32)]
+    _first_frame_size: u32,
+    #[auto_struct(derive = frames.size() as u32)]
+    _data_size: u32,
 
-        #[expect = 0x30]
-        _component_data_offset: u32,
-        #[expect = 0]
-        _offsets_data_offset: u32,
-        #[derivable = 0x30 + components.size() as u32]
-        _first_frame_offset: u32,
-        #[derivable = (0x30 + components.size() + frames.size() -
-                       frames.iter().last().unwrap().size()) as u32]
-        _last_frame_offset: u32,
+    #[auto_struct(expect = 0x30)]
+    _component_data_offset: u32,
+    #[auto_struct(expect = 0)]
+    _offsets_data_offset: u32,
+    #[auto_struct(derive = 0x30 + components.size() as u32)]
+    _first_frame_offset: u32,
+    #[auto_struct(derive = (0x30 + components.size() + frames.size() -
+                    frames.iter().last().unwrap().size()) as u32)]
+    _last_frame_offset: u32,
 
-        components: ThpComponents<'a>,
-        frames: LazyArray<'a, ThpFrameData<'a>> = (frame_count as usize,
-                                                   components.component_count > 1),
-    }
+    pub components: ThpComponents<'r>,
+    #[auto_struct(init = (frame_count as usize, components.component_count > 1))]
+    pub frames: LazyArray<'r, ThpFrameData<'r>>,
 }
 
-impl<'a> Thp<'a>
+impl<'r> Thp<'r>
 {
     pub fn update_sibling_frame_sizes(&mut self)
     {
@@ -63,67 +62,64 @@ impl<'a> Thp<'a>
     }
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct ThpComponents<'a>
-    {
-        component_count: u32,
-        component_types: RoArray<'a, u8> = (16, ()),
-        components: IteratorArray<'a, ThpComponent, RoArrayIter<'a, u8>> =
-            component_types.iter(),
-    }
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct ThpComponents<'r>
+{
+    pub component_count: u32,
+    #[auto_struct(init = (16, ()))]
+    pub component_types: RoArray<'r, u8>,
+    #[auto_struct(init = component_types.iter())]
+    pub components: IteratorArray<'r, ThpComponent, RoArrayIter<'r, u8>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct ThpComponent
-    {
-        #[args]
-        kind: u8,
-        video_info: Option<ThpVideoInfo> = if kind == 0 { Some(()) } else { None },
-        audio_info: Option<ThpAudioInfo> = if kind == 1 { Some(()) } else { None },
-    }
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct ThpComponent
+{
+    #[auto_struct(args)]
+    kind: u8,
+    #[auto_struct(init = if kind == 0 { Some(()) } else { None })]
+    pub video_info: Option<ThpVideoInfo>,
+    #[auto_struct(init = if kind == 1 { Some(()) } else { None })]
+    pub audio_info: Option<ThpAudioInfo>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct ThpVideoInfo
-    {
-        width: u32,
-        height: u32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct ThpVideoInfo
+{
+    pub width: u32,
+    pub height: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct ThpAudioInfo
-    {
-        channels_count: u32,
-        frequency: u32,
-        samples_count: u32,
-    }
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct ThpAudioInfo
+{
+    pub channels_count: u32,
+    pub frequency: u32,
+    pub samples_count: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct ThpFrameData<'a>
-    {
-        #[args]
-        has_audio: bool,
-        frame_size_next: u32,
-        frame_size_prev: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct ThpFrameData<'r>
+{
+    #[auto_struct(args)]
+    has_audio: bool,
+    pub frame_size_next: u32,
+    pub frame_size_prev: u32,
 
-        video_size: u32,
-        audio_size: Option<u32> = if has_audio { Some(()) } else { None },
+    pub video_size: u32,
+    #[auto_struct(init = if has_audio { Some(()) } else { None })]
+    pub audio_size: Option<u32>,
 
-        video_data: RoArray<'a, u8> = (video_size as usize, ()),
-        audio_data: Option<RoArray<'a, u8>> = audio_size.map(|s| (s as usize, ())),
+    #[auto_struct(init = (video_size as usize, ()))]
+    pub video_data: RoArray<'r, u8>,
+    #[auto_struct(init = audio_size.map(|s| (s as usize, ())))]
+    pub audio_data: Option<RoArray<'r, u8>>,
 
-        alignment_padding!(32),
-    }
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
 }

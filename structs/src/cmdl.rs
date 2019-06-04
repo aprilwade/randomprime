@@ -1,3 +1,4 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::{RoArray, RoArrayIter, IteratorArray};
 use reader_writer::typenum::*;
@@ -5,46 +6,46 @@ use reader_writer::generic_array::GenericArray;
 
 // We don't need to modify CMDLs, so most of the details are left out.
 // We only actually care about reading out the TXTR file ids.
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct Cmdl<'a>
-    {
-        #[expect = 0xDEADBABE]
-        magic: u32,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct Cmdl<'r>
+{
+    #[auto_struct(expect = 0xDEADBABE)]
+    magic: u32,
 
-        #[expect = 2]
-        version: u32,
+    #[auto_struct(expect = 2)]
+    version: u32,
 
-        flags: u32,
+    pub flags: u32,
 
-        maab: GenericArray<f32, U6>,
+    pub maab: GenericArray<f32, U6>,
 
-        data_section_count: u32,
-        material_set_count: u32,
+    pub data_section_count: u32,
+    pub material_set_count: u32,
 
-        material_set_sizes: RoArray<'a, u32> = (material_set_count as usize, ()),
-        data_section_sizes: RoArray<'a, u32> =
-            ((data_section_count - material_set_count) as usize, ()),
+    #[auto_struct(init = (material_set_count as usize, ()))]
+    pub material_set_sizes: RoArray<'r, u32>,
+    #[auto_struct(init = ((data_section_count - material_set_count) as usize, ()))]
+    pub data_section_sizes: RoArray<'r, u32>,
 
-        alignment_padding!(32),
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
 
-        material_sets: IteratorArray<'a, MaterialSet<'a>, RoArrayIter<'a, u32>> =
-            material_set_sizes.iter(),
-    }
+    #[auto_struct(init = material_set_sizes.iter())]
+    pub material_sets: IteratorArray<'r, MaterialSet<'r>, RoArrayIter<'r, u32>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MaterialSet<'a>
-    {
-        #[args]
-        size: u32,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MaterialSet<'r>
+{
+    #[auto_struct(args)]
+    size: u32,
 
-        texture_count: u32,
-        texture_ids: RoArray<'a, u32> = (texture_count as usize, ()),
+    pub texture_count: u32,
+    #[auto_struct(init = (texture_count as usize, ()))]
+    pub texture_ids: RoArray<'r, u32>,
 
-        padding: RoArray<'a, u8> = (size as usize - 4 - texture_ids.size(), ()),
-    }
+    #[auto_struct(init = (size as usize - 4 - texture_ids.size(), ()))]
+    pub padding: RoArray<'r, u8>,
 }

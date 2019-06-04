@@ -1,3 +1,4 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::{CStr, Reader, Readable, RoArray, Writable};
 use reader_writer::typenum::*;
@@ -6,26 +7,28 @@ use reader_writer::generic_array::GenericArray;
 use std::fmt;
 use std::io::{self, Read, Write};
 
-use ::pak::Pak;
-use ::thp::Thp;
-use ::bnr::Bnr;
+use crate::{
+    pak::Pak,
+    thp::Thp,
+    bnr::Bnr,
+};
 
 // Based on http://hitmen.c02.at/files/yagcd/yagcd/chap13.html
 
 pub const GC_DISC_LENGTH: usize = 1_459_978_240;
 
-pub struct GcDisc<'a>
+pub struct GcDisc<'r>
 {
     pub header: GcDiscHeader,
     header_info: GenericArray<u8, U8192>,
-    apploader: GcDiscApploader<'a>,
-    pub file_system_table: FileSystemTable<'a>,
+    apploader: GcDiscApploader<'r>,
+    pub file_system_table: FileSystemTable<'r>,
 }
 
-impl<'a> Readable<'a> for GcDisc<'a>
+impl<'r> Readable<'r> for GcDisc<'r>
 {
     type Args = ();
-    fn read(mut reader: Reader<'a>, (): ()) -> (GcDisc<'a>, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> GcDisc<'r>
     {
         let start = reader.clone();
         let header: GcDiscHeader = reader.read(());
@@ -39,7 +42,7 @@ impl<'a> Readable<'a> for GcDisc<'a>
             apploader: apploader,
             file_system_table: fst,
         };
-        (gc_disc, reader)
+        gc_disc
     }
 
     fn fixed_size() -> Option<usize>
@@ -70,7 +73,7 @@ impl<W> WriteExt for W
     }
 }
 
-impl<'a> GcDisc<'a>
+impl<'r> GcDisc<'r>
 {
     pub fn write<W, N>(&mut self, writer: &mut W, notifier: &mut N)
         -> io::Result<()>
@@ -94,12 +97,12 @@ impl<'a> GcDisc<'a>
         self.header.fst_max_length = self.header.fst_length;
 
         notifier.notify_writing_header();
-        self.header.write(writer)?;
-        self.header_info.write(writer)?;
-        self.apploader.write(writer)?;
+        self.header.write_to(writer)?;
+        self.header_info.write_to(writer)?;
+        self.apploader.write_to(writer)?;
 
         writer.skip_bytes(self.header.fst_offset as u64 - header_size as u64)?;
-        self.file_system_table.write(writer)?;
+        self.file_system_table.write_to(writer)?;
 
         let fst_end = (self.header.fst_offset + self.header.fst_length) as u64;
         writer.skip_bytes(fs_offset as u64 - fst_end)?;
@@ -107,45 +110,43 @@ impl<'a> GcDisc<'a>
     }
 }
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize, Writable)]
-    #[derive(Debug)]
-    pub struct GcDiscHeader
-    {
-        console_id: u8,
-        game_code: GenericArray<u8, U2>,
-        country_code: u8,
+#[auto_struct(Readable, FixedSize, Writable)]
+#[derive(Debug)]
+pub struct GcDiscHeader
+{
+    pub console_id: u8,
+    pub game_code: GenericArray<u8, U2>,
+    pub country_code: u8,
 
-        maker_code: GenericArray<u8, U2>,
-        disc_id: u8,
-        version: u8,
+    pub maker_code: GenericArray<u8, U2>,
+    pub disc_id: u8,
+    pub version: u8,
 
-        audio_streaming: u8,
-        stream_buffer_size: u8,
+    pub audio_streaming: u8,
+    pub stream_buffer_size: u8,
 
-        unused0: GenericArray<u8, U18>, //[0x12]
+    pub unused0: GenericArray<u8, U18>, //[0x12]
 
-        #[expect = 0xc2339f3d]
-        magic: u32, // 0xc2339f3d
-        game_name: GenericArray<u8, U992>, //[0x3e0]
+    #[auto_struct(expect = 0xc2339f3d)]
+    magic: u32, // 0xc2339f3d
+    pub game_name: GenericArray<u8, U992>, //[0x3e0]
 
-        debug_mon_offset: u32,
-        debug_mon_load_addr: u32,
+    pub debug_mon_offset: u32,
+    pub debug_mon_load_addr: u32,
 
-        unused1: GenericArray<u8, U24>,// [0x18]
+    pub unused1: GenericArray<u8, U24>,// [0x18]
 
-        main_dol_offset: u32,
+    pub main_dol_offset: u32,
 
-        fst_offset: u32,
-        fst_length: u32,
-        fst_max_length: u32,
+    pub fst_offset: u32,
+    pub fst_length: u32,
+    pub fst_max_length: u32,
 
-        user_position: u32,
-        user_length: u32,
+    pub user_position: u32,
+    pub user_length: u32,
 
-        unused2: u32,
-        unused3: u32,
-    }
+    pub unused2: u32,
+    pub unused3: u32,
 }
 
 impl GcDiscHeader
@@ -158,30 +159,29 @@ impl GcDiscHeader
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    pub struct GcDiscApploader<'a>
-    {
-        date: GenericArray<u8, U16>,
-        entrypoint: u32,
-        size: u32,
-        trailer_size: u32,
-        // TODO: Is this size right?
-        code: RoArray<'a, u8> = ((size + trailer_size) as usize, ())
-    }
+#[auto_struct(Readable, Writable)]
+pub struct GcDiscApploader<'r>
+{
+    pub date: GenericArray<u8, U16>,
+    pub entrypoint: u32,
+    pub size: u32,
+    pub trailer_size: u32,
+    // TODO: Is this size right?
+    #[auto_struct(init = ((size + trailer_size) as usize, ()))]
+    pub code: RoArray<'r, u8>,
 }
 
 
-pub struct FileSystemTable<'a>
+pub struct FileSystemTable<'r>
 {
-    pub fst_entries: Vec<FstEntry<'a>>,
+    pub fst_entries: Vec<FstEntry<'r>>,
 }
 
-impl<'a> Readable<'a> for FileSystemTable<'a>
+impl<'r> Readable<'r> for FileSystemTable<'r>
 {
-    type Args = (Reader<'a>, usize);
-    fn read(reader: Reader<'a>, args: Self::Args)
-        -> (FileSystemTable<'a>, Reader<'a>)
+    type Args = (Reader<'r>, usize);
+    fn read_from(_: &mut Reader<'r>, args: Self::Args)
+        -> FileSystemTable<'r>
     {
         let (disc_start, fst_offset) = args;
         let fst_start = disc_start.offset(fst_offset as usize);
@@ -197,9 +197,9 @@ impl<'a> Readable<'a> for FileSystemTable<'a>
         let fst_entries: Vec<FstEntry> = fst_start.clone()
             .read((fst_len, (disc_start, string_table_start.clone())));
 
-        (FileSystemTable {
+        FileSystemTable {
             fst_entries: fst_entries,
-        }, reader)
+        }
     }
 
     fn size(&self) -> usize
@@ -209,19 +209,20 @@ impl<'a> Readable<'a> for FileSystemTable<'a>
     }
 }
 
-impl<'a> Writable for FileSystemTable<'a>
+impl<'r> Writable for FileSystemTable<'r>
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
-        self.fst_entries.write(writer)?;
+        let mut sum = 0;
+        sum += self.fst_entries.write_to(writer)?;
         for s in self.fst_entries.iter() {
-            &s.name.write(writer)?;
+            sum += &s.name.write_to(writer)?;
         }
-        Ok(())
+        Ok(sum)
     }
 }
 
-impl<'a> FileSystemTable<'a>
+impl<'r> FileSystemTable<'r>
 {
     /// Updates the length and offset fields
     /// Returns the total size of all the files in the FST.
@@ -272,14 +273,14 @@ impl<'a> FileSystemTable<'a>
         for (e, zeroes) in entries_and_zeroes {
             if let Some(f) = e.file() {
                 notifier.notify_writing_file(&e.name, e.length as usize);
-                f.write(writer)?;
+                f.write_to(writer)?;
                 writer.write_all(&zero_bytes[0..zeroes as usize])?;
             }
         }
         Ok(())
     }
 
-    pub fn add_file(&mut self, name: CStr<'a>, file: FstEntryFile<'a>)
+    pub fn add_file(&mut self, name: CStr<'r>, file: FstEntryFile<'r>)
     {
         self.fst_entries.push(FstEntry {
             flags: 0,
@@ -295,38 +296,35 @@ impl<'a> FileSystemTable<'a>
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize, Writable)]
-    #[derive(Debug)]
-    pub struct FstEntry<'a>
-    {
-        #[args]
-        (disc_start, string_table): (Reader<'a>, Reader<'a>),
+#[auto_struct(Readable, FixedSize, Writable)]
+#[derive(Debug)]
+pub struct FstEntry<'r>
+{
+    #[auto_struct(args = (disc_start, string_table))]
+    _args: (Reader<'r>, Reader<'r>),
 
-        flags: u8,
-        unused: u8,
-        name_offset: u16,
+    pub flags: u8,
+    pub unused: u8,
+    pub name_offset: u16,
 
-        offset: u32,
-        length: u32,
+    pub offset: u32,
+    pub length: u32,
 
-        #[literal]
-        file: FstEntryFile<'a> = FstEntryFile::Unknown(disc_start.offset(offset as usize)
-                                                            .truncated(length as usize)),
-        #[literal]
-        name: CStr<'a> = string_table.offset(name_offset as usize).read::<CStr<'a>>(()),
-    }
+    #[auto_struct(literal = FstEntryFile::Unknown(disc_start.offset(offset as usize) .truncated(length as usize)))]
+    pub file: FstEntryFile<'r>,
+    #[auto_struct(literal = string_table.offset(name_offset as usize).read::<CStr<'r>>(()))]
+    pub name: CStr<'r>,
 }
 
 pub trait ToRead: fmt::Debug
 {
-    fn to_read<'a>(&'a self) -> Box<Read + 'a>;
+    fn to_read<'r>(&'r self) -> Box<Read + 'r>;
     fn len(&self) -> usize;
-    fn boxed<'a>(&self) -> Box<ToRead + 'a>
-        where Self: 'a;
+    fn boxed<'r>(&self) -> Box<ToRead + 'r>
+        where Self: 'r;
 }
 
-impl<'a> Clone for Box<ToRead + 'a>
+impl<'r> Clone for Box<ToRead + 'r>
 {
     fn clone(&self) -> Self
     {
@@ -337,7 +335,7 @@ impl<'a> Clone for Box<ToRead + 'a>
 impl<T> ToRead for T
     where T: AsRef<[u8]> + fmt::Debug + Clone
 {
-    fn to_read<'a>(&'a self) -> Box<Read + 'a>
+    fn to_read<'r>(&'r self) -> Box<Read + 'r>
     {
         Box::new(io::Cursor::new(self.as_ref()))
     }
@@ -347,26 +345,26 @@ impl<T> ToRead for T
         self.as_ref().len()
     }
 
-    fn boxed<'a>(&self) -> Box<ToRead + 'a>
-        where Self: 'a
+    fn boxed<'r>(&self) -> Box<ToRead + 'r>
+        where Self: 'r
     {
         Box::new(self.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum FstEntryFile<'a>
+pub enum FstEntryFile<'r>
 {
-    Pak(Pak<'a>),
-    Thp(Thp<'a>),
-    Bnr(Bnr<'a>),
-    ExternalFile(Box<ToRead + 'a>),
-    Unknown(Reader<'a>),
+    Pak(Pak<'r>),
+    Thp(Thp<'r>),
+    Bnr(Bnr<'r>),
+    ExternalFile(Box<ToRead + 'r>),
+    Unknown(Reader<'r>),
 }
 
-impl<'a> FstEntry<'a>
+impl<'r> FstEntry<'r>
 {
-    pub fn file(&self) -> Option<&FstEntryFile<'a>>
+    pub fn file(&self) -> Option<&FstEntryFile<'r>>
     {
         if self.is_folder() {
             None
@@ -375,7 +373,7 @@ impl<'a> FstEntry<'a>
         }
     }
 
-    pub fn file_mut(&mut self) -> Option<&mut FstEntryFile<'a>>
+    pub fn file_mut(&mut self) -> Option<&mut FstEntryFile<'r>>
     {
         if self.is_folder() {
             None
@@ -427,7 +425,7 @@ impl<'a> FstEntry<'a>
     }
 }
 
-impl<'a> FstEntryFile<'a>
+impl<'r> FstEntryFile<'r>
 {
     fn size(&self) -> usize
     {
@@ -440,16 +438,17 @@ impl<'a> FstEntryFile<'a>
         }
     }
 
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
         match *self {
-            FstEntryFile::Pak(ref pak) => pak.write(writer),
-            FstEntryFile::Thp(ref thp) => thp.write(writer),
-            FstEntryFile::Bnr(ref bnr) => bnr.write(writer),
-            FstEntryFile::ExternalFile(ref i) => {
-                io::copy(&mut *i.to_read(), writer).map(|_| ())
+            FstEntryFile::Pak(ref pak) => pak.write_to(writer),
+            FstEntryFile::Thp(ref thp) => thp.write_to(writer),
+            FstEntryFile::Bnr(ref bnr) => bnr.write_to(writer),
+            FstEntryFile::ExternalFile(ref i) => io::copy(&mut *i.to_read(), writer),
+            FstEntryFile::Unknown(ref reader) => {
+                writer.write_all(&reader)?;
+                Ok(reader.len() as u64)
             },
-            FstEntryFile::Unknown(ref reader) => writer.write_all(&reader),
         }
     }
 }

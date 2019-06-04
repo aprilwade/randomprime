@@ -1,52 +1,55 @@
+use auto_struct_macros::auto_struct;
 
-use reader_writer::{Dap, FourCC, LCow, RoArray, LazyArray, Readable, Reader, Writable};
+use reader_writer::{FourCC, LCow, RoArray, LazyArray, Readable, Reader, Writable};
 
 use std::io;
 use std::borrow::Cow;
 use std::fmt;
 
-use scly_props;
+use crate::scly_props;
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Scly<'a>
-    {
-        #[expect = FourCC::from_bytes(b"SCLY")]
-        magic: FourCC,
-
-        unknown: u32,
-
-        #[derivable = layers.len() as u32]
-        layer_count: u32,
-
-        #[derivable: Dap<_, _> = layers.iter().map(&|i: LCow<SclyLayer>| i.size() as u32).into()]
-        _layer_sizes: RoArray<'a, u32> = (layer_count as usize, ()),
-
-        layers: LazyArray<'a, SclyLayer<'a>> = (layer_count as usize, ()),
-    }
-}
-
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct SclyLayer<'a>
-    {
-        unknown: u8,
-
-        #[derivable = objects.len() as u32]
-        object_count: u32,
-        // TODO: Consider using DiffList here. Maybe requires profiling to decide...
-        objects: LazyArray<'a, SclyObject<'a>> = (object_count as usize, ()),
-
-        alignment_padding!(32),
-    }
-}
-
-impl<'a> SclyLayer<'a>
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Scly<'r>
 {
-    pub fn new() -> SclyLayer<'a>
+    #[auto_struct(expect = FourCC::from_bytes(b"SCLY"))]
+    magic: FourCC,
+
+    pub unknown: u32,
+
+    #[auto_struct(derive = layers.len() as u32)]
+    layer_count: u32,
+
+    #[auto_struct(derive_from_iter = layers.iter()
+            .map(&|i: LCow<SclyLayer>| i.size() as u32))]
+    #[auto_struct(init = (layer_count as usize, ()))]
+    _layer_sizes: RoArray<'r, u32>,
+
+    #[auto_struct(init = (layer_count as usize, ()))]
+    pub layers: LazyArray<'r, SclyLayer<'r>>,
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct SclyLayer<'r>
+{
+    pub unknown: u8,
+
+    #[auto_struct(derive = objects.len() as u32)]
+    object_count: u32,
+    // TODO: Consider using DiffList here. Maybe requires profiling to decide...
+
+    #[auto_struct(init = (object_count as usize, ()))]
+    pub objects: LazyArray<'r, SclyObject<'r>>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+}
+
+impl<'r> SclyLayer<'r>
+{
+    pub fn new() -> SclyLayer<'r>
     {
         SclyLayer {
             unknown: 0,
@@ -55,43 +58,42 @@ impl<'a> SclyLayer<'a>
     }
 }
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct SclyObject<'a>
-    {
-        #[derivable = property_data.object_type()]
-        object_type: u8,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct SclyObject<'r>
+{
+    #[auto_struct(derive = property_data.object_type())]
+    object_type: u8,
 
-        #[derivable = (8 + connections.size() + property_data.size()) as u32]
-        instance_size: u32,
+    #[auto_struct(derive = (8 + connections.size() + property_data.size()) as u32)]
+    instance_size: u32,
 
-        instance_id: u32,
+    pub instance_id: u32,
 
-        #[derivable = connections.len() as u32]
-        connection_count: u32,
-        connections: LazyArray<'a, Connection> = (connection_count as usize, ()),
+    #[auto_struct(derive = connections.len() as u32)]
+    connection_count: u32,
+    #[auto_struct(init = (connection_count as usize, ()))]
+    pub connections: LazyArray<'r, Connection>,
 
-        property_data: SclyProperty<'a> = (object_type,
-                                           (instance_size - 8) as usize - connections.size()),
-    }
+    #[auto_struct(init = (object_type, (instance_size - 8) as usize - connections.size()))]
+    pub property_data: SclyProperty<'r>,
 }
 
 macro_rules! build_scly_property {
     ($($name:ident, $is_check:ident, $accessor:ident, $accessor_mut:ident,)*) => {
 
         #[derive(Clone, Debug)]
-        pub enum SclyProperty<'a>
+        pub enum SclyProperty<'r>
         {
             Unknown {
                 object_type: u8,
-                data: Reader<'a>
+                data: Reader<'r>
             },
 
-            $($name(scly_props::$name<'a>),)*
+            $($name(scly_props::$name<'r>),)*
         }
 
-        impl<'a> SclyProperty<'a>
+        impl<'r> SclyProperty<'r>
         {
             pub fn object_type(&self) -> u8
             {
@@ -129,7 +131,7 @@ macro_rules! build_scly_property {
                     }
                 }
 
-                pub fn $accessor(&self) -> Option<Cow<scly_props::$name<'a>>>
+                pub fn $accessor(&self) -> Option<Cow<scly_props::$name<'r>>>
                 {
                     match *self {
                         SclyProperty::$name(ref inst) => Some(Cow::Borrowed(inst)),
@@ -144,7 +146,7 @@ macro_rules! build_scly_property {
                     }
                 }
 
-                pub fn $accessor_mut(&mut self) -> Option<&mut scly_props::$name<'a>>
+                pub fn $accessor_mut(&mut self) -> Option<&mut scly_props::$name<'r>>
                 {
                     let (mut data, object_type) = match *self {
                         SclyProperty::Unknown { ref data, object_type, .. } =>
@@ -164,16 +166,17 @@ macro_rules! build_scly_property {
             )*
         }
 
-        impl<'a> Readable<'a> for SclyProperty<'a>
+        impl<'r> Readable<'r> for SclyProperty<'r>
         {
             type Args = (u8, usize);
-            fn read(reader: Reader<'a>, (otype, size): Self::Args) -> (Self, Reader<'a>)
+            fn read_from(reader: &mut Reader<'r>, (otype, size): Self::Args) -> Self
             {
                 let prop = SclyProperty::Unknown {
                     object_type: otype,
                     data: reader.truncated(size),
                 };
-                (prop, reader.offset(size))
+                reader.advance(size);
+                prop
             }
 
             fn size(&self) -> usize
@@ -185,13 +188,16 @@ macro_rules! build_scly_property {
             }
         }
 
-        impl<'a> Writable for SclyProperty<'a>
+        impl<'r> Writable for SclyProperty<'r>
         {
-            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+            fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
             {
                 match *self {
-                    SclyProperty::Unknown { ref data, .. } => writer.write_all(&data),
-                    $(SclyProperty::$name(ref i) => i.write(writer),)*
+                    SclyProperty::Unknown { ref data, .. } => {
+                        writer.write_all(&data)?;
+                        Ok(data.len() as u64)
+                    },
+                    $(SclyProperty::$name(ref i) => i.write_to(writer),)*
                 }
             }
         }
@@ -226,15 +232,13 @@ pub trait SclyPropertyData
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Connection
-    {
-        state: ConnectionState,
-        message: ConnectionMsg,
-        target_object_id: u32,
-    }
+#[auto_struct(Readable, FixedSize, Writable)]
+#[derive(Debug, Clone)]
+pub struct Connection
+{
+    pub state: ConnectionState,
+    pub message: ConnectionMsg,
+    pub target_object_id: u32,
 }
 
 macro_rules! build_scly_conn_field {
@@ -257,14 +261,14 @@ macro_rules! build_scly_conn_field {
             }
         }
 
-        impl<'a> Readable<'a> for $struct_name
+        impl<'r> Readable<'r> for $struct_name
         {
             type Args = ();
 
-            fn read(mut reader: Reader<'a>, (): Self::Args) -> (Self, Reader<'a>)
+            fn read_from(reader: &mut Reader<'r>, (): Self::Args) -> Self
             {
                 let i = reader.read(());
-                ($struct_name(i), reader)
+                $struct_name(i)
             }
 
             fn fixed_size() -> Option<usize>
@@ -275,9 +279,9 @@ macro_rules! build_scly_conn_field {
 
         impl Writable for $struct_name
         {
-            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+            fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
             {
-                self.0.write(writer)
+                self.0.write_to(writer)
             }
         }
     };

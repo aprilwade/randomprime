@@ -1,5 +1,8 @@
-use structs::{Area, AreaLayerFlags, Dependency, Mlvl, Mrea, SclyLayer, Resource, ResourceSource};
-use reader_writer::{CStr, DiffListCursor, FourCC};
+use structs::{
+    Area, AreaLayerFlags, Dependency, MemoryRelayConn, Mlvl, Mrea, SclyLayer, Resource,
+    ResourceSource
+};
+use reader_writer::{CStr, DiffListCursor, FourCC, LazyArray};
 
 
 use std::collections::HashMap;
@@ -18,6 +21,7 @@ pub struct MlvlArea<'a, 'mlvl, 'cursor, 'list>
     pub mlvl_area: &'mlvl mut Area<'a>,
     pub layer_flags: &'mlvl mut AreaLayerFlags,
     pub layer_names: &'mlvl mut Vec<CStr<'a>>,
+    pub memory_relay_conns: &'mlvl mut LazyArray<'a, MemoryRelayConn>,
 }
 
 impl<'a> MlvlEditor<'a>
@@ -44,6 +48,7 @@ impl<'a> MlvlEditor<'a>
             mlvl_area: area,
             layer_flags: self.mlvl.area_layer_flags.as_mut_vec().get_mut(i).unwrap(),
             layer_names: self.mlvl.area_layer_names.mut_names_for_area(i).unwrap(),
+            memory_relay_conns: &mut self.mlvl.memory_relay_conns,
         }
     }
 }

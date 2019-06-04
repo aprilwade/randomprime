@@ -1,33 +1,32 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-use scly_props::structs::DamageInfo;
-use SclyPropertyData;
+use crate::scly_props::structs::DamageInfo;
+use crate::SclyPropertyData;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Trigger<'a>
-    {
-        #[expect = 9]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Trigger<'r>
+{
+    #[auto_struct(expect = 9)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        position: GenericArray<f32, U3>,
-        scale: GenericArray<f32, U3>,
-        damage_info: DamageInfo,
-        unknown0: GenericArray<f32, U3>,
-        unknown1: u32,
-        active: u8,
-        unknown2: u8,
-        unknown3: u8,
-    }
+    pub position: GenericArray<f32, U3>,
+    pub scale: GenericArray<f32, U3>,
+    pub damage_info: DamageInfo,
+    pub unknown0: GenericArray<f32, U3>,
+    pub unknown1: u32,
+    pub active: u8,
+    pub unknown2: u8,
+    pub unknown3: u8,
 }
 
-impl<'a> SclyPropertyData for Trigger<'a>
+impl<'r> SclyPropertyData for Trigger<'r>
 {
     const OBJECT_TYPE: u8 = 0x04;
 }

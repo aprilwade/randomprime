@@ -1,3 +1,4 @@
+use auto_struct_macros::auto_struct;
 
 use reader_writer::{CStr, FourCC, IteratorArray, Readable, Reader, RoArray, Uncached, RoArrayIter};
 use reader_writer::typenum::*;
@@ -12,295 +13,292 @@ fn bool_to_opt(b: bool) -> Option<()>
     }
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct Ancs<'a>
-    {
-        #[expect = 1]
-        version: u16,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct Ancs<'r>
+{
+    #[auto_struct(expect = 1)]
+    version: u16,
 
-        char_set: CharacterSet<'a>,
-        anim_set: AnimationSet<'a>,
-    }
+    pub char_set: CharacterSet<'r>,
+    pub anim_set: AnimationSet<'r>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct CharacterSet<'a>
-    {
-        #[expect = 1]
-        version: u16,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct CharacterSet<'r>
+{
+    #[auto_struct(expect = 1)]
+    version: u16,
 
-        char_info_count: u32,
-        char_info: RoArray<'a, CharacterInfo<'a>> = (char_info_count as usize, ()),
-    }
+    pub char_info_count: u32,
+    #[auto_struct(init = (char_info_count as usize, ()))]
+    pub char_info: RoArray<'r, CharacterInfo<'r>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct CharacterInfo<'a>
-    {
-        id: u32,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct CharacterInfo<'r>
+{
+    pub id: u32,
 
-        info_type_count: u16,
+    pub info_type_count: u16,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        cmdl: u32,
-        cskr: u32,
-        cinf: u32,
+    pub cmdl: u32,
+    pub cskr: u32,
+    pub cinf: u32,
 
-        animation_count: u32,
-        animation_names: RoArray<'a, AnimationName<'a>> = (animation_count as usize,
-                                                           info_type_count),
+    pub animation_count: u32,
+    #[auto_struct(init = (animation_count as usize, info_type_count))]
+    pub animation_names: RoArray<'r, AnimationName<'r>>,
 
-        pas_database: PasDatabase<'a>,
-        particles: ParticleResData<'a> = info_type_count,
+    pub pas_database: PasDatabase<'r>,
+    #[auto_struct(init = info_type_count)]
+    pub particles: ParticleResData<'r>,
 
-        unknown0: u32,
-        unknown1: Option<u32> = bool_to_opt(info_type_count > 9),
-        unknown2: Option<u32> = bool_to_opt(info_type_count > 9),
+    pub unknown0: u32,
+    #[auto_struct(init = bool_to_opt(info_type_count > 9))]
+    pub unknown1: Option<u32>,
+    #[auto_struct(init = bool_to_opt(info_type_count > 9))]
+    pub unknown2: Option<u32>,
 
-        animation_aabb_count: Option<u32> = bool_to_opt(info_type_count > 1),
-        animation_aabbs: Option<RoArray<'a, AnimationAABB<'a>>> =
-            animation_aabb_count.map(|i| (i as usize, ())),
+    #[auto_struct(init = bool_to_opt(info_type_count > 1))]
+    pub animation_aabb_count: Option<u32>,
+    #[auto_struct(init = animation_aabb_count.map(|i| (i as usize, ())))]
+    pub animation_aabbs: Option<RoArray<'r, AnimationAABB<'r>>>,
 
-        effect_count: Option<u32> = bool_to_opt(info_type_count > 1),
-        effects: Option<RoArray<'a, Effect<'a>>> = effect_count.map(|i| (i as usize, ())),
+    #[auto_struct(init = bool_to_opt(info_type_count > 1))]
+    pub effect_count: Option<u32>,
+    #[auto_struct(init = effect_count.map(|i| (i as usize, ())))]
+    pub effects: Option<RoArray<'r, Effect<'r>>>,
 
-        overlay_cmdl: Option<u32> = bool_to_opt(info_type_count > 3),
-        overlay_cskr: Option<u32> = bool_to_opt(info_type_count > 3),
+    #[auto_struct(init = bool_to_opt(info_type_count > 3))]
+    pub overlay_cmdl: Option<u32>,
+    #[auto_struct(init = bool_to_opt(info_type_count > 3))]
+    pub overlay_cskr: Option<u32>,
 
-        animation_index_count: Option<u32> = bool_to_opt(info_type_count > 4),
-        animation_indices: Option<RoArray<'a, u32>> =
-            animation_index_count.map(|i| (i as usize, ())),
+    #[auto_struct(init = bool_to_opt(info_type_count > 4))]
+    pub animation_index_count: Option<u32>,
+    #[auto_struct(init = animation_index_count.map(|i| (i as usize, ())))]
+    pub animation_indices: Option<RoArray<'r, u32>>,
 
-        unknown3: Option<u32> = bool_to_opt(info_type_count > 9),
-        unknown4: Option<u8> = bool_to_opt(info_type_count > 9),
+    #[auto_struct(init = bool_to_opt(info_type_count > 9))]
+    pub unknown3: Option<u32>,
+    #[auto_struct(init = bool_to_opt(info_type_count > 9))]
+    pub unknown4: Option<u8>,
 
-        animation_indexed_aabb_count: Option<u32> = bool_to_opt(info_type_count > 9),
-        animation_indexed_aabbs: Option<RoArray<'a, AnimationIndexedAABB>> =
-            animation_indexed_aabb_count.map(|i| (i as usize, ())),
-    }
-}
-
-
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct AnimationName<'a>
-    {
-        #[args]
-        info_type_count: u16,
-
-        index: u32,
-        unknown: Option<CStr<'a>> = bool_to_opt(info_type_count < 10),
-        name: CStr<'a>,
-    }
+    #[auto_struct(init = bool_to_opt(info_type_count > 9))]
+    pub animation_indexed_aabb_count: Option<u32>,
+    #[auto_struct(init = animation_indexed_aabb_count.map(|i| (i as usize, ())))]
+    pub animation_indexed_aabbs: Option<RoArray<'r, AnimationIndexedAABB>>,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct PasDatabase<'a>
-    {
-        #[expect = FourCC::from_bytes(b"PAS4")]
-        magic: FourCC,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct AnimationName<'r>
+{
+    #[auto_struct(args)]
+    info_type_count: u16,
 
-        anim_state_count: u32,
-        default_state: u32,
-        anim_states: RoArray<'a, PasAnimState<'a>> = (anim_state_count as usize, ()),
-    }
+    pub index: u32,
+    #[auto_struct(init = bool_to_opt(info_type_count < 10))]
+    pub unknown: Option<CStr<'r>>,
+    pub name: CStr<'r>,
+}
+
+
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct PasDatabase<'r>
+{
+    #[auto_struct(expect = FourCC::from_bytes(b"PAS4"))]
+    magic: FourCC,
+
+    pub anim_state_count: u32,
+    pub default_state: u32,
+    #[auto_struct(init = (anim_state_count as usize, ()))]
+    pub anim_states: RoArray<'r, PasAnimState<'r>>,
 }
 
 // PasDatabase inner details {{{
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct PasAnimState<'a>
-    {
-        unknown: u32,
-        param_info_count: u32,
-        anim_info_count: u32,
-        param_info: RoArray<'a, PasAnimStateParamInfo<'a>> = (param_info_count as usize, ()),
-        anim_info: RoArray<'a, PasAnimStateAnimInfo<'a>> = (anim_info_count as usize,
-                                                            param_info.clone())
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct PasAnimState<'r>
+{
+    pub unknown: u32,
+    pub param_info_count: u32,
+    pub anim_info_count: u32,
+    #[auto_struct(init = (param_info_count as usize, ()))]
+    pub param_info: RoArray<'r, PasAnimStateParamInfo<'r>>,
+    #[auto_struct(init = (anim_info_count as usize, param_info.clone()))]
+    pub anim_info: RoArray<'r, PasAnimStateAnimInfo<'r>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct PasAnimStateParamInfo<'a>
-    {
-        param_type: u32,
-        unknown0: u32,
-        unknown1: f32,
-        data0: RoArray<'a, u8> = (if param_type == 3 { 1 } else { 4 }, ()),
-        data1: RoArray<'a, u8> = (if param_type == 3 { 1 } else { 4 }, ()),
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct PasAnimStateParamInfo<'r>
+{
+    pub param_type: u32,
+    pub unknown0: u32,
+    pub unknown1: f32,
+    #[auto_struct(init = (if param_type == 3 { 1 } else { 4 }, ()))]
+    pub data0: RoArray<'r, u8>,
+    #[auto_struct(init = (if param_type == 3 { 1 } else { 4 }, ()))]
+    pub data1: RoArray<'r, u8>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct PasAnimStateAnimInfo<'a>
-    {
-        #[args]
-        param_info: RoArray<'a, PasAnimStateParamInfo<'a>>,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct PasAnimStateAnimInfo<'r>
+{
+    #[auto_struct(args)]
+    param_info: RoArray<'r, PasAnimStateParamInfo<'r>>,
 
-        unknown: u32,
-        items: IteratorArray<'a, PasAnimStateAnimInfoInner<'a>,
-                                 RoArrayIter<'a, PasAnimStateParamInfo<'a>>> = param_info.iter(),
-    }
+    pub unknown: u32,
+    #[auto_struct(init = param_info.iter())]
+    pub items: IteratorArray<'r, PasAnimStateAnimInfoInner<'r>, RoArrayIter<'r, PasAnimStateParamInfo<'r>>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct PasAnimStateAnimInfoInner<'a>
-    {
-        #[args]
-        param_info: PasAnimStateParamInfo<'a>,
-        data0: RoArray<'a, u8> = (if param_info.param_type == 3 { 1 } else { 4 }, ()),
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct PasAnimStateAnimInfoInner<'r>
+{
+    #[auto_struct(args)]
+    param_info: PasAnimStateParamInfo<'r>,
+    #[auto_struct(init = (if param_info.param_type == 3 { 1 } else { 4 }, ()))]
+    pub data0: RoArray<'r, u8>,
 }
 
 // }}}
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct ParticleResData<'a>
-    {
-        #[args]
-        info_type_count: u16,
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct ParticleResData<'r>
+{
+    #[auto_struct(args)]
+    info_type_count: u16,
 
-        part_asset_count: u32,
-        part_assets: RoArray<'a, u32> = (part_asset_count as usize, ()),
+    pub part_asset_count: u32,
+    #[auto_struct(init = (part_asset_count as usize, ()))]
+    pub part_assets: RoArray<'r, u32>,
 
-        swhc_asset_count: u32,
-        swhc_assets: RoArray<'a, u32> = (swhc_asset_count as usize, ()),
+    pub swhc_asset_count: u32,
+    #[auto_struct(init = (swhc_asset_count as usize, ()))]
+    pub swhc_assets: RoArray<'r, u32>,
 
-        unknown_count: u32,
-        unknowns: RoArray<'a, u32> = (unknown_count as usize, ()),
+    pub unknown_count: u32,
+    #[auto_struct(init = (unknown_count as usize, ()))]
+    pub unknowns: RoArray<'r, u32>,
 
-        elsc_count: Option<u32> = bool_to_opt(info_type_count > 5),
-        elsc_assets: Option<RoArray<'a, u32>> = elsc_count.map(|i| (i as usize, ())),
-    }
+    #[auto_struct(init = bool_to_opt(info_type_count > 5))]
+    pub elsc_count: Option<u32>,
+    #[auto_struct(init = elsc_count.map(|i| (i as usize, ())))]
+    pub elsc_assets: Option<RoArray<'r, u32>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct AnimationAABB<'a>
-    {
-        name: CStr<'a>,
-        aabb: GenericArray<f32, U6>,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct AnimationAABB<'r>
+{
+    pub name: CStr<'r>,
+    pub aabb: GenericArray<f32, U6>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct AnimationIndexedAABB
-    {
-        index: u32,
-        aabb: GenericArray<f32, U6>,
-    }
-}
-
-
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct Effect<'a>
-    {
-        name: CStr<'a>,
-        component_count: u32,
-        components: RoArray<'a, EffectComponent<'a>> = (component_count as usize, ()),
-    }
-}
-
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct EffectComponent<'a>
-    {
-        name: CStr<'a>,
-        type_: FourCC,
-        file_id: u32,
-        bone: CStr<'a>,
-        scale: f32,
-        parent_mode: u32,
-        flags: u32,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct AnimationIndexedAABB
+{
+    pub index: u32,
+    pub aabb: GenericArray<f32, U6>,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct AnimationSet<'a>
-    {
-        info_count: u16,
-        animation_count: u32,
-        animations: RoArray<'a, Animation<'a>> = (animation_count as usize, ()),
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct Effect<'r>
+{
+    pub name: CStr<'r>,
+    pub component_count: u32,
+    #[auto_struct(init = (component_count as usize, ()))]
+    pub components: RoArray<'r, EffectComponent<'r>>,
+}
 
-        transition_count: u32,
-        transitions: RoArray<'a, Transition<'a>> = (transition_count as usize, ()),
-        default_transition: MetaTransition<'a>,
-
-        additive_animation_count: u32,
-        additive_animations: RoArray<'a, AdditiveAnimation> =
-            (additive_animation_count as usize, ()),
-
-        // Defalut AddaptiveAnimation data
-        fade_in: f32,
-        fade_out: f32,
-
-        half_transition_count: Option<u32> = bool_to_opt(info_count > 2),
-        half_transitions: Option<RoArray<'a, HalfTransition<'a>>> =
-            half_transition_count.map(|i| (i as usize, ())),
-
-        animation_resource_count: Option<u32> = bool_to_opt(info_count > 3),
-        animation_resources: Option<RoArray<'a, AnimationResource>> =
-            animation_resource_count.map(|i| (i as usize, ())),
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct EffectComponent<'r>
+{
+    pub name: CStr<'r>,
+    pub type_: FourCC,
+    pub file_id: u32,
+    pub bone: CStr<'r>,
+    pub scale: f32,
+    pub parent_mode: u32,
+    pub flags: u32,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct Animation<'a>
-    {
-        name: CStr<'a>,
-        meta: MetaAnimation<'a>,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct AnimationSet<'r>
+{
+    pub info_count: u16,
+    pub animation_count: u32,
+    #[auto_struct(init = (animation_count as usize, ()))]
+    pub animations: RoArray<'r, Animation<'r>>,
+
+    pub transition_count: u32,
+    #[auto_struct(init = (transition_count as usize, ()))]
+    pub transitions: RoArray<'r, Transition<'r>>,
+    pub default_transition: MetaTransition<'r>,
+
+    pub additive_animation_count: u32,
+    #[auto_struct(init = (additive_animation_count as usize, ()))]
+    pub additive_animations: RoArray<'r, AdditiveAnimation>,
+
+    // Defalut AddaptiveAnimation data
+    pub fade_in: f32,
+    pub fade_out: f32,
+
+    #[auto_struct(init = bool_to_opt(info_count > 2))]
+    pub half_transition_count: Option<u32>,
+    #[auto_struct(init = half_transition_count.map(|i| (i as usize, ())))]
+    pub half_transitions: Option<RoArray<'r, HalfTransition<'r>>>,
+
+    #[auto_struct(init = bool_to_opt(info_count > 3))]
+    pub animation_resource_count: Option<u32>,
+    #[auto_struct(init = animation_resource_count.map(|i| (i as usize, ())))]
+    pub animation_resources: Option<RoArray<'r, AnimationResource>>,
+}
+
+
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct Animation<'r>
+{
+    pub name: CStr<'r>,
+    pub meta: MetaAnimation<'r>,
 }
 
 // Uncached allows for recursion without the struct having infinite size
 #[derive(Debug, Clone)]
-pub enum MetaAnimation<'a>
+pub enum MetaAnimation<'r>
 {
-    Play(Uncached<'a, MetaAnimationPlay<'a>>),
-    Blend(Uncached<'a, MetaAnimationBlend<'a>>),
-    PhaseBlend(Uncached<'a, MetaAnimationBlend<'a>>),
-    Random(Uncached<'a, MetaAnimationRandom<'a>>),
-    Sequence(Uncached<'a, MetaAnimationSequence<'a>>),
+    Play(Uncached<'r, MetaAnimationPlay<'r>>),
+    Blend(Uncached<'r, MetaAnimationBlend<'r>>),
+    PhaseBlend(Uncached<'r, MetaAnimationBlend<'r>>),
+    Random(Uncached<'r, MetaAnimationRandom<'r>>),
+    Sequence(Uncached<'r, MetaAnimationSequence<'r>>),
 }
 
 
-impl<'a> Readable<'a> for MetaAnimation<'a>
+impl<'r> Readable<'r> for MetaAnimation<'r>
 {
     type Args = ();
-    fn read(mut reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> Self
     {
         let kind: u32 = reader.read(());
         let res = match kind {
@@ -311,7 +309,7 @@ impl<'a> Readable<'a> for MetaAnimation<'a>
             4 => MetaAnimation::Sequence(reader.read(())),
             n => panic!("Unexpected MetaAnimation tag: {}", n),
         };
-        (res, reader)
+        res
     }
 
     fn size(&self) -> usize
@@ -327,86 +325,76 @@ impl<'a> Readable<'a> for MetaAnimation<'a>
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaAnimationPlay<'a>
-    {
-        anim: u32,
-        index: u32,
-        name: CStr<'a>,
-        unknown0: f32,
-        unknown1: u32,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaAnimationPlay<'r>
+{
+    pub anim: u32,
+    pub index: u32,
+    pub name: CStr<'r>,
+    pub unknown0: f32,
+    pub unknown1: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaAnimationBlend<'a>
-    {
-        anim_a: MetaAnimation<'a>,
-        anim_b: MetaAnimation<'a>,
-        unknown0: f32,
-        unknown1: u8,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaAnimationBlend<'r>
+{
+    pub anim_a: MetaAnimation<'r>,
+    pub anim_b: MetaAnimation<'r>,
+    pub unknown0: f32,
+    pub unknown1: u8,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaAnimationRandom<'a>
-    {
-        anim_count: u32,
-        anims: RoArray<'a, MetaAnimationRandomPair<'a>> = (anim_count as usize, ()),
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaAnimationRandom<'r>
+{
+    pub anim_count: u32,
+    #[auto_struct(init = (anim_count as usize, ()))]
+    pub anims: RoArray<'r, MetaAnimationRandomPair<'r>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaAnimationRandomPair<'a>
-    {
-        meta: MetaAnimation<'a>,
-        probability: u32,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaAnimationRandomPair<'r>
+{
+    pub meta: MetaAnimation<'r>,
+    pub probability: u32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaAnimationSequence<'a>
-    {
-        anim_count: u32,
-        anims: RoArray<'a, MetaAnimation<'a>> = (anim_count as usize, ()),
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaAnimationSequence<'r>
+{
+    pub anim_count: u32,
+    #[auto_struct(init = (anim_count as usize, ()))]
+    pub anims: RoArray<'r, MetaAnimation<'r>>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct Transition<'a>
-    {
-        unknown: u32,
-        anim_index_a: u32,
-        anim_index_b: u32,
-        meta: MetaTransition<'a>,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct Transition<'r>
+{
+    pub unknown: u32,
+    pub anim_index_a: u32,
+    pub anim_index_b: u32,
+    pub meta: MetaTransition<'r>,
 }
 
 #[derive(Debug, Clone)]
-pub enum MetaTransition<'a>
+pub enum MetaTransition<'r>
 {
-    Animation(Uncached<'a, MetaTransitionAnimation<'a>>),
-    Transition(Uncached<'a, MetaTransitionTransition>),
-    PhaseTransition(Uncached<'a, MetaTransitionTransition>),
+    Animation(Uncached<'r, MetaTransitionAnimation<'r>>),
+    Transition(Uncached<'r, MetaTransitionTransition>),
+    PhaseTransition(Uncached<'r, MetaTransitionTransition>),
     NoTransition,
 }
 
-impl<'a> Readable<'a> for MetaTransition<'a>
+impl<'r> Readable<'r> for MetaTransition<'r>
 {
     type Args = ();
-    fn read(mut reader: Reader<'a>, (): ()) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, (): ()) -> Self
     {
         let kind: u32 = reader.read(());
         let res = match kind {
@@ -416,7 +404,7 @@ impl<'a> Readable<'a> for MetaTransition<'a>
             3 => MetaTransition::NoTransition,
             _ => panic!("TODO"),
         };
-        (res, reader)
+        res
     }
 
     fn size(&self) -> usize
@@ -430,56 +418,46 @@ impl<'a> Readable<'a> for MetaTransition<'a>
     }
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct MetaTransitionAnimation<'a>
-    {
-        meta: MetaAnimation<'a>,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct MetaTransitionAnimation<'r>
+{
+    pub meta: MetaAnimation<'r>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct MetaTransitionTransition
-    {
-        time: f32,
-        unknown0: u32,
-        unknown1: u8,
-        unknown2: u8,
-        unknown3: u32,
-    }
+#[auto_struct(Readable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct MetaTransitionTransition
+{
+    pub time: f32,
+    pub unknown0: u32,
+    pub unknown1: u8,
+    pub unknown2: u8,
+    pub unknown3: u32,
 }
 
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct AdditiveAnimation
-    {
-        index: u32,
-        fade_in: f32,
-        fade_out: f32,
-    }
+#[auto_struct(Readable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct AdditiveAnimation
+{
+    pub index: u32,
+    pub fade_in: f32,
+    pub fade_out: f32,
 }
 
-auto_struct! {
-    #[auto_struct(Readable)]
-    #[derive(Debug, Clone)]
-    pub struct HalfTransition<'a>
-    {
-        index: u32,
-        meta: MetaTransition<'a>,
-    }
+#[auto_struct(Readable)]
+#[derive(Debug, Clone)]
+pub struct HalfTransition<'r>
+{
+    pub index: u32,
+    pub meta: MetaTransition<'r>,
 }
 
-auto_struct! {
-    #[auto_struct(Readable, FixedSize)]
-    #[derive(Debug, Clone)]
-    pub struct AnimationResource
-    {
-        anim: u32,
-        evnt: u32,
-    }
+#[auto_struct(Readable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct AnimationResource
+{
+    pub anim: u32,
+    pub evnt: u32,
 }

@@ -1,48 +1,48 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use scly_props::structs::{ActorParameters, AncsProp, DamageVulnerability, HealthInfo,
-                          PlayerActorParams};
+use crate::SclyPropertyData;
+use crate::scly_props::structs::{
+    ActorParameters, AncsProp, DamageVulnerability, HealthInfo, PlayerActorParams
+};
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct PlayerActor<'a>
-    {
-        #[expect = 19]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct PlayerActor<'r>
+{
+    #[auto_struct(expect = 19)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        position: GenericArray<f32, U3>,
-        rotation: GenericArray<f32, U3>,
-        scale: GenericArray<f32, U3>,
-        unknown0: GenericArray<f32, U3>,// hitbox?
-        scan_offset: GenericArray<f32, U3>,
+    pub position: GenericArray<f32, U3>,
+    pub rotation: GenericArray<f32, U3>,
+    pub scale: GenericArray<f32, U3>,
+    pub unknown0: GenericArray<f32, U3>,// hitbox?
+    pub scan_offset: GenericArray<f32, U3>,
 
-        unknown1: f32,
-        unknown2: f32,
+    pub unknown1: f32,
+    pub unknown2: f32,
 
-        health_info: HealthInfo,
-        damage_vulnerability: DamageVulnerability,
+    pub health_info: HealthInfo,
+    pub damage_vulnerability: DamageVulnerability,
 
-        cmdl: u32,
-        ancs: AncsProp,
-        actor_params: ActorParameters,
+    pub cmdl: u32,
+    pub ancs: AncsProp,
+    pub actor_params: ActorParameters,
 
-        loop_animation: u8,
-        unknown3: u8,
-        disable_movement: u8,
-        active: u8,
-        player_actor_params: PlayerActorParams,
-        unknown8: u32,
-    }
+    pub loop_animation: u8,
+    pub unknown3: u8,
+    pub disable_movement: u8,
+    pub active: u8,
+    pub player_actor_params: PlayerActorParams,
+    pub unknown8: u32,
 }
 
-impl<'a> SclyPropertyData for PlayerActor<'a>
+impl<'r> SclyPropertyData for PlayerActor<'r>
 {
     const OBJECT_TYPE: u8 = 0x4c;
 }

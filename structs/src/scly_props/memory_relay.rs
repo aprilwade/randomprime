@@ -1,23 +1,22 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
+use crate::SclyPropertyData;
 use reader_writer::CStr;
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct MemoryRelay<'a>
-    {
-        #[expect = 3]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct MemoryRelay<'r>
+{
+    #[auto_struct(expect = 3)]
+    prop_count: u32,
 
-        name: CStr<'a>,
-        unknown: u8,
-        active: u8,
-    }
+    pub name: CStr<'r>,
+    pub unknown: u8,
+    pub active: u8,
 }
 
-impl<'a> SclyPropertyData for MemoryRelay<'a>
+impl<'r> SclyPropertyData for MemoryRelay<'r>
 {
     const OBJECT_TYPE: u8 = 0x13;
 }

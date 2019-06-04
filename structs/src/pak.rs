@@ -1,3 +1,4 @@
+use auto_struct_macros::auto_struct;
 use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, FourCC, Readable,
                     Reader, RoArray, Writable,
                     align_byte_count};
@@ -6,83 +7,96 @@ use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, Four
 use std::io;
 use std::borrow::Cow;
 
-use mlvl::Mlvl;
-use mrea::Mrea;
-use savw::Savw;
-use hint::Hint;
-use strg::Strg;
-use scan::Scan;
+use crate::{
+    mlvl::Mlvl,
+    mrea::Mrea,
+    savw::Savw,
+    hint::Hint,
+    strg::Strg,
+    scan::Scan,
+};
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Clone, Debug)]
-    pub struct Pak<'a>
-    {
-        start: Reader<'a>,
-        #[expect = 0x00030005]
-        version: u32,
-        unused: u32,
-
-        #[derivable = named_resources.len() as u32]
-        named_resources_count: u32,
-        named_resources: RoArray<'a, NamedResource<'a>> = (named_resources_count as usize, ()),
-
-        #[derivable = resources.len() as u32]
-        resources_count: u32,
-
-        #[derivable: ResourceInfoProxy = ResourceInfoProxy(&resources, named_resources.size())]
-        resource_info: RoArray<'a, ResourceInfo> = (resources_count as usize, ()),
-
-        alignment_padding!(32),
-
-        resources: DiffList<ResourceSource<'a>> = ResourceSource(start.clone(),
-                                                                 resource_info.clone()),
-
-        alignment_padding!(32),
-    }
-}
-
-
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct NamedResource<'a>
-    {
-        fourcc: FourCC,
-        file_id: u32,
-        name_length: u32,
-        name: RoArray<'a, u8> = (name_length as usize, ()),
-    }
-}
-
-
-auto_struct! {
-    #[auto_struct(Readable, FixedSize, Writable)]
-    #[derive(Debug, Clone, Copy)]
-    pub struct ResourceInfo
-    {
-        compressed: u32,
-        fourcc: FourCC,
-        file_id: u32,
-        size: u32,
-        offset: u32,
-    }
-}
-
-
-#[derive(Debug, Clone)]
-pub struct ResourceSource<'a>(Reader<'a>, RoArray<'a, ResourceInfo>);
-#[derive(Debug, Clone)]
-pub struct ResourceSourceCursor<'a>
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct Pak<'r>
 {
-    pak_start: Reader<'a>,
-    info_array: RoArray<'a, ResourceInfo>,
+    pub start: Reader<'r>,
+    #[auto_struct(expect = 0x00030005)]
+    version: u32,
+    pub unused: u32,
+
+    #[auto_struct(derive = named_resources.len() as u32)]
+    named_resources_count: u32,
+    #[auto_struct(init = (named_resources_count as usize, ()))]
+    pub named_resources: RoArray<'r, NamedResource<'r>>,
+
+    #[auto_struct(derive = resources.len() as u32)]
+    resources_count: u32,
+
+    #[auto_struct(derive_from_iter = {
+            let starting_offset = align_byte_count(32,
+                    named_resources.size() +
+                    <u32 as Readable>::fixed_size().unwrap() * 4 +
+                    <ResourceInfo as Readable>::fixed_size().unwrap() * resources.len()
+                ) as u32;
+            resources.iter().scan(starting_offset, |offset, res| {
+                let info = res.resource_info(*offset);
+                *offset += info.size;
+                Some(info)
+            })
+        })]
+    #[auto_struct(init = (resources_count as usize, ()))]
+    resource_info: RoArray<'r, ResourceInfo>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+
+    #[auto_struct(init = ResourceSource(start.clone(), resource_info.clone()))]
+    pub resources: DiffList<ResourceSource<'r>>,
+
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+}
+
+
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct NamedResource<'r>
+{
+    pub fourcc: FourCC,
+    pub file_id: u32,
+    pub name_length: u32,
+    #[auto_struct(init = (name_length as usize, ()))]
+    pub name: RoArray<'r, u8>,
+}
+
+
+#[auto_struct(Readable, FixedSize, Writable)]
+#[derive(Debug, Clone, Copy)]
+pub struct ResourceInfo
+{
+    pub compressed: u32,
+    pub fourcc: FourCC,
+    pub file_id: u32,
+    pub size: u32,
+    pub offset: u32,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct ResourceSource<'r>(Reader<'r>, RoArray<'r, ResourceInfo>);
+#[derive(Debug, Clone)]
+pub struct ResourceSourceCursor<'r>
+{
+    pak_start: Reader<'r>,
+    info_array: RoArray<'r, ResourceInfo>,
     index: usize,
 }
 
-impl<'a> AsDiffListSourceCursor for ResourceSource<'a>
+impl<'r> AsDiffListSourceCursor for ResourceSource<'r>
 {
-    type Cursor = ResourceSourceCursor<'a>;
+    type Cursor = ResourceSourceCursor<'r>;
     fn as_cursor(&self) -> Self::Cursor
     {
         ResourceSourceCursor {
@@ -98,10 +112,10 @@ impl<'a> AsDiffListSourceCursor for ResourceSource<'a>
     }
 }
 
-impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
+impl<'r> DiffListSourceCursor for ResourceSourceCursor<'r>
 {
-    type Item = Resource<'a>;
-    type Source = ResourceSource<'a>;
+    type Item = Resource<'r>;
+    type Source = ResourceSource<'r>;
     fn next(&mut self) -> bool
     {
         if self.index == self.info_array.len() - 1 {
@@ -151,53 +165,18 @@ impl<'a> DiffListSourceCursor for ResourceSourceCursor<'a>
     }
 }
 
-struct ResourceInfoProxy<'a, 'list>(&'list DiffList<ResourceSource<'a>>, usize)
-    where 'a: 'list;
-impl<'a, 'list> Readable<'a> for ResourceInfoProxy<'a, 'list>
-    where 'a: 'list
-{
-    type Args = ();
-    fn read(_: Reader<'a>, (): ()) -> (Self, Reader<'a>)
-    {
-        panic!("This proxy shouldn't be read.")
-    }
-
-    fn size(&self) -> usize
-    {
-        ResourceInfo::fixed_size().unwrap() * self.0.len()
-    }
-}
-
-impl<'a, 'list> Writable for ResourceInfoProxy<'a, 'list>
-    where 'a: 'list
-{
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
-    {
-        let mut offset = align_byte_count(32,
-                self.1 +
-                u32::fixed_size().unwrap() * 4 +
-                ResourceInfo::fixed_size().unwrap() * self.0.len()
-            ) as u32;
-        for res in self.0.iter() {
-            let info = res.resource_info(offset);
-            info.write(writer)?;
-            offset += info.size;
-        }
-        Ok(())
-    }
-}
 
 #[derive(Debug, Clone)]
-pub struct Resource<'a>
+pub struct Resource<'r>
 {
     pub compressed: bool,
     pub file_id: u32,
-    pub kind: ResourceKind<'a>,
+    pub kind: ResourceKind<'r>,
     #[cfg(debug_assertions)]
     pub original_offset: u32,
 }
 
-impl<'a> Resource<'a>
+impl<'r> Resource<'r>
 {
     pub fn resource_info(&self, offset: u32) -> ResourceInfo
     {
@@ -216,11 +195,11 @@ impl<'a> Resource<'a>
     }
 }
 
-impl<'a> Readable<'a> for Resource<'a>
+impl<'r> Readable<'r> for Resource<'r>
 {
     type Args = ResourceInfo;
     #[cfg(debug_assertions)]
-    fn read(reader: Reader<'a>, info: Self::Args) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, info: Self::Args) -> Self
     {
         if info.compressed > 1 {
             panic!("Bad info.compressed")
@@ -231,17 +210,19 @@ impl<'a> Readable<'a> for Resource<'a>
             kind: ResourceKind::Unknown(reader.truncated(info.size as usize), info.fourcc),
             original_offset: info.offset,
         };
-        (res, reader.offset(info.size as usize))
+        reader.advance(info.size as usize);
+        res
     }
     #[cfg(not(debug_assertions))]
-    fn read(reader: Reader<'a>, info: Self::Args) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, info: Self::Args) -> Self
     {
         let res = Resource {
             compressed: info.compressed == 1,
             file_id: info.file_id,
             kind: ResourceKind::Unknown(reader.truncated(info.size as usize), info.fourcc),
         };
-        (res, reader.offset(info.size as usize))
+        reader.advance(info.size as usize);
+        res
     }
 
     fn size(&self) -> usize
@@ -250,11 +231,11 @@ impl<'a> Readable<'a> for Resource<'a>
     }
 }
 
-impl<'a> Writable for Resource<'a>
+impl<'r> Writable for Resource<'r>
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
-        self.kind.write(writer)
+        self.kind.write_to(writer)
     }
 }
 
@@ -262,14 +243,14 @@ macro_rules! build_resource_data {
     ($($name:ident, $fourcc:expr, $accessor:ident, $accessor_mut:ident,)*) => {
 
         #[derive(Clone, Debug)]
-        pub enum ResourceKind<'a>
+        pub enum ResourceKind<'r>
         {
-            Unknown(Reader<'a>, FourCC),
+            Unknown(Reader<'r>, FourCC),
             External(Vec<u8>, FourCC),
-            $($name($name<'a>),)*
+            $($name($name<'r>),)*
         }
 
-        impl<'a> ResourceKind<'a>
+        impl<'r> ResourceKind<'r>
         {
             pub fn fourcc(&self) -> FourCC
             {
@@ -294,7 +275,7 @@ macro_rules! build_resource_data {
             }
 
             $(
-                pub fn $accessor(&self) -> Option<Cow<$name<'a>>>
+                pub fn $accessor(&self) -> Option<Cow<$name<'r>>>
                 {
                     match *self {
                         ResourceKind::$name(ref inst) => Some(Cow::Borrowed(inst)),
@@ -309,7 +290,7 @@ macro_rules! build_resource_data {
                     }
                 }
 
-                pub fn $accessor_mut(&mut self) -> Option<&mut $name<'a>>
+                pub fn $accessor_mut(&mut self) -> Option<&mut $name<'r>>
                 {
                     self.guess_kind();
                     match *self {
@@ -328,12 +309,18 @@ macro_rules! build_resource_data {
                 }
             }
 
-            fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+            fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
             {
                 match *self {
-                    ResourceKind::Unknown(ref data, _) => writer.write_all(&data),
-                    ResourceKind::External(ref data, _) => writer.write_all(&data),
-                    $(ResourceKind::$name(ref i) => i.write(writer),)*
+                    ResourceKind::Unknown(ref data, _) => {
+                        writer.write_all(&data)?;
+                        Ok(data.len() as u64)
+                    },
+                    ResourceKind::External(ref data, _) => {
+                        writer.write_all(&data)?;
+                        Ok(data.len() as u64)
+                    },
+                    $(ResourceKind::$name(ref i) => i.write_to(writer),)*
                 }
             }
         }

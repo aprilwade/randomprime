@@ -1,76 +1,91 @@
 
-use reader_writer::{Dap, LCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable};
+use auto_struct_macros::auto_struct;
+use reader_writer::{LCow, IteratorArray, Readable, Reader, RoArray, RoArrayIter, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
 use std::io;
 
-use scly::Scly;
+use crate::scly::Scly;
 
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Clone, Debug)]
-    pub struct Mrea<'a>
-    {
-        #[expect = 0xDEADBEEF]
-        magic: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct Mrea<'r>
+{
+    #[auto_struct(expect = 0xDEADBEEF)]
+    magic: u32,
 
-        #[expect = 0xF]
-        version: u32,
+    #[auto_struct(expect = 0xF)]
+    version: u32,
 
 
-        area_transform: GenericArray<f32, U12>,
-        world_model_count: u32,
+    pub area_transform: GenericArray<f32, U12>,
+    pub world_model_count: u32,
 
-        #[derivable = sections.len() as u32]
-        sections_count: u32,
+    #[auto_struct(derive = sections.len() as u32)]
+    sections_count: u32,
 
-        world_geometry_section_idx: u32,
-        scly_section_idx: u32,
-        collision_section_idx: u32,
-        unknown_section_idx: u32,
-        lights_section_idx: u32,
-        visibility_tree_section_idx: u32,
-        path_section_idx: u32,
-        area_octree_section_idx: u32,
+    pub world_geometry_section_idx: u32,
+    pub scly_section_idx: u32,
+    pub collision_section_idx: u32,
+    pub unknown_section_idx: u32,
+    pub lights_section_idx: u32,
+    pub visibility_tree_section_idx: u32,
+    pub path_section_idx: u32,
+    pub area_octree_section_idx: u32,
 
-        #[derivable: Dap<_, _> = sections.iter()
-                                          .map(&|i: LCow<MreaSection>| i.size() as u32).into()]
-        section_sizes: RoArray<'a, u32> = (sections_count as usize, ()),
+    #[auto_struct(derive_from_iter = sections.iter()
+            .map(&|i: LCow<MreaSection>| i.size() as u32))]
+    #[auto_struct(init = (sections_count as usize, ()))]
+    section_sizes: RoArray<'r, u32>,
 
-        alignment_padding!(32),
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
 
-        // TODO: A more efficient representation might be nice
-        //       (We don't actually care about any of the sections except for scripting
-        //        section, so we could treat them as raw bytes. Similarly the indicies
-        //        for all the other sections.)
-        sections: IteratorArray<'a, MreaSection<'a>, RoArrayIter<'a, u32>> = section_sizes.iter(),
+    // TODO: A more efficient representation might be nice
+    //       (We don't actually care about any of the sections except for scripting
+    //        section, so we could treat them as raw bytes. Similarly the indicies
+    //        for all the other sections.)
 
-        alignment_padding!(32),
-    }
+    #[auto_struct(init = section_sizes.iter())]
+    pub sections: IteratorArray<'r, MreaSection<'r>, RoArrayIter<'r, u32>>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
 }
 
 
-impl<'a> Mrea<'a>
+impl<'r> Mrea<'r>
 {
-    pub fn scly_section_mut(&mut self) -> &mut Scly<'a>
+    pub fn scly_section<'s>(&'s self) -> LCow<'s, Scly<'r>>
+    {
+        let section = self.sections.iter().nth(self.scly_section_idx as usize).unwrap();
+        match section {
+            LCow::Owned(MreaSection::Unknown(ref reader)) => LCow::Owned(reader.clone().read(())),
+            LCow::Borrowed(MreaSection::Unknown(ref reader)) => LCow::Owned(reader.clone().read(())),
+            LCow::Owned(MreaSection::Scly(scly)) => LCow::Owned(scly),
+            LCow::Borrowed(MreaSection::Scly(scly)) => LCow::Borrowed(scly),
+        }
+    }
+
+    pub fn scly_section_mut(&mut self) -> &mut Scly<'r>
     {
         self.sections.as_mut_vec()[self.scly_section_idx as usize].convert_to_scly()
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum MreaSection<'a>
+pub enum MreaSection<'r>
 {
-    Unknown(Reader<'a>),
-    Scly(Scly<'a>),
+    Unknown(Reader<'r>),
+    Scly(Scly<'r>),
 }
 
-impl<'a> MreaSection<'a>
+impl<'r> MreaSection<'r>
 {
     // XXX A nicer/more clear name, maybe?
-    pub fn convert_to_scly(&mut self) -> &mut Scly<'a>
+    pub fn convert_to_scly(&mut self) -> &mut Scly<'r>
     {
         *self = match *self {
             MreaSection::Unknown(ref reader) => MreaSection::Scly(reader.clone().read(())),
@@ -83,12 +98,14 @@ impl<'a> MreaSection<'a>
     }
 }
 
-impl<'a> Readable<'a> for MreaSection<'a>
+impl<'r> Readable<'r> for MreaSection<'r>
 {
     type Args = u32;
-    fn read(reader: Reader<'a>, size: u32) -> (Self, Reader<'a>)
+    fn read_from(reader: &mut Reader<'r>, size: u32) -> Self
     {
-        (MreaSection::Unknown(reader.truncated(size as usize)), reader.offset(size as usize))
+        let res = MreaSection::Unknown(reader.truncated(size as usize));
+        reader.advance(size as usize);
+        res
     }
 
     fn size(&self) -> usize
@@ -100,13 +117,16 @@ impl<'a> Readable<'a> for MreaSection<'a>
     }
 }
 
-impl<'a> Writable for MreaSection<'a>
+impl<'r> Writable for MreaSection<'r>
 {
-    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
         match *self {
-            MreaSection::Unknown(ref reader) => writer.write_all(&reader),
-            MreaSection::Scly(ref scly) => scly.write(writer),
+            MreaSection::Unknown(ref reader) => {
+                writer.write_all(&reader)?;
+                Ok(reader.len() as u64)
+            },
+            MreaSection::Scly(ref scly) => scly.write_to(writer),
         }
     }
 }

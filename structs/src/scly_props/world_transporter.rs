@@ -1,44 +1,43 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use scly_props::structs::AncsProp;
+use crate::SclyPropertyData;
+use crate::scly_props::structs::AncsProp;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct WorldTransporter<'a>
-    {
-        #[expect = 21]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct WorldTransporter<'r>
+{
+    #[auto_struct(expect = 21)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        unknown0: u8,
-        mlvl: u32,
-        mrea: u32,
-        ancs: AncsProp,
-        unknown1: GenericArray<f32, U3>,
-        cmdl0: u32,
-        unknown2: GenericArray<f32, U3>,
-        cmdl1: u32,
-        unknown3: GenericArray<f32, U3>,
-        unknown4: u8,
-        unknown5: u32,
-        unknown6: u32,
-        unknown7: u32,
-        unknown8: u8,
-        font: u32,
-        strg: u32,
-        unknown9: u8,
-        unknown10: f32,
-        unknown11: f32,
-        unknown12: f32,
-    }
+    pub unknown0: u8,
+    pub mlvl: u32,
+    pub mrea: u32,
+    pub ancs: AncsProp,
+    pub unknown1: GenericArray<f32, U3>,
+    pub cmdl0: u32,
+    pub unknown2: GenericArray<f32, U3>,
+    pub cmdl1: u32,
+    pub unknown3: GenericArray<f32, U3>,
+    pub unknown4: u8,
+    pub unknown5: u32,
+    pub unknown6: u32,
+    pub unknown7: u32,
+    pub unknown8: u8,
+    pub font: u32,
+    pub strg: u32,
+    pub unknown9: u8,
+    pub unknown10: f32,
+    pub unknown11: f32,
+    pub unknown12: f32,
 }
 
-impl<'a> SclyPropertyData for WorldTransporter<'a>
+impl<'r> SclyPropertyData for WorldTransporter<'r>
 {
     const OBJECT_TYPE: u8 = 0x062;
 }

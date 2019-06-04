@@ -1,26 +1,25 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
+use crate::SclyPropertyData;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Timer<'a>
-    {
-        #[expect = 6]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Timer<'r>
+{
+    #[auto_struct(expect = 6)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        start_time: f32,
-        max_random_add: f32,
-        reset_to_zero: u8,
-        start_immediately: u8,
-        active: u8,
-    }
+    pub start_time: f32,
+    pub max_random_add: f32,
+    pub reset_to_zero: u8,
+    pub start_immediately: u8,
+    pub active: u8,
 }
 
-impl<'a> SclyPropertyData for Timer<'a>
+impl<'r> SclyPropertyData for Timer<'r>
 {
     const OBJECT_TYPE: u8 = 0x5;
 }

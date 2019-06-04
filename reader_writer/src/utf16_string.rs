@@ -135,10 +135,9 @@ impl<'r> Writable for LazyUtf16beStr<'r>
     fn write_to<W: io::Write>(&self, w: &mut W) -> io::Result<u64>
     {
         match *self {
-            // TODO: This is SUPER WRONG
             LazyUtf16beStr::Borrowed(ref s) => {
                 w.write_all(&s.0)?;
-                panic!()
+                Ok(s.0[..].len() as u64)
             },
             LazyUtf16beStr::Owned(ref s) => {
                 let mut sum = 0;

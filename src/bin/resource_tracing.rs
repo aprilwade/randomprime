@@ -388,7 +388,7 @@ fn extract_pickup_data<'a>(
         pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
     }
     let mut bytes = vec![];
-    pickup.write(&mut bytes).unwrap();
+    pickup.write_to(&mut bytes).unwrap();
 
     let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
         |obj| obj.property_data.as_hud_memo()
@@ -705,7 +705,7 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
         nothing_pickup.cmdl = asset_ids::NOTHING_CMDL;
         nothing_pickup.ancs.file_id = asset_ids::NOTHING_ANCS;
         nothing_pickup.actor_params.scan_params.scan = asset_ids::NOTHING_SCAN;
-        nothing_pickup.write(&mut nothing_bytes).unwrap();
+        nothing_pickup.write_to(&mut nothing_bytes).unwrap();
     }
     let mut nothing_deps: HashSet<_> = pickup_table[&PickupType::PhazonSuit].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into(),

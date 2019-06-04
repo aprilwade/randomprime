@@ -1,29 +1,28 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use scly_props::structs::ScannableParameters;
+use crate::scly_props::structs::ScannableParameters;
+use crate::SclyPropertyData;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct PointOfInterest<'a>
-    {
-        #[expect = 6]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct PointOfInterest<'r>
+{
+    #[auto_struct(expect = 6)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        position: GenericArray<f32, U3>,
-        rotation: GenericArray<f32, U3>,
-        unknown0: u8,
-        scan_param: ScannableParameters,
-        unknown1: f32,
-    }
+    pub position: GenericArray<f32, U3>,
+    pub rotation: GenericArray<f32, U3>,
+    pub unknown0: u8,
+    pub scan_param: ScannableParameters,
+    pub unknown1: f32,
 }
 
-impl<'a> SclyPropertyData for PointOfInterest<'a>
+impl<'r> SclyPropertyData for PointOfInterest<'r>
 {
     const OBJECT_TYPE: u8 = 0x42;
 }

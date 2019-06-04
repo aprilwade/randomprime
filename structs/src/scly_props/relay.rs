@@ -1,22 +1,21 @@
+use auto_struct_macros::auto_struct;
 
-use SclyPropertyData;
 use reader_writer::CStr;
+use crate::SclyPropertyData;
 
-auto_struct! {
-    #[auto_struct(Readable, Writable)]
-    #[derive(Debug, Clone)]
-    pub struct Relay<'a>
-    {
-        #[expect = 2]
-        prop_count: u32,
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct Relay<'r>
+{
+    #[auto_struct(expect = 2)]
+    prop_count: u32,
 
-        name: CStr<'a>,
+    pub name: CStr<'r>,
 
-        active: u8,
-    }
+    pub active: u8,
 }
 
-impl<'a> SclyPropertyData for Relay<'a>
+impl<'r> SclyPropertyData for Relay<'r>
 {
     const OBJECT_TYPE: u8 = 0x15;
 }

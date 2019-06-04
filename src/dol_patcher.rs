@@ -322,21 +322,21 @@ impl<'a> structs::ToRead for DolPatcher<'a>
         let mut offset = 0x100;
         for seg in segment_refs.iter() {
             if !seg.is_empty() {
-                offset.write(&mut header).unwrap();
+                offset.write_to(&mut header).unwrap();
             } else {
-                0u32.write(&mut header).unwrap();
+                0u32.write_to(&mut header).unwrap();
             }
             offset += seg.len();
         }
         for seg in segment_refs.iter() {
-            seg.addr().write(&mut header).unwrap();
+            seg.addr().write_to(&mut header).unwrap();
         }
         for seg in segment_refs.iter() {
-            seg.len().write(&mut header).unwrap();
+            seg.len().write_to(&mut header).unwrap();
         }
-        self.bss_addr.write(&mut header).unwrap();
-        self.bss_size.write(&mut header).unwrap();
-        self.entry_point.write(&mut header).unwrap();
+        self.bss_addr.write_to(&mut header).unwrap();
+        self.bss_size.write_to(&mut header).unwrap();
+        self.entry_point.write_to(&mut header).unwrap();
         header.resize(0x100, 0u8);
 
         let iter = segment_refs.into_iter()
