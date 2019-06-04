@@ -70,3 +70,8 @@ impl<I, T> From<I> for Dap<I, T>
         Dap::new(iter)
     }
 }
+
+pub trait DerivableFromIterator
+{
+    type Item;
+}

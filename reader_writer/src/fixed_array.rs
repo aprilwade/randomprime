@@ -1,9 +1,10 @@
 use std::io;
 
 use crate::{
+    derivable_array_proxy::DerivableFromIterator,
+    generic_array::{GenericArray, ArrayLength},
     reader::{Reader, Readable},
     writer::Writable,
-    generic_array::{GenericArray, ArrayLength},
 };
 
 pub type FixedArray<T, N> = GenericArray<T, N>;
@@ -51,4 +52,10 @@ impl<'r, T, N> Writable for FixedArray<T, N>
         }
         Ok(s)
     }
+}
+
+impl<T, N> DerivableFromIterator for FixedArray<T, N>
+    where N: ArrayLength<T>,
+{
+        type Item = T;
 }

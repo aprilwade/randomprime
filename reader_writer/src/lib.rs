@@ -33,7 +33,7 @@ pub use crate::{
     read_only_array::{RoArray, RoArrayIter},
     fixed_array::FixedArray,
     iterator_array::{IteratorArray, IteratorArrayIterator},
-    derivable_array_proxy::Dap,
+    derivable_array_proxy::{Dap, DerivableFromIterator},
     uncached::Uncached,
 
     lcow::LCow,

@@ -2,9 +2,17 @@
 name = "auto_struct_macros"
 version = "0.1.0"
 authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
 
-workspace = ".."
+[lib]
+proc-macro = true
 
 [dependencies]
-syntex = "0.43.0"
-syntex_syntax = "0.43.0"
+quote = "0.6"
+syn = { version = "0.15", features = ["full"] }
+proc-macro2 = "0.4"
+reader_writer = { path = "../reader_writer" }
+
+[[test]]
+name = "test_macros"
+path = "./tests/test.rs"

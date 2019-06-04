@@ -7,6 +7,7 @@ use std::{
 use crate::{
     reader::{Reader, Readable},
     writer::Writable,
+    derivable_array_proxy::DerivableFromIterator,
 };
 
 /// Read only array
@@ -177,6 +178,13 @@ impl<'r, T> Writable for RoArray<'r, T>
         writer.write_all(&(*self.data_start)[0..len])?;
         Ok(len as u64)
     }
+}
+
+impl<'r, T> DerivableFromIterator for RoArray<'r, T>
+    where T: Readable<'r>,
+          T::Args: Clone,
+{
+        type Item = T;
 }
 
 #[cfg(test)]

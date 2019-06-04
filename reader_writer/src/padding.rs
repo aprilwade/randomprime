@@ -1,7 +1,9 @@
 //! Utilities for padding for alignment
+use std::io;
 use crate::{
     read_only_array::RoArray,
-    reader::Reader,
+    reader::{Readable, Reader},
+    writer::Writable,
 };
 
 
@@ -29,4 +31,31 @@ pub fn pad_bytes<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
 pub fn pad_bytes_ff<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
 {
     Reader::new(&BYTES_FF).read((pad_bytes_count(align_to, n), ()))
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct PaddingBlackhole(pub usize);
+
+impl<'r> Readable<'r> for PaddingBlackhole
+{
+    type Args = usize;
+    fn read_from(reader: &mut Reader<'r>, i: Self::Args) -> Self
+    {
+        reader.advance(i);
+        PaddingBlackhole(i)
+    }
+
+    fn size(&self) -> usize
+    {
+        self.0
+    }
+}
+
+impl Writable for PaddingBlackhole
+{
+    fn write_to<W: io::Write>(&self, w: &mut W) -> io::Result<u64>
+    {
+        w.write_all(&BYTES_00[..self.0])?;
+        Ok(self.0 as u64)
+    }
 }
