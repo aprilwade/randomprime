@@ -17,7 +17,7 @@ pub struct PointOfInterest<'r>
 
     pub position: GenericArray<f32, U3>,
     pub rotation: GenericArray<f32, U3>,
-    pub unknown0: u8,
+    pub active: u8,
     pub scan_param: ScannableParameters,
     pub unknown1: f32,
 }

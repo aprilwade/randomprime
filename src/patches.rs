@@ -797,6 +797,53 @@ fn fix_artifact_of_truth_requirements(
     Ok(())
 }
 
+fn patch_artifact_hint_availability(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+    hint_behavior: ArtifactHintBehavior,
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    const HINT_RELAY_OBJS: &[u32] = &[
+        68157732,
+        68157735,
+        68157738,
+        68157741,
+        68157744,
+        68157747,
+        68157750,
+        68157753,
+        68157756,
+        68157759,
+        68157762,
+        68157765,
+    ];
+    match hint_behavior {
+        ArtifactHintBehavior::Default => (),
+        ArtifactHintBehavior::All => {
+            // Unconditionaly connect the hint relays directly to the relay that triggers the hints
+            // to conditionally.
+            let obj = scly.layers.as_mut_vec()[0].objects.iter_mut()
+                .find(|obj| obj.instance_id == 1048956) // "Relay One Shot Out"
+                .unwrap();
+            obj.connections.as_mut_vec().extend(HINT_RELAY_OBJS.iter().map(|id| {
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: *id,
+                }
+            }));
+        },
+        ArtifactHintBehavior::None => {
+            // Remove relays that activate artifact hint objects
+            scly.layers.as_mut_vec()[1].objects.as_mut_vec()
+                .retain(|obj| !HINT_RELAY_OBJS.contains(&obj.instance_id));
+        },
+    }
+    Ok(())
+}
+
+
 fn patch_flaahgra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -1479,7 +1526,14 @@ impl Default for IsoFormat
     }
 }
 
-
+#[derive(Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ArtifactHintBehavior
+{
+    Default,
+    None,
+    All,
+}
 
 pub struct ParsedConfig
 {
@@ -1499,6 +1553,8 @@ pub struct ParsedConfig
     pub nonvaria_heat_damage: bool,
     pub staggered_suit_damage: bool,
     pub quiet: bool,
+
+    pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
@@ -1788,6 +1844,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         b"Metroid4.pak",
         asset_ids::ARTIFACT_TEMPLE_MREA,
         |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
+    );
+    patcher.add_scly_patch(
+        b"Metroid4.pak",
+        asset_ids::ARTIFACT_TEMPLE_MREA,
+        |ps, area| patch_artifact_hint_availability(ps, area, config.artifact_hint_behavior)
     );
 
     patcher.add_resource_patch(b"NoARAM.pak", b"TXTR".into(), 0x4CAD3BCC, patch_save_banner_txtr);

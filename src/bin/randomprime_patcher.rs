@@ -1,5 +1,6 @@
 use clap::{
     Arg,
+    ArgGroup,
     App,
     Format, // XXX This is an undocumented enum
     crate_version,
@@ -101,6 +102,16 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("staggered-suit-damage")
             .help(concat!("The suit damage reduction is determinted by the number of suits ",
                             "collected rather than the most powerful one collected.")))
+
+        .arg(Arg::with_name("all artifact hints")
+            .long("all-artifact-hints")
+            .help("All artifact location hints are available immediately"))
+        .arg(Arg::with_name("no artifact hints")
+            .long("no-artifact-hints")
+            .help("Artifact location hints are disabled"))
+        .group(ArgGroup::with_name("artifact hint behavior")
+               .args(&["all artifact hints", "no artifact hints"]))
+
         .arg(Arg::with_name("trilogy disc path")
             .long("flaahgra-music-disc-path")
             .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
@@ -152,7 +163,12 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     let layout_string = matches.value_of("pickup layout").unwrap().to_string();
     let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
 
+    let artifact_hint_behavior = if matches.is_present("all artifact hints") {
+        patches::ArtifactHintBehavior::All
+    } else if matches.is_present("no artifact hints") {
+        patches::ArtifactHintBehavior::None
     } else {
+        patches::ArtifactHintBehavior::Default
     };
 
     let flaahgra_music_files = if let Some(path) = matches.value_of("trilogy disc path") {
@@ -174,6 +190,8 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         keep_fmvs: matches.is_present("keep attract mode"),
         obfuscate_items: matches.is_present("obfuscate items"),
         quiet: matches.is_present("quiet"),
+
+        artifact_hint_behavior,
 
         flaahgra_music_files,
 

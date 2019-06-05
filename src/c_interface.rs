@@ -44,6 +44,9 @@ struct Config
     #[serde(default)]
     obfuscate_items: bool,
 
+    #[serde(default = patches::ArtifactHintBehavior::Default)]
+    artifact_hint_behavior: patches::ArtifactHintBehavior,
+
     #[serde(default)]
     trilogy_disc_path: Option<String>,
 
@@ -200,6 +203,8 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
         quiet: false,
+
+        artifact_hint_behavior: config.artifact_hint_behavior,
 
         flaahgra_music_files,
 
