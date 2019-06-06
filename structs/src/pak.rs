@@ -8,12 +8,13 @@ use std::io;
 use std::borrow::Cow;
 
 use crate::{
+    frme::Frme,
+    hint::Hint,
     mlvl::Mlvl,
     mrea::Mrea,
     savw::Savw,
-    hint::Hint,
-    strg::Strg,
     scan::Scan,
+    strg::Strg,
 };
 
 #[auto_struct(Readable, Writable)]
@@ -328,11 +329,12 @@ macro_rules! build_resource_data {
 }
 
 build_resource_data!(
-    Mrea, b"MREA", as_mrea, as_mrea_mut,
-    Mlvl, b"MLVL", as_mlvl, as_mlvl_mut,
-    Savw, b"SAVW", as_savw, as_savw_mut,
+    Frme, b"FRME", as_frme, as_frme_mut,
     Hint, b"HINT", as_hint, as_hint_mut,
-    Strg, b"STRG", as_strg, as_strg_mut,
+    Mlvl, b"MLVL", as_mlvl, as_mlvl_mut,
+    Mrea, b"MREA", as_mrea, as_mrea_mut,
+    Savw, b"SAVW", as_savw, as_savw_mut,
     Scan, b"SCAN", as_scan, as_scan_mut,
+    Strg, b"STRG", as_strg, as_strg_mut,
 );
 
