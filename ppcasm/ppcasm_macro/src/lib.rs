@@ -6,19 +6,19 @@ use proc_macro::TokenStream;
 use quote::{quote, TokenStreamExt, ToTokens};
 use syn::{
     braced, parenthesized, parse_macro_input, parse_quote, token, Error, Expr,
-    Ident, LitFloat, LitInt, Token, Result
+    Ident, LitByteStr, LitFloat, LitInt, Token, Result
 };
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 struct AsmBlock
 {
     starting_address: Expr,
     _comma: Token![,],
     _brace: token::Brace,
-    asm: Punctuated<AsmInstr, Token![;]>,
+    asm: Vec<AsmInstr>,
 }
 
 impl Parse for AsmBlock
@@ -30,7 +30,10 @@ impl Parse for AsmBlock
             starting_address: input.parse()?,
             _comma: input.parse()?,
             _brace: braced!(content in input),
-            asm: Punctuated::parse_terminated(&content)?
+            asm: Punctuated::<AsmInstrVec, Token![;]>::parse_terminated(&content)?
+                .into_iter()
+                .flat_map(|aiv| aiv.0)
+                .collect(),
         };
 
         // Detect duplicate labels
@@ -51,13 +54,6 @@ impl ToTokens for AsmBlock
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream)
     {
         let sa = &self.starting_address;
-        let mut label_map = HashMap::<Ident, u32>::new();
-
-        for (i, instr) in self.asm.iter().enumerate() {
-            for label in &instr.labels {
-                label_map.insert(label.clone(), i as u32);
-            }
-        }
 
         let labels_let_iter = self.asm.iter()
             .enumerate()
@@ -126,6 +122,16 @@ impl ToTokens for AsmOp
             AsmOp::Expr(e) => e.to_tokens(tokens),
             _ => unreachable!(),
         }
+    }
+}
+
+struct AsmInstrVec(Vec<AsmInstr>);
+
+impl From<Vec<AsmInstr>> for AsmInstrVec
+{
+    fn from(vec: Vec<AsmInstr>) -> Self
+    {
+        AsmInstrVec(vec)
     }
 }
 
@@ -254,11 +260,12 @@ macro_rules! parse_operand {
 mod kw {
     syn::custom_keyword!(float);
     syn::custom_keyword!(long);
+    syn::custom_keyword!(asciiz);
 }
 
 macro_rules! decl_instrs {
     ($( $nm:ident $([$flag:tt])* $(, $arg:tt)* => $($part:tt)|* ;)+) => {
-        impl Parse for AsmInstr
+        impl Parse for AsmInstrVec
         {
             fn parse(input: ParseStream) -> Result<Self>
             {
@@ -273,16 +280,42 @@ macro_rules! decl_instrs {
                     let e = if let Ok(_) = input.parse::<kw::float>() {
                         let f = input.parse::<LitFloat>()?.value() as f32;
                         parse_quote! { #f.to_bits() as i32 }
+
                     } else if let Ok(_) = input.parse::<kw::long>() {
+                        let forked = input.fork();
                         let i = input.parse::<LitInt>()?.value();
+                        if i > u32::max_value() as u64 {
+                            Err(forked.error("Literal out of range"))?;
+                        }
+                        let i = i as i32;
                         parse_quote! { #i }
+
+                    } else if let Ok(_) = input.parse::<kw::asciiz>() {
+                        let mut bytes = input.parse::<LitByteStr>()?.value();
+                        bytes.push(0);
+                        while bytes.len() % 4 != 0 {
+                            bytes.push(0);
+                        }
+                        let mut labels = Some(labels);
+                        return Ok(bytes.chunks(4)
+                                .map(|chunk| AsmInstr {
+                                    labels: labels.take().unwrap_or(vec![]),
+                                    parts: chunk.iter()
+                                        .map(|b| *b as i32)
+                                        .map(|b| (8, AsmOp::Expr(parse_quote! { #b })))
+                                        .collect(),
+                                })
+                                .collect::<Vec<_>>()
+                                .into()
+                            );
+
                     } else {
                         Err(input.error("Unsupported directive"))?
                     };
-                    return Ok(AsmInstr {
+                    return Ok(vec![AsmInstr {
                         labels,
                         parts: vec![(32, AsmOp::Expr(e))],
-                    });
+                    }].into());
                 }
 
                 let ident: Ident = input.parse()?;
@@ -314,10 +347,10 @@ macro_rules! decl_instrs {
                         let parts = vec![
                             $(parse_part!(__dot__, $part),)*
                         ];
-                        return Ok(AsmInstr {
+                        return Ok(vec![AsmInstr {
                             labels,
                             parts
-                        });
+                        }].into());
                     }
                 }
                 )*
