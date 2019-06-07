@@ -1336,6 +1336,9 @@ fn patch_dol<'r>(
         cinematic_skip: u32,
         unlockables_default_ctor: u32,
         unlockables_read_ctor: u32,
+
+        missile_hud_formating: u32,
+        sprintf: u32,
     }
 
     let addrs = match version {
@@ -1351,6 +1354,9 @@ fn patch_dol<'r>(
                 cinematic_skip: 0x80151868,
                 unlockables_read_ctor: 0x801d5c70,
                 unlockables_default_ctor: 0x801d609c,
+
+                missile_hud_formating: 0x80191900,
+                sprintf: 0x8038DCDC,
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
         Version::V0_02 => Addrs {
@@ -1365,6 +1371,9 @@ fn patch_dol<'r>(
                 cinematic_skip: 0x8015204c,
                 unlockables_read_ctor: 0x801d64c0,
                 unlockables_default_ctor: 0x801d68ec,
+
+                missile_hud_formating: 0x801920e4,
+                sprintf: 0x8038ecf4,
             },
     };
 
@@ -1425,6 +1434,32 @@ fn patch_dol<'r>(
             nop;
     });
 
+    let missile_hud_formating_patch = ppcasm!(addrs.missile_hud_formating, {
+            b          skip;
+        fmt:
+            .asciiz b"%03d/%03d";
+
+        skip:
+            stw        r30, 40(r1);// var_8(r1);
+            mr         r30, r3;
+            stw        r4, 8(r1);// var_28(r1)
+
+            lwz        r6, 4(r30);
+
+            mr         r5, r4;
+
+            lis        r4, fmt@h;
+            addi       r4, r4, fmt@l;
+
+            addi       r3, r1, 12;// arg_C
+
+            nop; // crclr      cr6;
+            bl         { addrs.sprintf };
+
+            addi       r3, r1, 20;// arg_14;
+            addi       r4, r1, 12;// arg_C
+        });
+
 
     let reader = match *file {
         structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
@@ -1439,6 +1474,7 @@ fn patch_dol<'r>(
         .patch(addrs.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))?
         .patch(addrs.save_filename_a, b"randomprime A\0"[..].into())?
         .patch(addrs.save_filename_b, b"randomprime B\0"[..].into())?
+        .ppcasm_patch(&missile_hud_formating_patch)?
         .ppcasm_patch(&cinematic_skip_patch)?
         .ppcasm_patch(&unlockables_default_ctor_patch)?
         .ppcasm_patch(&unlockables_read_ctor_patch)?;
