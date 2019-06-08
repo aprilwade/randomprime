@@ -346,6 +346,44 @@ fn patch_save_banner_txtr(res: &mut structs::Resource)
     Ok(())
 }
 
+fn patch_morphball_hud(res: &mut structs::Resource)
+    -> Result<(), String>
+{
+    let frme = res.kind.as_frme_mut().unwrap();
+    let widget = frme.widgets.iter_mut()
+        .find(|widget| widget.name == b"textpane_bombdigits\0".as_cstr())
+        .unwrap();
+    // Use the version of Deface18 that has more than just numerical characters for the powerbomb
+    // ammo counter
+    match &mut widget.kind {
+        structs::FrmeWidgetKind::TextPane(textpane) => {
+            textpane.font = 0xB7BBD0B4;
+            textpane.word_wrap = 0;
+        }
+        _ => panic!("Widget \"textpane_bombdigits\" should be a TXPN"),
+    }
+    widget.origin[0] -= 0.1;
+
+    // We need to shift all of the widgets in the bomb UI left so there's
+    // room for the longer powerbomb ammo counter
+    const BOMB_UI_WIDGET_NAMES: &[&[u8]] = &[
+        b"model_bar",
+        b"model_bombbrak0",
+        b"model_bombdrop0",
+        b"model_bombbrak1",
+        b"model_bombdrop1",
+        b"model_bombbrak2",
+        b"model_bombdrop2",
+        b"model_bombicon",
+    ];
+    for widget in frme.widgets.iter_mut() {
+        if !BOMB_UI_WIDGET_NAMES.contains(&widget.name.to_bytes()) {
+            continue;
+        }
+        widget.origin[0] -= 0.325;
+    }
+    Ok(())
+}
 
 fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
     -> Result<(), String>
@@ -1338,6 +1376,7 @@ fn patch_dol<'r>(
         unlockables_read_ctor: u32,
 
         missile_hud_formating: u32,
+        powerbomb_hud_formating: u32,
         sprintf: u32,
     }
 
@@ -1356,6 +1395,7 @@ fn patch_dol<'r>(
                 unlockables_default_ctor: 0x801d609c,
 
                 missile_hud_formating: 0x80191900,
+                powerbomb_hud_formating: 0x801cd664,
                 sprintf: 0x8038DCDC,
             },
         Version::V0_01 => return Err("Unreachable?".to_owned()),
@@ -1373,6 +1413,7 @@ fn patch_dol<'r>(
                 unlockables_default_ctor: 0x801d68ec,
 
                 missile_hud_formating: 0x801920e4,
+                powerbomb_hud_formating: 0x801cdeb4,
                 sprintf: 0x8038ecf4,
             },
     };
@@ -1460,6 +1501,21 @@ fn patch_dol<'r>(
             addi       r4, r1, 12;// arg_C
         });
 
+    let powerbomb_hud_formating_patch = ppcasm!(addrs.powerbomb_hud_formating, {
+            b skip;
+        fmt:
+            .asciiz b"%d/%d";// %d";
+            nop;
+        skip:
+            mr         r6, r27;
+            mr         r5, r28;
+            lis        r4, fmt@h;
+            addi       r4, r4, fmt@l;
+            addi       r3, r1, 12;// arg_C;
+            nop; // crclr      cr6;
+            bl         { addrs.sprintf };
+
+        });
 
     let reader = match *file {
         structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
@@ -1475,6 +1531,7 @@ fn patch_dol<'r>(
         .patch(addrs.save_filename_a, b"randomprime A\0"[..].into())?
         .patch(addrs.save_filename_b, b"randomprime B\0"[..].into())?
         .ppcasm_patch(&missile_hud_formating_patch)?
+        .ppcasm_patch(&powerbomb_hud_formating_patch)?
         .ppcasm_patch(&cinematic_skip_patch)?
         .ppcasm_patch(&unlockables_default_ctor_patch)?
         .ppcasm_patch(&unlockables_read_ctor_patch)?;
@@ -1888,6 +1945,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     );
 
     patcher.add_resource_patch(b"NoARAM.pak", b"TXTR".into(), 0x4CAD3BCC, patch_save_banner_txtr);
+
+    patcher.add_resource_patch(b"GGuiSys.pak", b"FRME".into(), 0xBF687554, patch_morphball_hud);
 
     make_elevators_patch(&mut patcher, &config.elevator_layout);
 

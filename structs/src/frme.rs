@@ -1,7 +1,7 @@
 use auto_struct_macros::auto_struct;
 
 use reader_writer::{
-    CStr, FourCC, Readable, Reader, RoArray, Writable,
+    CStr, FourCC, LazyArray, Readable, Reader, RoArray, Writable,
 };
 use reader_writer::generic_array::GenericArray;
 use reader_writer::generic_array::typenum:: *;
@@ -26,7 +26,10 @@ pub struct Frme<'r>
     widget_count: u32,
 
     #[auto_struct(init = (widget_count as usize, version))]
-    pub widgets: RoArray<'r, FrmeWidget<'r>>,
+    pub widgets: LazyArray<'r, FrmeWidget<'r>>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
 }
 
 #[auto_struct(Readable, Writable)]
