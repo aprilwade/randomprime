@@ -30,6 +30,7 @@ fn main()
     if is_msvc {
         build
             .flag("/std:c++17")
+            .flag("/EHsc")
             .flag("-DUNICODE=1")
             .flag("-D_UNICODE=1")
             .flag("-D__SSE__=1")

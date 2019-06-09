@@ -52,8 +52,12 @@ cpp! {{
 
         uint64_t read_bytes(uint64_t offset, uint64_t buf_length, uint8_t *buf)
         {
-            auto stream = this->file.beginReadStream(offset);
-            return stream->read(buf, buf_length);
+            try {
+                auto stream = this->file.beginReadStream(offset);
+                return stream->read(buf, buf_length);
+            } catch (...) {
+                return 0;
+            }
         }
 
         FileWrapper(std::shared_ptr<nod::DiscBase> disc_, nod::Node &file_)
@@ -67,44 +71,53 @@ cpp! {{
 
         static DiscWrapper* create(nod::SystemChar *disc_path, const char **err_msg)
         {
-            bool is_wii;
-            std::unique_ptr<nod::DiscBase> disc = nod::OpenDiscFromImage(disc_path, is_wii);
-            if (!disc) {
-                *err_msg = "Failed to open disc";
+            try {
+                bool is_wii;
+                std::unique_ptr<nod::DiscBase> disc = nod::OpenDiscFromImage(disc_path, is_wii);
+                if (!disc) {
+                    *err_msg = "Failed to open disc";
+                    return 0;
+                }
+
+                nod::IPartition* partition = disc->getDataPartition();
+                if (!partition) {
+                    *err_msg = "Failed to find data partition";
+                    return 0;
+                }
+
+                return new DiscWrapper { std::shared_ptr<nod::DiscBase>(disc.release()) };
+            } catch (...) {
+                *err_msg = "Unknown error";
                 return 0;
             }
-
-            nod::IPartition* partition = disc->getDataPartition();
-            if (!partition) {
-                *err_msg = "Failed to find data partition";
-                return 0;
-            }
-
-            return new DiscWrapper { std::shared_ptr<nod::DiscBase>(disc.release()) };
         }
 
         FileWrapper* open_file(const char *file_name)
         {
-            nod::IPartition* partition = this->disc->getDataPartition();
-            if (!partition) {
-                return 0;
-            }
-
-            nod::Node &root = partition->getFSTRoot();
-            nod::Node *found = nullptr;
-            auto it_end = root.rawEnd();
-            for(auto it = root.rawBegin(); it != it_end; ++it) {
-                if(it->getName() == file_name) {
-                    found = &*it;
-                    break;
+            try {
+                nod::IPartition* partition = this->disc->getDataPartition();
+                if (!partition) {
+                    return 0;
                 }
-            }
 
-            if(!found) {
+                nod::Node &root = partition->getFSTRoot();
+                nod::Node *found = nullptr;
+                auto it_end = root.rawEnd();
+                for(auto it = root.rawBegin(); it != it_end; ++it) {
+                    if(it->getName() == file_name) {
+                        found = &*it;
+                        break;
+                    }
+                }
+
+                if(!found) {
+                    return 0;
+                }
+
+                return new FileWrapper(this->disc, *found);
+            } catch (...) {
                 return 0;
             }
-
-            return new FileWrapper(this->disc, *found);
         }
     };
 }}
