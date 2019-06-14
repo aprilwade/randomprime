@@ -6,6 +6,7 @@ use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
+use resource_info_table::{resource_info, ResourceInfo};
 
 use std::{
     mem,
@@ -193,6 +194,14 @@ struct ResourceKey
 {
     file_id: u32,
     fourcc: FourCC
+}
+
+impl From<ResourceInfo> for ResourceKey
+{
+    fn from(res_info: ResourceInfo) -> ResourceKey
+    {
+        ResourceKey::new(res_info.res_id, res_info.fourcc)
+    }
 }
 
 impl ResourceKey
@@ -383,9 +392,9 @@ fn extract_pickup_data<'r>(
     };
 
     if pickup.kind == 23 {
-        pickup.cmdl = asset_ids::PHAZON_SUIT_CMDL;
-        pickup.ancs.file_id = asset_ids::PHAZON_SUIT_ANCS;
-        pickup.actor_params.scan_params.scan = asset_ids::PHAZON_SUIT_SCAN;
+        pickup.cmdl = custom_asset_ids::PHAZON_SUIT_CMDL;
+        pickup.ancs.file_id = custom_asset_ids::PHAZON_SUIT_ANCS;
+        pickup.actor_params.scan_params.scan = custom_asset_ids::PHAZON_SUIT_SCAN;
     }
     let mut bytes = vec![];
     pickup.write_to(&mut bytes).unwrap();
@@ -398,7 +407,7 @@ fn extract_pickup_data<'r>(
     let hudmemo_strg = if let Some(hudmemo) = hudmemo {
         hudmemo.property_data.as_hud_memo().unwrap().strg
     } else {
-        asset_ids::PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG
+        resource_info!("Phazon Suit acquired!.STRG").res_id
     };
 
     PickupData {
@@ -666,28 +675,28 @@ fn find_cutscene_trigger_relay<'r>(
 fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
 {
     // Don't ask me why; Claris seems to skip this one.
-    deps.remove(&ResourceKey::new(0xA0DA476B, b"PART".into()));
+    deps.remove(&resource_info!("purple.PART").into());
 
     if pickup_kind == 19 {
         // Spiderball. I couldn't find any references to this outside of PAK resource
         // indexes and dependency lists.
-        deps.insert(ResourceKey::new(0x00656374, b"CSKR".into()));
+        deps.insert(resource_info!("spiderball.CSKR").into());
     } else if pickup_kind == 23 {
         // Phazon suit.
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_SCAN, b"SCAN".into()));
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_STRG, b"STRG".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_SCAN, b"SCAN".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_STRG, b"STRG".into()));
 
         // Remove the Gravity Suit's CMDL and ANCS
-        deps.remove(&ResourceKey::new(asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into()));
-        deps.remove(&ResourceKey::new(asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into()));
+        deps.remove(&resource_info!("Node1_11.CMDL").into());
+        deps.remove(&resource_info!("Node1_11.ANCS").into());
         deps.remove(&ResourceKey::new(0x08C625DA, b"TXTR".into()));
         deps.remove(&ResourceKey::new(0xA95D06BC, b"TXTR".into()));
 
         // Add the custom CMDL and textures
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_CMDL, b"CMDL".into()));
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_ANCS, b"ANCS".into()));
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
-        deps.insert(ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR2, b"TXTR".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_CMDL, b"CMDL".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_ANCS, b"ANCS".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR2, b"TXTR".into()));
     };
 }
 
@@ -702,9 +711,9 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
         nothing_pickup.kind = 26; // This kind matches an energy refill
         nothing_pickup.max_increase = 0;
         nothing_pickup.curr_increase = 0;
-        nothing_pickup.cmdl = asset_ids::NOTHING_CMDL;
-        nothing_pickup.ancs.file_id = asset_ids::NOTHING_ANCS;
-        nothing_pickup.actor_params.scan_params.scan = asset_ids::NOTHING_SCAN;
+        nothing_pickup.cmdl = custom_asset_ids::NOTHING_CMDL;
+        nothing_pickup.ancs.file_id = custom_asset_ids::NOTHING_ANCS;
+        nothing_pickup.actor_params.scan_params.scan = custom_asset_ids::NOTHING_SCAN;
         nothing_pickup.write_to(&mut nothing_bytes).unwrap();
     }
     let mut nothing_deps: HashSet<_> = pickup_table[&PickupType::PhazonSuit].deps.iter()
@@ -712,18 +721,18 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
                       b"CMDL".into(), b"ANCS".into()].contains(&i.fourcc))
         .cloned()
         .collect();
-    nothing_deps.remove(&ResourceKey::new(asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
+    nothing_deps.remove(&ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
     nothing_deps.extend(&[
-        ResourceKey::new(asset_ids::NOTHING_SCAN_STRG, b"STRG".into()),
-        ResourceKey::new(asset_ids::NOTHING_SCAN, b"SCAN".into()),
-        ResourceKey::new(asset_ids::NOTHING_CMDL, b"CMDL".into()),
-        ResourceKey::new(asset_ids::NOTHING_ANCS, b"ANCS".into()),
-        ResourceKey::new(asset_ids::NOTHING_TXTR, b"TXTR".into()),
+        ResourceKey::new(custom_asset_ids::NOTHING_SCAN_STRG, b"STRG".into()),
+        ResourceKey::new(custom_asset_ids::NOTHING_SCAN, b"SCAN".into()),
+        ResourceKey::new(custom_asset_ids::NOTHING_CMDL, b"CMDL".into()),
+        ResourceKey::new(custom_asset_ids::NOTHING_ANCS, b"ANCS".into()),
+        ResourceKey::new(custom_asset_ids::NOTHING_TXTR, b"TXTR".into()),
     ]);
     assert!(pickup_table.insert(PickupType::Nothing, PickupData {
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
+        hudmemo_strg: custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
         // TODO replace with something silly or silence?
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
@@ -870,9 +879,9 @@ fn main()
 
 
     // Special case of Nothing and Phazon Suits' custom CMDLs
-    let aabb = *cmdl_aabbs.get(&asset_ids::GRAVITY_SUIT_CMDL).unwrap();
-    assert!(cmdl_aabbs.insert(asset_ids::PHAZON_SUIT_CMDL, aabb).is_none());
-    assert!(cmdl_aabbs.insert(asset_ids::NOTHING_CMDL, aabb).is_none());
+    let aabb = *cmdl_aabbs.get(&resource_info!("Node1_11.CMDL").res_id).unwrap();
+    assert!(cmdl_aabbs.insert(custom_asset_ids::PHAZON_SUIT_CMDL, aabb).is_none());
+    assert!(cmdl_aabbs.insert(custom_asset_ids::NOTHING_CMDL, aabb).is_none());
 
     create_nothing(&mut pickup_table);
 

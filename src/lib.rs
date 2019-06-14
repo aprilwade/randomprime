@@ -268,7 +268,7 @@ macro_rules! def_asset_ids {
     };
 }
 
-pub mod asset_ids {
+pub mod custom_asset_ids {
     def_asset_ids! {
         PHAZON_SUIT_SCAN = 0xDEAF0000,
         PHAZON_SUIT_STRG,
@@ -285,11 +285,5 @@ pub mod asset_ids {
 
         SKIP_HUDMEMO_STRG_START,
         SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 37,
-
-        GRAVITY_SUIT_CMDL = 0x95946E41,
-        GRAVITY_SUIT_ANCS = 0x27A97006,
-        PHAZON_SUIT_ACQUIRED_HUDMEMO_STRG = 0x11BEB861,
-        PHAZON_MINES_SAVW = 0x2D52090E,
-        ARTIFACT_TEMPLE_MREA = 0x2398E906,
     }
 }

@@ -3,7 +3,7 @@ use std::mem;
 use reader_writer::{FourCC, Reader};
 use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, Resource, ResourceKind};
 
-use crate::asset_ids;
+use crate::custom_asset_ids;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PickupType
@@ -196,7 +196,7 @@ impl PickupType
 
     pub fn skip_hudmemos_strg(&self) -> u32
     {
-        (asset_ids::SKIP_HUDMEMO_STRG_START..asset_ids::SKIP_HUDMEMO_STRG_END)
+        (custom_asset_ids::SKIP_HUDMEMO_STRG_START..custom_asset_ids::SKIP_HUDMEMO_STRG_END)
             .nth(self.idx())
             .unwrap()
     }
@@ -312,28 +312,28 @@ pub struct ScriptObjectLocation
 
 const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
     // Phazon Suit SCAN
-    (asset_ids::PHAZON_SUIT_SCAN, *b"SCAN",
+    (custom_asset_ids::PHAZON_SUIT_SCAN, *b"SCAN",
      include_bytes!("../extra_assets/phazon_suit_scan.scan")),
     // Phazon Suit STRG
-    (asset_ids::PHAZON_SUIT_STRG, *b"STRG",
+    (custom_asset_ids::PHAZON_SUIT_STRG, *b"STRG",
      include_bytes!("../extra_assets/phazon_suit_scan.strg")),
     // Phazon Suit TXTR 1
-    (asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
+    (custom_asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
      include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
     // Phazon Suit TXTR 2
-    (asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
+    (custom_asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
      include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
     // Nothing acquired HudMemo STRG
-    (asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, *b"STRG",
+    (custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, *b"STRG",
      include_bytes!("../extra_assets/nothing_hudmemo.strg")),
     // Nothing scan STRG
-    (asset_ids::NOTHING_SCAN_STRG, *b"STRG",
+    (custom_asset_ids::NOTHING_SCAN_STRG, *b"STRG",
      include_bytes!("../extra_assets/nothing_scan.strg")),
     // Nothing SCAN
-    (asset_ids::NOTHING_SCAN, *b"SCAN",
+    (custom_asset_ids::NOTHING_SCAN, *b"SCAN",
      include_bytes!("../extra_assets/nothing_scan.scan")),
     // Nothing texture
-    (asset_ids::NOTHING_TXTR, *b"TXTR",
+    (custom_asset_ids::NOTHING_TXTR, *b"TXTR",
      include_bytes!("../extra_assets/nothing_texture.txtr")),
 ];
 

@@ -54,14 +54,24 @@ impl<'r, 's> PrimePatcher<'r, 's>
         self.file_patches.insert(name, Box::new(f));
     }
 
-    pub fn add_resource_patch<F>(&mut self, pak_name: &'s [u8], kind: FourCC, id: u32, f: F)
-        where F: FnMut(&mut Resource<'r>) -> Result<(), String> + 's
+    pub fn add_resource_patch<F>(
+        &mut self,
+        (paks, res_id, fourcc): (&'_ [&'s [u8]], u32, FourCC),
+        f: F,
+    )
+        where F: Clone + FnMut(&mut Resource<'r>) -> Result<(), String> + 's
     {
-        let key = ResourceKey { pak_name, kind, id, };
-        self.resource_patches.push((key, Box::new(f)));
+        for pak_name in paks {
+            let key = ResourceKey {
+                pak_name,
+                kind: fourcc,
+                id: res_id,
+            };
+            self.resource_patches.push((key, Box::new(f.clone())));
+        }
     }
 
-    pub fn add_scly_patch<F>(&mut self, pak_name: &'s [u8], room_id: u32, f: F)
+    pub fn add_scly_patch<F>(&mut self, (pak_name, room_id): (&'s [u8], u32), f: F)
         where F: FnMut(&mut PatcherState, &mut MlvlArea<'r, '_, '_, '_>) -> Result<(), String> + 's
     {
         let key = MreaKey { pak_name, room_id, };

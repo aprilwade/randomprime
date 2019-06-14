@@ -10,7 +10,6 @@ clap = "2.9"
 encoding = "0.2"
 flate2 = "1.0"
 memmap = "0.4"
-preferences = "1.1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
@@ -22,13 +21,14 @@ ppcasm = { path = "ppcasm" }
 structs = { path = "structs" }
 reader_writer = { path = "reader_writer" }
 nod_wrapper = { path = "nod_wrapper" }
+resource_info_table = { path = "resource_info_table" }
 
 [profile.release]
 lto = true
 panic = "unwind"
 
 [workspace]
-members = ["structs", "reader_writer", "auto_struct_macros", "ppcasm", "ppcasm/ppcasm_macro", "nod_wrapper"]
+members = ["structs", "reader_writer", "auto_struct_macros", "ppcasm", "ppcasm/ppcasm_macro", "nod_wrapper", "resource_info_table"]
 
 [lib]
 name = "randomprime"

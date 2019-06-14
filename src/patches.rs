@@ -8,7 +8,7 @@ use encoding::{
 use serde_derive::Deserialize;
 
 use crate::{
-    asset_ids,
+    custom_asset_ids,
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{ELEVATORS, SpawnRoom},
@@ -23,6 +23,7 @@ use crate::{
     ResourceData,
 };
 
+use resource_info_table::{resource_info, ResourceInfo};
 use ppcasm::ppcasm;
 
 use reader_writer::{
@@ -107,8 +108,9 @@ fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struc
     -> (structs::Resource<'r>, structs::Resource<'r>)
 {
     let nothing_suit_cmdl = {
-        let grav_suit_cmdl = ResourceData::new(&resources[&(
-                asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into())]);
+        let grav_suit_cmdl = ResourceData::new(
+            &resources[&resource_info!("Node1_11.CMDL").into()]
+        );
         let mut nothing_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -116,16 +118,17 @@ fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struc
         nothing_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change which texture this points to
-        asset_ids::NOTHING_TXTR.write_to(&mut &mut nothing_cmdl_bytes[0x64..]).unwrap();
-        asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut nothing_cmdl_bytes[0x70..]).unwrap();
+        custom_asset_ids::NOTHING_TXTR.write_to(&mut &mut nothing_cmdl_bytes[0x64..]).unwrap();
+        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut nothing_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            asset_ids::NOTHING_CMDL,
+            custom_asset_ids::NOTHING_CMDL,
             structs::ResourceKind::External(nothing_cmdl_bytes, b"CMDL".into())
         )
     };
     let nothing_suit_ancs = {
-        let grav_suit_ancs = ResourceData::new(&resources[&(
-                asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into())]);
+        let grav_suit_ancs = ResourceData::new(
+            &resources[&resource_info!("Node1_11.ANCS").into()]
+        );
         let mut nothing_ancs_bytes = grav_suit_ancs.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -133,9 +136,9 @@ fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struc
         nothing_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change this to refer to the CMDL above
-        asset_ids::NOTHING_CMDL.write_to(&mut &mut nothing_ancs_bytes[0x14..]).unwrap();
+        custom_asset_ids::NOTHING_CMDL.write_to(&mut &mut nothing_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            asset_ids::NOTHING_ANCS,
+            custom_asset_ids::NOTHING_ANCS,
             structs::ResourceKind::External(nothing_ancs_bytes, b"ANCS".into())
         )
     };
@@ -146,8 +149,9 @@ fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struct
     -> (structs::Resource<'r>, structs::Resource<'r>)
 {
     let phazon_suit_cmdl = {
-        let grav_suit_cmdl = ResourceData::new(&resources[&(
-                asset_ids::GRAVITY_SUIT_CMDL, b"CMDL".into())]);
+        let grav_suit_cmdl = ResourceData::new(
+            &resources[&resource_info!("Node1_11.CMDL").into()]
+        );
         let mut phazon_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -155,16 +159,17 @@ fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struct
         phazon_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change which textures this points to
-        asset_ids::PHAZON_SUIT_TXTR1.write_to(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
-        asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
+        custom_asset_ids::PHAZON_SUIT_TXTR1.write_to(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
+        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            asset_ids::PHAZON_SUIT_CMDL,
+            custom_asset_ids::PHAZON_SUIT_CMDL,
             structs::ResourceKind::External(phazon_cmdl_bytes, b"CMDL".into())
         )
     };
     let phazon_suit_ancs = {
-        let grav_suit_ancs = ResourceData::new(&resources[&(
-                asset_ids::GRAVITY_SUIT_ANCS, b"ANCS".into())]);
+        let grav_suit_ancs = ResourceData::new(
+            &resources[&resource_info!("Node1_11.ANCS").into()]
+        );
         let mut phazon_ancs_bytes = grav_suit_ancs.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
@@ -172,9 +177,9 @@ fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), struct
         phazon_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change this to refer to the CMDL above
-        asset_ids::PHAZON_SUIT_CMDL.write_to(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
+        custom_asset_ids::PHAZON_SUIT_CMDL.write_to(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            asset_ids::PHAZON_SUIT_ANCS,
+            custom_asset_ids::PHAZON_SUIT_ANCS,
             structs::ResourceKind::External(phazon_ancs_bytes, b"ANCS".into())
         )
     };
@@ -357,7 +362,7 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     // ammo counter
     match &mut widget.kind {
         structs::FrmeWidgetKind::TextPane(textpane) => {
-            textpane.font = 0xB7BBD0B4;
+            textpane.font = resource_info!("Deface18B.FONT").res_id;
             textpane.word_wrap = 0;
         }
         _ => panic!("Widget \"textpane_bombdigits\" should be a TXPN"),
@@ -388,11 +393,10 @@ fn patch_morphball_hud(res: &mut structs::Resource)
 fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
     -> Result<(), String>
 {
-            // Some((asset_ids::PHAZON_MINES_SAVW, fourcc)) if fourcc == b"SAVW".into() => {
     // Add a scan for the Phazon suit.
     let savw = res.kind.as_savw_mut().unwrap();
     savw.scan_array.as_mut_vec().push(structs::ScannableObject {
-        scan: asset_ids::PHAZON_SUIT_SCAN,
+        scan: custom_asset_ids::PHAZON_SUIT_SCAN,
         logbook_category: 0,
     });
     Ok(())
@@ -597,8 +601,8 @@ fn update_hudmemo(
     skip_hudmenus: bool)
 {
     // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
-    // (Artifact of Truth) should always have modal hudmenus to because a cutscene plays
-    // immediately after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
+    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
+    // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         hudmemo.first_message_timer = 5.;
@@ -659,7 +663,7 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [u8])
 {
     for (i, elv) in ELEVATORS.iter().enumerate() {
-        patcher.add_scly_patch(elv.pak_name.as_bytes(), elv.mrea, move |_ps, area| {
+        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |_ps, area| {
             let scly = area.mrea().scly_section_mut();
             for layer in scly.layers.iter_mut() {
                 let obj = layer.objects.iter_mut()
@@ -673,19 +677,19 @@ fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [u8]
             Ok(())
         });
 
-        patcher.add_resource_patch(elv.pak_name.as_bytes(), b"STRG".into(), elv.room_strg, move |res| {
+        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
             let string = format!("Transport to {}\u{0}", ELEVATORS[layout[i] as usize].name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
-        patcher.add_resource_patch(elv.pak_name.as_bytes(), b"STRG".into(), elv.hologram_strg, move |res| {
+        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
             let string = format!("Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}", ELEVATORS[layout[i] as usize].name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
-        patcher.add_resource_patch(elv.pak_name.as_bytes(), b"STRG".into(), elv.control_strg, move |res| {
+        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
             let string = format!("Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}", ELEVATORS[layout[i] as usize].name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
@@ -1025,14 +1029,14 @@ fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: 
 
 fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
 {
-    patcher.add_scly_patch(b"metroid5.pak", 0x8A97BB54, |_ps, area| {
+    patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |_ps, area| {
         let flags = &mut area.layer_flags.flags;
         *flags |= 1 << 1; // Turn on "3rd pass elite bustout"
         *flags &= !(1 << 5); // Turn off the "dummy elite"
         Ok(())
     });
 
-    patcher.add_scly_patch(b"metroid5.pak", 0xFEA372E2, |_ps, area| {
+    patcher.add_scly_patch(resource_info!("07_mines_electric.MREA").into(), |_ps, area| {
         let scly = area.mrea().scly_section_mut();
         scly.layers.as_mut_vec()[0].objects.as_mut_vec()
             .retain(|obj| obj.instance_id != 0x1B0525 && obj.instance_id != 0x1B0522);
@@ -1830,7 +1834,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let mut layout_iterator = pickup_layout.iter();
     for (name, rooms) in pickup_meta::PICKUP_LOCATIONS.iter() {
         for room_info in rooms.iter() {
-             patcher.add_scly_patch(name.as_bytes(), room_info.room_id, move |_, area| {
+             patcher.add_scly_patch((name.as_bytes(), room_info.room_id), move |_, area| {
                 // Remove objects
                 let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
                 for otr in room_info.objects_to_remove {
@@ -1842,8 +1846,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
             for (&pickup_location, &pickup_type) in iter {
                 patcher.add_scly_patch(
-                    name.as_bytes(),
-                    room_info.room_id,
+                    (name.as_bytes(), room_info.room_id),
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,
@@ -1882,8 +1885,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             )
         );
         patcher.add_scly_patch(
-            b"Metroid1.pak",
-            0xD1241219,
+            resource_info!("01_intro_hanger.MREA").into(),
             move |_ps, area| patch_frigate_teleporter(area, spawn_room)
         );
     }
@@ -1894,82 +1896,107 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         (0, false)
     };
     patcher.add_scly_patch(
-        spawn_room.pak_name.as_bytes(),
-        spawn_room.mrea,
+        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
         move |_ps, area| patch_starting_pickups(area, starting_items, print_sis)
     );
 
     // TODO: It might be nice for this list to be generated by resource_tracing, but
     //       the sorting is probably non-trivial.
-    const ARTIFACT_TOTEM_SCAN_STRGS: &[u32] = &[
-        0x61729798,// Lifegiver
-        0xAA2E443D,// Wild
-        0x8E9C7387,// World
-        0x16B057E3,// Sun
-        0xB72B7485,// Elder
-        0x45C0A022,// Spirit
-        0xFAE3D58E,// Truth
-        0x2CBA3693,// Chozo
-        0xE7E6E536,// Warrior
-        0xC354D28C,// Newborn
-        0xDDEC8446,// Nature
-        0x7C77A720,// Strength
+    const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
+        resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
+        resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
+        resource_info!("07_Over_Stonehenge Totem 10.STRG"), // World
+        resource_info!("07_Over_Stonehenge Totem 9.STRG"), // Sun
+        resource_info!("07_Over_Stonehenge Totem 3.STRG"), // Elder
+        resource_info!("07_Over_Stonehenge Totem 11.STRG"), // Spirit
+        resource_info!("07_Over_Stonehenge Totem 1.STRG"), // Truth
+        resource_info!("07_Over_Stonehenge Totem 7.STRG"), // Chozo
+        resource_info!("07_Over_Stonehenge Totem 6.STRG"), // Warrior
+        resource_info!("07_Over_Stonehenge Totem 12.STRG"), // Newborn
+        resource_info!("07_Over_Stonehenge Totem 8.STRG"), // Nature
+        resource_info!("07_Over_Stonehenge Totem 2.STRG"), // Strength
     ];
-    for (file_id, strg_text) in ARTIFACT_TOTEM_SCAN_STRGS.iter().zip(artifact_totem_strings.iter()) {
+    for (res_info, strg_text) in ARTIFACT_TOTEM_SCAN_STRGS.iter().zip(artifact_totem_strings.iter()) {
         patcher.add_resource_patch(
-            b"Metroid4.pak",
-            b"STRG".into(),
-            *file_id,
+            (*res_info).into(),
             move |res| patch_artifact_totem_scan_strg(res, &strg_text),
         );
     }
 
     patcher.add_resource_patch(
-        b"NoARAM.pak",
-        b"STRG".into(),
-        0x324D0835,
+        resource_info!("STRG_Credits.STRG").into(),
         |res| patch_credits(res, &pickup_layout)
     );
 
-    patcher.add_resource_patch(b"Metroid4.pak", b"SAVW".into(), asset_ids::PHAZON_MINES_SAVW,
-                               patch_mines_savw_for_phazon_suit_scan);
+    patcher.add_resource_patch(
+        resource_info!("!MinesWorld_Master.SAVW").into(),
+        patch_mines_savw_for_phazon_suit_scan
+    );
     patcher.add_scly_patch(
-        b"Metroid4.pak",
-        asset_ids::ARTIFACT_TEMPLE_MREA,
+        resource_info!("07_stonehenge.MREA").into(),
         |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
     );
     patcher.add_scly_patch(
-        b"Metroid4.pak",
-        asset_ids::ARTIFACT_TEMPLE_MREA,
+        resource_info!("07_stonehenge.MREA").into(),
         |ps, area| patch_artifact_hint_availability(ps, area, config.artifact_hint_behavior)
     );
 
-    patcher.add_resource_patch(b"NoARAM.pak", b"TXTR".into(), 0x4CAD3BCC, patch_save_banner_txtr);
+    patcher.add_resource_patch(
+        resource_info!("TXTR_SaveBanner.TXTR").into(),
+        patch_save_banner_txtr
+    );
 
-    patcher.add_resource_patch(b"GGuiSys.pak", b"FRME".into(), 0xBF687554, patch_morphball_hud);
+    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
     make_elevators_patch(&mut patcher, &config.elevator_layout);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
-    patcher.add_scly_patch(b"Metroid2.pak", 0x9A0A03EB, patch_flaahgra_after_wild);
-    patcher.add_scly_patch(b"Metroid4.pak", 0xBDB1FCAC, patch_temple_security_station_cutscene_trigger);
-    patcher.add_scly_patch(b"Metroid4.pak", 0xAFD4E038, patch_main_ventilation_shaft_section_b_door);
-    patcher.add_scly_patch(b"Metroid3.pak", 0x43E4CC25, patch_research_lab_hydra_barrier);
-    patcher.add_scly_patch(b"Metroid3.pak", 0xA49B2544, patch_research_lab_aether_exploding_wall);
-    patcher.add_scly_patch(b"Metroid3.pak", 0x3FB4A34E, patch_observatory_2nd_pass_solvablility);
-    patcher.add_scly_patch(b"metroid5.pak", 0x956F1552, patch_mines_security_station_soft_lock);
+    patcher.add_scly_patch(resource_info!("22_Flaahgra.MREA").into(), patch_flaahgra_after_wild);
+    patcher.add_scly_patch(
+        resource_info!("00j_over_hall.MREA").into(),
+        patch_temple_security_station_cutscene_trigger
+    );
+    patcher.add_scly_patch(
+        resource_info!("08b_under_intro_ventshaft.MREA").into(),
+        patch_main_ventilation_shaft_section_b_door
+    );
+    patcher.add_scly_patch(
+        resource_info!("10_ice_research_a.MREA").into(),
+        patch_research_lab_hydra_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(),
+        patch_research_lab_aether_exploding_wall
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(),
+        patch_observatory_2nd_pass_solvablility
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(),
+        patch_mines_security_station_soft_lock
+    );
 
 
     if version == Version::V0_02 {
-        patcher.add_scly_patch(b"metroid5.pak", 0x643d038f, patch_ore_processing_door_lock_0_02);
-        patcher.add_scly_patch(b"Metroid6.pak", 0xc0498676, patch_geothermal_core_door_lock_0_02);
+        patcher.add_scly_patch(
+            resource_info!("01_mines_mainplaza.MREA").into(),
+            patch_ore_processing_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_door_lock_0_02
+        );
     }
 
     if config.elevator_layout[20] != 20 {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
-        patcher.add_scly_patch(b"Metroid4.pak", 0xB2701146, patch_landing_site_cutscene_triggers);
+        patcher.add_scly_patch(
+            resource_info!("01_over_mainplaza.MREA").into(),
+            patch_landing_site_cutscene_triggers
+        );
     }
     patcher.run(gc_disc)?;
     Ok(())
