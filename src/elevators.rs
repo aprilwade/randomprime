@@ -14,7 +14,28 @@ pub struct Elevator {
     pub default_dest: u8,
 }
 
-#[derive(Clone, Copy, Debug)]
+impl Elevator
+{
+    pub fn end_game_elevator() -> Elevator
+    {
+        Elevator {
+            pak_name: "Metroid8.pak",
+            name: "End of Game",
+            mlvl: 0x13d79165,
+            mrea: 0xb4b41c48,
+            mrea_idx: 0,
+            scly_id: 0xFFFFFFFF,
+
+            room_strg: 0xFFFFFFFF,
+            hologram_strg: 0xFFFFFFFF,
+            control_strg: 0xFFFFFFFF,
+
+            default_dest: 0xFF,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpawnRoom
 {
     pub pak_name: &'static str,
@@ -29,13 +50,7 @@ impl SpawnRoom
     pub fn from_room_idx(idx: usize) -> SpawnRoom
     {
         if idx == 20 {
-            SpawnRoom {
-                pak_name: "Metroid4.pak",
-                name: "Landing Site",
-                mlvl: 0x39f2de28,
-                mrea: 0xb2701146,
-                mrea_idx: 0,
-            }
+            SpawnRoom::landing_site_spawn_room()
         } else {
             let elv = &ELEVATORS[idx];
             SpawnRoom {
@@ -45,6 +60,17 @@ impl SpawnRoom
                 mrea: elv.mrea,
                 mrea_idx: elv.mrea_idx,
             }
+        }
+    }
+
+    pub fn landing_site_spawn_room() -> SpawnRoom
+    {
+        SpawnRoom {
+            pak_name: "Metroid4.pak",
+            name: "Landing Site",
+            mlvl: 0x39f2de28,
+            mrea: 0xb2701146,
+            mrea_idx: 0,
         }
     }
 

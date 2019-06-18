@@ -102,6 +102,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("staggered-suit-damage")
             .help(concat!("The suit damage reduction is determinted by the number of suits ",
                             "collected rather than the most powerful one collected.")))
+        .arg(Arg::with_name("skip impact crater")
+            .long("skip-impact-crater")
+            .help("Elevators to the Impact Crater immediately go to the game end sequence"))
 
         .arg(Arg::with_name("all artifact hints")
             .long("all-artifact-hints")
@@ -162,6 +165,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
 
     let layout_string = matches.value_of("pickup layout").unwrap().to_string();
     let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
+    let skip_impact_crater = matches.is_present("skip impact crater");
 
     let artifact_hint_behavior = if matches.is_present("all artifact hints") {
         patches::ArtifactHintBehavior::All
@@ -191,6 +195,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         obfuscate_items: matches.is_present("obfuscate items"),
         quiet: matches.is_present("quiet"),
 
+        skip_impact_crater,
         artifact_hint_behavior,
 
         flaahgra_music_files,

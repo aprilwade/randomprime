@@ -44,6 +44,8 @@ struct Config
     #[serde(default)]
     obfuscate_items: bool,
 
+    #[serde(default)]
+    skip_impact_crater: bool,
     #[serde(default = patches::ArtifactHintBehavior::Default)]
     artifact_hint_behavior: patches::ArtifactHintBehavior,
 
@@ -204,6 +206,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         obfuscate_items: config.obfuscate_items,
         quiet: false,
 
+        skip_impact_crater: config.skip_impact_crater,
         artifact_hint_behavior: config.artifact_hint_behavior,
 
         flaahgra_music_files,

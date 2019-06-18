@@ -11,7 +11,7 @@ use crate::{
     custom_asset_ids,
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{ELEVATORS, SpawnRoom},
+    elevators::{ELEVATORS, Elevator, SpawnRoom},
     gcz_writer::GczWriter,
     memmap,
     mlvl_wrapper,
@@ -660,9 +660,13 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 }
 
 
-fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [u8])
+fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [Elevator])
 {
-    for (i, elv) in ELEVATORS.iter().enumerate() {
+    for (elv, dest) in ELEVATORS.iter().zip(layout) {
+        if elv.pak_name.len() == 0 {
+            // Skip destination only elevators
+            continue
+        }
         patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |_ps, area| {
             let scly = area.mrea().scly_section_mut();
             for layer in scly.layers.iter_mut() {
@@ -670,27 +674,27 @@ fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [u8]
                     .find(|obj| obj.instance_id == elv.scly_id);
                 if let Some(obj) = obj {
                     let wt = obj.property_data.as_world_transporter_mut().unwrap();
-                    wt.mrea = ELEVATORS[layout[i] as usize].mrea;
-                    wt.mlvl = ELEVATORS[layout[i] as usize].mlvl;
+                    wt.mrea = dest.mrea;
+                    wt.mlvl = dest.mlvl;
                 }
             }
             Ok(())
         });
 
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to {}\u{0}", ELEVATORS[layout[i] as usize].name);
+            let string = format!("Transport to {}\u{0}", dest.name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
-            let string = format!("Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}", ELEVATORS[layout[i] as usize].name);
+            let string = format!("Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}", dest.name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}", ELEVATORS[layout[i] as usize].name);
+            let string = format!("Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}", dest.name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
@@ -756,6 +760,24 @@ fn patch_landing_site_cutscene_triggers(
     });
     Ok(())
 }
+
+fn patch_ending_scene_straight_to_credits(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
+    let trigger = layer.objects.iter_mut()
+        .find(|obj| obj.instance_id == 1103) // "Trigger - Start this Beatch"
+        .unwrap();
+    trigger.connections.as_mut_vec().push(structs::Connection {
+        state: structs::ConnectionState::ENTERED,
+        message: structs::ConnectionMsg::ACTION,
+        target_object_id: 1241, // "SpecialFunction-edngame"
+    });
+    Ok(())
+}
+
 
 fn patch_frigate_teleporter<'r>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: SpawnRoom)
     -> Result<(), String>
@@ -1651,6 +1673,7 @@ pub struct ParsedConfig
     pub staggered_suit_damage: bool,
     pub quiet: bool,
 
+    pub skip_impact_crater: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
@@ -1747,12 +1770,23 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     Ok(())
 }
 
-fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, version: Version) -> Result<(), String>
+fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, version: Version)
+    -> Result<(), String>
 {
     let pickup_layout: Vec<_> = config.pickup_layout.iter()
         .map(|i| PickupType::from_idx(*i as usize).unwrap())
         .collect();
     let pickup_layout = &pickup_layout[..];
+
+    let elevator_layout: Vec<_> = config.elevator_layout[..ELEVATORS.len()].iter()
+        .map(|i| ELEVATORS[*i as usize])
+        .map(|elv| if config.skip_impact_crater && elv.name == "Crater Entry Point" {
+                Elevator::end_game_elevator()
+            } else {
+                elv
+            })
+        .collect();
+    let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
 
     let mut rng = ChaChaRng::from_seed(&config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -1860,7 +1894,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         }
     }
 
-    let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
     if config.skip_frigate {
         patcher.add_file_patch(
             b"default.dol",
@@ -1900,8 +1933,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         move |_ps, area| patch_starting_pickups(area, starting_items, print_sis)
     );
 
-    // TODO: It might be nice for this list to be generated by resource_tracing, but
-    //       the sorting is probably non-trivial.
     const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
         resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
         resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
@@ -1948,7 +1979,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
-    make_elevators_patch(&mut patcher, &config.elevator_layout);
+    make_elevators_patch(&mut patcher, &elevator_layout);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
@@ -1990,7 +2021,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-    if config.elevator_layout[20] != 20 {
+    if spawn_room != SpawnRoom::landing_site_spawn_room() {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(
@@ -1998,6 +2029,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             patch_landing_site_cutscene_triggers
         );
     }
+
+    if config.skip_impact_crater {
+        patcher.add_scly_patch(
+            resource_info!("01_endcinema.MREA").into(),
+            patch_ending_scene_straight_to_credits
+        );
+    }
+
     patcher.run(gc_disc)?;
     Ok(())
 }
