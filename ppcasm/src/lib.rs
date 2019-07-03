@@ -6,13 +6,7 @@ pub use ppcasm_macro::ppcasm;
 use std::io;
 
 use byteorder::{BigEndian, WriteBytesExt};
-
-#[doc(hidden)]
-pub mod macro_rexport
-{
-    pub use generic_array::arr;
-    pub use generic_array::arr_impl;
-}
+pub use generic_array;
 
 pub fn upper_bits(n: u32) -> i32
 {
@@ -71,9 +65,36 @@ impl<A, L> AsmBlock<A, L>
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct AsmInstrPart(pub u8, pub i32);
+pub struct AsmInstrPart(u8, u32);
 impl AsmInstrPart
 {
+    pub fn new<T: Into<i64>>(bit_len: u8, data: T) -> AsmInstrPart
+    {
+        if bit_len > 32 {
+            panic!("AsmInstrPart bit_len may not exceed 32 (max 32 bits per instruction)")
+        }
+
+        let data = data.into();
+        let data = if data >= 0 {
+            if (1 << bit_len) - 1 < data {
+                panic!("AsmInstrPart value {:x} is longer than {} bits", data, bit_len)
+            }
+            data as u32
+        } else {
+            // NOTE: (bit_len - 1) because the top bit MUST be negative in 2s complement
+            if -1 << (bit_len - 1) > data {
+                panic!("AsmInstrPart value {:x} is longer than {} bits", data, bit_len)
+            }
+            if bit_len == 32 {
+                data as u32
+            } else {
+                // Zero out the upper bits
+                data as u32 & ((1 << bit_len) - 1)
+            }
+        };
+        AsmInstrPart(bit_len, data)
+    }
+
     pub fn bit_len(&self) -> u8
     {
         self.0
@@ -87,11 +108,7 @@ impl AsmInstrPart
 
     pub fn encoding(&self) -> u32
     {
-        if self.0 == 32 {
-            self.1 as u32
-        } else {
-            (self.1 as u32) & ((1 << self.shiftable_bit_len()) - 1)
-        }
+        self.1
     }
 
     pub fn assemble(parts: &[AsmInstrPart]) -> u32

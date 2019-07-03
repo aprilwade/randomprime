@@ -1465,7 +1465,7 @@ fn patch_dol<'r>(
             lis     r6, data@h;
             addi    r6, r6, data@l;
             lfsx     f0, r4, r6;
-            b       { addrs.suit_damage_reduction_calc as i32 + 0x9c };
+            b       { addrs.suit_damage_reduction_calc + 0x9c };
         data:
             .float 0.0;
             .float 0.1;

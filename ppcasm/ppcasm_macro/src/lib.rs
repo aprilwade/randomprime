@@ -3,13 +3,14 @@ extern crate proc_macro;
 use proc_macro_hack::proc_macro_hack;
 
 use proc_macro::TokenStream;
-use quote::{quote, TokenStreamExt, ToTokens};
+use quote::{quote, quote_spanned, TokenStreamExt, ToTokens};
 use syn::{
     braced, parenthesized, parse_macro_input, parse_quote, token, Error, Expr,
     Ident, LitByteStr, LitFloat, LitInt, Token, Result
 };
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 
 use std::collections::HashSet;
 
@@ -53,12 +54,11 @@ impl ToTokens for AsmBlock
 {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream)
     {
-        let sa = &self.starting_address;
+        let sa: &Ident = &parse_quote! { __sa__ };
 
         let labels_let_iter = self.asm.iter()
             .enumerate()
             .flat_map(|(i, instr)| {
-                let sa = &self.starting_address;
                 let i = (i * 4) as u32;
                 instr.labels.iter().map(move |id| quote!(let #id = #sa + #i;))
             });
@@ -72,27 +72,35 @@ impl ToTokens for AsmBlock
             .map(|(i, instr)| {
                 let iter = instr.parts.iter().map(|(width, op)| {
                     match op {
-                        AsmOp::Expr(e) => quote! { ppcasm::AsmInstrPart(#width, #e) },
+                        AsmOp::Expr(e) => {
+                            quote_spanned! {e.span()=>
+                                ppcasm::AsmInstrPart::new(#width, #e)
+                            }
+                        },
                         AsmOp::BranchExpr(e) => {
                             let instr_offset = i as i64 * 4;
-                            quote! {
-                                ppcasm::AsmInstrPart(
+                            quote_spanned! {e.span()=>
+                                ppcasm::AsmInstrPart::new(
                                     #width,
-                                    (((#e) as i64 - (#sa) as i64 - (#instr_offset)) >> 2) as i32
+                                    ((#e) as i64 - #sa as i64 - (#instr_offset)) >> 2
                                 )
                             }
                         },
                         AsmOp::AtBranchExpr(e) => {
-                            quote! { ppcasm::AsmInstrPart(#width, ((#e) as u32 >> 2) as i32) }
+                            quote_spanned! {e.span()=>
+                                ppcasm::AsmInstrPart::new(#width, ((#e) >> 2))
+                            }
                         },
                     }
                 });
                 quote! { ppcasm::AsmInstrPart::assemble(&[#(#iter),*]) }
             });
 
+        let sa_e = &self.starting_address;
         tokens.append_all(quote! {
             {
-                use ::ppcasm::macro_rexport::{arr, arr_impl};
+                let #sa: u32 = #sa_e;
+                use ::ppcasm::generic_array::arr;
                 #(#labels_let_iter)*
                 struct Labels {
                     #(#labels_name_iter: u32, )*
@@ -100,7 +108,7 @@ impl ToTokens for AsmBlock
                 let __labels__ = Labels {
                     #(#labels_field_iter,)*
                 };
-                ppcasm::AsmBlock::new(#sa, arr![u32; #(#instrs_iter),* ], __labels__)
+                ppcasm::AsmBlock::new(__sa__, arr![u32; #(#instrs_iter),* ], __labels__)
             }
         })
     }
@@ -196,7 +204,7 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
         parse_quote! { #id }
     } else {
         let lit: LitInt = input.parse()?;
-        let v = lit.value() as i32;
+        let v = lit.value() as i64;
         parse_quote! { #v }
     };
     if let Ok(_) = input.parse::<Token![@]>() {
@@ -229,7 +237,7 @@ macro_rules! parse_operand {
     ($input:ident, (r:$i:ident)) => {
         let ident: Ident = $input.parse()?;
         let $i = if let Some(i) = GPR_NAMES.iter().position(|n| ident == n) {
-            let i = i as i32;
+            let i = i as i64;
             (5, AsmOp::Expr(parse_quote! { #i }))
         } else {
             Err(Error::new(ident.span(), format!("Expected GP register name, got {}", ident)))?
@@ -238,7 +246,7 @@ macro_rules! parse_operand {
     ($input:ident, (f:$i:ident)) => {
         let ident: Ident = $input.parse()?;
         let $i = if let Some(i) = FPR_NAMES.iter().position(|n| ident == n) {
-            let i = i as i32;
+            let i = i as i64;
             (5, AsmOp::Expr(parse_quote! { #i }))
         } else {
             Err(Error::new(ident.span(), format!("Expected FP register name, got {}", ident)))?
@@ -270,7 +278,7 @@ macro_rules! decl_instrs {
             fn parse(input: ParseStream) -> Result<Self>
             {
                 let mut labels = vec![];
-                // XXX Peeking for Idents is way to dumb :(
+                // XXX Peeking for Idents is way too dumb :(
                 while input.peek(|_| -> Ident { unreachable!() }) && input.peek2(Token![:]) {
                     labels.push(input.parse()?);
                     let _: Token![:] = input.parse()?;
@@ -279,7 +287,7 @@ macro_rules! decl_instrs {
                 if let Ok(_) = input.parse::<Token![.]>() {
                     let e = if let Ok(_) = input.parse::<kw::float>() {
                         let f = input.parse::<LitFloat>()?.value() as f32;
-                        parse_quote! { #f.to_bits() as i32 }
+                        parse_quote! { #f.to_bits() }
 
                     } else if let Ok(_) = input.parse::<kw::long>() {
                         let forked = input.fork();
@@ -287,7 +295,7 @@ macro_rules! decl_instrs {
                         if i > u32::max_value() as u64 {
                             Err(forked.error("Literal out of range"))?;
                         }
-                        let i = i as i32;
+                        let i = i as u32;
                         parse_quote! { #i }
 
                     } else if let Ok(_) = input.parse::<kw::asciiz>() {
@@ -301,7 +309,7 @@ macro_rules! decl_instrs {
                                 .map(|chunk| AsmInstr {
                                     labels: labels.take().unwrap_or(vec![]),
                                     parts: chunk.iter()
-                                        .map(|b| *b as i32)
+                                        .map(|b| *b)
                                         .map(|b| (8, AsmOp::Expr(parse_quote! { #b })))
                                         .collect(),
                                 })

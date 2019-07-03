@@ -8,5 +8,5 @@ workspace = ".."
 
 [dependencies]
 byteorder = "1.2"
-generic-array = "0.12"
+generic-array = "0.13"
 num = "0.1"
