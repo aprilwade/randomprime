@@ -125,25 +125,6 @@ impl<'a> io::Read for PatchedBinary<'a>
     }
 }
 
-// impl<'a> structs::ToRead for PatchedBinaryBase<'a, vec::IntoIter<Cow<'a, [u8]>>>
-// {
-//     fn to_read<'s>(&'s self) -> Box<io::Read + 's>
-//     {
-//         let mut curr_segment = io::Cursor::new(Cow::Borrowed(&self.curr_segment.get_ref()[..]));
-//         curr_segment.set_position(self.curr_segment.position());
-//         Box::new(PatchedBinaryBase {
-//             curr_segment,
-//             segments: self.segments.as_slice().iter().map(|s| Cow::Borrowed(&s[..])),
-//             len: self.len,
-//         })
-//     }
-
-//     fn len(&self) -> usize
-//     {
-//         self.len
-//     }
-// }
-
 #[derive(Debug, Clone)]
 enum DolSegment<'a>
 {
@@ -243,11 +224,10 @@ impl<'a> DolPatcher<'a>
         Ok(())
     }
 
-    // TODO: Ensure the bytes object has an appropriately aligned length (32 bytes)
     pub fn add_data_segment(&mut self, addr: u32, bytes: Cow<'a, [u8]>) -> Result<&mut Self, String>
     {
-        if bytes.len() & !0x1f != 0 {
-            Err("Invalid length for new data - not 32 byte aligned".to_owned())?;
+        if bytes.len() & 0x1f != 0 {
+            Err(format!("Invalid length for new data ({}) - not 32 byte aligned", bytes.len()))?;
         }
         self.check_for_overlapping_segment(addr, bytes.len() as u32)?;
         let seg = self.data_segments.iter_mut()
@@ -259,8 +239,8 @@ impl<'a> DolPatcher<'a>
 
     pub fn add_text_segment(&mut self, addr: u32, bytes: Cow<'a, [u8]>) -> Result<&mut Self, String>
     {
-        if bytes.len() & !0x1f != 0 {
-            Err("Invalid length for new text - not 32 byte aligned".to_owned())?;
+        if bytes.len() & 0x1f != 0 {
+            Err(format!("Invalid length for new text ({}) - not 32 byte aligned", bytes.len()))?;
         }
         self.check_for_overlapping_segment(addr, bytes.len() as u32)?;
         let seg = self.text_segments.iter_mut()
@@ -303,9 +283,23 @@ impl<'a> DolPatcher<'a>
 
 
 
-impl<'a> structs::ToRead for DolPatcher<'a>
+impl<'a> reader_writer::WithRead for DolPatcher<'a>
 {
-    fn to_read<'s>(&'s self) -> Box<io::Read + 's>
+    fn len(&self) -> usize
+    {
+        let contents_len: u32 = self.data_segments.iter().chain(&self.text_segments)
+            .map(|seg| seg.len())
+            .sum();
+        0x100 + contents_len as usize
+    }
+
+    fn boxed<'s>(&self) -> Box<reader_writer::WithRead + 's>
+        where Self: 's
+    {
+        Box::new(self.clone())
+    }
+
+    fn with_read(&self, f: &mut dyn FnMut(&mut io::Read) -> io::Result<u64>) -> io::Result<u64>
     {
         let mut data_segment_refs = GenericArray::<_, U11>::from_exact_iter(&self.data_segments).unwrap();
         data_segment_refs.sort_by_key(|seg| if seg.is_empty() { 0xFFFFFFFF } else { seg.addr() });
@@ -317,27 +311,29 @@ impl<'a> structs::ToRead for DolPatcher<'a>
             .map(|i| *i)
             .collect();
 
-        let mut header = Vec::with_capacity(0x100);
+        let mut header = [0; 0x100];
+        let mut header = io::Cursor::new(&mut header[..]);
 
         let mut offset = 0x100;
         for seg in segment_refs.iter() {
             if !seg.is_empty() {
-                offset.write_to(&mut header).unwrap();
+                offset.write_to(&mut header)?;
             } else {
-                0u32.write_to(&mut header).unwrap();
+                0u32.write_to(&mut header)?;
             }
             offset += seg.len();
         }
         for seg in segment_refs.iter() {
-            seg.addr().write_to(&mut header).unwrap();
+            seg.addr().write_to(&mut header)?;
         }
         for seg in segment_refs.iter() {
-            seg.len().write_to(&mut header).unwrap();
+            seg.len().write_to(&mut header)?;
         }
-        self.bss_addr.write_to(&mut header).unwrap();
-        self.bss_size.write_to(&mut header).unwrap();
-        self.entry_point.write_to(&mut header).unwrap();
-        header.resize(0x100, 0u8);
+        self.bss_addr.write_to(&mut header)?;
+        self.bss_size.write_to(&mut header)?;
+        self.entry_point.write_to(&mut header)?;
+
+        header.set_position(0);
 
         let iter = segment_refs.into_iter()
             .filter_map(|seg| {
@@ -348,22 +344,7 @@ impl<'a> structs::ToRead for DolPatcher<'a>
                 }
             });
 
-        Box::new(io::Read::chain(io::Cursor::new(header), ReadIteratorChain::new(iter)))
-    }
-
-    fn len(&self) -> usize
-    {
-        let contents_len: u32 = self.data_segments.iter().chain(&self.text_segments)
-            // .map(|seg| (seg.len() + 31) & (u32::max_value() - 31))
-            .map(|seg| seg.len())
-            .sum();
-        0x100 + contents_len as usize
-    }
-
-    fn boxed<'s>(&self) -> Box<structs::ToRead + 's>
-        where Self: 's
-    {
-        Box::new(self.clone())
+        f(&mut io::Read::chain(header, ReadIteratorChain::new(iter)))
     }
 }
 

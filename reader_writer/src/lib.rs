@@ -16,6 +16,7 @@ pub mod diff_list;
 pub mod lcow;
 pub mod derivable_array_proxy;
 pub mod uncached;
+pub mod with_read;
 
 pub mod padding;
 
@@ -35,6 +36,7 @@ pub use crate::{
     iterator_array::{IteratorArray, IteratorArrayIterator},
     derivable_array_proxy::{Dap, DerivableFromIterator},
     uncached::Uncached,
+    with_read::WithRead,
 
     lcow::LCow,
 

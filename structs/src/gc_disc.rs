@@ -1,11 +1,10 @@
 use auto_struct_macros::auto_struct;
 
-use reader_writer::{CStr, Reader, Readable, RoArray, Writable};
+use reader_writer::{CStr, Reader, Readable, RoArray, WithRead, Writable};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-use std::fmt;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
 use crate::{
     pak::Pak,
@@ -316,49 +315,13 @@ pub struct FstEntry<'r>
     pub name: CStr<'r>,
 }
 
-pub trait ToRead: fmt::Debug
-{
-    fn to_read<'r>(&'r self) -> Box<Read + 'r>;
-    fn len(&self) -> usize;
-    fn boxed<'r>(&self) -> Box<ToRead + 'r>
-        where Self: 'r;
-}
-
-impl<'r> Clone for Box<ToRead + 'r>
-{
-    fn clone(&self) -> Self
-    {
-        self.boxed()
-    }
-}
-
-impl<T> ToRead for T
-    where T: AsRef<[u8]> + fmt::Debug + Clone
-{
-    fn to_read<'r>(&'r self) -> Box<Read + 'r>
-    {
-        Box::new(io::Cursor::new(self.as_ref()))
-    }
-
-    fn len(&self) -> usize
-    {
-        self.as_ref().len()
-    }
-
-    fn boxed<'r>(&self) -> Box<ToRead + 'r>
-        where Self: 'r
-    {
-        Box::new(self.clone())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum FstEntryFile<'r>
 {
     Pak(Pak<'r>),
     Thp(Thp<'r>),
     Bnr(Bnr<'r>),
-    ExternalFile(Box<ToRead + 'r>),
+    ExternalFile(Box<WithRead + 'r>),
     Unknown(Reader<'r>),
 }
 
@@ -444,7 +407,7 @@ impl<'r> FstEntryFile<'r>
             FstEntryFile::Pak(ref pak) => pak.write_to(writer),
             FstEntryFile::Thp(ref thp) => thp.write_to(writer),
             FstEntryFile::Bnr(ref bnr) => bnr.write_to(writer),
-            FstEntryFile::ExternalFile(ref i) => io::copy(&mut *i.to_read(), writer),
+            FstEntryFile::ExternalFile(ref i) => i.with_read(&mut |r| io::copy(r, writer)),
             FstEntryFile::Unknown(ref reader) => {
                 writer.write_all(&reader)?;
                 Ok(reader.len() as u64)

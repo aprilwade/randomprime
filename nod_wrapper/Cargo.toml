@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 cpp = "0.5"
-structs = { path = "../structs" }
+reader_writer = { path = "../reader_writer" }
 
 [build-dependencies]
 # cmake = "0.1"

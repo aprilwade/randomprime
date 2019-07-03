@@ -227,25 +227,25 @@ impl Clone for FileWrapper
     }
 }
 
-impl structs::ToRead for FileWrapper
+impl reader_writer::WithRead for FileWrapper
 {
-    fn to_read<'a>(&'a self) -> Box<io::Read + 'a>
-    {
-        Box::new(FileWrapperRead {
-            fw: self,
-            offset: 0,
-        })
-    }
-
     fn len(&self) -> usize
     {
         self.len() as usize
     }
 
-    fn boxed<'a>(&self) -> Box<structs::ToRead + 'a>
+    fn boxed<'a>(&self) -> Box<reader_writer::WithRead + 'a>
         where Self: 'a
     {
         Box::new(self.clone())
+    }
+
+    fn with_read(&self, f: &mut dyn FnMut(&mut io::Read) -> io::Result<u64>) -> io::Result<u64>
+    {
+        f(&mut FileWrapperRead {
+            fw: self,
+            offset: 0,
+        })
     }
 }
 
