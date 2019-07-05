@@ -22,6 +22,11 @@ struct AsmBlock
     asm: Vec<AsmInstr>,
 }
 
+// XXX Why doesn't syn define this for us?
+macro_rules! parse_quote_spanned {
+    ($($tts:tt)*) => { syn::parse(quote_spanned! { $($tts)* }.into()).unwrap() };
+}
+
 impl Parse for AsmBlock
 {
     fn parse(input: ParseStream) -> Result<Self>
@@ -196,7 +201,7 @@ macro_rules! parse_part {
 
 fn parse_immediate(input: ParseStream) -> Result<Expr>
 {
-    let expr = if input.peek(token::Brace) {
+    let expr: syn::Expr = if input.peek(token::Brace) {
         let content;
         let _ = braced!(content in input);
         content.parse()?
@@ -205,14 +210,14 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
     } else {
         let lit: LitInt = input.parse()?;
         let v = lit.value() as i64;
-        parse_quote! { #v }
+        parse_quote_spanned! { lit.span()=> #v }
     };
     if let Ok(_) = input.parse::<Token![@]>() {
         let id: Ident = input.parse()?;
         if id == "h" {
-            Ok(parse_quote! { ppcasm::upper_bits(#expr) })
+            Ok(parse_quote_spanned! {expr.span()=> ppcasm::upper_bits(#expr) })
         } else if id == "l" {
-            Ok(parse_quote! { ppcasm::lower_bits(#expr) })
+            Ok(parse_quote_spanned! {expr.span()=> ppcasm::lower_bits(#expr) })
         } else {
             Err(Error::new(id.span(), "Expected either 'h' or 'l'"))
         }
@@ -238,7 +243,7 @@ macro_rules! parse_operand {
         let ident: Ident = $input.parse()?;
         let $i = if let Some(i) = GPR_NAMES.iter().position(|n| ident == n) {
             let i = i as i64;
-            (5, AsmOp::Expr(parse_quote! { #i }))
+            (5, AsmOp::Expr(parse_quote_spanned! {ident.span()=> #i }))
         } else {
             Err(Error::new(ident.span(), format!("Expected GP register name, got {}", ident)))?
         };
@@ -247,7 +252,7 @@ macro_rules! parse_operand {
         let ident: Ident = $input.parse()?;
         let $i = if let Some(i) = FPR_NAMES.iter().position(|n| ident == n) {
             let i = i as i64;
-            (5, AsmOp::Expr(parse_quote! { #i }))
+            (5, AsmOp::Expr(parse_quote_spanned! {ident.span()=> #i }))
         } else {
             Err(Error::new(ident.span(), format!("Expected FP register name, got {}", ident)))?
         };
@@ -286,20 +291,23 @@ macro_rules! decl_instrs {
 
                 if let Ok(_) = input.parse::<Token![.]>() {
                     let e = if let Ok(_) = input.parse::<kw::float>() {
-                        let f = input.parse::<LitFloat>()?.value() as f32;
-                        parse_quote! { #f.to_bits() }
+                        let lit = input.parse::<LitFloat>()?;
+                        let f = lit.value() as f32;
+                        parse_quote_spanned! {lit.span()=> #f.to_bits() }
 
                     } else if let Ok(_) = input.parse::<kw::long>() {
                         let forked = input.fork();
-                        let i = input.parse::<LitInt>()?.value();
+                        let lit = input.parse::<LitInt>()?;
+                        let i = lit.value();
                         if i > u32::max_value() as u64 {
                             Err(forked.error("Literal out of range"))?;
                         }
                         let i = i as u32;
-                        parse_quote! { #i }
+                        parse_quote_spanned! {lit=> #i }
 
                     } else if let Ok(_) = input.parse::<kw::asciiz>() {
-                        let mut bytes = input.parse::<LitByteStr>()?.value();
+                        let lit = input.parse::<LitByteStr>()?;
+                        let mut bytes = lit.value();
                         bytes.push(0);
                         while bytes.len() % 4 != 0 {
                             bytes.push(0);
@@ -310,7 +318,8 @@ macro_rules! decl_instrs {
                                     labels: labels.take().unwrap_or(vec![]),
                                     parts: chunk.iter()
                                         .map(|b| *b)
-                                        .map(|b| (8, AsmOp::Expr(parse_quote! { #b })))
+                                        .map(|b| parse_quote_spanned! {lit.span()=> #b })
+                                        .map(|e| (8, AsmOp::Expr(e)))
                                         .collect(),
                                 })
                                 .collect::<Vec<_>>()
