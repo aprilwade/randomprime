@@ -298,6 +298,24 @@ version = "0.2.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "macro_file_proxy"
+version = "0.1.0"
+dependencies = [
+ "macro_file_proxy_proc_macro 0.1.0",
+ "proc-macro-hack 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "macro_file_proxy_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro-hack 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro2 0.4.27 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.15.26 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "memchr"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -564,6 +582,7 @@ dependencies = [
 name = "resource_info_table"
 version = "0.1.0"
 dependencies = [
+ "macro_file_proxy 0.1.0",
  "reader_writer 0.1.0",
 ]
 

@@ -28,7 +28,7 @@ lto = true
 panic = "unwind"
 
 [workspace]
-members = ["structs", "reader_writer", "auto_struct_macros", "ppcasm", "ppcasm/ppcasm_macro", "nod_wrapper", "resource_info_table"]
+members = ["structs", "reader_writer", "auto_struct_macros", "ppcasm", "ppcasm/ppcasm_macro", "nod_wrapper", "resource_info_table", "macro_file_proxy","macro_file_proxy/macro_file_proxy_proc_macro"]
 
 [lib]
 name = "randomprime"
