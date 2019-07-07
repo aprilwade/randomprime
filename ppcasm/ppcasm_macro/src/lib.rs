@@ -205,12 +205,15 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
         let content;
         let _ = braced!(content in input);
         content.parse()?
-    } else if let Ok(id) = input.parse::<Ident>() {
-        parse_quote! { #id }
     } else {
-        let lit: LitInt = input.parse()?;
-        let v = lit.value() as i64;
-        parse_quote_spanned! { lit.span()=> #v }
+        let minus = input.parse::<Token![-]>().ok();
+        if let Ok(id) = input.parse::<Ident>() {
+            parse_quote_spanned! {id.span()=> (#minus #id) }
+        } else {
+            let lit: LitInt = input.parse()?;
+            let v = lit.value() as i64;
+            parse_quote_spanned! {lit.span()=> (#minus #v) }
+        }
     };
     if let Ok(_) = input.parse::<Token![@]>() {
         let id: Ident = input.parse()?;
@@ -228,16 +231,10 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
 
 macro_rules! parse_operand {
     ($input:ident, (r:$i:ident:$d:ident)) => {
-        let ($d, $i) = if !$input.peek(Ident) {
-            let $d = AsmOp::Expr(parse_immediate($input)?);
-            let content;
-            let _: token::Paren = parenthesized!(content in $input);
-            parse_operand!(content, (r:$i));
-            ($d, $i)
-        } else {
-            parse_operand!($input, (r:$i));
-            (AsmOp::Expr(parse_quote! { 0 }), $i)
-        };
+        let $d = AsmOp::Expr(parse_immediate($input)?);
+        let content;
+        let _: token::Paren = parenthesized!(content in $input);
+        parse_operand!(content, (r:$i));
     };
     ($input:ident, (r:$i:ident)) => {
         let ident: Ident = $input.parse()?;
