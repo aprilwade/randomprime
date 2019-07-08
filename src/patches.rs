@@ -1534,6 +1534,13 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
+    if version == Version::V0_02 {
+        let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
+                b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
+        });
+        dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
+    }
+
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
 }
