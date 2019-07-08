@@ -170,6 +170,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dol_symbol_table"
+version = "0.1.0"
+dependencies = [
+ "macro_file_proxy 0.1.0",
+ "reader_writer 0.1.0",
+]
+
+[[package]]
 name = "encoding"
 version = "0.2.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,6 +520,7 @@ version = "0.2.3"
 dependencies = [
  "adler32 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dol_symbol_table 0.1.0",
  "encoding 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

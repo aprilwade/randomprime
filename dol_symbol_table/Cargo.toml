@@ -1,0 +1,11 @@
+[package]
+name = "dol_symbol_table"
+version = "0.1.0"
+authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
+
+workspace = ".."
+
+[dependencies]
+reader_writer = { path = "../reader_writer" }
+macro_file_proxy = { path = "../macro_file_proxy" }

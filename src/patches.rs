@@ -23,6 +23,7 @@ use crate::{
     ResourceData,
 };
 
+use dol_symbol_table::mp1_symbol;
 use resource_info_table::{resource_info, ResourceInfo};
 use ppcasm::ppcasm;
 
@@ -40,8 +41,9 @@ use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
     ffi::CString,
+    fmt,
     fs::File,
-    io::{self, Write},
+    io::Write,
     iter,
 };
 
@@ -1387,103 +1389,43 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
-    struct Addrs
-    {
-        load_mlvl_upper: u32,
-        load_mlvl_lower: u32,
-        load_mrea_idx: u32,
-        disable_hints: u32,
-        heat_damage_check: u32,
-        suit_damage_reduction_calc: u32,
-        save_filename_a: u32,
-        save_filename_b: u32,
-        cinematic_skip: u32,
-        unlockables_default_ctor: u32,
-        unlockables_read_ctor: u32,
-
-        missile_hud_formating: u32,
-        powerbomb_hud_formating: u32,
-        sprintf: u32,
+    macro_rules! symbol_addr {
+        ($sym:tt, $version:expr) => {
+            {
+                let s = mp1_symbol!($sym);
+                match &$version {
+                    Version::V0_00 => s.addr_0_00,
+                    Version::V0_01 => s.addr_0_01,
+                    Version::V0_02 => s.addr_0_02,
+                }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
+            }
+        }
     }
 
-    let addrs = match version {
-        Version::V0_00 => Addrs {
-                load_mlvl_upper: 0x80022fbc,
-                load_mlvl_lower: 0x80022fc8,
-                heat_damage_check: 0x8014f784,
-                load_mrea_idx: 0x801d5080,
-                disable_hints: 0x8020f26c,
-                suit_damage_reduction_calc: 0x80049efc,
-                save_filename_a: 0x803d47cc,
-                save_filename_b: 0x803d47db,
-                cinematic_skip: 0x80151868,
-                unlockables_read_ctor: 0x801d5c70,
-                unlockables_default_ctor: 0x801d609c,
-
-                missile_hud_formating: 0x80191900,
-                powerbomb_hud_formating: 0x801cd664,
-                sprintf: 0x8038DCDC,
-            },
-        Version::V0_01 => return Err("Unreachable?".to_owned()),
-        Version::V0_02 => Addrs {
-                load_mlvl_upper: 0x800232a8,
-                load_mlvl_lower: 0x800232b4,
-                heat_damage_check: 0x8014ff68,
-                load_mrea_idx: 0x801d58d0,
-                disable_hints: 0x8020fae4,
-                suit_damage_reduction_calc: 0x8004a1e8,
-                save_filename_a: 0x803d588c,
-                save_filename_b: 0x803d589b,
-                cinematic_skip: 0x8015204c,
-                unlockables_read_ctor: 0x801d64c0,
-                unlockables_default_ctor: 0x801d68ec,
-
-                missile_hud_formating: 0x801920e4,
-                powerbomb_hud_formating: 0x801cdeb4,
-                sprintf: 0x8038ecf4,
-            },
+    let reader = match *file {
+        structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
+        _ => panic!(),
     };
 
+    let mut dol_patcher = DolPatcher::new(reader);
+    dol_patcher
+        .patch(symbol_addr!("aMetroidprimeA", version), b"randomprime A\0"[..].into())?
+        .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
 
-    let mrea_idx = spawn_room.mrea_idx;
-
-    let mut mlvl_bytes = u32_to_be(spawn_room.mlvl);
-    // PPC addi encoding shenanigans
-    if mlvl_bytes[2] & 0x80 == 0x80 {
-        mlvl_bytes[1] += 1;
-    }
-
-    let staggered_suit_damage_patch = ppcasm!(addrs.suit_damage_reduction_calc, {
-            lwz     r3, 0x8b8(r25);
-            lwz     r3, 0(r3);
-            lwz     r4, 220(r3);
-            lwz     r5, 212(r3);
-            addc    r4, r4, r5;
-            lwz     r5, 228(r3);
-            addc    r4, r4, r5;
-            rlwinm  r4, r4, 2, 0, 29;
-            lis     r6, data@h;
-            addi    r6, r6, data@l;
-            lfsx     f0, r4, r6;
-            b       { addrs.suit_damage_reduction_calc + 0x9c };
-        data:
-            .float 0.0;
-            .float 0.1;
-            .float 0.2;
-            .float 0.5;
-    });
-
-    let cinematic_skip_patch = ppcasm!(addrs.cinematic_skip, {
+    let cinematic_skip_patch = ppcasm!(symbol_addr!("ShouldSkipCinematic__22CScriptSpecialFunctionFR13CStateManager", version), {
             li      r3, 0x1;
             blr;
     });
-    let unlockables_default_ctor_patch = ppcasm!(addrs.unlockables_default_ctor, {
+    dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
+
+    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {// addrs.unlockables_default_ctor, {
             li      r6, 100;
             stw     r6, 0xcc(r3);
             lis     r6, 0xF7FF;
             stw     r6, 0xd0(r3);
     });
-    let unlockables_read_ctor_patch = ppcasm!(addrs.unlockables_read_ctor, {
+    dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
+    let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {// addrs.unlockables_read_ctor, {
             li      r6, 100;
             stw     r6, 0xcc(r28);
             lis     r6, 0xF7FF;
@@ -1491,17 +1433,10 @@ fn patch_dol<'r>(
             mr      r3, r29;
             li      r4, 2;
     });
+    dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
 
 
-    let heat_damage_patch = ppcasm!(addrs.heat_damage_check, {
-            lwz     r4, 0xdc(r4);
-            nop;
-            subf    r0, r6, r5;
-            cntlzw  r0, r0;
-            nop;
-    });
-
-    let missile_hud_formating_patch = ppcasm!(addrs.missile_hud_formating, {
+    let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
             b          skip;
         fmt:
             .asciiz b"%03d/%03d";
@@ -1521,13 +1456,14 @@ fn patch_dol<'r>(
             addi       r3, r1, 12;// arg_C
 
             nop; // crclr      cr6;
-            bl         { addrs.sprintf };
+            bl         { symbol_addr!("sprintf", version) };
 
             addi       r3, r1, 20;// arg_14;
             addi       r4, r1, 12;// arg_C
-        });
+    });
+    dol_patcher.ppcasm_patch(&missile_hud_formating_patch)?;
 
-    let powerbomb_hud_formating_patch = ppcasm!(addrs.powerbomb_hud_formating, {
+    let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
             b skip;
         fmt:
             .asciiz b"%d/%d";// %d";
@@ -1539,34 +1475,62 @@ fn patch_dol<'r>(
             addi       r4, r4, fmt@l;
             addi       r3, r1, 12;// arg_C;
             nop; // crclr      cr6;
-            bl         { addrs.sprintf };
+            bl         { symbol_addr!("sprintf", version) };
 
-        });
+    });
+    dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
 
-    let reader = match *file {
-        structs::FstEntryFile::Unknown(ref reader) => reader.clone(),
-        _ => panic!(),
-    };
+    let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 4, {
+            lis         r4, {spawn_room.mlvl}@h;
+    });
+    dol_patcher.ppcasm_patch(&level_select_mlvl_upper_patch)?;
 
-    let mut dol_patcher = DolPatcher::new(reader);
-    dol_patcher
-        .patch(addrs.load_mlvl_upper + 2, Cow::Owned(vec![mlvl_bytes[0], mlvl_bytes[1]]))?
-        .patch(addrs.load_mlvl_lower + 2, Cow::Owned(vec![mlvl_bytes[2], mlvl_bytes[3]]))?
-        .patch(addrs.load_mrea_idx + 3, Cow::Owned(vec![mrea_idx as u8]))?
-        .patch(addrs.disable_hints + 1, Cow::Borrowed(&[0xC0u8] as &[u8]))?
-        .patch(addrs.save_filename_a, b"randomprime A\0"[..].into())?
-        .patch(addrs.save_filename_b, b"randomprime B\0"[..].into())?
-        .ppcasm_patch(&missile_hud_formating_patch)?
-        .ppcasm_patch(&powerbomb_hud_formating_patch)?
-        .ppcasm_patch(&cinematic_skip_patch)?
-        .ppcasm_patch(&unlockables_default_ctor_patch)?
-        .ppcasm_patch(&unlockables_read_ctor_patch)?;
+    let level_select_mlvl_lower_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x10, {
+            addi        r0, r4, {spawn_room.mlvl}@l;
+    });
+    dol_patcher.ppcasm_patch(&level_select_mlvl_lower_patch)?;
+
+    let level_select_mrea_idx_patch = ppcasm!(symbol_addr!("__ct__11CWorldStateFUi", version) + 0x10, {
+            li          r0, { spawn_room.mrea_idx };
+    });
+    dol_patcher.ppcasm_patch(&level_select_mrea_idx_patch)?;
+
+    let disable_hints_setting_patch = ppcasm!(symbol_addr!("ResetToDefaults__12CGameOptionsFv", version) + 0x80, {
+            rlwimi      r0, r6, 3, 28, 28;
+    });
+    dol_patcher.ppcasm_patch(&disable_hints_setting_patch)?;
 
     if patch_heat_damage {
+        let heat_damage_patch = ppcasm!(symbol_addr!("ThinkAreaDamage__22CScriptSpecialFunctionFfR13CStateManager", version) + 0x4c, {
+                lwz     r4, 0xdc(r4);
+                nop;
+                subf    r0, r6, r5;
+                cntlzw  r0, r0;
+                nop;
+        });
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
     }
 
     if patch_suit_damage {
+        let staggered_suit_damage_patch = ppcasm!(symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + 0x128, {
+                lwz     r3, 0x8b8(r25);
+                lwz     r3, 0(r3);
+                lwz     r4, 220(r3);
+                lwz     r5, 212(r3);
+                addc    r4, r4, r5;
+                lwz     r5, 228(r3);
+                addc    r4, r4, r5;
+                rlwinm  r4, r4, 2, 0, 29;
+                lis     r6, data@h;
+                addi    r6, r6, data@l;
+                lfsx     f0, r4, r6;
+                b       { symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + 0x1c4 };
+            data:
+                .float 0.0;
+                .float 0.1;
+                .float 0.2;
+                .float 0.5;
+        });
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
@@ -1696,6 +1660,18 @@ enum Version
     V0_00,
     V0_01,
     V0_02,
+}
+
+impl fmt::Display for Version
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
+    {
+        match self {
+            Version::V0_00 => write!(f, "1.00"),
+            Version::V0_01 => write!(f, "1.01"),
+            Version::V0_02 => write!(f, "1.02"),
+        }
+    }
 }
 
 pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>

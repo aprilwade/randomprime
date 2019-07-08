@@ -17,18 +17,28 @@ sha2 = "0.7"
 rand = "0.4"
 winapi = "0.3"
 
-ppcasm = { path = "ppcasm" }
-structs = { path = "structs" }
-reader_writer = { path = "reader_writer" }
+dol_symbol_table = { path = "dol_symbol_table" }
 nod_wrapper = { path = "nod_wrapper" }
+ppcasm = { path = "ppcasm" }
+reader_writer = { path = "reader_writer" }
 resource_info_table = { path = "resource_info_table" }
+structs = { path = "structs" }
 
 [profile.release]
 lto = true
 panic = "unwind"
 
 [workspace]
-members = ["structs", "reader_writer", "auto_struct_macros", "ppcasm", "ppcasm/ppcasm_macro", "nod_wrapper", "resource_info_table", "macro_file_proxy","macro_file_proxy/macro_file_proxy_proc_macro"]
+members = [
+    "auto_struct_macros",
+    "dol_symbol_table",
+    "macro_file_proxy", "macro_file_proxy/macro_file_proxy_proc_macro",
+    "nod_wrapper",
+    "ppcasm", "ppcasm/ppcasm_macro",
+    "reader_writer",
+    "resource_info_table",
+    "structs",
+]
 
 [lib]
 name = "randomprime"
