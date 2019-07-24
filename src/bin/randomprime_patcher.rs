@@ -129,6 +129,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         .arg(Arg::with_name("quiet")
             .long("quiet")
             .help("Don't print the progress messages"))
+        .arg(Arg::with_name("main menu message")
+            .long("main-menu-message")
+            .hidden(true)
+            .takes_value(true))
         .arg(Arg::with_name("change starting items")
             .long("starting-items")
             .hidden(true)
@@ -205,6 +209,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                                 .map(|s| s.parse::<u64>().unwrap()),
 
         comment: matches.value_of("text file comment").unwrap_or("").to_string(),
+        main_menu_message: matches.value_of("main menu message").unwrap_or("").to_string(),
 
         bnr_game_name: None,
         bnr_developer: None,

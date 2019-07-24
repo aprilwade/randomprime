@@ -58,6 +58,8 @@ struct Config
     starting_items: Option<u64>,
     #[serde(default)]
     comment: String,
+    #[serde(default)]
+    main_menu_message: String,
 
     banner: Option<ConfigBanner>,
 }
@@ -213,6 +215,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
         starting_items: config.starting_items,
         comment: config.comment,
+        main_menu_message: config.main_menu_message,
 
         bnr_game_name: config.banner.as_mut().and_then(|b| b.game_name.take()),
         bnr_developer: config.banner.as_mut().and_then(|b| b.developer.take()),

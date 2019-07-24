@@ -1223,6 +1223,90 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
+{
+    let strings = res.kind.as_strg_mut().unwrap()
+        .string_tables
+        .as_mut_vec()
+        .iter_mut()
+        .find(|table| table.lang == b"ENGL".into())
+        .unwrap()
+        .strings
+        .as_mut_vec();
+
+    let s = strings.iter_mut()
+        .find(|s| *s == "Metroid Fusion Connection Bonuses\u{0}")
+        .unwrap();
+    *s = "Extras\u{0}".to_string().into();
+
+    strings.push(format!("{}\0", msg).into());
+    Ok(())
+}
+
+fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
+{
+    let frme = res.kind.as_frme_mut().unwrap();
+
+    frme.widgets.as_mut_vec().push(structs::FrmeWidget {
+        name: b"textpane_identifier\0".as_cstr(),
+        parent: b"kGSYS_HeadWidgetID\0".as_cstr(),
+        use_anim_controller: 0,
+        default_visible: 1,
+        default_active: 1,
+        cull_faces: 0,
+        color: [1.0, 1.0, 1.0, 1.0].into(),
+        model_draw_flags: 2,
+        kind: structs::FrmeWidgetKind::TextPane(
+            structs::TextPaneWidget {
+                x_dim: 10.455326,
+                z_dim: 1.813613,
+                scale_center: [
+                    -5.227663,
+                    0.0,
+                    -0.51,
+                ].into(),
+                font: 3265024497,
+                word_wrap: 0,
+                horizontal: 1,
+                justification: 0,
+                vertical_justification: 0,
+                fill_color: [1.0, 1.0, 1.0, 1.0].into(),
+                outline_color: [0.0, 0.0, 0.0, 1.0].into(),
+                block_extent: [213.0, 38.0].into(),
+                jpn_font: None,
+                jpn_point_scale: None,
+            },
+        ),
+        worker_id: None,
+        origin: [9.25, 1.500001, 0.0].into(),
+        basis: [
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 1.0,
+        ].into(),
+        rotation_center: [0.0, 0.0, 0.0].into(),
+        unknown0: 0,
+        unknown1: 0,
+    });
+
+    let mut shadow_widget = frme.widgets.as_mut_vec().last().unwrap().clone();
+    shadow_widget.name = b"textpane_identifierb\0".as_cstr();
+    let tp = match &mut shadow_widget.kind {
+        structs::FrmeWidgetKind::TextPane(tp) => tp,
+        _ => unreachable!(),
+    };
+    tp.fill_color = [0.0, 0.0, 0.0, 0.4].into();
+    tp.outline_color = [0.0, 0.0, 0.0, 0.2].into();
+    shadow_widget.origin[0] -= -0.235091;
+    shadow_widget.origin[1] -= -0.104353;
+    shadow_widget.origin[2] -= 0.176318;
+
+    frme.widgets.as_mut_vec().push(shadow_widget);
+
+    Ok(())
+}
+
+
 fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
     -> Result<(), String>
 {
@@ -1374,13 +1458,6 @@ fn patch_starting_pickups(
     Ok(())
 }
 
-fn u32_to_be(x: u32) -> [u8; 4]
-{
-    let mut bytes = [0u8; 4];
-    x.write_to(&mut io::Cursor::new(&mut bytes as &mut [u8])).unwrap();
-    bytes
-}
-
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
@@ -1418,14 +1495,14 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
-    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {// addrs.unlockables_default_ctor, {
+    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {
             li      r6, 100;
             stw     r6, 0xcc(r3);
             lis     r6, 0xF7FF;
             stw     r6, 0xd0(r3);
     });
     dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
-    let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {// addrs.unlockables_read_ctor, {
+    let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
             li      r6, 100;
             stw     r6, 0xcc(r28);
             lis     r6, 0xF7FF;
@@ -1541,6 +1618,80 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
 
+    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("FinishedLoading__19SNewFileSelectFrame", version) + 0x2c, {
+        bl      { 0x80002000 };
+    }))?;
+
+    dol_patcher.add_ppcasm_text_segment(&{
+            let bp_push = 0x30;
+            let lr = bp_push + 4;
+            ppcasm!(0x80002000, {
+                    stwu        r1, -bp_push(r1);
+                    mflr        r0;
+                    stw         r0, lr(r1);
+                    stw         r30, 0x24(r1);
+                    stw         r29, 0x28(r1);
+
+                    mr          r30, r3;
+                    bl          { symbol_addr!("FindWidget__9CGuiFrameCFPCc", version) };
+
+                    stw         r3, 0x2c(r1);// Save our return value
+
+
+                    lwz         r3, -0x5f8c(r13);
+                    li          r4, 110;
+                    bl          { symbol_addr!("GetString__12CStringTableCFi", version) };
+
+                    mr          r4, r3;
+                    addi        r3, r1, 0x8;
+                    bl          { symbol_addr!("wstring_l__4rstlFPCw", version) };
+
+                    lis         r29, widget_names@h;
+                    addi        r29, r29, widget_names@l;
+                    b           loop_cond;
+
+                loop_start:
+                    addi        r29, r29, 4;
+                    mr          r3, r30;
+
+                    bl          { symbol_addr!("FindWidget__9CGuiFrameCFPCc", version) };
+
+                    addi        r3, r3, 0xd4;
+                    addi        r4, r1, 0x8;
+                    li          r5, 0;
+                    bl          { symbol_addr!("SetText__15CGuiTextSupportFRCQ24rstl66basic_string<w,Q24rstl14char_traits<w>,Q24rstl17rmemory_allocator>", version) };
+
+
+                loop_cond:
+                    lwz         r4, 0(r29);
+                    cmplwi      r4, 0;
+                    bne         loop_start;
+
+                    addi        r3, r1, 0x8;
+                    bl          { symbol_addr!("internal_dereference__Q24rstl66basic_string<w,Q24rstl14char_traits<w>,Q24rstl17rmemory_allocator>Fv", version) };
+
+                    lwz         r29, 0x28(r1);
+                    lwz         r30, 0x24(r1);
+
+                    // Restore the correct return value
+                    lwz         r3, 0x2c(r1);
+                    lwz         r0, lr(r1);
+                    mtlr        r0;
+                    addi        r1, r1, bp_push;
+                    blr;
+
+                widget_name:
+                    .asciiz b"textpane_identifier";
+                widget_name_shadow:
+                    .asciiz b"textpane_identifierb";
+                widget_names:
+                    .long widget_name;
+                    .long widget_name_shadow;
+                    .long 0;
+            })
+        })?;
+
+
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
 }
@@ -1651,6 +1802,7 @@ pub struct ParsedConfig
 
     pub starting_items: Option<u64>,
     pub comment: String,
+    pub main_menu_message: String,
 
     pub bnr_game_name: Option<String>,
     pub bnr_developer: Option<String>,
@@ -1938,6 +2090,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
 
     patcher.add_resource_patch(
+        resource_info!("STRG_Main.STRG").into(),// 0x0552a456
+        |res| patch_main_strg(res, &config.main_menu_message)
+    );
+    patcher.add_resource_patch(
+        resource_info!("FRME_NewFileSelect.FRME").into(),
+        patch_main_menu
+    );
+
+    patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
         |res| patch_credits(res, &pickup_layout)
     );
@@ -1977,8 +2138,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     );
     patcher.add_scly_patch(
         resource_info!("10_ice_research_a.MREA").into(),
-        patch_research_lab_hydra_barrier
-    );
+        patch_research_lab_hydra_barrier);
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(),
         patch_research_lab_aether_exploding_wall

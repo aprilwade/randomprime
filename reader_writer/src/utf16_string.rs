@@ -1,7 +1,8 @@
 use std::{
-    io,
+    char::{DecodeUtf16, decode_utf16, REPLACEMENT_CHARACTER},
     fmt,
-    char::{DecodeUtf16, decode_utf16},
+    io,
+    cmp,
     str::Chars,
 };
 
@@ -39,6 +40,25 @@ impl<'r> Readable<'r> for Utf16beStr<'r>
     fn size(&self) -> usize
     {
         self.0.len()
+    }
+}
+
+impl<'r, 'r2> cmp::PartialEq<Utf16beStr<'r2>> for Utf16beStr<'r>
+{
+    fn eq(&self, other: &Utf16beStr<'r2>) -> bool
+    {
+        self.chars()
+            .eq(other.chars())
+    }
+}
+
+impl<'r> cmp::PartialEq<str> for Utf16beStr<'r>
+{
+    fn eq(&self, other: &str) -> bool
+    {
+        self.chars()
+            .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
+            .eq(other.chars())
     }
 }
 
@@ -111,6 +131,34 @@ impl<'r> LazyUtf16beStr<'r>
         }
     }
 }
+impl<'r> cmp::PartialEq<str> for LazyUtf16beStr<'r>
+{
+    fn eq(&self, other: &str) -> bool
+    {
+        self.chars()
+            .eq(other.chars())
+    }
+}
+
+impl<'r, 'r2> cmp::PartialEq<Utf16beStr<'r2>> for LazyUtf16beStr<'r>
+{
+    fn eq(&self, other: &Utf16beStr<'r2>) -> bool
+    {
+        self.chars()
+            .eq(other.chars().map(|r| r.unwrap_or(REPLACEMENT_CHARACTER)))
+    }
+}
+
+
+impl<'r, 'r2> cmp::PartialEq<LazyUtf16beStr<'r2>> for LazyUtf16beStr<'r>
+{
+    fn eq(&self, other: &LazyUtf16beStr<'r2>) -> bool
+    {
+        self.chars()
+            .eq(other.chars())
+    }
+}
+
 
 impl<'r> Readable<'r> for LazyUtf16beStr<'r>
 {
@@ -164,7 +212,9 @@ impl<'r, 's> Iterator for LazyUtf16beStrChars<'r, 's>
     {
         match *self {
             LazyUtf16beStrChars::Owned(ref mut c) => c.next().map(|i| i),
-            LazyUtf16beStrChars::Borrowed(ref mut c) => c.next().map(|r| r.unwrap_or('\u{fffd}')),
+            LazyUtf16beStrChars::Borrowed(ref mut c) => {
+                c.next().map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
+            },
         }
     }
 }

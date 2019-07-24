@@ -7,6 +7,7 @@ use crate::lcow::LCow;
 use crate::reader::{Reader, Readable};
 use crate::writer::Writable;
 use crate::read_only_array::{RoArray, RoArrayIter};
+use crate::derivable_array_proxy::DerivableFromIterator;
 
 impl<'r, T> Readable<'r> for Vec<T>
     where T: Readable<'r>,
@@ -41,6 +42,11 @@ impl<'r, T> Writable for Vec<T>
         }
         Ok(s)
     }
+}
+
+impl<T> DerivableFromIterator for Vec<T>
+{
+    type Item = T;
 }
 
 #[derive(Clone)]
@@ -130,6 +136,13 @@ impl<'r, T> Readable<'r> for LazyArray<'r, T>
             .map(|i| i * self.len())
             .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()))
     }
+}
+
+impl<'r, T> DerivableFromIterator for LazyArray<'r, T>
+    where T: Readable<'r>,
+          T::Args: Clone,
+{
+    type Item = T;
 }
 
 impl<'r, T> fmt::Debug for LazyArray<'r, T>

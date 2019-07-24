@@ -293,14 +293,7 @@ macro_rules! decl_instrs {
                         parse_quote_spanned! {lit.span()=> #f.to_bits() }
 
                     } else if let Ok(_) = input.parse::<kw::long>() {
-                        let forked = input.fork();
-                        let lit = input.parse::<LitInt>()?;
-                        let i = lit.value();
-                        if i > u32::max_value() as u64 {
-                            Err(forked.error("Literal out of range"))?;
-                        }
-                        let i = i as u32;
-                        parse_quote_spanned! {lit=> #i }
+                        input.parse()?
 
                     } else if let Ok(_) = input.parse::<kw::asciiz>() {
                         let lit = input.parse::<LitByteStr>()?;

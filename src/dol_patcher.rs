@@ -5,6 +5,7 @@ use reader_writer::{LazyArray, Reader, Writable};
 use std::{
     borrow::Cow,
     io,
+    iter,
     vec,
 };
 
@@ -203,6 +204,17 @@ impl<'a> DolPatcher<'a>
         }
     }
 
+    pub fn iter_section_addrs_and_sizes<'s>(&'s self) -> impl Iterator<Item = (u32, u32)> + 's
+    {
+        iter::once((self.bss_addr, self.bss_size))
+            .chain(self.data_segments.iter()
+                .filter(|seg| !seg.is_empty())
+                .map(|seg| (seg.addr(), seg.len())))
+            .chain(self.text_segments.iter()
+                .filter(|seg| !seg.is_empty())
+                .map(|seg| (seg.addr(), seg.len())))
+    }
+
     fn check_for_overlapping_segment(&self, addr: u32, len: u32) -> Result<(), String>
     {
         let check_overlap = |seg: &DolSegment| {
@@ -249,6 +261,18 @@ impl<'a> DolPatcher<'a>
         *seg = DolSegment::NewSegment(addr, bytes);
         Ok(self)
     }
+
+    pub fn add_ppcasm_text_segment<A, L>(&mut self, asm: &ppcasm::AsmBlock<A, L>) -> Result<&mut Self, String>
+        where A: AsRef<[u32]>
+    {
+        let mut bytes = asm.encoded_bytes();
+        if bytes.len() & 0x1f != 0 {
+            let bytes_needed = ((bytes.len() + 31) & !31) - bytes.len();
+            bytes.extend([0; 32][..bytes_needed].iter().copied());
+        }
+        self.add_text_segment(asm.addr(), bytes.into())
+    }
+
 
     pub fn patch(&mut self, start: u32, data: Cow<'a, [u8]>) -> Result<&mut Self, String>
     {

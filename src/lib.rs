@@ -1,3 +1,4 @@
+#![recursion_limit = "128"]
 
 pub use structs;
 pub use reader_writer;
