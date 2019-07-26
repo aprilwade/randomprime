@@ -1625,6 +1625,12 @@ fn patch_dol<'r>(
     dol_patcher.add_ppcasm_text_segment(&{
             let bp_push = 0x30;
             let lr = bp_push + 4;
+
+            let string_table_offset = match version {
+                Version::V0_00 => -0x5f8c,
+                Version::V0_01 => unreachable!(),
+                Version::V0_02 => -0x5f6c,
+            };
             ppcasm!(0x80002000, {
                     stwu        r1, -bp_push(r1);
                     mflr        r0;
@@ -1638,7 +1644,7 @@ fn patch_dol<'r>(
                     stw         r3, 0x2c(r1);// Save our return value
 
 
-                    lwz         r3, -0x5f8c(r13);
+                    lwz         r3, string_table_offset(r13);
                     li          r4, 110;
                     bl          { symbol_addr!("GetString__12CStringTableCFi", version) };
 
