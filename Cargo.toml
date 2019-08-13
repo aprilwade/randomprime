@@ -24,6 +24,11 @@ reader_writer = { path = "reader_writer" }
 resource_info_table = { path = "resource_info_table" }
 structs = { path = "structs" }
 
+[build-dependencies]
+walkdir = "2"
+
+dol_linker = { path = "dol_linker" }
+
 [profile.release]
 lto = true
 panic = "unwind"
@@ -31,10 +36,13 @@ panic = "unwind"
 [workspace]
 members = [
     "auto_struct_macros",
+    "dol_linker",
     "dol_symbol_table",
-    "macro_file_proxy", "macro_file_proxy/macro_file_proxy_proc_macro",
+    "macro_file_proxy",
+        "macro_file_proxy/macro_file_proxy_proc_macro",
     "nod_wrapper",
-    "ppcasm", "ppcasm/ppcasm_macro",
+    "ppcasm",
+        "ppcasm/ppcasm_macro",
     "reader_writer",
     "resource_info_table",
     "structs",

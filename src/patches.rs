@@ -1618,85 +1618,18 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
 
-    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("FinishedLoading__19SNewFileSelectFrame", version) + 0x2c, {
-        bl      { 0x80002000 };
+    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("PPCSetFpIEEEMode", version) + 4, {
+        b      { 0x80002000 };
     }))?;
 
-    dol_patcher.add_ppcasm_text_segment(&{
-            let bp_push = 0x30;
-            let lr = bp_push + 4;
-
-            let string_table_offset = match version {
-                Version::V0_00 => -0x5f8c,
-                Version::V0_01 => unreachable!(),
-                Version::V0_02 => -0x5f6c,
-            };
-            ppcasm!(0x80002000, {
-                    stwu        r1, -bp_push(r1);
-                    mflr        r0;
-                    stw         r0, lr(r1);
-                    stw         r30, 0x24(r1);
-                    stw         r29, 0x28(r1);
-
-                    mr          r30, r3;
-                    bl          { symbol_addr!("FindWidget__9CGuiFrameCFPCc", version) };
-
-                    stw         r3, 0x2c(r1);// Save our return value
-
-
-                    lwz         r3, string_table_offset(r13);
-                    li          r4, 110;
-                    bl          { symbol_addr!("GetString__12CStringTableCFi", version) };
-
-                    mr          r4, r3;
-                    addi        r3, r1, 0x8;
-                    bl          { symbol_addr!("wstring_l__4rstlFPCw", version) };
-
-                    lis         r29, widget_names@h;
-                    addi        r29, r29, widget_names@l;
-                    b           loop_cond;
-
-                loop_start:
-                    addi        r29, r29, 4;
-                    mr          r3, r30;
-
-                    bl          { symbol_addr!("FindWidget__9CGuiFrameCFPCc", version) };
-
-                    addi        r3, r3, 0xd4;
-                    addi        r4, r1, 0x8;
-                    li          r5, 0;
-                    bl          { symbol_addr!("SetText__15CGuiTextSupportFRCQ24rstl66basic_string<w,Q24rstl14char_traits<w>,Q24rstl17rmemory_allocator>", version) };
-
-
-                loop_cond:
-                    lwz         r4, 0(r29);
-                    cmplwi      r4, 0;
-                    bne         loop_start;
-
-                    addi        r3, r1, 0x8;
-                    bl          { symbol_addr!("internal_dereference__Q24rstl66basic_string<w,Q24rstl14char_traits<w>,Q24rstl17rmemory_allocator>Fv", version) };
-
-                    lwz         r29, 0x28(r1);
-                    lwz         r30, 0x24(r1);
-
-                    // Restore the correct return value
-                    lwz         r3, 0x2c(r1);
-                    lwz         r0, lr(r1);
-                    mtlr        r0;
-                    addi        r1, r1, bp_push;
-                    blr;
-
-                widget_name:
-                    .asciiz b"textpane_identifier";
-                widget_name_shadow:
-                    .asciiz b"textpane_identifierb";
-                widget_names:
-                    .long widget_name;
-                    .long widget_name_shadow;
-                    .long 0;
-            })
-        })?;
-
+    let mut rel_loader = match version {
+        Version::V0_00 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
+        Version::V0_01 => unreachable!(),
+        Version::V0_02 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
+    };
+    let bytes_needed = ((rel_loader.len() + 31) & !31) - rel_loader.len();
+    rel_loader.extend([0; 32][..bytes_needed].iter().copied());
+    dol_patcher.add_text_segment(0x80002000, Cow::Owned(rel_loader))?;
 
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
@@ -1883,6 +1816,18 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
         b"randomprime.txt\0".as_cstr(),
         structs::FstEntryFile::Unknown(Reader::new(&ct)),
     );
+
+    let patches_rel_bytes = match version {
+        Version::V0_00 => include_bytes!("../extra_assets/patches_1.00.rel"),
+        Version::V0_01 => unreachable!(),
+        Version::V0_02 => include_bytes!("../extra_assets/patches_1.02.rel"),
+    };
+    gc_disc.file_system_table.add_file(
+        b"patches.rel\0".as_cstr(),
+        structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes)),
+    );
+
+
 
     match config.iso_format {
         IsoFormat::Iso => {

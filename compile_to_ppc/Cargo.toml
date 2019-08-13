@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "core-futures-tls",
+    "patch_fn_macros",
+    "primeapi-rs",
+    "rel_loader",
+    "rel_patches",
+]
+
+[profile.dev]
+panic = "abort"
+lto = true
+codegen-units = 1
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+opt-level = 'z'
+
