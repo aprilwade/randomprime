@@ -9,8 +9,10 @@ use walkdir::WalkDir;
 
 fn invoke_cargo(ppc_manifest: &Path, package: &str)
 {
-    let output = Command::new("cargo")
-        .arg("+nightly")
+    let output = Command::new("rustup")
+        .arg("run")
+        .arg("nightly")
+        .arg("cargo")
         .arg("rustc")
         .arg("--manifest-path")
         .arg(ppc_manifest)
