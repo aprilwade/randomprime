@@ -112,10 +112,10 @@ pub fn patch_fn(attr: TokenStream, item: TokenStream) -> TokenStream
     let offset = flags.offset;
     let target_func_name = flags.target;
 
-    let func_name = &func.ident;
+    let func_name = &func.sig.ident;
     let target_hash = md5::compute(target_func_name.value().as_bytes());
 
-    let static_name = format!("PATCHES_{:x}_{:x}", target_hash, offset.value());
+    let static_name = format!("PATCHES_{:x}_{}", target_hash, offset.base10_digits());
     let static_name = syn::parse_str::<syn::Ident>(&static_name).unwrap();
 
     (quote! {
@@ -129,6 +129,23 @@ pub fn patch_fn(attr: TokenStream, item: TokenStream) -> TokenStream
             primeapi::Patch::#patch_func_name(target_func as *const u8, #offset, #func_name as *const u8)
         };
 
+        #func
+    }).into()
+}
+
+#[proc_macro_attribute]
+pub fn prolog_fn(_attr: TokenStream, item: TokenStream) -> TokenStream
+{
+    let func = parse_macro_input!(item as syn::ItemFn);
+
+    let func_name = &func.sig.ident;
+
+    let static_name = format!("PROLOG_FUNCS_{}", func_name);
+    let static_name = syn::parse_str::<syn::Ident>(&static_name).unwrap();
+
+    (quote! {
+        #[distributed_slice(primeapi::PROLOG_FUNCS)]
+        static #static_name: unsafe extern "C" fn()  = #func_name;
         #func
     }).into()
 }
@@ -406,7 +423,7 @@ impl fmt::Display for CppTemplateArguments
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
         write!(f, "<")?;
-        write!(f, "{}", self.params.first().unwrap().value())?;
+        write!(f, "{}", self.params.first().unwrap())?;
         for param in self.params.iter().skip(1) {
             write!(f, ",{}", param)?;
         }
@@ -513,10 +530,50 @@ pub fn cw_link_name(attr: TokenStream, item: TokenStream) -> TokenStream
     let func = parse_macro_input!(item as syn::ForeignItemFn);
 
     let cpp_decl = parse_macro_input!(attr as CppFuncDecl);
-
     let mangled_name = cpp_decl.to_string();
+
     (quote! {
         #[link_name = #mangled_name]
         #func
+    }).into()
+}
+
+#[proc_macro_attribute]
+pub fn cpp_method(attr: TokenStream, fn_decl: TokenStream) -> TokenStream
+{
+    let func = parse_macro_input!(fn_decl as syn::ItemFn);
+
+    let cpp_decl = parse_macro_input!(attr as CppFuncDecl);
+    let mangled_name = cpp_decl.to_string();
+
+    // let attrs = &func.attrs;
+    let vis = &func.vis;
+    let sig = &func.sig;
+    if func.sig.unsafety.is_none() {
+        // TODO: Error
+    }
+
+    let extern_ident = syn::Ident::new(&format!("{}_extern", sig.ident), sig.ident.span());
+    let extern_sig = syn::Signature {
+        ident: extern_ident.clone(),
+        unsafety: None,
+        ..(sig.clone())
+    };
+
+    let param_names = sig.inputs.iter()
+        .map(|param| match param {
+            syn::FnArg::Receiver(_) => syn::parse_quote!(self),
+            syn::FnArg::Typed(pattype) => pattype.pat.clone(),
+        });
+
+    (quote! {
+        #vis #sig
+        {
+            extern "C" {
+                #[link_name = #mangled_name]
+                #extern_sig;
+            }
+            #extern_ident(#(#param_names,)*)
+        }
     }).into()
 }

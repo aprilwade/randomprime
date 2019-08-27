@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "core-futures-tls",
-    "patch_fn_macros",
     "primeapi-rs",
+        "primeapi-rs/primeapi_macros",
     "rel_loader",
     "rel_patches",
 ]
@@ -16,5 +16,5 @@ codegen-units = 1
 panic = "abort"
 lto = true
 codegen-units = 1
-opt-level = 'z'
+opt-level = 's'
 

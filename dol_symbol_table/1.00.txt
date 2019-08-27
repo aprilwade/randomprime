@@ -14326,3 +14326,4 @@
 0x803d47cc "aMetroidprimeA"
 0x803d47db "aMetroidprimeB"
 0x805a8c34 "g_MainStringTable"
+0x805a8c40 "g_GameState"

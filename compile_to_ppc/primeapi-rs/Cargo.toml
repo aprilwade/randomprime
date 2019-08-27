@@ -10,20 +10,10 @@ edition = "2018"
 linkme = "0.1"
 # generic-array = "0.13"
 # pin-utils = "0.1.0-alpha.4"
+paste = "0.1"
 
-patch_fn_macros = { path = "../patch_fn_macros" }
+primeapi_macros = { path = "primeapi_macros" }
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
 
-# [lib]
-# crate-type = ["staticlib"]
-
-# [profile.dev]
-# panic = "abort"
-
-# [profile.release]
-# panic = "abort"
-# lto = true
-# opt-level = "s"
-
-# [workspace]
-# members = [ "patch_fn_macros", "core-futures-tls" ]
+[features]
+rel_prolog = []

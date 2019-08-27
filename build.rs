@@ -24,6 +24,8 @@ fn invoke_cargo(ppc_manifest: &Path, package: &str)
         .arg("--")
         .arg("-C")
         .arg("relocation-model=static")
+        .arg("-C")
+        .arg("target-cpu=750")
         .output()
         .expect("Failed to compile ppc crate");
     if !output.status.success() {

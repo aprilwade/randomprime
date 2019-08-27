@@ -874,7 +874,7 @@ fn filter_unused_sections<'a>(object_files: &'a [ObjectFile<'a>])
                         RelocationKind::ExternalSymbol(sn_k) if sn_k.starts_with("__stop_") => {
                             sec_q.name == &sn_k[7..]
                         },
-                        RelocationKind::ExternalSymbol(sym_name_k) if of_qi != of_ki => {
+                        RelocationKind::ExternalSymbol(sym_name_k) => {
                             // Check if any of sec_k's External relocs match sec_q's symbols
                             sec_q.exported_symbols
                                 .iter()

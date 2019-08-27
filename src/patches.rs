@@ -1625,7 +1625,7 @@ fn patch_dol<'r>(
     let mut rel_loader = match version {
         Version::V0_00 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
         Version::V0_01 => unreachable!(),
-        Version::V0_02 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
+        Version::V0_02 => include_bytes!("../extra_assets/rel_loader_1.02.bin").to_vec(),
     };
     let bytes_needed = ((rel_loader.len() + 31) & !31) - rel_loader.len();
     rel_loader.extend([0; 32][..bytes_needed].iter().copied());
