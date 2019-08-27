@@ -8,7 +8,9 @@ edition = "2018"
 
 [dependencies]
 generic-array = "0.13"
+linked_list_allocator = "0.6"
 linkme = "0.1"
+pin-utils = "0.1.0-alpha.4"
 
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
 primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
