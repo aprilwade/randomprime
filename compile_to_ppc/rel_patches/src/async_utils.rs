@@ -122,40 +122,38 @@ impl<'a> LineReaderSock<'a>
 }
 
 impl<'a> LineReaderSock<'a>
-    // where F: FnMut(&'a mut [u8]) -> Fut,
-    //       Fut: core::future::Future<Output = Result<u32, E>> + 'a,
 {
     pub async fn read_line<'s>(&'s mut self) -> crate::sock_async::Result<&'s [u8]>
     {
-        // Copy the data from the end of buf to its front, if needed
-        if self.valid_range.0 > 0 {
-            unsafe {
-                core::ptr::copy(
-                    self.buf.as_ptr().offset(self.valid_range.0 as isize),
-                    self.buf.as_mut_ptr(),
-                    self.valid_range.1 - self.valid_range.0,
-                );
-            }
-        }
-
-        let mut data_len = self.valid_range.1 - self.valid_range.0;
         loop {
+            for (i, b) in self.buf[self.valid_range.0..self.valid_range.1].iter().enumerate() {
+                if *b == b'\n' {
+                    let ret = &self.buf[self.valid_range.0..(self.valid_range.0 + i + 1)];
+                    self.valid_range.0 += i + 1;
+                    return Ok(ret)
+                }
+            }
+
+            let data_len = self.valid_range.1 - self.valid_range.0;
+            // Copy the data from the end of buf to its front, if needed
+            if self.valid_range.0 > 0 {
+                if data_len > 0 {
+                    unsafe {
+                        core::ptr::copy(
+                            self.buf.as_ptr().offset(self.valid_range.0 as isize),
+                            self.buf.as_mut_ptr(),
+                            self.valid_range.1 - self.valid_range.0,
+                        );
+                    }
+                }
+                self.valid_range = (0, data_len);
+            }
+
             if data_len == self.buf.len() {
                 // TODO: It might be good to enforce a maximum size
                 self.buf.extend(core::iter::repeat(0).take(1024));
             }
-            let read = self.sock.read(&mut self.buf[data_len..]).await? as usize;
-            for (i, b) in self.buf[data_len..data_len + read].iter().enumerate() {
-                if *b == b'\n' {
-                    if i == read - 1{
-                        self.valid_range = (0, 0);
-                    } else {
-                        self.valid_range = (data_len + i + 1, data_len + read);
-                    }
-                    return Ok(&self.buf[..i + 1]);
-                }
-            }
-            data_len += read;
+            self.valid_range.1 += self.sock.read(&mut self.buf[data_len..]).await? as usize;
         }
     }
 }
