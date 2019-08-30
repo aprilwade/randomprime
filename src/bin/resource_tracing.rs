@@ -395,7 +395,10 @@ fn extract_pickup_data<'r>(
         pickup.cmdl = custom_asset_ids::PHAZON_SUIT_CMDL;
         pickup.ancs.file_id = custom_asset_ids::PHAZON_SUIT_ANCS;
         pickup.actor_params.scan_params.scan = custom_asset_ids::PHAZON_SUIT_SCAN;
+    } else if pickup.kind == 9 {
+        pickup.actor_params.scan_params.scan = custom_asset_ids::THERMAL_VISOR_SCAN;
     }
+
     let mut bytes = vec![];
     pickup.write_to(&mut bytes).unwrap();
 
@@ -677,7 +680,10 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
     // Don't ask me why; Claris seems to skip this one.
     deps.remove(&resource_info!("purple.PART").into());
 
-    if pickup_kind == 19 {
+    if pickup_kind == 9 {
+        deps.insert(ResourceKey::new(custom_asset_ids::THERMAL_VISOR_SCAN, b"SCAN".into()));
+        deps.insert(ResourceKey::new(custom_asset_ids::THERMAL_VISOR_STRG, b"STRG".into()));
+    } else if pickup_kind == 19 {
         // Spiderball. I couldn't find any references to this outside of PAK resource
         // indexes and dependency lists.
         deps.insert(resource_info!("spiderball.CSKR").into());

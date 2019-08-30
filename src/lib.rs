@@ -283,6 +283,8 @@ pub mod custom_asset_ids {
         NOTHING_TXTR,
         NOTHING_CMDL,
         NOTHING_ANCS,
+        THERMAL_VISOR_SCAN,
+        THERMAL_VISOR_STRG,
 
         SKIP_HUDMEMO_STRG_START,
         SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 37,

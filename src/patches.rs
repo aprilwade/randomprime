@@ -119,6 +119,11 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
             "Nothing acquired!\0".to_owned(),
         ])),
     ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::THERMAL_VISOR_SCAN,
+        custom_asset_ids::THERMAL_VISOR_STRG,
+        "Thermal Visor\0",
+    ));
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
         if looking_for.remove(&key) {
