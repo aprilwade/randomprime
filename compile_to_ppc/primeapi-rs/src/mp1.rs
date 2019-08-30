@@ -1,5 +1,7 @@
 use crate::{cpp_field, cpp_method};
-use crate::rstl::WString;
+use crate::rstl::{WString, Vector};
+
+use core::ptr;
 
 pub enum CGuiFrame { }
 pub enum CGuiWidget { }
@@ -112,3 +114,60 @@ impl CSamusHud
     { }
 }
 
+pub type EScriptObjectMessage = u32;
+pub type TAreaId = u32;
+pub type TEditorId = u32;
+pub type TUniqueId = u32;
+
+#[repr(C)]
+pub struct SConnection
+{
+    // TODO: These are actually enums
+    pub state: u32,
+    pub msg: EScriptObjectMessage,
+    pub obj_id: u32,
+}
+
+pub enum IVisitor {}
+
+#[repr(C)]
+pub struct CEntityVTable<This>
+{
+    pub unknown0: u32,
+    pub unknown1: u32,
+    pub dtor: extern "C" fn(*mut This, *mut IVisitor),
+    // Accept__12CScriptRelayFR8IVisitor
+    pub accept: extern "C" fn(*mut This),
+    // PreThink__7CEntityFfR13CStateManager
+    pub pre_think: extern "C" fn(*mut This, *mut CStateManager),
+    // Think__12CScriptRelayFfR13CStateManager
+    pub think: extern "C" fn(*mut This, *mut CStateManager),
+    // AcceptScriptMsg__12CScriptRelayF20EScriptObjectMessage9TUniqueIdR13CStateManager
+    pub accept_script_msg: extern "C" fn(*mut This, EScriptObjectMessage, TUniqueId, *mut CStateManager),
+    // SetActive__7CEntityFb
+    pub set_active: extern "C" fn(*mut This, u8),
+}
+
+
+#[repr(C)]
+pub struct CEntity
+{
+    pub vtable: *const CEntityVTable<CEntity>,
+    pub area_id: TAreaId,
+    pub unique_id: TUniqueId,
+    pub editor_id: TEditorId,
+    pub connections: Vector<SConnection>,
+    // TODO This a actually a bit field
+    pub status: u8,
+}
+
+pub extern "C" fn entity_empty_accept_impl<T>(this: *mut T, visitor: *mut IVisitor)
+{
+    // TODO: Load visitor's vtable, and then call it's entry for
+    // Visit__20TCastToPtr<7CWeapon>FR7CEntity (0x9 * 4?)
+    unsafe {
+        let vtable = ptr::read(visitor as *mut *mut extern "C" fn(*mut IVisitor, *mut T));
+        let func_ptr = ptr::read(vtable.offset(0x9));
+        (func_ptr)(visitor, this)
+    }
+}
