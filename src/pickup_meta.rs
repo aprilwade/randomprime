@@ -44,6 +44,7 @@ pub enum PickupType
     ArtifactOfNature,
     ArtifactOfStrength,
     Nothing,
+    ScanVisor,
 }
 
 impl PickupType
@@ -87,6 +88,7 @@ impl PickupType
             PickupType::ArtifactOfNature =>    "Artifact of Nature",
             PickupType::ArtifactOfStrength =>  "Artifact of Strength",
             PickupType::Nothing =>             "Nothing",
+            PickupType::ScanVisor =>           "Scan Visor",
         }
     }
 
@@ -129,6 +131,7 @@ impl PickupType
             PickupType::ArtifactOfNature =>    33,
             PickupType::ArtifactOfStrength =>  34,
             PickupType::Nothing =>             35,
+            PickupType::ScanVisor =>           36,
         }
     }
 
@@ -171,6 +174,7 @@ impl PickupType
             33 => Some(PickupType::ArtifactOfNature),
             34 => Some(PickupType::ArtifactOfStrength),
             35 => Some(PickupType::Nothing),
+            36 => Some(PickupType::ScanVisor),
             _ => None,
         }
     }
@@ -245,6 +249,7 @@ impl PickupType
             PickupType::ArtifactOfNature,
             PickupType::ArtifactOfStrength,
             PickupType::Nothing,
+            PickupType::ScanVisor,
         ].iter().map(|i| *i)
     }
 }

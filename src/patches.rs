@@ -116,13 +116,24 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     new_assets.push(pickup_meta::build_resource(
         custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
         structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-            "Nothing acquired!\0".to_owned(),
+            "&just=center;Nothing acquired!\0".to_owned(),
         ])),
     ));
     new_assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::THERMAL_VISOR_SCAN,
         custom_asset_ids::THERMAL_VISOR_STRG,
         "Thermal Visor\0",
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::SCAN_VISOR_SCAN,
+        custom_asset_ids::SCAN_VISOR_SCAN_STRG,
+        "Scan Visor\0",
+    ));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "&just=center;Scan Visor acquired!\0".to_owned(),
+        ])),
     ));
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
@@ -1411,7 +1422,8 @@ fn patch_starting_pickups(
 
             print_maybe!(first, "Starting pickups set:");
 
-            spawn_point.scan_visor = 1;
+            spawn_point.scan_visor = fetch_bits(1);
+            print_maybe!(first, "    scan_visor: {}", spawn_point.scan_visor);
 
             spawn_point.missiles = fetch_bits(8);
             print_maybe!(first, "    missiles: {}", spawn_point.missiles);
@@ -2033,7 +2045,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let (starting_items, print_sis) = if let Some(starting_items) = config.starting_items {
         (starting_items, true)
     } else {
-        (0, false)
+        (1, false)
     };
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),

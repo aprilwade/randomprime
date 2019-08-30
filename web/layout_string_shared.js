@@ -7,10 +7,14 @@ var LayoutString = (function() {
         REV_TABLE.set(TABLE[i], i);
     }
     var PICKUP_SIZES = Array(100).fill(36);
+    var PICKUP_SIZES_2 = Array(100).fill(37);
     var ELEVATOR_SIZES = Array(20).fill(20).concat([21]);
 
     function compute_checksum(checksum_size, layout_number)
     {
+        if(checksum_size == 0) {
+            return 0;
+        }
         var s = 0;
         while(layout_number.greater(0)){
             var divmod = layout_number.divmod(1 << checksum_size);
@@ -22,16 +26,24 @@ var LayoutString = (function() {
 
     function encode_layout(pickup_layout, elevator_layout)
     {
+        var elevator_string;
         if(elevator_layout === undefined) {
-            return encode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+            elevator_string = "qzoCAr2fwehJmRjM"
         } else {
-            var elevator_string = encode_layout_inner(ELEVATOR_SIZES, 91, 5, elevator_layout);
-            var pickup_string = encode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
-            if(elevator_string != "qzoCAr2fwehJmRjM") {
-                return elevator_string + "." + pickup_string;
-            } else {
-                return pickup_string;
-            }
+            elevator_string = encode_layout_inner(ELEVATOR_SIZES, 91, 5, elevator_layout);
+        }
+
+        var pickup_string;
+        if(pickup_layout.indexOf("36") == -1) {
+            pickup_string = encode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+        } else {
+            pickup_string = "!" + encode_layout_inner(PICKUP_SIZES_2, 521, 1, pickup_layout);
+        }
+
+        if(elevator_string != "qzoCAr2fwehJmRjM") {
+            return elevator_string + "." + pickup_string;
+        } else {
+            return pickup_string;
         }
     }
 
@@ -80,24 +92,36 @@ var LayoutString = (function() {
         var pickup_layout, elevator_layout;
         if(layout_string.includes('.')) {
             [elevator_layout, pickup_layout] = layout_string.split('.');
-            if(pickup_layout.length != 87) {
-                return "Invalid layout: incorrect length for the section after '.', not 87 characters";
-            }
             if(elevator_layout.length != 16) {
                 return "Invalid layout: incorrect length for the section before '.', not 16 characters";
             }
         } else {
             pickup_layout = layout_string;
+            has_scan_visor = pickup_layout[0] == '!';
             elevator_layout = "qzoCAr2fwehJmRjM";
-            if(pickup_layout.length != 87) {
-                return 'Invalid layout: incorrect length, not 87 characters';
-            }
         }
+
+        var has_scan_visor = false;
+        if(pickup_layout[0] == '!') {
+            has_scan_visor = true;
+            pickup_layout = pickup_layout.substring(1);
+        }
+
+        if(pickup_layout.length != 87) {
+            return "Invalid layout: incorrect length for the section after '.', not 87 characters";
+        }
+
         var el = decode_layout_inner(ELEVATOR_SIZES, 91, 5, elevator_layout);
         if(typeof el === "string") {
             return el;
         }
-        var pl = decode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+
+        var pl;
+        if(has_scan_visor) {
+            pl  = decode_layout_inner(PICKUP_SIZES_2, 521, 1, pickup_layout);
+        } else {
+            pl  = decode_layout_inner(PICKUP_SIZES, 517, 5, pickup_layout);
+        }
         if(typeof pl === "string") {
             return pl;
         }
