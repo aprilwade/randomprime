@@ -2,6 +2,8 @@
 #![feature(macros_in_extern)]
 #![no_std]
 
+extern crate alloc;
+
 use linkme::distributed_slice;
 
 // Rexport these macros

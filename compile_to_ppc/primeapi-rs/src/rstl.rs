@@ -78,3 +78,75 @@ impl Drop for WString
         }
     }
 }
+
+
+#[repr(C)]
+pub struct Vector<T>
+{
+    // XXX Is _first actually used? primeapi doesn't seem to think so
+    _first: usize,
+    size: usize,
+    capacity: usize,
+    data: *mut T,
+}
+
+impl<T> Vector<T>
+{
+    pub fn size(&self) -> usize
+    {
+        self.size
+    }
+
+    pub fn capacity(&self) -> usize
+    {
+        self.capacity
+    }
+}
+
+impl<T> core::ops::Deref for Vector<T>
+{
+    type Target = [T];
+    fn deref(&self) -> &Self::Target
+    {
+        unsafe {
+            core::slice::from_raw_parts(self.data, self.size)
+        }
+    }
+}
+
+impl<T> core::ops::DerefMut for Vector<T>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target
+    {
+        unsafe {
+            core::slice::from_raw_parts_mut(self.data, self.size)
+        }
+    }
+}
+
+impl<T> Into<alloc::vec::Vec<T>> for Vector<T>
+{
+    fn into(self) -> alloc::vec::Vec<T>
+    {
+        unsafe {
+            alloc::vec::Vec::from_raw_parts(
+                self.data,
+                self.size,
+                self.capacity,
+            )
+        }
+    }
+}
+
+impl<T> From<alloc::vec::Vec<T>> for Vector<T>
+{
+    fn from(vec: alloc::vec::Vec<T>) -> Self
+    {
+        Vector {
+            _first: 0,
+            size: vec.len(),
+            capacity: vec.capacity(),
+            data: alloc::boxed::Box::into_raw(vec.into_boxed_slice()) as *mut T,
+        }
+    }
+}
