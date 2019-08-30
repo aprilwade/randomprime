@@ -88,11 +88,37 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     }
 
     // Generate and add the assets for Nothing and Phazon Suit
-    // XXX This is super gross because arrays don't have owned-iterators
-    let new_assets = vec![create_nothing_cmdl_and_ancs(&mut found),
-                          create_phazon_cmdl_and_ancs(&mut found)]
-                    .into_iter()
-                    .flat_map(|(a, b)| vec![a, b].into_iter());
+    let mut new_assets = vec![];
+    new_assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
+        &found,
+        custom_asset_ids::NOTHING_CMDL,
+        custom_asset_ids::NOTHING_ANCS,
+        custom_asset_ids::NOTHING_TXTR,
+        custom_asset_ids::PHAZON_SUIT_TXTR2,
+    ));
+    new_assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
+        &found,
+        custom_asset_ids::PHAZON_SUIT_CMDL,
+        custom_asset_ids::PHAZON_SUIT_ANCS,
+        custom_asset_ids::PHAZON_SUIT_TXTR1,
+        custom_asset_ids::PHAZON_SUIT_TXTR2,
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::PHAZON_SUIT_SCAN,
+        custom_asset_ids::PHAZON_SUIT_STRG,
+        "Phazon Suit\0",
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::NOTHING_SCAN,
+        custom_asset_ids::NOTHING_SCAN_STRG,
+        "???\0",
+    ));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "Nothing acquired!\0".to_owned(),
+        ])),
+    ));
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
         if looking_for.remove(&key) {
@@ -105,88 +131,78 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     found
 }
 
-// TODO Reduce duplication between create_phazon_cmdl_and_ancs and create_nothing_cmdl_and_ancs
-fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
-    -> (structs::Resource<'r>, structs::Resource<'r>)
+fn create_suit_icon_cmdl_and_ancs<'r>(
+    resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    new_cmdl: u32,
+    new_ancs: u32,
+    new_txtr1: u32,
+    new_txtr2: u32,
+) -> [structs::Resource<'r>; 2]
 {
-    let nothing_suit_cmdl = {
+    let new_suit_cmdl = {
         let grav_suit_cmdl = ResourceData::new(
             &resources[&resource_info!("Node1_11.CMDL").into()]
         );
-        let mut nothing_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+        let mut new_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
-        let len = nothing_cmdl_bytes.len();
-        nothing_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+        let len = new_cmdl_bytes.len();
+        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change which texture this points to
-        custom_asset_ids::NOTHING_TXTR.write_to(&mut &mut nothing_cmdl_bytes[0x64..]).unwrap();
-        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut nothing_cmdl_bytes[0x70..]).unwrap();
+        new_txtr1.write_to(&mut &mut new_cmdl_bytes[0x64..]).unwrap();
+        new_txtr2.write_to(&mut &mut new_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            custom_asset_ids::NOTHING_CMDL,
-            structs::ResourceKind::External(nothing_cmdl_bytes, b"CMDL".into())
+            new_cmdl,
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
         )
     };
-    let nothing_suit_ancs = {
+    let new_suit_ancs = {
         let grav_suit_ancs = ResourceData::new(
             &resources[&resource_info!("Node1_11.ANCS").into()]
         );
-        let mut nothing_ancs_bytes = grav_suit_ancs.decompress().into_owned();
+        let mut new_ancs_bytes = grav_suit_ancs.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
-        let len = nothing_ancs_bytes.len();
-        nothing_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+        let len = new_ancs_bytes.len();
+        new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change this to refer to the CMDL above
-        custom_asset_ids::NOTHING_CMDL.write_to(&mut &mut nothing_ancs_bytes[0x14..]).unwrap();
+        new_cmdl.write_to(&mut &mut new_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            custom_asset_ids::NOTHING_ANCS,
-            structs::ResourceKind::External(nothing_ancs_bytes, b"ANCS".into())
+            new_ancs,
+            structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
         )
     };
-    (nothing_suit_cmdl, nothing_suit_ancs)
+    [new_suit_cmdl, new_suit_ancs]
 }
 
-fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
-    -> (structs::Resource<'r>, structs::Resource<'r>)
+fn create_item_scan_strg_pair<'r>(
+    new_scan: u32,
+    new_strg: u32,
+    contents: &str,
+) -> [structs::Resource<'r>; 2]
 {
-    let phazon_suit_cmdl = {
-        let grav_suit_cmdl = ResourceData::new(
-            &resources[&resource_info!("Node1_11.CMDL").into()]
-        );
-        let mut phazon_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
-
-        // Ensure the length is a multiple of 32
-        let len = phazon_cmdl_bytes.len();
-        phazon_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
-        // Change which textures this points to
-        custom_asset_ids::PHAZON_SUIT_TXTR1.write_to(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
-        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
-        pickup_meta::build_resource(
-            custom_asset_ids::PHAZON_SUIT_CMDL,
-            structs::ResourceKind::External(phazon_cmdl_bytes, b"CMDL".into())
-        )
-    };
-    let phazon_suit_ancs = {
-        let grav_suit_ancs = ResourceData::new(
-            &resources[&resource_info!("Node1_11.ANCS").into()]
-        );
-        let mut phazon_ancs_bytes = grav_suit_ancs.decompress().into_owned();
-
-        // Ensure the length is a multiple of 32
-        let len = phazon_ancs_bytes.len();
-        phazon_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
-        // Change this to refer to the CMDL above
-        custom_asset_ids::PHAZON_SUIT_CMDL.write_to(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
-        pickup_meta::build_resource(
-            custom_asset_ids::PHAZON_SUIT_ANCS,
-            structs::ResourceKind::External(phazon_ancs_bytes, b"ANCS".into())
-        )
-    };
-    (phazon_suit_cmdl, phazon_suit_ancs)
+    let scan = pickup_meta::build_resource(
+        new_scan,
+        structs::ResourceKind::Scan(structs::Scan {
+            frme: 0xFFFFFFFF,
+            strg: new_strg,
+            scan_speed: 0,
+            category: 0,
+            icon_flag: 0,
+            images: Default::default(),
+            padding: [255; 23].into(),
+            _dummy: std::marker::PhantomData,
+        }),
+    );
+    let strg = pickup_meta::build_resource(
+        new_strg,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![contents.to_owned()])),
+    );
+    [scan, strg]
 }
+
 
 fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     -> structs::SclyObject<'r>

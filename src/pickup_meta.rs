@@ -311,27 +311,12 @@ pub struct ScriptObjectLocation
 }
 
 const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
-    // Phazon Suit SCAN
-    (custom_asset_ids::PHAZON_SUIT_SCAN, *b"SCAN",
-     include_bytes!("../extra_assets/phazon_suit_scan.scan")),
-    // Phazon Suit STRG
-    (custom_asset_ids::PHAZON_SUIT_STRG, *b"STRG",
-     include_bytes!("../extra_assets/phazon_suit_scan.strg")),
     // Phazon Suit TXTR 1
     (custom_asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
      include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
     // Phazon Suit TXTR 2
     (custom_asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
      include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
-    // Nothing acquired HudMemo STRG
-    (custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG, *b"STRG",
-     include_bytes!("../extra_assets/nothing_hudmemo.strg")),
-    // Nothing scan STRG
-    (custom_asset_ids::NOTHING_SCAN_STRG, *b"STRG",
-     include_bytes!("../extra_assets/nothing_scan.strg")),
-    // Nothing SCAN
-    (custom_asset_ids::NOTHING_SCAN, *b"SCAN",
-     include_bytes!("../extra_assets/nothing_scan.scan")),
     // Nothing texture
     (custom_asset_ids::NOTHING_TXTR, *b"TXTR",
      include_bytes!("../extra_assets/nothing_texture.txtr")),
