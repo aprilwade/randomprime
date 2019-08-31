@@ -102,6 +102,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("staggered-suit-damage")
             .help(concat!("The suit damage reduction is determinted by the number of suits ",
                             "collected rather than the most powerful one collected.")))
+        .arg(Arg::with_name("auto enabled elevators")
+            .long("auto-enabled-elevators")
+            .help("Every elevator will be automatically enabled without scaning its terminal"))
         .arg(Arg::with_name("skip impact crater")
             .long("skip-impact-crater")
             .help("Elevators to the Impact Crater immediately go to the game end sequence"))
@@ -197,6 +200,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         staggered_suit_damage: matches.is_present("staggered suit damage"),
         keep_fmvs: matches.is_present("keep attract mode"),
         obfuscate_items: matches.is_present("obfuscate items"),
+        auto_enabled_elevators: matches.is_present("auto enabled elevators"),
         quiet: matches.is_present("quiet"),
 
         skip_impact_crater,

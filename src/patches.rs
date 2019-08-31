@@ -694,14 +694,18 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 }
 
 
-fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [Elevator])
+fn make_elevators_patch<'a>(
+    patcher: &mut PrimePatcher<'_, 'a>,
+    layout: &'a [Elevator],
+    auto_enabled_elevators: bool,
+)
 {
     for (elv, dest) in ELEVATORS.iter().zip(layout) {
         if elv.pak_name.len() == 0 {
             // Skip destination only elevators
             continue
         }
-        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |_ps, area| {
+        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
             let scly = area.mrea().scly_section_mut();
             for layer in scly.layers.iter_mut() {
                 let obj = layer.objects.iter_mut()
@@ -712,6 +716,40 @@ fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [Ele
                     wt.mlvl = dest.mlvl;
                 }
             }
+
+            if auto_enabled_elevators {
+                // Auto enable the elevator
+                let layer = &mut scly.layers.as_mut_vec()[0];
+                let mr_id = layer.objects.iter()
+                    .find(|obj| obj.property_data.as_memory_relay()
+                        .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
+                        .unwrap_or(false)
+                    )
+                    .map(|mr| mr.instance_id);
+
+                if let Some(mr_id) = mr_id {
+                    layer.objects.as_mut_vec().push(structs::SclyObject {
+                        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                        property_data: structs::SclyProperty::Timer(structs::Timer {
+                            name: b"Auto enable elevator\0".as_cstr(),
+
+                            start_time: 0.001,
+                            max_random_add: 0f32,
+                            reset_to_zero: 0,
+                            start_immediately: 1,
+                            active: 1,
+                        }),
+                        connections: vec![
+                            structs::Connection {
+                                state: structs::ConnectionState::ZERO,
+                                message: structs::ConnectionMsg::ACTIVATE,
+                                target_object_id: mr_id,
+                            },
+                        ].into(),
+                    });
+                }
+            }
+
             Ok(())
         });
 
@@ -1765,6 +1803,7 @@ pub struct ParsedConfig
     pub obfuscate_items: bool,
     pub nonvaria_heat_damage: bool,
     pub staggered_suit_damage: bool,
+    pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
     pub skip_impact_crater: bool,
@@ -2107,7 +2146,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
-    make_elevators_patch(&mut patcher, &elevator_layout);
+    make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
