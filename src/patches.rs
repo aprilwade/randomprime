@@ -1293,6 +1293,18 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    // Remove the object that turns off the stalactites layer
+    layer.objects.as_mut_vec().retain(|obj| obj.instance_id != 3473722);
+
+    Ok(())
+}
+
 fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
 {
     let strings = res.kind.as_strg_mut().unwrap()
@@ -2173,6 +2185,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         resource_info!("02_mines_shotemup.MREA").into(),
         patch_mines_security_station_soft_lock
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_ice_gravity_chamber.MREA").into(),
+        patch_gravity_chamber_stalactite_grapple_point
     );
 
 

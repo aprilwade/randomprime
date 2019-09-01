@@ -24,6 +24,7 @@ mod scly_props
 {
     // http://www.metroid2002.com/retromodding/wiki/User:Parax0/Sandbox
     mod actor;
+    mod damageable_trigger;
     mod dock;
     mod effect;
     mod hud_memo;
@@ -45,6 +46,7 @@ mod scly_props
     pub mod structs;
 
     pub use self::actor::*;
+    pub use self::damageable_trigger::*;
     pub use self::dock::*;
     pub use self::effect::*;
     pub use self::hud_memo::*;
