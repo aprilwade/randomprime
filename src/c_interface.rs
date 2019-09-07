@@ -43,6 +43,8 @@ struct Config
     staggered_suit_damage: bool,
     #[serde(default)]
     obfuscate_items: bool,
+    #[serde(default)]
+    auto_enabled_elevators: bool,
 
     #[serde(default)]
     skip_impact_crater: bool,
@@ -206,6 +208,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         staggered_suit_damage: config.staggered_suit_damage,
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
+        auto_enabled_elevators: config.auto_enabled_elevators,
         quiet: false,
 
         skip_impact_crater: config.skip_impact_crater,
@@ -216,6 +219,8 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         starting_items: config.starting_items,
         comment: config.comment,
         main_menu_message: config.main_menu_message,
+
+        quickplay: false,
 
         bnr_game_name: config.banner.as_mut().and_then(|b| b.game_name.take()),
         bnr_developer: config.banner.as_mut().and_then(|b| b.developer.take()),

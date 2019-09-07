@@ -58,6 +58,7 @@ impl DVDFileInfo
         }
     }
 
+    #[inline(always)]
     pub fn file_length(&self) -> u32
     {
         unsafe { (*self.0.get()).length }
@@ -82,6 +83,7 @@ impl DVDFileInfo
 
 impl Drop for DVDFileInfo
 {
+    #[inline(always)]
     fn drop(&mut self)
     {
         unsafe {

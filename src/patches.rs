@@ -88,11 +88,53 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     }
 
     // Generate and add the assets for Nothing and Phazon Suit
-    // XXX This is super gross because arrays don't have owned-iterators
-    let new_assets = vec![create_nothing_cmdl_and_ancs(&mut found),
-                          create_phazon_cmdl_and_ancs(&mut found)]
-                    .into_iter()
-                    .flat_map(|(a, b)| vec![a, b].into_iter());
+    let mut new_assets = vec![];
+    new_assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
+        &found,
+        custom_asset_ids::NOTHING_CMDL,
+        custom_asset_ids::NOTHING_ANCS,
+        custom_asset_ids::NOTHING_TXTR,
+        custom_asset_ids::PHAZON_SUIT_TXTR2,
+    ));
+    new_assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
+        &found,
+        custom_asset_ids::PHAZON_SUIT_CMDL,
+        custom_asset_ids::PHAZON_SUIT_ANCS,
+        custom_asset_ids::PHAZON_SUIT_TXTR1,
+        custom_asset_ids::PHAZON_SUIT_TXTR2,
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::PHAZON_SUIT_SCAN,
+        custom_asset_ids::PHAZON_SUIT_STRG,
+        "Phazon Suit\0",
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::NOTHING_SCAN,
+        custom_asset_ids::NOTHING_SCAN_STRG,
+        "???\0",
+    ));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "&just=center;Nothing acquired!\0".to_owned(),
+        ])),
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::THERMAL_VISOR_SCAN,
+        custom_asset_ids::THERMAL_VISOR_STRG,
+        "Thermal Visor\0",
+    ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::SCAN_VISOR_SCAN,
+        custom_asset_ids::SCAN_VISOR_SCAN_STRG,
+        "Scan Visor\0",
+    ));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "&just=center;Scan Visor acquired!\0".to_owned(),
+        ])),
+    ));
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
         if looking_for.remove(&key) {
@@ -105,88 +147,78 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     found
 }
 
-// TODO Reduce duplication between create_phazon_cmdl_and_ancs and create_nothing_cmdl_and_ancs
-fn create_nothing_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
-    -> (structs::Resource<'r>, structs::Resource<'r>)
+fn create_suit_icon_cmdl_and_ancs<'r>(
+    resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    new_cmdl: u32,
+    new_ancs: u32,
+    new_txtr1: u32,
+    new_txtr2: u32,
+) -> [structs::Resource<'r>; 2]
 {
-    let nothing_suit_cmdl = {
+    let new_suit_cmdl = {
         let grav_suit_cmdl = ResourceData::new(
             &resources[&resource_info!("Node1_11.CMDL").into()]
         );
-        let mut nothing_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+        let mut new_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
-        let len = nothing_cmdl_bytes.len();
-        nothing_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+        let len = new_cmdl_bytes.len();
+        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change which texture this points to
-        custom_asset_ids::NOTHING_TXTR.write_to(&mut &mut nothing_cmdl_bytes[0x64..]).unwrap();
-        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut nothing_cmdl_bytes[0x70..]).unwrap();
+        new_txtr1.write_to(&mut &mut new_cmdl_bytes[0x64..]).unwrap();
+        new_txtr2.write_to(&mut &mut new_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            custom_asset_ids::NOTHING_CMDL,
-            structs::ResourceKind::External(nothing_cmdl_bytes, b"CMDL".into())
+            new_cmdl,
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
         )
     };
-    let nothing_suit_ancs = {
+    let new_suit_ancs = {
         let grav_suit_ancs = ResourceData::new(
             &resources[&resource_info!("Node1_11.ANCS").into()]
         );
-        let mut nothing_ancs_bytes = grav_suit_ancs.decompress().into_owned();
+        let mut new_ancs_bytes = grav_suit_ancs.decompress().into_owned();
 
         // Ensure the length is a multiple of 32
-        let len = nothing_ancs_bytes.len();
-        nothing_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+        let len = new_ancs_bytes.len();
+        new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         // Change this to refer to the CMDL above
-        custom_asset_ids::NOTHING_CMDL.write_to(&mut &mut nothing_ancs_bytes[0x14..]).unwrap();
+        new_cmdl.write_to(&mut &mut new_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            custom_asset_ids::NOTHING_ANCS,
-            structs::ResourceKind::External(nothing_ancs_bytes, b"ANCS".into())
+            new_ancs,
+            structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
         )
     };
-    (nothing_suit_cmdl, nothing_suit_ancs)
+    [new_suit_cmdl, new_suit_ancs]
 }
 
-fn create_phazon_cmdl_and_ancs<'r>(resources: &mut HashMap<(u32, FourCC), structs::Resource<'r>>)
-    -> (structs::Resource<'r>, structs::Resource<'r>)
+fn create_item_scan_strg_pair<'r>(
+    new_scan: u32,
+    new_strg: u32,
+    contents: &str,
+) -> [structs::Resource<'r>; 2]
 {
-    let phazon_suit_cmdl = {
-        let grav_suit_cmdl = ResourceData::new(
-            &resources[&resource_info!("Node1_11.CMDL").into()]
-        );
-        let mut phazon_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
-
-        // Ensure the length is a multiple of 32
-        let len = phazon_cmdl_bytes.len();
-        phazon_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
-        // Change which textures this points to
-        custom_asset_ids::PHAZON_SUIT_TXTR1.write_to(&mut &mut phazon_cmdl_bytes[0x64..]).unwrap();
-        custom_asset_ids::PHAZON_SUIT_TXTR2.write_to(&mut &mut phazon_cmdl_bytes[0x70..]).unwrap();
-        pickup_meta::build_resource(
-            custom_asset_ids::PHAZON_SUIT_CMDL,
-            structs::ResourceKind::External(phazon_cmdl_bytes, b"CMDL".into())
-        )
-    };
-    let phazon_suit_ancs = {
-        let grav_suit_ancs = ResourceData::new(
-            &resources[&resource_info!("Node1_11.ANCS").into()]
-        );
-        let mut phazon_ancs_bytes = grav_suit_ancs.decompress().into_owned();
-
-        // Ensure the length is a multiple of 32
-        let len = phazon_ancs_bytes.len();
-        phazon_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
-        // Change this to refer to the CMDL above
-        custom_asset_ids::PHAZON_SUIT_CMDL.write_to(&mut &mut phazon_ancs_bytes[0x14..]).unwrap();
-        pickup_meta::build_resource(
-            custom_asset_ids::PHAZON_SUIT_ANCS,
-            structs::ResourceKind::External(phazon_ancs_bytes, b"ANCS".into())
-        )
-    };
-    (phazon_suit_cmdl, phazon_suit_ancs)
+    let scan = pickup_meta::build_resource(
+        new_scan,
+        structs::ResourceKind::Scan(structs::Scan {
+            frme: 0xFFFFFFFF,
+            strg: new_strg,
+            scan_speed: 0,
+            category: 0,
+            icon_flag: 0,
+            images: Default::default(),
+            padding: [255; 23].into(),
+            _dummy: std::marker::PhantomData,
+        }),
+    );
+    let strg = pickup_meta::build_resource(
+        new_strg,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![contents.to_owned()])),
+    );
+    [scan, strg]
 }
+
 
 fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     -> structs::SclyObject<'r>
@@ -662,14 +694,18 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 }
 
 
-fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [Elevator])
+fn make_elevators_patch<'a>(
+    patcher: &mut PrimePatcher<'_, 'a>,
+    layout: &'a [Elevator],
+    auto_enabled_elevators: bool,
+)
 {
     for (elv, dest) in ELEVATORS.iter().zip(layout) {
         if elv.pak_name.len() == 0 {
             // Skip destination only elevators
             continue
         }
-        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |_ps, area| {
+        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
             let scly = area.mrea().scly_section_mut();
             for layer in scly.layers.iter_mut() {
                 let obj = layer.objects.iter_mut()
@@ -680,6 +716,40 @@ fn make_elevators_patch<'a>(patcher: &mut PrimePatcher<'_, 'a>, layout: &'a [Ele
                     wt.mlvl = dest.mlvl;
                 }
             }
+
+            if auto_enabled_elevators {
+                // Auto enable the elevator
+                let layer = &mut scly.layers.as_mut_vec()[0];
+                let mr_id = layer.objects.iter()
+                    .find(|obj| obj.property_data.as_memory_relay()
+                        .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
+                        .unwrap_or(false)
+                    )
+                    .map(|mr| mr.instance_id);
+
+                if let Some(mr_id) = mr_id {
+                    layer.objects.as_mut_vec().push(structs::SclyObject {
+                        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                        property_data: structs::SclyProperty::Timer(structs::Timer {
+                            name: b"Auto enable elevator\0".as_cstr(),
+
+                            start_time: 0.001,
+                            max_random_add: 0f32,
+                            reset_to_zero: 0,
+                            start_immediately: 1,
+                            active: 1,
+                        }),
+                        connections: vec![
+                            structs::Connection {
+                                state: structs::ConnectionState::ZERO,
+                                message: structs::ConnectionMsg::ACTIVATE,
+                                target_object_id: mr_id,
+                            },
+                        ].into(),
+                    });
+                }
+            }
+
             Ok(())
         });
 
@@ -1223,6 +1293,18 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    // Remove the object that turns off the stalactites layer
+    layer.objects.as_mut_vec().retain(|obj| obj.instance_id != 3473722);
+
+    Ok(())
+}
+
 fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
 {
     let strings = res.kind.as_strg_mut().unwrap()
@@ -1390,7 +1472,8 @@ fn patch_starting_pickups(
 
             print_maybe!(first, "Starting pickups set:");
 
-            spawn_point.scan_visor = 1;
+            spawn_point.scan_visor = fetch_bits(1);
+            print_maybe!(first, "    scan_visor: {}", spawn_point.scan_visor);
 
             spawn_point.missiles = fetch_bits(8);
             print_maybe!(first, "    missiles: {}", spawn_point.missiles);
@@ -1458,12 +1541,14 @@ fn patch_starting_pickups(
     Ok(())
 }
 
+include!("../compile_to_ppc/patches_config.rs");
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
     patch_heat_damage: bool,
     patch_suit_damage: bool,
+    quickplay: bool,
 ) -> Result<(), String>
 {
     macro_rules! symbol_addr {
@@ -1617,19 +1702,48 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
-
-    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("PPCSetFpIEEEMode", version) + 4, {
-        b      { 0x80002000 };
-    }))?;
-
-    let mut rel_loader = match version {
-        Version::V0_00 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
+    let (rel_loader_bytes, rel_loader_map_str) = match version {
+        Version::V0_00 => {
+            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.00.bin");
+            let map_str = include_str!("../extra_assets/rel_loader_1.00.bin.map");
+            (loader_bytes, map_str)
+        },
         Version::V0_01 => unreachable!(),
-        Version::V0_02 => include_bytes!("../extra_assets/rel_loader_1.02.bin").to_vec(),
+        Version::V0_02 => {
+            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.02.bin");
+            let map_str = include_str!("../extra_assets/rel_loader_1.02.bin.map");
+            (loader_bytes, map_str)
+        },
     };
+
+    let mut rel_loader = rel_loader_bytes.to_vec();
+
+    let rel_loader_map = dol_linker::parse_symbol_table(
+        "extra_assets/rel_loader_1.0?.bin.map".as_ref(),
+        rel_loader_map_str.lines().map(|l| Ok(l.to_owned())),
+    ).map_err(|e| e.to_string())?;
+
+
+    let rel_config = RelConfig {
+        quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
+        quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
+    };
+    let rel_config_size = <RelConfig as reader_writer::Readable>::fixed_size().unwrap();
+    let rel_config_offset = (rel_loader_map["REL_CONFIG"] - 0x80002000) as usize;
+    {
+        let rel_config_bytes = &mut rel_loader[rel_config_offset..(rel_config_offset + rel_config_size)];
+        rel_config.write_to(&mut std::io::Cursor::new(rel_config_bytes)).unwrap();
+    }
+
     let bytes_needed = ((rel_loader.len() + 31) & !31) - rel_loader.len();
     rel_loader.extend([0; 32][..bytes_needed].iter().copied());
+
     dol_patcher.add_text_segment(0x80002000, Cow::Owned(rel_loader))?;
+
+    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("PPCSetFpIEEEMode", version) + 4, {
+        b      { rel_loader_map["rel_loader_hook"] };
+    }))?;
+
 
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
@@ -1732,6 +1846,7 @@ pub struct ParsedConfig
     pub obfuscate_items: bool,
     pub nonvaria_heat_damage: bool,
     pub staggered_suit_damage: bool,
+    pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
     pub skip_impact_crater: bool,
@@ -1742,6 +1857,8 @@ pub struct ParsedConfig
     pub starting_items: Option<u64>,
     pub comment: String,
     pub main_menu_message: String,
+
+    pub quickplay: bool,
 
     pub bnr_game_name: Option<String>,
     pub bnr_developer: Option<String>,
@@ -1989,6 +2106,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
+                config.quickplay,
             )
         );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
@@ -2001,6 +2119,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
+                config.quickplay,
             )
         );
         patcher.add_scly_patch(
@@ -2012,7 +2131,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let (starting_items, print_sis) = if let Some(starting_items) = config.starting_items {
         (starting_items, true)
     } else {
-        (0, false)
+        (1, false)
     };
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
@@ -2074,7 +2193,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
-    make_elevators_patch(&mut patcher, &elevator_layout);
+    make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
@@ -2101,6 +2220,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         resource_info!("02_mines_shotemup.MREA").into(),
         patch_mines_security_station_soft_lock
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_ice_gravity_chamber.MREA").into(),
+        patch_gravity_chamber_stalactite_grapple_point
     );
 
 

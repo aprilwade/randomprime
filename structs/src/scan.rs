@@ -28,7 +28,7 @@ pub struct Scan<'r>
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ScanImage
 {
     pub txtr: u32,
@@ -38,6 +38,22 @@ pub struct ScanImage
     pub height: u32,
     pub interval: f32,
     pub fade_duration: f32,
+}
+
+impl Default for ScanImage
+{
+    fn default() -> Self
+    {
+        ScanImage {
+            txtr: 0xFFFFFFFF,
+            appearance_percent: 0.0,
+            image_position: 0xFFFFFFFF,
+            width: 0,
+            height: 0,
+            interval: 0.0,
+            fade_duration: 0.0,
+        }
+    }
 }
 
 #[test]

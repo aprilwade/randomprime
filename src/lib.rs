@@ -183,6 +183,11 @@ pub fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, [u32; 16]), String>
         return Err(msg.to_string());
     }
 
+    let (pickup_bytes, has_scan_visor) = if pickup_bytes.starts_with(b"!") {
+        (&pickup_bytes[1..], true)
+    } else {
+        (pickup_bytes, false)
+    };
     if pickup_bytes.len() != 87 {
         return Err("Layout string should be exactly 87 characters".to_string());
     }
@@ -201,8 +206,9 @@ pub fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, [u32; 16]), String>
 
     let pickup_layout = parse_layout_chars_to_ints(
             pickup_bytes,
-            517, 5,
-            iter::repeat(36u8).take(100)
+            if has_scan_visor { 521 } else { 517 },
+            if has_scan_visor { 1 } else { 5 },
+            iter::repeat(if has_scan_visor { 37u8 } else { 36u8 }).take(100)
         ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
 
     let elevator_layout = parse_layout_chars_to_ints(
@@ -283,6 +289,11 @@ pub mod custom_asset_ids {
         NOTHING_TXTR,
         NOTHING_CMDL,
         NOTHING_ANCS,
+        THERMAL_VISOR_SCAN,
+        THERMAL_VISOR_STRG,
+        SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
+        SCAN_VISOR_SCAN_STRG,
+        SCAN_VISOR_SCAN,
 
         SKIP_HUDMEMO_STRG_START,
         SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 37,

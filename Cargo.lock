@@ -616,6 +616,7 @@ name = "randomprime"
 version = "0.2.3"
 dependencies = [
  "adler32 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "auto_struct_macros 0.1.0",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dol_linker 0.1.0",
  "dol_symbol_table 0.1.0",
