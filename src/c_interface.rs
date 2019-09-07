@@ -220,6 +220,8 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 
+        quickplay: false,
+
         bnr_game_name: config.banner.as_mut().and_then(|b| b.game_name.take()),
         bnr_developer: config.banner.as_mut().and_then(|b| b.developer.take()),
 

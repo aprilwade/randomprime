@@ -1399,17 +1399,13 @@ pub fn link_obj_files_to_bin<'a>(
     )
 }
 
-pub fn read_symbol_table(fname: impl AsRef<Path>)
-    -> Result<HashMap<String, u32>>
+pub fn parse_symbol_table(
+    fname: &Path,
+    lines: impl Iterator<Item = std::io::Result<String>>,
+) -> Result<HashMap<String, u32>>
 {
-    let fname = fname.as_ref();
-
-    let file = File::open(fname)
-        .with_context(|| OpenFile { filename: fname })?;
-    let file = BufReader::new(file);
-
     let mut sym_table = HashMap::new();
-    for (line_number, line) in file.lines().enumerate() {
+    for (line_number, line) in lines.enumerate() {
         let line = line
             .with_context(|| SymTableIO { filename: fname, line_number })?;
 
@@ -1417,7 +1413,7 @@ pub fn read_symbol_table(fname: impl AsRef<Path>)
             continue
         }
 
-        let mut it = line.split(' ');
+        let mut it = line.splitn(2, ' ');
 
         let addr = it.next()
             .with_context(|| SymTableWrongNumberOfComponenets { filename: fname, line_number })?;
@@ -1438,6 +1434,18 @@ pub fn read_symbol_table(fname: impl AsRef<Path>)
     }
 
     Ok(sym_table)
+}
+
+pub fn read_symbol_table(fname: impl AsRef<Path>)
+    -> Result<HashMap<String, u32>>
+{
+    let fname = fname.as_ref();
+
+    let file = File::open(fname)
+        .with_context(|| OpenFile { filename: fname })?;
+    let file = BufReader::new(file);
+
+    parse_symbol_table(fname, file.lines())
 }
 
 fn align_to(x: impl Into<u32>, alignment: impl Into<u32>) -> u32

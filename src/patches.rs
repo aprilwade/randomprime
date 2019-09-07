@@ -1541,12 +1541,14 @@ fn patch_starting_pickups(
     Ok(())
 }
 
+include!("../compile_to_ppc/patches_config.rs");
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
     patch_heat_damage: bool,
     patch_suit_damage: bool,
+    quickplay: bool,
 ) -> Result<(), String>
 {
     macro_rules! symbol_addr {
@@ -1700,19 +1702,48 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
-
-    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("PPCSetFpIEEEMode", version) + 4, {
-        b      { 0x80002000 };
-    }))?;
-
-    let mut rel_loader = match version {
-        Version::V0_00 => include_bytes!("../extra_assets/rel_loader_1.00.bin").to_vec(),
+    let (rel_loader_bytes, rel_loader_map_str) = match version {
+        Version::V0_00 => {
+            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.00.bin");
+            let map_str = include_str!("../extra_assets/rel_loader_1.00.bin.map");
+            (loader_bytes, map_str)
+        },
         Version::V0_01 => unreachable!(),
-        Version::V0_02 => include_bytes!("../extra_assets/rel_loader_1.02.bin").to_vec(),
+        Version::V0_02 => {
+            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.02.bin");
+            let map_str = include_str!("../extra_assets/rel_loader_1.02.bin.map");
+            (loader_bytes, map_str)
+        },
     };
+
+    let mut rel_loader = rel_loader_bytes.to_vec();
+
+    let rel_loader_map = dol_linker::parse_symbol_table(
+        "extra_assets/rel_loader_1.0?.bin.map".as_ref(),
+        rel_loader_map_str.lines().map(|l| Ok(l.to_owned())),
+    ).map_err(|e| e.to_string())?;
+
+
+    let rel_config = RelConfig {
+        quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
+        quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
+    };
+    let rel_config_size = <RelConfig as reader_writer::Readable>::fixed_size().unwrap();
+    let rel_config_offset = (rel_loader_map["REL_CONFIG"] - 0x80002000) as usize;
+    {
+        let rel_config_bytes = &mut rel_loader[rel_config_offset..(rel_config_offset + rel_config_size)];
+        rel_config.write_to(&mut std::io::Cursor::new(rel_config_bytes)).unwrap();
+    }
+
     let bytes_needed = ((rel_loader.len() + 31) & !31) - rel_loader.len();
     rel_loader.extend([0; 32][..bytes_needed].iter().copied());
+
     dol_patcher.add_text_segment(0x80002000, Cow::Owned(rel_loader))?;
+
+    dol_patcher.ppcasm_patch(&ppcasm!(symbol_addr!("PPCSetFpIEEEMode", version) + 4, {
+        b      { rel_loader_map["rel_loader_hook"] };
+    }))?;
+
 
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
@@ -1826,6 +1857,8 @@ pub struct ParsedConfig
     pub starting_items: Option<u64>,
     pub comment: String,
     pub main_menu_message: String,
+
+    pub quickplay: bool,
 
     pub bnr_game_name: Option<String>,
     pub bnr_developer: Option<String>,
@@ -2073,6 +2106,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
+                config.quickplay,
             )
         );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
@@ -2085,6 +2119,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
+                config.quickplay,
             )
         );
         patcher.add_scly_patch(

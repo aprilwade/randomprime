@@ -1,5 +1,7 @@
 use std::env;
-use std::path::{Path};
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 use std::process::Command;
 
 use dol_linker::{read_symbol_table, link_obj_files_to_bin, link_obj_files_to_rel};
@@ -48,16 +50,28 @@ fn main()
     for version in &["1.00", "1.02"] {
         let sym_table_path = format!("dol_symbol_table/{}.txt", version);
         eprintln!("{:?}", root_dir.join(&sym_table_path));
-        let symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();
+        let mut symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();
 
         let bin_path = root_dir.join(format!("extra_assets/rel_loader_{}.bin", version));
-        link_obj_files_to_bin(
+        let symbols_map = link_obj_files_to_bin(
             [ppc_target_dir.join("librel_loader.a")].iter(),
             0x80002000,
             &symbol_table,
             &bin_path,
         ).unwrap();
-        println!("caragp:rerun-if-changed={}", bin_path.display());
+        println!("cargo:rerun-if-changed={}", bin_path.display());
+        let map_path = bin_path.with_extension("bin.map");
+        {
+            let mut map_file = File::create(map_path).unwrap();
+            for (sym_name, addr) in &symbols_map {
+                writeln!(map_file, "0x{:08x} \"{}\"", addr, sym_name).unwrap();
+            }
+        }
+
+        for (sym_name, addr) in symbols_map {
+            symbol_table.entry(sym_name)
+                .or_insert(addr);
+        }
 
         let rel_path = root_dir.join(format!("extra_assets/patches_{}.rel", version));
         link_obj_files_to_rel(
@@ -65,10 +79,10 @@ fn main()
             &symbol_table,
             &rel_path,
         ).unwrap();
-        println!("caragp:rerun-if-changed={}", rel_path.display());
+        println!("cargo:rerun-if-changed={}", rel_path.display());
     }
 
     for entry in WalkDir::new(ppc_dir) {
-        println!("caragp:rerun-if-changed={}", entry.unwrap().path().display());
+        println!("cargo:rerun-if-changed={}", entry.unwrap().path().display());
     }
 }

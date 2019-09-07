@@ -142,6 +142,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .takes_value(true)
             .validator(|s| s.parse::<u64>().map(|_| ())
                                         .map_err(|_| "Expected an integer".to_string())))
+        .arg(Arg::with_name("quickplay")
+            .long("quickplay")
+            .hidden(true))
         .arg(Arg::with_name("text file comment")
                 .long("text-file-comment")
                 .hidden(true)
@@ -214,6 +217,8 @@ fn get_config() -> Result<patches::ParsedConfig, String>
 
         comment: matches.value_of("text file comment").unwrap_or("").to_string(),
         main_menu_message: matches.value_of("main menu message").unwrap_or("").to_string(),
+
+        quickplay: matches.is_present("quickplay"),
 
         bnr_game_name: None,
         bnr_developer: None,

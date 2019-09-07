@@ -73,6 +73,14 @@ impl CPlayerState
     { }
 }
 
+pub enum CWorldState { }
+impl CWorldState
+{
+    #[cpp_method(CWorldState::SetDesiredAreaAssetId(unsigned int))]
+    pub unsafe fn set_desired_area_asset_id(this: *mut CWorldState, id: u32)
+    { }
+}
+
 pub enum CGameState { }
 impl CGameState
 {
@@ -89,6 +97,14 @@ impl CGameState
             g_GameState
         }
     }
+
+    #[cpp_method(CGameState::SetCurrentWorldId(unsigned int))]
+    pub unsafe fn set_current_world_id(this: *mut CGameState, id: u32)
+    { }
+
+    #[cpp_method(CGameState::GetCurrentWorldState(void) const)]
+    pub unsafe fn get_current_world_state(this: *mut CGameState) -> *mut CWorldState
+    { }
 }
 
 pub enum CStateManager { }
@@ -170,4 +186,26 @@ pub extern "C" fn entity_empty_accept_impl<T>(this: *mut T, visitor: *mut IVisit
         let func_ptr = ptr::read(vtable.offset(0x9));
         (func_ptr)(visitor, this)
     }
+}
+
+pub enum CArchitectureQueue { }
+
+pub enum CMainFlow { }
+impl CMainFlow
+{
+    #[cpp_method(CMainFlow::AdvanceGameState(CArchitectureQueue &))]
+    pub unsafe fn advance_game_state(this: *mut CMainFlow, q: *mut CArchitectureQueue)
+    { }
+
+    #[cpp_method(CMainFlow::SetGameState(EClientFlowStates, CArchitectureQueue &))]
+    pub unsafe fn set_game_state(this: *mut CMainFlow, state: i32, q: *mut CArchitectureQueue)
+    { }
+
+    cpp_field!(game_state: i32; ro_val @ 0x14);
+
+    pub const CLIENT_FLOW_STATE_UNSPECIFIED: i32 = -1;
+    pub const CLIENT_FLOW_STATE_PRE_FRONT_END: i32 = 7;
+    pub const CLIENT_FLOW_STATE_FRONT_END: i32 = 8;
+    pub const CLIENT_FLOW_STATE_GAME: i32 = 14;
+    pub const CLIENT_FLOW_STATE_GAME_EXIT: i32 = 15;
 }

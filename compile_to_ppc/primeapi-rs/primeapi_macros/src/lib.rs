@@ -567,6 +567,7 @@ pub fn cpp_method(attr: TokenStream, fn_decl: TokenStream) -> TokenStream
         });
 
     (quote! {
+        #[inline(always)]
         #vis #sig
         {
             extern "C" {

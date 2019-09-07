@@ -17,6 +17,8 @@ sha2 = "0.7"
 rand = "0.4"
 winapi = "0.3"
 
+auto_struct_macros = { path = "auto_struct_macros" }
+dol_linker = { path = "dol_linker" }
 dol_symbol_table = { path = "dol_symbol_table" }
 nod_wrapper = { path = "nod_wrapper" }
 ppcasm = { path = "ppcasm" }

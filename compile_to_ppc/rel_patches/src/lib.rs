@@ -4,7 +4,10 @@
 use linkme::distributed_slice;
 
 use primeapi::patch_fn;
-use primeapi::mp1::{CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget, CStringTable};
+use primeapi::mp1::{
+    CArchitectureQueue, CGameState, CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget,
+    CMainFlow, CStringTable, CWorldState,
+};
 use primeapi::rstl::WString;
 
 
@@ -26,4 +29,33 @@ unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *
     }
 
     res
+}
+
+include!("../../patches_config.rs");
+extern "C" {
+    static REL_CONFIG: RelConfig;
+}
+
+// Based on
+// https://github.com/AxioDL/PWEQuickplayPatch/blob/249ae82cc20031fe99894524aefb1f151430bedf/Source/QuickplayModule.cpp#L150
+#[patch_fn(kind = "call",
+           target = "OnMessage__9CMainFlowFRC20CArchitectureMessageR18CArchitectureQueue" + 72)]
+unsafe extern "C" fn quickplay_hook_advance_game_state(
+    flow: *mut CMainFlow,
+    q: *mut CArchitectureQueue
+)
+{
+    static mut INIT: bool = false;
+    if CMainFlow::game_state(flow) == CMainFlow::CLIENT_FLOW_STATE_PRE_FRONT_END  && !INIT {
+        INIT = true;
+        if REL_CONFIG.quickplay_mlvl != 0xFFFFFFFF {
+            let game_state = CGameState::global_instance();
+            CGameState::set_current_world_id(game_state, REL_CONFIG.quickplay_mlvl);
+            let world_state = CGameState::get_current_world_state(game_state);
+            CWorldState::set_desired_area_asset_id(world_state, REL_CONFIG.quickplay_mrea);
+            CMainFlow::set_game_state(flow, CMainFlow::CLIENT_FLOW_STATE_GAME, q);
+            return;
+        }
+    }
+    CMainFlow::advance_game_state(flow, q)
 }

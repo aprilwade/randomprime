@@ -3,6 +3,14 @@
 use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::dol_sdk::os::{OSLink, OSModuleHeader};
 
+include!("../../patches_config.rs");
+#[no_mangle]
+pub static REL_CONFIG: RelConfig = RelConfig {
+    quickplay_mlvl: 0xFFFFFFFF,
+    quickplay_mrea: 0xFFFFFFFF,
+};
+
+
 #[inline(always)]
 fn leak_slice<'a>(len: usize) -> &'a mut [u8]
 {
@@ -12,8 +20,7 @@ fn leak_slice<'a>(len: usize) -> &'a mut [u8]
     }
 }
 
-// Custom name for section sorting purposes (spaces sort extremely early!)
-#[export_name = " rel_loader_hook"]
+#[export_name = "rel_loader_hook"]
 pub unsafe extern "C" fn rel_loader_hook()
 {
     let mut fi = DVDFileInfo::new(b"patches.rel\0");

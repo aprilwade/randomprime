@@ -28,24 +28,31 @@ pub mod reexport {
 #[macro_export]
 macro_rules! cpp_field {
     ($id:ident: $ty:ty; ptr @ $e:expr) => {
+        #[inline(always)]
         pub fn $id(this: *const Self) -> *const $ty
         {
             (this as usize + ($e)) as *mut _
         }
 
         $crate::reexport::paste::item! {
+            #[inline(always)]
             pub fn [<$id _mut>](this: *mut Self) -> *mut $ty
             {
                 (this as usize + ($e)) as *mut _
             }
         }
     };
-    ($id:ident: $ty:ty; val @ $e:expr) => {
+    ($id:ident: $ty:ty; ro_val @ $e:expr) => {
+        #[inline(always)]
         pub unsafe fn $id(this: *const Self) -> $ty
         {
             core::ptr::read((this as usize + ($e)) as *const $ty)
         }
+    };
+    ($id:ident: $ty:ty; val @ $e:expr) => {
+        $crate::cpp_field!($id: $ty; ro_val @ $e);
         $crate::reexport::paste::item! {
+            #[inline(always)]
             pub unsafe fn [<set_ $id>](this: *const Self, val: $ty)
             {
                 core::ptr::write((this as usize + ($e)) as *mut $ty, val)
