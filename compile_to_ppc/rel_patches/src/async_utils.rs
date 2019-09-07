@@ -108,8 +108,6 @@ pub struct LineReaderSock<'a>
 }
 
 impl<'a> LineReaderSock<'a>
-    // where F: FnMut(&'a mut [u8]) -> Fut,
-    //       Fut: core::future::Future<Output = Result<u32, E>> + 'a,
 {
     pub fn new(sock: crate::sock_async::TcpStreamRecv<'a>) -> Self
     {
