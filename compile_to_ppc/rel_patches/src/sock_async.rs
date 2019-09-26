@@ -1,20 +1,26 @@
 #![allow(unused)]
 
 use crate::ipc_async::{
-    empty_slice, empty_slice_mut, ios_open, ios_ioctl, ios_ioctlv, ios_close, running_on_dolphin,
-    Aligned32, Aligned32Slice, Aligned32SliceMut, EmptyArray, IpcIoctlvVec, Mem2Buf
+    ios_open, ios_ioctl, ios_ioctlv, ios_close, running_on_dolphin, IpcIoctlvVec, Mem2Buf,
+    ToIoctlvVec,
 };
-use crate::async_utils::{delay, milliseconds_to_ticks, poll_until_complete};
 
-use generic_array::{GenericArray, typenum::U4096};
+use crate::{delay, milliseconds_to_ticks};
+use async_utils::{poll_until_complete, MaybeUninitSliceExt};
+use generic_array::{GenericArray, typenum};
+use primeapi::alignment_utils::{
+    empty_aligned_slice, empty_aligned_slice_mut, Aligned32, Aligned32Slice, Aligned32SliceMut,
+    EmptyArray,
+};
 
 use core::future::Future;
 use core::marker::PhantomData;
-use core::mem;
+use core::mem::{self, MaybeUninit};
 use core::num::NonZeroU32;
+use core::pin::Pin;
 use core::ptr;
 use core::slice;
-use core::task::Poll;
+use core::task::{Poll, Context};
 
 macro_rules! decl_consts {
     (@Build { $prev:expr } $id:ident, $($rest:tt)*) => {
@@ -238,8 +244,13 @@ pub async fn sock_startup() -> u32
 
     // TODO: Spin until this returns 0? I've never seen it return anything else...
     let nwc24_startup_res = {
-        let mut output = Aligned32::new(mem::MaybeUninit::<[u8; 0x20]>::uninit());
-        ios_ioctl(kd_fd, IOCTL_NWC24_STARTUP, empty_slice(), output.as_slice_mut()).await
+        let mut output = Aligned32::new([mem::MaybeUninit::<u8>::uninit(); 0x20]);
+        ios_ioctl(
+            kd_fd,
+            IOCTL_NWC24_STARTUP,
+            empty_aligned_slice(),
+            output.as_inner_slice_mut()
+        ).await
     };
     debug_assert_eq!(nwc24_startup_res, 0);
 
@@ -254,12 +265,17 @@ pub async fn sock_startup() -> u32
 
 
     let so_startup_res = {
-        ios_ioctl(so_fd, IOCTL_SO_STARTUP, empty_slice(), empty_slice_mut()).await
+        ios_ioctl(so_fd, IOCTL_SO_STARTUP, empty_aligned_slice(), empty_aligned_slice_mut()).await
     };
     debug_assert_eq!(so_startup_res, 0);
 
     loop {
-        let ip = ios_ioctl(so_fd, IOCTL_SO_GETHOSTID, empty_slice(), empty_slice_mut()).await;
+        let ip = ios_ioctl(
+            so_fd,
+            IOCTL_SO_GETHOSTID,
+            empty_aligned_slice(),
+            empty_aligned_slice_mut()
+        ).await;
 
         if ip != 0 {
             break
@@ -284,7 +300,7 @@ pub async fn sock_socket<'a>(
         protocol: u32,
     }
     let params = Aligned32::new(SocketParams { domain, type_, protocol });
-    let r = ios_ioctl(so_fd, IOCTL_SO_SOCKET, params.as_slice(), empty_slice_mut()).await;
+    let r = ios_ioctl(so_fd, IOCTL_SO_SOCKET, params.as_slice(), empty_aligned_slice_mut()).await;
     convert_sock_res(r)
 }
 
@@ -293,7 +309,7 @@ pub async fn sock_close<'a>(
 ) -> i32
 {
     let mut socket = Aligned32::new(socket);
-    ios_ioctl(so_fd, IOCTL_SO_CLOSE, socket.as_slice(), empty_slice_mut()).await
+    ios_ioctl(so_fd, IOCTL_SO_CLOSE, socket.as_slice(), empty_aligned_slice_mut()).await
 }
 
 pub async fn sock_bind<'a>(
@@ -311,7 +327,7 @@ pub async fn sock_bind<'a>(
         has_name: 1,
         sockaddr
     });
-    let r = ios_ioctl(so_fd, IOCTL_SO_BIND, params.as_slice(), empty_slice_mut()).await;
+    let r = ios_ioctl(so_fd, IOCTL_SO_BIND, params.as_slice(), empty_aligned_slice_mut()).await;
     convert_sock_res(r)
 }
 
@@ -345,7 +361,12 @@ pub async fn sock_connect<'a>(
         socket,
         sockaddr: SockAddr { len: 8, ..sockaddr },
     });
-    convert_sock_res(ios_ioctl(so_fd, IOCTL_SO_CONNECT, params.as_slice(), empty_slice_mut()).await)
+    convert_sock_res(ios_ioctl(
+        so_fd,
+        IOCTL_SO_CONNECT,
+        params.as_slice(),
+        empty_aligned_slice_mut()
+    ).await)
 }
 
 pub async fn sock_listen<'a>(
@@ -361,7 +382,12 @@ pub async fn sock_listen<'a>(
         socket,
         backlog
     });
-    convert_sock_res(ios_ioctl(so_fd, IOCTL_SO_LISTEN, params.as_slice(), empty_slice_mut()).await)
+    convert_sock_res(ios_ioctl(
+        so_fd,
+        IOCTL_SO_LISTEN,
+        params.as_slice(),
+        empty_aligned_slice_mut()
+    ).await)
 }
 
 pub async fn sock_sendto<'a>(
@@ -398,7 +424,7 @@ pub async fn sock_sendto<'a>(
 
 pub async fn sock_recvfrom(
     so_fd: u32, socket: u32,
-    buf: &mut [u8],
+    buf: &mut [MaybeUninit<u8>],
     flags: u32,
     sockaddr: Option<&mut Aligned32<mem::MaybeUninit<SockAddr>>> ,
 ) -> Result<u32>
@@ -433,7 +459,13 @@ pub async fn sock_recvfrom(
     ).await;
     if r > 0 {
         if let Some(mem2_buf) = mem2_buf {
-            buf[..r as usize].copy_from_slice(&mem2_buf[..r as usize]);
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    mem2_buf.as_ptr(),
+                    buf.as_mut_ptr() as *mut _,
+                    r as usize
+                );
+            }
         }
     }
     convert_sock_res(r)
@@ -457,22 +489,22 @@ pub async fn sock_setsockopt<'a, T>(
     if optlen > 0x20 {
         Err(Error::EINVAL)?;
     }
-    let mut optval = [0u8; 0x20];
+    let mut optval_ = [0u8; 0x20];
     unsafe {
-        ptr::copy_nonoverlapping(optval.as_ptr() as *const u8, optval.as_mut_ptr(), optlen);
+        ptr::copy_nonoverlapping(optval.as_ptr() as *const u8, optval_.as_mut_ptr(), optlen);
     }
     let params = Aligned32::new(SetSockOptParams {
         socket,
         level,
         optname,
         optlen: optlen as u32,
-        optval,
+        optval: optval_,
     });
 
     convert_sock_res(ios_ioctl(
         so_fd, IOCTL_SO_SETSOCKOPT,
         params.as_slice(),
-        empty_slice_mut(),
+        empty_aligned_slice_mut(),
     ).await)
 }
 
@@ -536,24 +568,25 @@ impl TcpListener
     }
 }
 
+// TODO: Add a method to set the timeout (both recv and send)
 impl TcpStream
 {
-    pub async fn write<'a>(&mut self, buf: Aligned32Slice<'a, u8>) -> Result<u32>
+    pub async fn send<'a>(&mut self, buf: Aligned32Slice<'a, u8>) -> Result<u32>
     {
         let mut send = self.split().0;
-        send.write(buf).await
+        send.send(buf).await
     }
 
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<u32>
+    pub async fn recv(&mut self, buf: &mut [MaybeUninit<u8>]) -> Result<u32>
     {
         let mut recv = self.split().1;
-        recv.read(buf).await
+        recv.recv(buf).await
     }
 
-    pub async fn write_all(&mut self, buf: &[u8]) -> Result<()>
+    pub async fn send_all(&mut self, buf: &[u8]) -> Result<()>
     {
         let mut send = self.split().0;
-        send.write_all(buf).await
+        send.send_all(buf).await
     }
 
     pub fn split<'a>(&'a mut self) -> (TcpStreamSend<'a>, TcpStreamRecv<'a>)
@@ -595,27 +628,86 @@ pub struct TcpStreamSend<'a>
     phantom: PhantomData<&'a mut TcpStream>,
 }
 
+async fn sock_send_unaligned(so_fd: u32, socket: u32, buf: &[u8]) -> Result<u32>
+{
+    // TODO: This dance isn't necessary on dolphin
+    let (unaligned, aligned) = Aligned32Slice::split_unaligned_prefix(buf);
+    let i = {
+        let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
+        tmp_buf[..unaligned.len()].copy_from_slice(<[MaybeUninit<u8>]>::from_inited_slice(unaligned));
+
+        let tmp_buf = tmp_buf.as_inner_slice().truncate_to_len(unaligned.len());
+        sock_sendto(so_fd, socket, unsafe { tmp_buf.assume_init() }, 0, None).await?
+    };
+    if (i as usize) < unaligned.len() {
+        Ok(i)
+    } else {
+        Ok(sock_sendto(so_fd, socket, aligned, 0, None).await? + i)
+    }
+}
+
+async fn sock_send_unaligned_usize(so_fd: u32, socket: u32, buf: &[u8]) -> Result<usize>
+{
+    sock_send_unaligned(so_fd, socket, buf).await.map(|i| i as usize)
+}
+
+
 impl<'a> TcpStreamSend<'a>
 {
-    pub async fn write<'b>(&mut self, buf: Aligned32Slice<'b, u8>) -> Result<u32>
+    pub async fn send<'b>(&mut self, buf: Aligned32Slice<'b, u8>) -> Result<u32>
     {
         sock_sendto(self.so_fd, self.socket, buf, 0, None).await
     }
 
-    pub async fn write_all(&mut self, buf: &[u8]) -> Result<()>
+    pub async fn send_unaligned<'b>(&'a mut self, buf: &'b [u8]) -> Result<u32>
     {
-        // TODO: Maybe this should be larger to match the maximum size of TCP packet?
-        let mut tmp_buf = Aligned32::new(GenericArray::<u8, U4096>::default());
+        sock_send_unaligned(self.so_fd, self.socket, buf).await
+    }
+
+    fn send_unaligned_<'b>(&'b mut self, buf: &'b [u8]) -> TcpStreamSendWrite_<'b>
+    {
+        sock_send_unaligned_usize(self.so_fd, self.socket, buf)
+    }
+
+    pub async fn send_all(&mut self, buf: &[u8]) -> Result<()>
+    {
+        // TODO: MaybeUninit
+        let mut tmp_buf = Aligned32::new(GenericArray::<u8, typenum::U4096>::default());
         let mut bytes_written = 0;
         while bytes_written < buf.len() {
+            // TODO: If the remainder of tmp_buf starts at a 32-byte aligned address...
             let send_len = core::cmp::min(buf.len() - bytes_written, tmp_buf.len());
             tmp_buf[..send_len].copy_from_slice(&buf[bytes_written..bytes_written + send_len]);
             let mut tmp_buf = tmp_buf.as_inner_slice().truncate_to_len(send_len);
-            bytes_written += self.write(tmp_buf).await? as usize;
+            bytes_written += self.send(tmp_buf).await? as usize;
         }
         Ok(())
     }
 
+}
+
+type TcpStreamSendWrite_<'a> = impl Future<Output = Result<usize>> + 'a;
+pub struct TcpStreamSendWrite<'a>(TcpStreamSendWrite_<'a>);
+impl<'a> Future for TcpStreamSendWrite<'a>
+{
+    type Output = <TcpStreamSendWrite_<'a> as Future>::Output;
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output>
+    {
+        unsafe { self.map_unchecked_mut(|this| &mut this.0) }.poll(ctx)
+    }
+}
+async_utils::impl_rebind_lifetime_1!(TcpStreamSendWrite);
+
+impl<'a> async_utils::AsyncWrite for TcpStreamSend<'a>
+{
+    type Error = Error;
+    type Future = TcpStreamSendWrite<'static>;
+
+    fn async_write<'b>(&'b mut self, buf: &'b [u8])
+        -> async_utils::Lifetime1Rebinder<'b, Self::Future>
+    {
+        async_utils::Lifetime1Rebinder::new(TcpStreamSendWrite(self.send_unaligned_(buf)))
+    }
 }
 
 pub struct TcpStreamRecv<'a>
@@ -625,11 +717,51 @@ pub struct TcpStreamRecv<'a>
     phantom: PhantomData<&'a mut TcpStream>,
 }
 
-
 impl<'a> TcpStreamRecv<'a>
 {
-    pub async fn read(&mut self, buf: &mut [u8]) -> Result<u32>
+    pub async fn recv(&mut self, buf: &mut [MaybeUninit<u8>]) -> Result<u32>
     {
         sock_recvfrom(self.so_fd, self.socket, buf, 0, None).await
     }
+
+    fn read_usize_<'b>(&'b mut self, buf: &'b mut [MaybeUninit<u8>]) -> TcpStreamRecvRead_<'b>
+    {
+        // Compiler bug workaraound; apparently combinators won't work
+        pub async fn sock_recvfrom_usize(
+            so_fd: u32, socket: u32,
+            buf: &mut [MaybeUninit<u8>],
+            flags: u32,
+            sockaddr: Option<&mut Aligned32<mem::MaybeUninit<SockAddr>>> ,
+        ) -> Result<usize>
+        {
+            sock_recvfrom(so_fd, socket, buf, 0, None).await.map(|i| i as usize)
+        }
+        sock_recvfrom_usize(self.so_fd, self.socket, buf, 0, None)
+    }
 }
+
+impl<'a> async_utils::AsyncRead for TcpStreamRecv<'a>
+{
+    type Error = Error;
+    type Future = TcpStreamRecvRead<'static>;
+
+    fn async_read<'s>(&'s mut self, buf: &'s mut [MaybeUninit<u8>])
+        -> async_utils::Lifetime1Rebinder<'s, Self::Future>
+    {
+        async_utils::Lifetime1Rebinder::new(TcpStreamRecvRead(self.read_usize_(buf)))
+    }
+}
+
+type TcpStreamRecvRead_<'a> = impl Future<Output = Result<usize>> + 'a;
+// XXX Temporary workaround for a compiler bug
+// (https://github.com/rust-lang/rust/issues/63677)
+pub struct TcpStreamRecvRead<'a>(TcpStreamRecvRead_<'a>);
+impl<'a> Future for TcpStreamRecvRead<'a>
+{
+    type Output = <TcpStreamRecvRead_<'a> as Future>::Output;
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output>
+    {
+        unsafe { self.map_unchecked_mut(|this| &mut this.0) }.poll(ctx)
+    }
+}
+async_utils::impl_rebind_lifetime_1!(TcpStreamRecvRead);

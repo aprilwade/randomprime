@@ -41,6 +41,10 @@ impl<T: Generator<Yield = ()>> Future for GenFuture<T> {
     }
 }
 
+// XXX We need this to be a real tls-variable when testing. Its fine when actually compiling for
+//     PPC because we're using single-threaded code on the Game Cube there and we're assuming that
+//     development/`cargo test` builds won't be done on PPC systems
+#[cfg_attr(not(target_arch = "powerpc"), thread_local)]
 static FAKE_TLS_CX: AtomicPtr<Context<'static>> = AtomicPtr::new(ptr::null_mut());
 
 struct SetOnDrop(*mut Context<'static>);

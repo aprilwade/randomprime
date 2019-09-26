@@ -1,5 +1,5 @@
 [package]
-name = "primeapi"
+name = "barebones_http"
 version = "0.1.0"
 authors = ["April Wade <wayedt@gmail.com>"]
 edition = "2018"
@@ -7,13 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-linkme = "0.1"
-generic-array = "0.13"
-# pin-utils = "0.1.0-alpha.4"
-paste = "0.1"
+arrayvec = { version = "0.4", default-features = false }
+pin-utils = "0.1.0-alpha.4"
 
-primeapi_macros = { path = "primeapi_macros" }
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
+async_utils = { path = "../async_utils", package = "async_utils" }
 
-[features]
-rel_prolog = []
+[lib]
+doctest = false

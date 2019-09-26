@@ -75,7 +75,7 @@
 //! such as microcontrollers. This is left as an exercise to the reader.
 
 #![no_std]
-#![feature(generator_trait, optin_builtin_traits)]
+#![feature(thread_local, generator_trait, optin_builtin_traits)]
 
 pub mod future;
 pub use core::*;

@@ -1,2 +1,3 @@
-0x800020c0 "rel_loader_hook"
-0x8000216c "REL_CONFIG"
+0x800020f8 "bcmp"
+0x80002138 "rel_loader_hook"
+0x80002228 "REL_CONFIG"

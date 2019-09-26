@@ -1,4 +1,5 @@
 #![feature(alloc_error_handler)]
+// #![feature(async_await)]
 #![feature(macros_in_extern)]
 #![no_std]
 
@@ -19,6 +20,7 @@ pub mod dol_sdk {
     pub mod os;
 }
 pub mod mp1;
+pub mod alignment_utils;
 
 #[doc(hidden)]
 pub mod reexport {
@@ -246,22 +248,22 @@ unsafe extern "C" fn __rel_prolog()
 
 
 // TODO: Maybe re-enable this later? The core::fmt machinery seems to need it sometimes
-// #[no_mangle]
-// unsafe extern "C" fn bcmp(mut b1: *const u8, mut b2: *const u8, mut len: u32) -> u32
-// {
-//     if len == 0 {
-//         return 0
-//     }
+#[no_mangle]
+unsafe extern "C" fn bcmp(mut b1: *const u8, mut b2: *const u8, mut len: u32) -> u32
+{
+    if len == 0 {
+        return 0
+    }
 
-//     while len > 0 {
-//         if ptr::read(b1) != ptr::read(b2) {
-//             break
-//         }
+    while len > 0 {
+        if core::ptr::read(b1) != core::ptr::read(b2) {
+            break
+        }
 
-//         b1 = b1.offset(1);
-//         b2 = b2.offset(1);
-//         len -= 1;
-//     }
+        b1 = b1.offset(1);
+        b2 = b2.offset(1);
+        len -= 1;
+    }
 
-//     len
-// }
+    len
+}

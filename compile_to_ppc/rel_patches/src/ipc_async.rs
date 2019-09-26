@@ -2,7 +2,7 @@
 
 use core::alloc::Layout;
 use core::future::Future;
-use core::mem;
+use core::mem::{self, MaybeUninit};
 use core::pin::Pin;
 use core::ptr;
 use core::ops::{Deref, DerefMut};
@@ -12,7 +12,8 @@ use core::slice;
 
 use generic_array::{ArrayLength, GenericArray};
 
-use crate::async_utils::{PollFn, poll_until};
+use async_utils::{PollFn, poll_until};
+use primeapi::alignment_utils::{Aligned32, Aligned32Slice, Aligned32SliceMut};
 
 static mut MEM2_HEAP: linked_list_allocator::Heap = linked_list_allocator::Heap::empty();
 unsafe fn mem2_alloc(size: usize) -> Option<core::ptr::NonNull<u8>>
@@ -33,7 +34,7 @@ unsafe fn mem2_dealloc(ptr: core::ptr::NonNull<u8>, size: usize)
     )
 }
 
-pub struct Mem2Buf(&'static mut [u8]);
+pub struct Mem2Buf(*mut [MaybeUninit<u8>]);
 
 impl Mem2Buf
 {
@@ -46,35 +47,35 @@ impl Mem2Buf
                 Poll::Pending
             }
         }).await;
-        Mem2Buf(unsafe { slice::from_raw_parts_mut(ptr.as_ptr(), len) })
+        Mem2Buf(unsafe { slice::from_raw_parts_mut(ptr.as_ptr() as *mut _, len) })
     }
 
     pub fn allocate_sync(len: usize) -> Option<Mem2Buf>
     {
         if let Some(ptr) = unsafe { mem2_alloc(len) } {
-            Some(Mem2Buf(unsafe { slice::from_raw_parts_mut(ptr.as_ptr(), len) }))
+            Some(Mem2Buf(unsafe { slice::from_raw_parts_mut(ptr.as_ptr() as *mut _, len) }))
         } else {
             None
         }
     }
 
-    pub fn as_aligned_slice<'a>(&'a self) -> Aligned32Slice<'a, u8>
+    pub fn as_aligned_slice<'a>(&'a self) -> Aligned32Slice<'a, MaybeUninit<u8>>
     {
-        Aligned32Slice(self.0)
+        unsafe { Aligned32Slice::from_slice_unchecked(&mut *self.0) }
     }
 
-    pub fn as_aligned_slice_mut<'a>(&'a mut self) -> Aligned32SliceMut<'a, u8>
+    pub fn as_aligned_slice_mut<'a>(&'a mut self) -> Aligned32SliceMut<'a, MaybeUninit<u8>>
     {
-        Aligned32SliceMut(self.0)
+        unsafe { Aligned32SliceMut::from_slice_unchecked(&mut *self.0) }
     }
 }
 
 impl core::ops::Deref for Mem2Buf
 {
-    type Target = [u8];
+    type Target = [MaybeUninit<u8>];
     fn deref(&self) -> &Self::Target
     {
-        &self.0
+        unsafe { &*self.0 }
     }
 }
 
@@ -82,7 +83,7 @@ impl core::ops::DerefMut for Mem2Buf
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
-        &mut self.0
+        unsafe { &mut *self.0 }
     }
 }
 
@@ -92,182 +93,38 @@ impl Drop for Mem2Buf
     fn drop(&mut self)
     {
         unsafe {
-            mem2_dealloc(ptr::NonNull::new_unchecked(self.0.as_mut_ptr()), self.0.len());
+            mem2_dealloc(ptr::NonNull::new_unchecked(self.0 as *mut _), (*self.0).len());
         }
     }
 }
 
-#[repr(align(32))]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Aligned32<T>(T);
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Aligned32Slice<'a, T>(&'a [T]);
-#[derive(Debug, Eq, PartialEq)]
-pub struct Aligned32SliceMut<'a, T>(&'a mut [T]);
-
-pub trait TrustedDerefSlice { }
-
-
-impl<T, N: ArrayLength<T>> TrustedDerefSlice for GenericArray<T, N> { }
-
-macro_rules! trusted_deref_slice_array {
-    ($($e:tt)*) => {
-        $(
-            impl<T> TrustedDerefSlice for [T; $e] { }
-        )*
-    }
-}
-trusted_deref_slice_array!(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19);
-trusted_deref_slice_array!(20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39);
-trusted_deref_slice_array!(40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59);
-trusted_deref_slice_array!(60 61 62 63 64);
-
-impl<T> Aligned32<T>
+pub trait ToIoctlvVec
 {
-    pub fn as_inner_slice<'a, R>(&'a self) -> Aligned32Slice<'a, R>
-        where T: TrustedDerefSlice + AsRef<[R]>,
-    {
-        Aligned32Slice(self.0.as_ref())
-    }
-
-    pub fn as_inner_slice_mut<'a, R>(&'a mut self) -> Aligned32SliceMut<'a, R>
-        where T: TrustedDerefSlice + AsMut<[R]>,
-    {
-        Aligned32SliceMut(self.0.as_mut())
-    }
-
+    fn to_ioctlv_vec(self) -> IpcIoctlvVec;
 }
 
-impl<T> Aligned32<T>
+impl<'a, 'b, T> ToIoctlvVec for &'a Aligned32Slice<'b, T>
 {
-    pub const fn new(t: T) -> Aligned32<T>
-    {
-        Aligned32(t)
-    }
-
-    pub fn into_inner(self) -> T
-    {
-        self.0
-    }
-    pub fn as_slice<'a>(&'a self) -> Aligned32Slice<'a, T>
-    {
-        Aligned32Slice(core::slice::from_ref(&self.0))
-    }
-
-    pub fn as_slice_mut<'a>(&'a mut self) -> Aligned32SliceMut<'a, T>
-    {
-        Aligned32SliceMut(core::slice::from_mut(&mut self.0))
-    }
-}
-
-impl<T> core::ops::Deref for Aligned32<T>
-{
-    type Target = T;
-    fn deref(&self) -> &Self::Target
-    {
-        &self.0
-    }
-}
-
-
-impl<T> core::ops::DerefMut for Aligned32<T>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target
-    {
-        &mut self.0
-    }
-}
-
-impl<'a, T> Aligned32Slice<'a, T>
-{
-    pub fn to_ioctlv_vec(&self) -> IpcIoctlvVec
+    fn to_ioctlv_vec(self) -> IpcIoctlvVec
     {
         IpcIoctlvVec {
             ptr: if self.len() > 0 { self.as_ptr() as *mut _ } else { ptr::null_mut() },
             len: (self.len() * mem::size_of::<T>()) as u32,
         }
     }
-
-    pub fn empty() -> Self
-    {
-        Aligned32Slice(&[])
-    }
-
-    pub fn truncate_to_len(self, len: usize) -> Aligned32Slice<'a, T>
-    {
-        Aligned32Slice(&self.0[..len])
-    }
 }
 
-pub fn empty_slice() -> Aligned32Slice<'static, u8>
+impl<'a, 'b, T> ToIoctlvVec for & 'a mut Aligned32SliceMut<'b, T>
 {
-    Aligned32Slice::empty()
-}
-
-impl<'a, T> Aligned32SliceMut<'a, T>
-{
-    pub fn to_ioctlv_vec(&mut self) -> IpcIoctlvVec
+    fn to_ioctlv_vec(self) -> IpcIoctlvVec
     {
         IpcIoctlvVec {
             ptr: if self.len() > 0 { self.as_ptr() as *mut _ } else { ptr::null_mut() },
             len: (self.len() * mem::size_of::<T>()) as u32,
         }
     }
-
-    pub fn empty() -> Self
-    {
-        Aligned32SliceMut(&mut [])
-    }
-
-    pub fn truncate_to_len(self, len: usize) -> Aligned32SliceMut<'a, T>
-    {
-        Aligned32SliceMut(&mut self.0[..len])
-    }
 }
 
-pub fn empty_slice_mut() -> Aligned32SliceMut<'static, u8>
-{
-    Aligned32SliceMut::empty()
-}
-
-impl<'a, T> core::ops::Deref for Aligned32Slice<'a, T>
-{
-    type Target = [T];
-    fn deref(&self) -> &Self::Target
-    {
-        &self.0
-    }
-}
-
-impl<'a, T> core::ops::Deref for Aligned32SliceMut<'a, T>
-{
-    type Target = [T];
-    fn deref(&self) -> &Self::Target
-    {
-        &self.0
-    }
-}
-
-
-impl<'a, T> core::ops::DerefMut for Aligned32SliceMut<'a, T>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target
-    {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct EmptyArray;
-
-impl<T> Into<GenericArray<T, generic_array::typenum::U0>> for EmptyArray
-{
-    fn into(self) -> GenericArray<T, generic_array::typenum::U0>
-    {
-        generic_array::arr![T;]
-    }
-}
 
 #[repr(u32)]
 enum IpcMessageType
@@ -300,7 +157,7 @@ struct IpcMessage
 
     _async0: u32,
     _async1: u32,
-    _padding: [u32; 5],
+    _padding: [MaybeUninit<u32>; 5],
     _relaunch: u32,
 }
 
@@ -378,10 +235,10 @@ pub struct IpcIoctlvVec
 
 impl IpcIoctlvVec
 {
-    pub unsafe fn from_slice_unchecked(s: &mut [u8]) -> Self
+    pub unsafe fn from_slice_unchecked<T>(s: &mut [T]) -> Self
     {
         IpcIoctlvVec {
-            ptr: if s.len() > 0 { s.as_mut_ptr() } else { ptr::null_mut() },
+            ptr: if s.len() > 0 { s.as_mut_ptr() as *mut u8 } else { ptr::null_mut() },
             len: s.len() as u32,
         }
     }
@@ -496,7 +353,7 @@ pub async fn ios_open<'a>(filepath: Aligned32Slice<'a, u8>, mode: u32) -> i32
 
             _async0: 0,
             _async1: 0,
-            _padding: [0; 5],
+            _padding: [MaybeUninit::uninit(); 5],
             _relaunch: 0,
         };
 
@@ -521,7 +378,7 @@ pub async fn ios_close(fd: u32) -> i32
 
         _async0: 0,
         _async1: 0,
-        _padding: [0; 5],
+        _padding: [MaybeUninit::uninit(); 5],
         _relaunch: 0,
     };
 
@@ -574,7 +431,7 @@ pub async fn ios_ioctl_raw(
 
         _async0: 0,
         _async1: 0,
-        _padding: [0; 5],
+        _padding: [MaybeUninit::uninit(); 5],
         _relaunch: 0,
     };
 
@@ -603,7 +460,7 @@ pub async fn ios_ioctlv<I, O, N, M>(
     let argv_in = argv_in.into();
     let argv_out = argv_out.into();
 
-    let mut argv = Aligned32(generic_array::sequence::Concat::concat(argv_in, argv_out));
+    let mut argv = Aligned32::new(generic_array::sequence::Concat::concat(argv_in, argv_out));
     ios_ioctlv_raw(fd, ioctl, N::U32, M::U32, argv.as_inner_slice_mut()).await
 }
 
@@ -649,7 +506,7 @@ pub async fn ios_ioctlv_raw<'a>(
 
             _async0: 0,
             _async1: 0,
-            _padding: [0; 5],
+            _padding: [MaybeUninit::uninit(); 5],
             _relaunch: 0,
         };
 
