@@ -125,10 +125,13 @@ pub(crate) trait HttpRequestHandler
     fn accept_header_field(&mut self, name: &[u8], val: &[u8]) -> Result<(), HttpSemanticError>;
 }
 
-pub(crate) async fn parse_http_request_headers<R, WE, H>(lr: &mut LineReader<R>, handler: &mut H)
-    -> Result<(), HttpError<R::Error, WE>>
+pub(crate) async fn parse_http_request_headers<R, B, WE, H>(
+    lr: &mut LineReader<R, B>,
+    handler: &mut H
+) -> Result<(), HttpError<R::Error, WE>>
     where R: AsyncRead,
           H: HttpRequestHandler,
+          B: alloc::borrow::BorrowMut<[MaybeUninit<u8>]>,
 {
     let l = lr.read_line().await?;
     let l = if l.last() == Some(&b'\r') { &l[..l.len() - 1] } else { l };
@@ -344,8 +347,12 @@ pub enum HttpRequestError<RE, WE>
     Internal,
 }
 
-pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W, fs: S)
-    -> Result<(), HttpRequestError<R::Error, W::Error>>
+pub async fn handle_http_request<R, W, S>(
+    buf: &mut [MaybeUninit<u8>],
+    mut sock_reader: R,
+    mut sock_writer: W,
+    fs: S
+) -> Result<(), HttpRequestError<R::Error, W::Error>>
     where R: AsyncRead,
           W: AsyncWrite,
           S: FileSystemSource,
@@ -353,7 +360,7 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
     let res: Result<_, HttpError<R::Error, W::Error>> = async {
         let mut handler = InterestingHttpHeaderFields::default();
         let already_read_len = {
-            let mut lr = LineReader::new(&mut sock_reader);
+            let mut lr = LineReader::with_buf(&mut *buf, &mut sock_reader);
             parse_http_request_headers(&mut lr, &mut handler).await?;
             lr.peek_buf().len()
         };
@@ -364,7 +371,6 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
         if let Some(content_length) = &handler.content_length {
             let mut content_length = content_length - already_read_len;
 
-            let mut buf = [MaybeUninit::uninit(); 4096];
             while content_length > 0 {
                 let len = core::cmp::min(buf.len(), content_length);
                 let fut = sock_reader.async_read(&mut buf[..len]);
@@ -387,7 +393,7 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
         };
 
         if use_cached {
-            let mut buf_writer = BufferedAsyncWriter::new(&mut sock_writer);
+            let mut buf_writer = BufferedAsyncWriter::with_buf(&mut *buf, &mut sock_writer);
 
             buf_writer.write("HTTP/1.1 ".as_bytes()).await.map_err(HttpError::WriterIO)?;
             buf_writer.write(HttpStatus::NotModified304.header_message().as_bytes()).await
@@ -396,7 +402,7 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
             buf_writer.write(b"\r\n").await.map_err(HttpError::WriterIO)?;
             buf_writer.flush().await.map_err(HttpError::WriterIO)?;
         } else {
-            let mut buf_writer = BufferedAsyncWriter::new(&mut sock_writer);
+            let mut buf_writer = BufferedAsyncWriter::with_buf(&mut *buf, &mut sock_writer);
 
             buf_writer.write("HTTP/1.1 ".as_bytes()).await.map_err(HttpError::WriterIO)?;
             buf_writer.write(HttpStatus::OK200.header_message().as_bytes()).await
@@ -434,7 +440,6 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
         if handler.method == Some(HttpMethod::Get) {
             // Actually send the payload
             let mut bytes_to_read = metadata.size;
-            let mut buf = [MaybeUninit::uninit(); 4096];
             while bytes_to_read > 0 {
                 let fut = file_reader.async_read(&mut buf[..]);
                 pin_mut!(fut);
@@ -456,7 +461,7 @@ pub async fn handle_http_request<R, W, S>(mut sock_reader: R, mut sock_writer: W
         Err(HttpError::Semantic(HttpSemanticError(status, _msg))) => {
             let res: Result<_, W::Error> = async {
                 // TODO Actually write out _msg
-                let mut buf_writer = BufferedAsyncWriter::new(&mut sock_writer);
+                let mut buf_writer = BufferedAsyncWriter::with_buf(&mut *buf, &mut sock_writer);
                 buf_writer.write("HTTP/1.1 ".as_bytes()).await?;
                 buf_writer.write(status.header_message().as_bytes()).await?;
                 buf_writer.write(b"Connection: close\r\n").await?;

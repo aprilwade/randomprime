@@ -216,10 +216,12 @@ pub async fn async_write_all<W>(mut writer: W, mut buf: &[u8]) -> Result<(), W::
 }
 
 
-pub struct BufferedAsyncWriter<W>
-    where W: AsyncWrite
+pub type BufferedAsyncWriterDefaultBuffer = GenericArray<MaybeUninit<u8>, typenum::U512>;
+pub struct BufferedAsyncWriter<W, B = BufferedAsyncWriterDefaultBuffer>
+    where W: AsyncWrite,
+          B: BorrowMut<[MaybeUninit<u8>]>,
 {
-    buf: [MaybeUninit<u8>; 4096],
+    buf: B,
     buf_len: usize,
     writer: W
 }
@@ -229,8 +231,18 @@ impl<W> BufferedAsyncWriter<W>
 {
     pub fn new(w: W) -> BufferedAsyncWriter<W>
     {
+        Self::with_buf(core::iter::repeat(()).map(|()| MaybeUninit::uninit()).collect(), w)
+    }
+}
+
+impl<W, B> BufferedAsyncWriter<W, B>
+    where W: AsyncWrite,
+          B: BorrowMut<[MaybeUninit<u8>]>,
+{
+    pub fn with_buf(buf: B, w: W) -> Self
+    {
         BufferedAsyncWriter {
-            buf: [MaybeUninit::uninit(); 4096],
+            buf,
             buf_len: 0,
             writer: w,
         }
@@ -238,16 +250,16 @@ impl<W> BufferedAsyncWriter<W>
 
     pub async fn write(&mut self, buf: &[u8]) -> Result<usize, W::Error>
     {
-        if buf.len() + self.buf_len > self.buf.len() {
+        if buf.len() + self.buf_len > self.buf.borrow().len() {
             self.flush().await?;
         }
-        if buf.len() >= self.buf.len() {
+        if buf.len() >= self.buf.borrow().len() {
             let fut = self.writer.async_write(buf);
             pin_mut!(fut);
             fut.rebound_pinned().await
         } else {
             let buf = <[MaybeUninit<u8>]>::from_inited_slice(buf);
-            self.buf[self.buf_len..][..buf.len()].copy_from_slice(buf);
+            self.buf.borrow_mut()[self.buf_len..][..buf.len()].copy_from_slice(buf);
             self.buf_len += buf.len();
             Ok(buf.len())
         }
@@ -258,15 +270,16 @@ impl<W> BufferedAsyncWriter<W>
         let len = self.buf_len;
         if len > 0 {
             self.buf_len = 0;
-            async_write_all(&mut self.writer, unsafe { self.buf[..len].assume_init() }).await
+            async_write_all(&mut self.writer, unsafe { self.buf.borrow()[..len].assume_init() }).await
         } else {
             Ok(())
         }
     }
 }
 
-impl<W> Drop for BufferedAsyncWriter<W>
-    where W: AsyncWrite
+impl<W, B> Drop for BufferedAsyncWriter<W, B>
+    where W: AsyncWrite,
+          B: BorrowMut<[MaybeUninit<u8>]>,
 {
     fn drop(&mut self)
     {
@@ -379,11 +392,10 @@ impl<R> LineReader<R>
     }
 }
 
-
 impl<R, B> LineReader<R, B>
     where B: BorrowMut<[MaybeUninit<u8>]>,
 {
-    pub fn new_with_buf(reader: R, buf: B) -> Self
+    pub fn with_buf(buf: B, reader: R) -> Self
     {
         LineReader{
             reader,

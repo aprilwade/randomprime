@@ -58,6 +58,7 @@ unsafe extern "C" fn setup_global_state()
 {
     debug_assert!(EVENT_LOOP.is_none());
     EVENT_LOOP = Some(Pin::new_unchecked(Box::new(event_loop())));
+    primeapi::printf(b"EVENT_LOOP size: %d\n\0".as_ptr(), core::mem::size_of_val(&event_loop()));
 }
 
 
@@ -153,7 +154,8 @@ async fn event_loop() -> !
         let mut client = server.accept().await.unwrap();
 
         let (send, recv) = client.split();
-        match barebones_http::handle_http_request(recv, send, DvdFileSystem).await {
+        let mut buf = [MaybeUninit::uninit(); 4096];
+        match barebones_http::handle_http_request(&mut buf, recv, send, DvdFileSystem).await {
             Ok(_) => unsafe { primeapi::printf(b"successful http request\n\0".as_ptr()); },
             Err(barebones_http::HttpRequestError::ReaderIO(e)) => {
                 let _ = writeln!(primeapi::Mp1Stdout, "Reader IO Error: {:?}", e);
