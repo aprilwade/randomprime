@@ -15,7 +15,7 @@ use primeapi::mp1::{
     CMainFlow, CPlayerState, CRelayTracker, CStringTable, CWorldState,
 };
 use primeapi::rstl::WString;
-use primeapi::alignment_utils::{Aligned32, Aligned32SliceMut};
+use primeapi::alignment_utils::Aligned32;
 
 use alloc::boxed::Box;
 
@@ -23,12 +23,12 @@ use core::fmt::Write;
 use core::future::Future;
 use core::mem::MaybeUninit;
 use core::pin::Pin;
-use core::ptr;
 use core::task::{Context, Poll};
 use core::writeln;
 
 mod ipc_async;
 mod sock_async;
+mod http;
 
 
 pub fn delay(ticks: u32) -> impl Future<Output = ()>
@@ -154,16 +154,16 @@ async fn event_loop() -> !
         let mut client = server.accept().await.unwrap();
 
         let (send, recv) = client.split();
-        let mut buf = [MaybeUninit::uninit(); 4096];
-        match barebones_http::handle_http_request(&mut buf, recv, send, DvdFileSystem).await {
+        let mut buf = Aligned32::new([MaybeUninit::uninit(); 4096]);
+        match crate::http::handle_http_request(&mut buf[..], recv, send).await {
             Ok(_) => unsafe { primeapi::printf(b"successful http request\n\0".as_ptr()); },
-            Err(barebones_http::HttpRequestError::ReaderIO(e)) => {
+            Err(crate::http::HttpRequestError::ReaderIO(e)) => {
                 let _ = writeln!(primeapi::Mp1Stdout, "Reader IO Error: {:?}", e);
             },
-            Err(barebones_http::HttpRequestError::WriterIO(e)) => {
+            Err(crate::http::HttpRequestError::WriterIO(e)) => {
                 let _ = writeln!(primeapi::Mp1Stdout, "Writer IO Error: {:?}", e);
             },
-            Err(barebones_http::HttpRequestError::Internal) => unsafe {
+            Err(crate::http::HttpRequestError::Internal) => unsafe {
                 primeapi::printf(b"failed http request\n\0".as_ptr());
             },
         }
@@ -415,131 +415,3 @@ unsafe extern "C" fn quickplay_hook_advance_game_state(
     CMainFlow::advance_game_state(flow, q)
 }
 
-use async_utils::{impl_rebind_lifetime_1, AsyncRead, MaybeUninitSliceExt};
-use barebones_http::{FileMetadata, FileSystemSource};
-
-struct DvdFileSystem;
-impl FileSystemSource for DvdFileSystem
-{
-    type Reader = DvdFileSystemReader;
-    fn lookup_file(&self, uri: &[u8]) -> Option<(FileMetadata, Self::Reader)>
-    {
-        const MAX_FILENAME_LEN: usize = 128;
-
-        if uri.len() >= MAX_FILENAME_LEN {
-            return None;
-        }
-
-        // Ensure our filename is null-terminated
-        let mut buf = [MaybeUninit::uninit(); MAX_FILENAME_LEN];
-        buf[..uri.len()].copy_from_slice(<[MaybeUninit<_>]>::from_inited_slice(uri));
-        buf[uri.len()] = MaybeUninit::new(0);
-        let filename = unsafe { buf[..uri.len() + 1].assume_init_mut() };
-
-        let fi = if let Some(fi) = DVDFileInfo::new(filename) {
-            fi
-        } else {
-            return None;
-        };
-        let metadata = FileMetadata {
-            size: fi.file_length(),
-            // TODO: We should pull these values from a global variable/the config
-            etag: None,
-            last_modified: None,
-        };
-        Some((metadata, DvdFileSystemReader(fi, 0)))
-    }
-}
-
-use primeapi::dol_sdk::dvd::DVDFileInfo;
-struct DvdFileSystemReader(DVDFileInfo, u32);
-impl AsyncRead for DvdFileSystemReader
-{
-    type Error = ();
-    type Future = DvdFileSystemReaderFuture<'static>;
-    fn async_read<'s>(&'s mut self, buf: &'s mut [MaybeUninit<u8>])
-        -> async_utils::Lifetime1Rebinder<'s, Self::Future>
-    {
-        async_utils::Lifetime1Rebinder::new(DvdFileSystemReaderFuture(dvd_filesystem_read(self, buf)))
-    }
-}
-
-type DvdFileSystemReaderFuture_<'a> = impl Future<Output = Result<usize, ()>> + 'a;
-fn dvd_filesystem_read<'a>(reader: &'a mut DvdFileSystemReader, buf: &'a mut [MaybeUninit<u8>])
-    -> DvdFileSystemReaderFuture_<'a>
-{
-    async fn inner<'a>(reader: &'a mut DvdFileSystemReader, mut buf: &'a mut [MaybeUninit<u8>])
-        -> Result<usize, ()>
-    {
-        if reader.1 >= reader.0.file_length() {
-            return Ok(0)
-        }
-        let bytes_read = if reader.1 & 3 != 0 {
-            // The offset into the file must be a multiple of 4, so perform an extra small read to
-            // fix the alignment if, needed
-            let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
-            {
-                let handler = reader.0.read_async(tmp_buf.as_inner_slice_mut(), reader.1 & 3, 0);
-                async_utils::poll_until(|| handler.is_finished()).await;
-            }
-            let bytes_to_copy = core::cmp::min(32 - reader.1 as usize & 3, buf.len());
-            buf[..bytes_to_copy].copy_from_slice(&tmp_buf[..bytes_to_copy]);
-            buf = &mut buf[bytes_to_copy..];
-            reader.1 += bytes_to_copy as u32;
-            bytes_to_copy
-        } else {
-            0
-        };
-
-        let buf_addr = buf.as_ptr() as usize;
-        if buf.len() < 31 || ((buf_addr + 31) & !31) >= ((buf_addr + buf.len()) & !31) {
-            if buf.len() == 0 {
-                return Ok(bytes_read)
-            }
-            // The number of bytes read from the disc must be a multiple of 32. Normally we
-            // accomplish this by simply truncating the read length to the nearest multiple of 32,
-            // but if we're being asked to copy less than 32 bytes, we need to copy the data into a
-            // temporary buffer first to avoid any chance of overrunning the provided buffer
-            let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
-            {
-                let handler = reader.0.read_async(tmp_buf.as_inner_slice_mut(), reader.1, 0);
-                async_utils::poll_until(|| handler.is_finished()).await;
-            }
-            let len = core::cmp::min(buf.len(), 32);
-            buf.copy_from_slice(&tmp_buf[..len]);
-
-            return Ok(bytes_read + len)
-        }
-
-        let (unaligned_buf, mut aligned_buf) = Aligned32SliceMut::split_unaligned_prefix(buf);
-        let file_remainder = (reader.0.file_length() - reader.1) as usize;
-        let read_len = core::cmp::min(aligned_buf.len() & !31, (file_remainder + 31) & !31);
-        let copy_len = core::cmp::min(read_len, file_remainder);
-        {
-            let recv_buf = aligned_buf.reborrow().truncate_to_len(read_len);
-            let handler = reader.0.read_async(recv_buf, reader.1, 3);
-            async_utils::poll_until(|| handler.is_finished()).await;
-        }
-        unsafe {
-            ptr::copy(
-                aligned_buf.as_ptr(),
-                unaligned_buf.as_mut_ptr(),
-                copy_len,
-            );
-        }
-        reader.1 += copy_len as u32;
-        Ok(bytes_read + copy_len)
-    }
-    inner(reader, buf)
-}
-
-struct DvdFileSystemReaderFuture<'a>(DvdFileSystemReaderFuture_<'a>);
-impl<'a> Future for DvdFileSystemReaderFuture<'a>
-{
-    type Output = Result<usize, ()>;
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output>
-    {
-        unsafe { self.map_unchecked_mut(|this| &mut this.0) }.poll(ctx)
-    }
-}
-impl_rebind_lifetime_1!(DvdFileSystemReaderFuture);

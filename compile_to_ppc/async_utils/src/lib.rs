@@ -6,6 +6,7 @@ use generic_array::{typenum, GenericArray};
 use pin_utils::pin_mut;
 
 use alloc::borrow::{Borrow, BorrowMut};
+use alloc::boxed::Box;
 use core::future::Future;
 use core::mem::{self, MaybeUninit};
 use core::pin::Pin;
@@ -139,6 +140,11 @@ macro_rules! impl_rebind_lifetime_1 {
             type Rebound = $name<'a>;
         }
     }
+}
+
+impl<'a, T> Rebind1Lifetime<'a> for Pin<Box<dyn Future<Output = T> + 'static>>
+{
+    type Rebound = Pin<Box<dyn Future<Output = T> + 'a>>;
 }
 
 pub struct Lifetime1Rebinder<'a, T>

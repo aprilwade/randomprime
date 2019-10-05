@@ -7,6 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arrayvec = { version = "0.4", default-features = false }
+embedded-websocket = "0.1"
 futures-preview = { version = "=0.3.0-alpha.18", default-features = false }
 generic-array = "0.13"
 linked_list_allocator = "0.6"
@@ -15,7 +17,6 @@ pin-utils = "0.1.0-alpha.4"
 
 
 async_utils = { path = "../async_utils", package = "async_utils" }
-barebones_http = { path = "../barebones_http", package = "barebones_http" }
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
 primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
 

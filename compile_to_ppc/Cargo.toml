@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "async_utils",
-    "barebones_http",
     "core-futures-tls",
     "primeapi-rs",
         "primeapi-rs/primeapi_macros",

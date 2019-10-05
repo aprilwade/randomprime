@@ -1,17 +1,19 @@
-#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
 use arrayvec::ArrayString;
 use pin_utils::pin_mut;
 
-
 use alloc::borrow::{Cow, ToOwned};
 use alloc::vec::Vec;
 use core::default::Default;
 use core::fmt::Write;
+use core::future::Future;
 use core::mem::MaybeUninit;
+use core::ptr;
 use core::writeln;
+
+use primeapi::alignment_utils::{Aligned32, Aligned32SliceMut};
 
 use async_utils::{
     async_write_all, AsyncRead, AsyncWrite, BufferedAsyncWriter, LineReader, LineReaderError,
@@ -119,18 +121,11 @@ impl<RE, WE> From<LineReaderError<RE>> for HttpError<RE, WE>
     }
 }
 
-pub(crate) trait HttpRequestHandler
-{
-    fn accept_method(&mut self, method: HttpMethod, uri: &[u8]) -> Result<(), HttpSemanticError>;
-    fn accept_header_field(&mut self, name: &[u8], val: &[u8]) -> Result<(), HttpSemanticError>;
-}
-
-pub(crate) async fn parse_http_request_headers<R, B, WE, H>(
+pub(crate) async fn parse_http_request_headers<R, B, WE>(
     lr: &mut LineReader<R, B>,
-    handler: &mut H
+    handler: &mut SupportedHttpHeaderFields,
 ) -> Result<(), HttpError<R::Error, WE>>
     where R: AsyncRead,
-          H: HttpRequestHandler,
           B: alloc::borrow::BorrowMut<[MaybeUninit<u8>]>,
 {
     let l = lr.read_line().await?;
@@ -178,7 +173,7 @@ pub(crate) async fn parse_http_request_headers<R, B, WE, H>(
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct InterestingHttpHeaderFields
+pub(crate) struct SupportedHttpHeaderFields
 {
     pub(crate) method: Option<HttpMethod>,
     pub(crate) uri: Vec<u8>,
@@ -187,9 +182,14 @@ pub(crate) struct InterestingHttpHeaderFields
     pub(crate) if_none_match: Option<[u8; 16]>,
     // TODO If we receive "Connection: close", then we should terminate the connection after
     //      sending our response
+
+    pub(crate) connection_upgrade: bool,
+    pub(crate) upgrade_websocket: bool,
+    pub(crate) websocket_key: Option<[u8; 24]>,
+    pub(crate) websocket_version_13: bool,
 }
 
-impl HttpRequestHandler for InterestingHttpHeaderFields
+impl SupportedHttpHeaderFields
 {
     fn accept_method(&mut self, method: HttpMethod, uri: &[u8]) -> Result<(), HttpSemanticError>
     {
@@ -229,6 +229,34 @@ impl HttpRequestHandler for InterestingHttpHeaderFields
                 etag[..s.len()].copy_from_slice(s.as_bytes());
                 self.if_none_match = Some(etag);
             }
+        } else if name == b"Connection" && val == b"Upgrade" {
+            self.connection_upgrade = true;
+        } else if name == b"Upgrade" && val == b"websocket" {
+            self.upgrade_websocket = true;
+        } else if name == b"Sec-WebSocket-Key" {
+            let mut key_buf = [0; 24];
+            if val.len() > key_buf.len() {
+                Err(HttpSemanticError(
+                    HttpStatus::BadRequest400,
+                    "Invalid length for Sec-WebSocket-Key".into()
+                ))?
+            }
+            key_buf[..val.len()].copy_from_slice(val);
+            self.websocket_key = Some(key_buf);
+        } else if name == b"Sec-WebSocket-Version" {
+            let ver_num: u32 = core::str::from_utf8(val)
+                .map_err(|_| HttpSemanticError(HttpStatus::BadRequest400,
+                                               "Invalid Sec-WebSocket-Version".into()))?
+                .parse()
+                .map_err(|_| HttpSemanticError(HttpStatus::BadRequest400,
+                                               "Invalid Sec-WebSocket-Version".into()))?;
+            if ver_num != 13 {
+                Err(HttpSemanticError(
+                    HttpStatus::BadRequest400,
+                    "Invalid Sec-WebSocket-Version".into()
+                ))?
+            }
+            self.websocket_version_13 = true;
         }
         Ok(())
     }
@@ -323,19 +351,157 @@ pub struct FileMetadata
     pub etag: Option<[u8; 16]>,
 }
 
-pub trait FileSystemSource
+struct DvdFileSystem;
+impl DvdFileSystem
 {
-    type Reader: AsyncRead;
-    fn lookup_file(&self, uri: &[u8]) -> Option<(FileMetadata, Self::Reader)>;
+    fn lookup_file(&self, uri: &[u8]) -> Option<(FileMetadata, DvdFileSystemReader)>
+    {
+        const MAX_FILENAME_LEN: usize = 128;
+
+        if uri.len() >= MAX_FILENAME_LEN {
+            return None;
+        }
+
+        // Ensure our filename is null-terminated
+        let mut buf = [MaybeUninit::uninit(); MAX_FILENAME_LEN];
+        buf[..uri.len()].copy_from_slice(<[MaybeUninit<_>]>::from_inited_slice(uri));
+        buf[uri.len()] = MaybeUninit::new(0);
+        let filename = unsafe { buf[..uri.len() + 1].assume_init_mut() };
+
+        let fi = if let Some(fi) = DVDFileInfo::new(filename) {
+            fi
+        } else {
+            return None;
+        };
+        let metadata = FileMetadata {
+            size: fi.file_length(),
+            // TODO: We should pull these values from a global variable/the config
+            etag: None,
+            last_modified: None,
+        };
+        Some((metadata, DvdFileSystemReader(fi, 0)))
+    }
 }
 
-impl<'a, S> FileSystemSource for &'a S
-    where S: FileSystemSource
+use primeapi::dol_sdk::dvd::DVDFileInfo;
+struct DvdFileSystemReader(DVDFileInfo, u32);
+impl DvdFileSystemReader
 {
-    type Reader = S::Reader;
-    fn lookup_file(&self, uri: &[u8]) -> Option<(FileMetadata, Self::Reader)>
+    async fn async_read(&mut self, mut buf: &mut [MaybeUninit<u8>]) -> Result<usize, !>
     {
-        S::lookup_file(*self, uri)
+        if self.1 >= self.0.file_length() {
+            return Ok(0)
+        }
+        let bytes_read = if self.1 & 3 != 0 {
+            // The offset into the file must be a multiple of 4, so perform an extra small read to
+            // fix the alignment if, needed
+            let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
+            {
+                let handler = self.0.read_async(tmp_buf.as_inner_slice_mut(), self.1 & 3, 0);
+                async_utils::poll_until(|| handler.is_finished()).await;
+            }
+            let bytes_to_copy = core::cmp::min(32 - self.1 as usize & 3, buf.len());
+            buf[..bytes_to_copy].copy_from_slice(&tmp_buf[..bytes_to_copy]);
+            buf = &mut buf[bytes_to_copy..];
+            self.1 += bytes_to_copy as u32;
+            bytes_to_copy
+        } else {
+            0
+        };
+
+        let buf_addr = buf.as_ptr() as usize;
+        if buf.len() < 31 || ((buf_addr + 31) & !31) >= ((buf_addr + buf.len()) & !31) {
+            if buf.len() == 0 {
+                return Ok(bytes_read)
+            }
+            // The number of bytes read from the disc must be a multiple of 32. Normally we
+            // accomplish this by simply truncating the read length to the nearest multiple of 32,
+            // but if we're being asked to copy less than 32 bytes, we need to copy the data into a
+            // temporary buffer first to avoid any chance of overrunning the provided buffer
+            let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
+            {
+                let handler = self.0.read_async(tmp_buf.as_inner_slice_mut(), self.1, 0);
+                async_utils::poll_until(|| handler.is_finished()).await;
+            }
+            let len = core::cmp::min(buf.len(), 32);
+            buf.copy_from_slice(&tmp_buf[..len]);
+
+            return Ok(bytes_read + len)
+        }
+
+        let (unaligned_buf, mut aligned_buf) = Aligned32SliceMut::split_unaligned_prefix(buf);
+        let file_remainder = (self.0.file_length() - self.1) as usize;
+        let read_len = core::cmp::min(aligned_buf.len() & !31, (file_remainder + 31) & !31);
+        let copy_len = core::cmp::min(read_len, file_remainder);
+        {
+            let recv_buf = aligned_buf.reborrow().truncate_to_len(read_len);
+            let handler = self.0.read_async(recv_buf, self.1, 3);
+            async_utils::poll_until(|| handler.is_finished()).await;
+        }
+        unsafe {
+            ptr::copy(
+                aligned_buf.as_ptr(),
+                unaligned_buf.as_mut_ptr(),
+                copy_len,
+            );
+        }
+        self.1 += copy_len as u32;
+        Ok(bytes_read + copy_len)
+    }
+}
+
+
+struct WebSocketHandler;
+
+impl WebSocketHandler
+{
+    fn websocket_connection<'a, W, R>(
+        &mut self,
+        _path: &[u8],
+        ws_key: [u8; 24],
+        reader: R,
+        writer: W,
+        buf: &'a mut [MaybeUninit<u8>],
+    ) -> Result<impl Future<Output = ()> + 'a, W>
+        where R: AsyncRead + 'a,
+              W: AsyncWrite + 'a,
+    {
+        Ok(Self::websocket_logic(reader, writer, buf, ws_key))
+    }
+
+    async fn websocket_logic<W, R>(
+        mut reader: R,
+        mut writer: W,
+        buf: &mut [MaybeUninit<u8>],
+        ws_key: [u8; 24]
+    )
+        where R: AsyncRead,
+              W: AsyncWrite,
+    {
+        let buf = unsafe {
+            core::ptr::write_bytes(buf.as_mut_ptr(), 0, buf.len());
+            buf.assume_init_mut()
+        };
+        let _: Result<(), ()> = async {
+            use embedded_websocket::{WebSocketServer, WebSocketKey};
+            let mut ws = WebSocketServer::new_server();
+            let key_str = core::str::from_utf8(&ws_key[..])
+                .map_err(|_| ())?;
+            let key = <WebSocketKey as core::str::FromStr>::from_str(key_str)
+                .map_err(|_| ())?;
+
+            let written = ws.server_accept(&key, None, buf)
+                .map_err(|_| ())?;
+            async_utils::async_write_all(&mut writer, &buf[..written]).await
+                .map_err(|_| ())?;
+
+            // TODO: Swallow all non ping messages, but do respond to pings
+            //       Every 5 seconds send the json message from above
+
+            use core::cell::RefCell;
+            let mut writer = RefCell::new(&mut writer);
+            Ok(())
+        }.await;
     }
 }
 
@@ -347,18 +513,18 @@ pub enum HttpRequestError<RE, WE>
     Internal,
 }
 
-pub async fn handle_http_request<R, W, S>(
+pub async fn handle_http_request<R, W>(
     buf: &mut [MaybeUninit<u8>],
     mut sock_reader: R,
     mut sock_writer: W,
-    fs: S
-) -> Result<(), HttpRequestError<R::Error, W::Error>>
+) -> Result<bool, HttpRequestError<R::Error, W::Error>>
     where R: AsyncRead,
           W: AsyncWrite,
-          S: FileSystemSource,
 {
-    let res: Result<_, HttpError<R::Error, W::Error>> = async {
-        let mut handler = InterestingHttpHeaderFields::default();
+    let fs = DvdFileSystem;
+    let mut ws = WebSocketHandler;
+    let res: Result<_, HttpError<R::Error, W::Error>> = try {
+        let mut handler = SupportedHttpHeaderFields::default();
         let already_read_len = {
             let mut lr = LineReader::with_buf(&mut *buf, &mut sock_reader);
             parse_http_request_headers(&mut lr, &mut handler).await?;
@@ -377,6 +543,31 @@ pub async fn handle_http_request<R, W, S>(
                 pin_mut!(fut);
                 content_length -= fut.rebound_pinned().await.map_err(HttpError::ReaderIO)?;
             }
+        }
+
+        // Check if this is a websocket request
+        if handler.upgrade_websocket {
+            // Verify we received all of the required headers
+            let key = match handler.websocket_key {
+                Some(key) if handler.connection_upgrade && handler.websocket_version_13 => key,
+                _ => Err(HttpError::semantic(HttpStatus::BadRequest400, ""))?,
+            };
+
+            let maybe_fut = ws.websocket_connection(
+                &handler.uri,
+                key,
+                sock_reader,
+                { sock_writer },
+                &mut *buf
+            );
+            sock_writer = match maybe_fut {
+                Ok(fut) => {
+                    fut.await;
+                    return Ok(false);
+                },
+                Err(writer) => writer,
+            };
+            Err(HttpError::semantic(HttpStatus::NotFound404, ""))?
         }
 
         // Lookup the file
@@ -441,10 +632,12 @@ pub async fn handle_http_request<R, W, S>(
             // Actually send the payload
             let mut bytes_to_read = metadata.size;
             while bytes_to_read > 0 {
-                let fut = file_reader.async_read(&mut buf[..]);
-                pin_mut!(fut);
-                let i = fut.rebound_pinned().await
-                    .map_err(|_| HttpError::Unrecoverable)?;
+                let i = {
+                    let fut = file_reader.async_read(&mut buf[..]);
+                    pin_mut!(fut);
+                    fut.await
+                        .map_err(|_| HttpError::Unrecoverable)?
+                };
 
                 bytes_to_read -= i as u32;
                 async_write_all(&mut sock_writer, unsafe { buf[..i].assume_init() }).await
@@ -453,11 +646,11 @@ pub async fn handle_http_request<R, W, S>(
             }
         }
 
-        Ok(())
-    }.await;
+        false
+    };
 
     match res {
-        Ok(()) => Ok(()),
+        Ok(b) => Ok(b),
         Err(HttpError::Semantic(HttpSemanticError(status, _msg))) => {
             let res: Result<_, W::Error> = async {
                 // TODO Actually write out _msg
@@ -467,253 +660,12 @@ pub async fn handle_http_request<R, W, S>(
                 buf_writer.write(b"Connection: close\r\n").await?;
                 buf_writer.write(b"\r\n").await?;
                 buf_writer.flush().await?;
-                Ok(())
+                Ok(false)
             }.await;
             res.map_err(|e| HttpRequestError::WriterIO(e))
         },
         Err(HttpError::ReaderIO(e)) => { Err(HttpRequestError::ReaderIO(e)) },
         Err(HttpError::WriterIO(e)) => { Err(HttpRequestError::WriterIO(e)) },
         Err(HttpError::Unrecoverable) => Err(HttpRequestError::Internal),
-    }
-}
-
-#[cfg(test)]
-mod test
-{
-    use super::*;
-    use alloc::vec;
-    use alloc::vec::Vec;
-
-    use core::future::Future;
-    use core::pin::Pin;
-    use core::task::{Context, Poll};
-
-    use async_utils::{poll_until_complete, impl_rebind_lifetime_1, Lifetime1Rebinder};
-
-    #[derive(Copy, Clone, Debug)]
-    enum Empty { }
-
-    struct DummyAsyncCopy<'a>
-    {
-        bytes_to_write: &'static [u8],
-        max: usize,
-        counter: &'a mut usize,
-        dst_buf: &'a mut [MaybeUninit<u8>],
-    }
-    impl<'a> Future for DummyAsyncCopy<'a>
-    {
-        type Output = Result<usize, Empty>;
-        fn poll(mut self: Pin<&mut Self>, _ctx: &mut Context) -> Poll<Self::Output>
-        {
-            let len = *[self.bytes_to_write.len(), self.dst_buf.len(), self.max].iter()
-                .min()
-                .unwrap();
-            *self.counter += len;
-            // DerefMut weirdness...
-            let this = &mut *self;
-            unsafe {
-                core::ptr::copy_nonoverlapping(
-                    this.bytes_to_write.as_ptr(),
-                    this.dst_buf.as_mut_ptr() as *mut u8,
-                    len
-                );
-            }
-            Poll::Ready(Ok(len))
-        }
-    }
-    impl_rebind_lifetime_1!(DummyAsyncCopy);
-
-    struct DummyAsyncReader(usize, usize, &'static [u8]);
-    impl AsyncRead for DummyAsyncReader
-    {
-        type Error = Empty;
-        type Future = DummyAsyncCopy<'static>;
-
-        fn async_read<'a>(&'a mut self, buf: &'a mut [MaybeUninit<u8>])
-            -> Lifetime1Rebinder<'a, Self::Future>
-        {
-            Lifetime1Rebinder::new(DummyAsyncCopy {
-                bytes_to_write: &self.2[self.0..],
-                max: self.1,
-                counter: &mut self.0,
-                dst_buf: buf,
-            })
-        }
-    }
-
-    struct TestingHttpRequestHandler
-    {
-        expected_method: HttpMethod,
-        expected_uri: &'static str,
-        expected_fields: Vec<(&'static str, &'static str)>,
-    }
-
-    impl HttpRequestHandler for TestingHttpRequestHandler
-    {
-        fn accept_method(&mut self, method: HttpMethod, uri: &[u8]) -> Result<(), HttpSemanticError>
-        {
-            assert_eq!(method, self.expected_method);
-            assert_eq!(uri, self.expected_uri.as_bytes());
-            Ok(())
-        }
-
-        fn accept_header_field(&mut self, name: &[u8], val: &[u8]) -> Result<(), HttpSemanticError>
-        {
-            let idx = self.expected_fields.iter().position(|(n, _)| n.as_bytes() == name).unwrap();
-            let expected_val = self.expected_fields.remove(idx).1;
-            assert_eq!(expected_val.as_bytes(), val);
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn test_parse_http_request_headers()
-    {
-        let request = "\
-            GET /index.html HTTP/1.1\r\n\
-            Host: example.com\r\n\
-            Something-With-Colon: \"Testing: Here\"\r\n\
-            \r\n";
-        let mut reader = DummyAsyncReader(0, usize::max_value(), request.as_bytes());
-
-        let mut handler = TestingHttpRequestHandler {
-            expected_method: HttpMethod::Get,
-            expected_uri: "/index.html",
-            expected_fields: vec![
-                ("Host", "example.com"),
-                ("Something-With-Colon", "\"Testing: Here\""),
-            ],
-        };
-
-        let mut lr = LineReader::new(&mut reader);
-        poll_until_complete(parse_http_request_headers::<_, (), _>(&mut lr, &mut handler)).unwrap();
-        assert_eq!(handler.expected_fields, vec![]);
-    }
-
-    #[test]
-    fn test_http_date()
-    {
-        assert_eq!(
-            HttpDate::from_str("Tue, 17 Sep 2019 21:55:30 GMT").unwrap(),
-            HttpDate::from_parts(2019, 9, 17, 21, 55, 30)
-        );
-    }
-
-    struct DummyAsyncWriter
-    {
-        buf: Vec<u8>,
-    }
-    struct DummyAsyncWriterFuture<'a>
-    {
-        dst: &'a mut Vec<u8>,
-        src: &'a [u8],
-    }
-    impl<'a> Future for DummyAsyncWriterFuture<'a>
-    {
-        type Output = Result<usize, Empty>;
-        fn poll(mut self: Pin<&mut Self>, _ctx: &mut Context) -> Poll<Self::Output>
-        {
-            let src = self.src;
-            self.dst.extend_from_slice(src);
-            Poll::Ready(Ok(self.src.len()))
-        }
-    }
-    impl_rebind_lifetime_1!(DummyAsyncWriterFuture);
-
-    impl AsyncWrite for DummyAsyncWriter
-    {
-        type Error = Empty;
-        type Future = DummyAsyncWriterFuture<'static>;
-
-        fn async_write<'a>(&'a mut self, buf: &'a [u8]) -> Lifetime1Rebinder<'a, Self::Future>
-        {
-            Lifetime1Rebinder::new(DummyAsyncWriterFuture {
-                dst: &mut self.buf,
-                src: buf,
-            })
-        }
-    }
-
-    #[derive(Clone)]
-    struct DummyFileSystem
-    {
-        files: Vec<(&'static str, &'static [u8])>,
-        etag: Option<[u8; 16]>,
-        last_modified: Option<&'static str>,
-    }
-
-    impl FileSystemSource for DummyFileSystem
-    {
-        type Reader = DummyAsyncReader;
-        fn lookup_file(&self, uri: &[u8]) -> Option<(FileMetadata, Self::Reader)>
-        {
-            self.files.iter()
-                .find(|(name, _)| name.as_bytes() == uri)
-                .map(|(_, data)| (
-                        FileMetadata {
-                            size: data.len() as u32,
-                            etag: self.etag,
-                            last_modified: self.last_modified,
-                        },
-                        DummyAsyncReader(0, usize::max_value(), data),
-                    ))
-        }
-    }
-
-    #[test]
-    fn test_handle_http_request()
-    {
-        let fs = DummyFileSystem {
-            files: vec![
-                ("/testing", b"testing"),
-                ("/binary_data", b"\x01\x02\x03\x04"),
-            ],
-            etag: None,
-            last_modified: None,
-        };
-
-        let request = "\
-            GET /testing HTTP/1.1\r\n\
-            Host: example.com\r\n\
-            \r\n";
-        let reader = DummyAsyncReader(0, usize::max_value(), request.as_bytes());
-        let mut writer = DummyAsyncWriter { buf: vec![] };
-        poll_until_complete(handle_http_request(reader, &mut writer, fs.clone())).unwrap();
-        assert_eq!(&writer.buf[..], "\
-            HTTP/1.1 200 OK\r\n\
-            Content-Length: 7\r\n\
-            Connection: close\r\n\
-            \r\n\
-            testing".as_bytes()
-        );
-
-        let request = "\
-            HEAD /testing HTTP/1.1\r\n\
-            Host: example.com\r\n\
-            \r\n";
-        let reader = DummyAsyncReader(0, usize::max_value(), request.as_bytes());
-        let mut writer = DummyAsyncWriter { buf: vec![] };
-        poll_until_complete(handle_http_request(reader, &mut writer, fs.clone())).unwrap();
-        assert_eq!(&writer.buf[..], "\
-            HTTP/1.1 200 OK\r\n\
-            Content-Length: 7\r\n\
-            Connection: close\r\n\
-            \r\n".as_bytes()
-        );
-
-        let request = "\
-            GET /unknown HTTP/1.1\r\n\
-            Host: example.com\r\n\
-            \r\n";
-        let reader = DummyAsyncReader(0, usize::max_value(), request.as_bytes());
-        let mut writer = DummyAsyncWriter { buf: vec![] };
-        poll_until_complete(handle_http_request(reader, &mut writer, fs.clone())).unwrap();
-        assert_eq!(&writer.buf[..], "\
-            HTTP/1.1 404 Not Found\r\n\
-            Connection: close\r\n\
-            \r\n".as_bytes()
-        );
-
-        // TODO: Test cache-related behavior
     }
 }
