@@ -7,6 +7,7 @@ use pin_utils::pin_mut;
 
 use alloc::borrow::{Borrow, BorrowMut};
 use alloc::boxed::Box;
+use core::cell::Cell;
 use core::future::Future;
 use core::mem::{self, MaybeUninit};
 use core::pin::Pin;
@@ -471,6 +472,91 @@ impl<R, B> LineReader<R, B>
     }
 }
 
+struct Msg<T: ?Sized>
+{
+    next: Option<ptr::NonNull<Msg<T>>>,
+    data: Option<ptr::NonNull<T>>,
+}
+pub struct AsyncMsgQueue<T: ?Sized>
+{
+    head_tail: Cell<Option<(ptr::NonNull<Msg<T>>, ptr::NonNull<Msg<T>>)>>,
+}
+pub struct MsgRef<T: ?Sized>(ptr::NonNull<Msg<T>>);
+
+impl<T: ?Sized> AsyncMsgQueue<T>
+{
+    pub fn new() -> Self
+    {
+        AsyncMsgQueue {
+            head_tail: Cell::new(None),
+        }
+    }
+
+    /// Adds message to the queue and waits until it is handled
+    pub async fn sync_push<B: Borrow<T>>(&self, data: B)
+    {
+        let mut msg = Msg {
+            next: None,
+            data: ptr::NonNull::new(data.borrow() as *const _ as *mut _),
+        };
+        let ptr = unsafe { ptr::NonNull::new_unchecked(&mut msg) };
+        if let Some((head, tail)) = self.head_tail.take() {
+            let tail_msg = unsafe { &mut *tail.as_ptr() };
+            tail_msg.next = Some(ptr);
+            self.head_tail.set(Some((head, ptr)));
+        } else {
+            self.head_tail.set(Some((ptr, ptr)));
+        }
+        poll_until(|| unsafe { ptr.as_ref() }.data.is_none()).await
+    }
+
+    fn pop(&self) -> Option<ptr::NonNull<Msg<T>>>
+    {
+        let (head, tail) = self.head_tail.take()?;
+        let next_ptr = unsafe { &mut *head.as_ptr() }.next;
+
+        if let Some(next) = next_ptr {
+            self.head_tail.set(Some((next, tail)));
+        } else {
+            self.head_tail.set(None);
+        }
+
+        Some(head)
+    }
+
+    /// Dequeues a message; blocks until a message becomes available if the queue is empty
+    pub async fn sync_pop(&self) -> MsgRef<T>
+    {
+        let msg_ptr = PollFn(|| {
+            if let Some(msg) = self.pop() {
+                Poll::Ready(msg)
+            } else {
+                Poll::Pending
+            }
+        }).await;
+        MsgRef(msg_ptr)
+    }
+}
+
+impl<T: ?Sized> core::ops::Deref for MsgRef<T>
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target
+    {
+        let msg = unsafe { &mut *self.0.as_ptr() };
+        unsafe { &*msg.data.unwrap().as_ptr() }
+    }
+}
+
+impl<T: ?Sized> Drop for MsgRef<T>
+{
+    fn drop(&mut self)
+    {
+        let msg = unsafe { &mut *self.0.as_ptr() };
+        msg.data = None;
+    }
+}
+
 #[cfg(test)]
 mod test
 {
@@ -543,6 +629,27 @@ mod test
         for bytes in &expected {
             assert_eq!(poll_until_complete(lr.read_line()).unwrap(), *bytes);
         }
+    }
+
+    #[test]
+    fn test_msg_queue()
+    {
+        use futures::future::join;
+        let queue = AsyncMsgQueue::new();
+        let queue = &queue;
+
+        let make_push_fut = |i| Box::pin(async move {
+            queue.sync_push(i).await;
+        });
+        let f = make_push_fut(0u32);
+        let f = join(f, make_push_fut(1u32));
+        let f = join(f, make_push_fut(2u32));
+        let f = join(f, async {
+            assert_eq!(*queue.sync_pop().await, 0);
+            assert_eq!(*queue.sync_pop().await, 1);
+            assert_eq!(*queue.sync_pop().await, 2);
+        });
+        poll_until_complete(f);
     }
 }
 

@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 arrayvec = { version = "0.4", default-features = false }
-embedded-websocket = "0.1"
-futures-preview = { version = "=0.3.0-alpha.18", default-features = false }
+embedded-websocket = { git = "https://github.com/aprilwade/embedded-websocket" }
+futures-preview = { version = "=0.3.0-alpha.19", default-features = false }
 generic-array = "0.13"
 linked_list_allocator = "0.6"
 linkme = "0.1"

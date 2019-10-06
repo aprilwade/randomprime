@@ -12,5 +12,8 @@ pin-utils = "0.1.0-alpha.4"
 
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
 
+[dev-dependencies]
+futures-preview = { version = "=0.3.0-alpha.19", default-features = false, features = ["async-await"] }
+
 [lib]
 doctest = false

@@ -632,14 +632,16 @@ async fn sock_send_unaligned(so_fd: u32, socket: u32, buf: &[u8]) -> Result<u32>
 {
     // TODO: This dance isn't necessary on dolphin
     let (unaligned, aligned) = Aligned32Slice::split_unaligned_prefix(buf);
-    let i = {
+    let i = if unaligned.len() > 0 {
         let mut tmp_buf = Aligned32::new([MaybeUninit::uninit(); 32]);
         tmp_buf[..unaligned.len()].copy_from_slice(<[MaybeUninit<u8>]>::from_inited_slice(unaligned));
 
         let tmp_buf = tmp_buf.as_inner_slice().truncate_to_len(unaligned.len());
         sock_sendto(so_fd, socket, unsafe { tmp_buf.assume_init() }, 0, None).await?
+    } else {
+        0
     };
-    if (i as usize) < unaligned.len() {
+    if (i as usize) < unaligned.len() || aligned.len() == 0 {
         Ok(i)
     } else {
         Ok(sock_sendto(so_fd, socket, aligned, 0, None).await? + i)

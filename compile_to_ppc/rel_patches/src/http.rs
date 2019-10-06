@@ -2,10 +2,16 @@
 extern crate alloc;
 
 use arrayvec::ArrayString;
+use embedded_websocket::{
+    Error as WebSocketError, WebSocketKey, WebSocketReceiveMessageType, WebSocketSendMessageType,
+    WebSocketServer, WebSocketState,
+};
+use futures::future::{self, FutureExt, TryFutureExt};
 use pin_utils::pin_mut;
 
 use alloc::borrow::{Cow, ToOwned};
 use alloc::vec::Vec;
+use core::cell::RefCell;
 use core::default::Default;
 use core::fmt::Write;
 use core::future::Future;
@@ -88,24 +94,6 @@ impl<RE, WE> HttpError<RE, WE>
         HttpError::Semantic(HttpSemanticError(status, s.into()))
     }
 }
-
-// impl<RE, WE> From<RE> for HttpError<RE, WE>
-// {
-//     fn from(e: RE) -> Self
-//     {
-//         // panic!();
-//         HttpError::ReaderIO(e)
-//     }
-// }
-
-// impl<RE, WE> From<WE> for HttpError<RE, WE>
-// {
-//     fn from(e: WE) -> Self
-//     {
-//         // panic!();
-//         HttpError::WriterIO(e)
-//     }
-// }
 
 impl<RE, WE> From<LineReaderError<RE>> for HttpError<RE, WE>
 {
@@ -465,6 +453,7 @@ impl WebSocketHandler
     ) -> Result<impl Future<Output = ()> + 'a, W>
         where R: AsyncRead + 'a,
               W: AsyncWrite + 'a,
+              W::Error: core::fmt::Debug,
     {
         Ok(Self::websocket_logic(reader, writer, buf, ws_key))
     }
@@ -477,14 +466,14 @@ impl WebSocketHandler
     )
         where R: AsyncRead,
               W: AsyncWrite,
+              W::Error: core::fmt::Debug,
     {
         let buf = unsafe {
             core::ptr::write_bytes(buf.as_mut_ptr(), 0, buf.len());
             buf.assume_init_mut()
         };
-        let _: Result<(), ()> = async {
-            use embedded_websocket::{WebSocketServer, WebSocketKey};
-            let mut ws = WebSocketServer::new_server();
+        let mut ws = WebSocketServer::new_server();
+        let res: Result<(), ()> = async {
             let key_str = core::str::from_utf8(&ws_key[..])
                 .map_err(|_| ())?;
             let key = <WebSocketKey as core::str::FromStr>::from_str(key_str)
@@ -494,14 +483,150 @@ impl WebSocketHandler
                 .map_err(|_| ())?;
             async_utils::async_write_all(&mut writer, &buf[..written]).await
                 .map_err(|_| ())?;
-
-            // TODO: Swallow all non ping messages, but do respond to pings
-            //       Every 5 seconds send the json message from above
-
-            use core::cell::RefCell;
-            let mut writer = RefCell::new(&mut writer);
             Ok(())
         }.await;
+        if res.is_err() {
+            return
+        }
+
+        let (msg_buf, buf) = { buf }.split_at_mut(1024);
+        let (ping_buf, recv_buf) = { buf }.split_at_mut(64);
+        let ws = RefCell::new(ws);
+        let write_queue = async_utils::AsyncMsgQueue::new();
+
+        let msg_fut = async {
+            let l = msg_buf.len();
+            let (msg_encoded, msg_decoded) = msg_buf.split_at_mut(l / 2 + 1);
+            loop {
+                let game_state = primeapi::mp1::CGameState::global_instance();
+                if game_state.is_null() {
+                    async_utils::stall_once().await;
+                    continue
+                }
+
+                let player_state_ptr = unsafe { primeapi::mp1::CGameState::player_state(game_state) };
+                if player_state_ptr.is_null() {
+                    async_utils::stall_once().await;
+                    continue
+                }
+                let player_state = unsafe { ptr::read(player_state_ptr) };
+                if player_state.is_null() {
+                    async_utils::stall_once().await;
+                    continue
+                }
+
+                let len = match crate::build_tracker_data_json(msg_decoded, game_state, player_state) {
+                    Ok(len) => len,
+                    Err(e) => {
+                        primeapi::dbg!(e);
+                        continue
+                    },
+                };
+                let res = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::Text, true, &msg_decoded[..len], msg_encoded);
+
+                primeapi::dbg!(&res);
+                match res {
+                    Ok(i) => {
+                        // primeapi::dbg!(&msg_encoded[..i]);
+                        write_queue.sync_push(&msg_encoded[..i]).await
+                    },
+                    Err(e) => {
+                        primeapi::dbg!(e);
+                    },
+                }
+
+                crate::delay(crate::milliseconds_to_ticks(5000)).await;
+            }
+        };
+
+        let ping_fut = async {
+            // Every ~10 seconds send a ping
+            loop {
+                crate::delay(crate::milliseconds_to_ticks(10000)).await;
+                let res = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::Ping, true, &[], ping_buf);
+                match res {
+                    Ok(i) => write_queue.sync_push(&ping_buf[..i]).await,
+                    Err(e) => { primeapi::dbg!(e); },
+                }
+            }
+        };
+
+        let reader_fut = async {
+            let l = recv_buf.len();
+            let (recv_encoded, recv_decoded) = recv_buf.split_at_mut(l / 2 + 1);
+            let mut recv_encoded_len = 0;
+            let r = loop {
+                if ws.borrow().state != WebSocketState::Open {
+                    break Ok(())
+                }
+
+                let res = ws
+                    .borrow_mut()
+                    .read(&recv_encoded[..recv_encoded_len], &mut recv_decoded[..]);
+                let res = match res {
+                    Ok(res) => res,
+                    Err(WebSocketError::ReadFrameIncomplete) => {
+                        let buf = <[MaybeUninit<u8>]>::from_inited_slice_mut(recv_encoded);
+                        let fut = reader.async_read(buf);
+                        pin_mut!(fut);
+                        recv_encoded_len += fut.rebound_pinned().await.map_err(|_| ())?;
+                        continue
+                    },
+                    Err(e) => {
+                        primeapi::dbg!(e);
+                        break Err(());
+                    },
+                };
+
+                recv_encoded_len -= res.len_from;
+                unsafe {
+                    ptr::copy(
+                        recv_encoded[res.len_from..].as_ptr(),
+                        recv_encoded.as_mut_ptr(),
+                        res.len_from,
+                    );
+                }
+
+                if res.message_type == WebSocketReceiveMessageType::Ping {
+                    // Send a pong
+                    let l = ws.borrow_mut()
+                        .write(WebSocketSendMessageType::Pong, true, &[], recv_decoded)
+                        .map_err(|e| { primeapi::dbg!(e); })?;
+                        // .map_err(|_| ())?;
+                    write_queue.sync_push(&recv_decoded[..l]).await;
+                } else if res.message_type == WebSocketReceiveMessageType::CloseMustReply {
+                    let l = ws.borrow_mut()
+                        .write(WebSocketSendMessageType::CloseReply, true, &[], recv_decoded)
+                        .map_err(|e| { primeapi::dbg!(e); })?;
+                        // .map_err(|_| ())?;
+                    write_queue.sync_push(&recv_decoded[..l]).await;
+                } else if res.message_type == WebSocketReceiveMessageType::CloseCompleted {
+                    return Err(())
+                }
+            };
+            r
+        };
+
+        let write_fut = async {
+            loop {
+                if false {
+                    // XXX Type hint
+                    break Result::<(), W::Error>::Ok(())
+                }
+                let buf_ref = write_queue.sync_pop().await;
+                async_utils::async_write_all(&mut writer, &buf_ref).await?;
+            }
+        };
+
+        let f = future::try_join4(
+            write_fut.map_err(|e| { primeapi::dbg!(e); }),
+            reader_fut,
+            msg_fut.unit_error(),
+            ping_fut.unit_error(),
+        );
+        let _ = f.await;
     }
 }
 
@@ -520,6 +645,7 @@ pub async fn handle_http_request<R, W>(
 ) -> Result<bool, HttpRequestError<R::Error, W::Error>>
     where R: AsyncRead,
           W: AsyncWrite,
+        W::Error: core::fmt::Debug,
 {
     let fs = DvdFileSystem;
     let mut ws = WebSocketHandler;
