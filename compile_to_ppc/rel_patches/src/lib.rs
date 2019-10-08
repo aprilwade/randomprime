@@ -22,9 +22,10 @@ use alloc::boxed::Box;
 use core::fmt::Write;
 use core::future::Future;
 use core::mem::MaybeUninit;
+use core::num::NonZeroUsize;
 use core::pin::Pin;
+use core::ptr;
 use core::task::{Context, Poll};
-use core::writeln;
 
 mod ipc_async;
 mod sock_async;
@@ -58,7 +59,7 @@ unsafe extern "C" fn setup_global_state()
 {
     debug_assert!(EVENT_LOOP.is_none());
     EVENT_LOOP = Some(Pin::new_unchecked(Box::new(event_loop())));
-    primeapi::printf(b"EVENT_LOOP size: %d\n\0".as_ptr(), core::mem::size_of_val(&event_loop()));
+    primeapi::dbg!(core::mem::size_of_val(&event_loop()));
 }
 
 
@@ -156,54 +157,23 @@ async fn event_loop() -> !
         let (send, recv) = client.split();
         let mut buf = Aligned32::new([MaybeUninit::uninit(); 4096]);
         match crate::http::handle_http_request(&mut buf[..], recv, send).await {
-            Ok(_) => unsafe { primeapi::printf(b"successful http request\n\0".as_ptr()); },
+            Ok(_) => {
+                primeapi::dbg!("successful http request");
+            },
             Err(crate::http::HttpRequestError::ReaderIO(e)) => {
-                let _ = writeln!(primeapi::Mp1Stdout, "Reader IO Error: {:?}", e);
+                primeapi::dbg!("Reader IO Error", e);
             },
             Err(crate::http::HttpRequestError::WriterIO(e)) => {
-                let _ = writeln!(primeapi::Mp1Stdout, "Writer IO Error: {:?}", e);
+                primeapi::dbg!("Writer IO Error", e);
             },
-            Err(crate::http::HttpRequestError::Internal) => unsafe {
-                primeapi::printf(b"failed http request\n\0".as_ptr());
+            Err(crate::http::HttpRequestError::Internal) => {
+                primeapi::dbg!("failed http request");
             },
         }
-
-        // loop {
-
-        //     let game_state = CGameState::global_instance();
-        //     if game_state.is_null() {
-        //         async_utils::stall_once().await;
-        //         continue
-        //     }
-
-        //     let player_state_ptr = unsafe { CGameState::player_state(game_state) };
-        //     if player_state_ptr.is_null() {
-        //         async_utils::stall_once().await;
-        //         continue
-        //     }
-        //     let player_state = unsafe { ptr::read(player_state_ptr) };
-        //     if player_state.is_null() {
-        //         async_utils::stall_once().await;
-        //         continue
-        //     }
-
-        //     use generic_array::{GenericArray, typenum::U4096};
-        //     let mut buf = Aligned32::new(GenericArray::<u8, U4096>::default());
-
-        //     let res: crate::sock_async::Result<()> = try {
-        //         let len = build_tracker_data_json(&mut buf, game_state, player_state)?;
-        //         client.send(buf.as_inner_slice().truncate_to_len(len)).await?;
-        //     };
-        //     if res.is_err() {
-        //         break
-        //     }
-
-        //     delay(milliseconds_to_ticks(5000)).await;
-        // }
     }
 }
 
-const PICKUP_MEMORY_RELAY_IDS: &[(u32, &[(u32, u32)])] = &[
+const PICKUP_MEMORY_RELAY_IDS: &[(u32, &[(u8, u32)])] = &[
     (0x83f6ff6f, &[
         (0, 131373),
         (1, 131378),
@@ -323,68 +293,183 @@ const PICKUP_MEMORY_RELAY_IDS: &[(u32, &[(u32, u32)])] = &[
     ])
 ];
 
-
-#[allow(unused)]
-fn build_tracker_data_json(
-    buf: &mut[u8],
-    game_state: *mut CGameState,
-    player_state: *mut CPlayerState,
-) -> crate::sock_async::Result<usize>
+#[derive(Clone, Debug, PartialEq)]
+struct ItemsCollected([u8; 13]);
+impl ItemsCollected
 {
-    let mut f = FmtCursor::new(&mut buf[..]);
-    (|| -> Result<_, core::fmt::Error> {
-        // TODO: Using rust's builti-n formating on a float costs ~20k of file size :(
-        //       Can we work around with sprintf or something manual?
-        //       OR: Just report play time in milliseconds (ie as an int!)
-        write!(f, "{{\"play_time\":{:.1},\"inventory\":[",
-            unsafe {CGameState::play_time(game_state) }
-        )?;
+    fn new() -> Self
+    {
+        ItemsCollected([0; 13])
+    }
 
-        for i in 0..41 {
-            let cap = unsafe { CPlayerState::get_item_capacity(player_state, i) };
-            write!(f, "{},", cap)?;
+    fn set(&mut self, i: u8, val: bool)
+    {
+        if i >= 100 {
+            return;
         }
-        // Clear the trailing comma
-        f.set_position(f.position() - 1);
-        write!(f, "],\"pickup_locations\":[")?;
+        if val {
+            self.0[(i >> 3) as usize] |= 1 << (i & 3);
+        } else {
+            self.0[(i >> 3) as usize] &= !(1 << (i & 3));
+        }
+    }
 
-        let mut pickup_locations = [false; 100];
+    fn test(&self, i: u8) -> bool
+    {
+        (self.0[(i >> 3) as usize] & (1 << (i & 3))) != 0
+    }
+}
 
-        // Its _probably_ safe to use a ref here, right?
-        let world_states = unsafe { &*CGameState::world_states(game_state) };
-        for world_state in world_states.iter() {
-            let mlvl_relays = PICKUP_MEMORY_RELAY_IDS.iter()
-                .find(|(mlvl, _)| *mlvl == unsafe { CWorldState::mlvl(world_state) });
-            let mlvl_relays = if let Some(mlvl_relays) = mlvl_relays {
-                mlvl_relays.1
-            } else {
-                continue
-            };
+fn current_items_collected(game_state: *mut CGameState) -> ItemsCollected
+{
+    let mut locs = ItemsCollected::new();
+    let world_states = unsafe { &*CGameState::world_states(game_state) };
+    for world_state in world_states.iter() {
+        let mlvl_relays = PICKUP_MEMORY_RELAY_IDS.iter()
+            .find(|(mlvl, _)| *mlvl == unsafe { CWorldState::mlvl(world_state) });
+        let mlvl_relays = if let Some(mlvl_relays) = mlvl_relays {
+            mlvl_relays.1
+        } else {
+            continue
+        };
 
-            let relay_tracker = unsafe { CWorldState::relay_tracker(world_state) };
-            if !relay_tracker.is_null() && !unsafe { *relay_tracker }.is_null() {
-                let relay_tracker = unsafe { *relay_tracker };
-                let relays = unsafe { &*CRelayTracker::relays(relay_tracker) };
+        let relay_tracker = unsafe { CWorldState::relay_tracker(world_state) };
+        if !relay_tracker.is_null() && !unsafe { *relay_tracker }.is_null() {
+            let relay_tracker = unsafe { *relay_tracker };
+            let relays = unsafe { &*CRelayTracker::relays(relay_tracker) };
 
-                for relay in relays.iter() {
-                    if let Some((loc_idx, _)) = mlvl_relays.iter().find(|(_, id)| id == relay) {
-                        pickup_locations[*loc_idx as usize] = true;
-                    }
+            for relay in relays.iter() {
+                if let Some((loc_idx, _)) = mlvl_relays.iter().find(|(_, id)| id == relay) {
+                    locs.set(*loc_idx, true);
                 }
             }
         }
+    }
 
-        for collected in pickup_locations.iter() {
-            write!(f, "{},", *collected as u8)?;
-        }
-        f.set_position(f.position() - 1);
-        write!(f, "]}}\n")?;
-        Ok(())
-    })().map_err(|_| crate::sock_async::Error::RANDOMPRIME)?;
-
-    Ok(f.position())
+    locs
 }
 
+#[derive(Clone)]
+struct TrackerState
+{
+    play_time: f64,
+    play_time_paused: bool,
+    items_collected: ItemsCollected,
+    inventory: [u8; 41],
+}
+
+impl TrackerState
+{
+    fn new() -> Self {
+        TrackerState {
+            play_time: 0.0,
+            play_time_paused: false,
+            items_collected: ItemsCollected::new(),
+            inventory: [0; 41],
+        }
+    }
+}
+
+fn update_tracker_state(ts: &mut TrackerState, initial: bool, time_only: bool, msg_buf: &mut [u8])
+    -> Option<NonZeroUsize>
+{
+    let game_state = CGameState::global_instance();
+    if game_state.is_null() {
+        return None;
+    }
+
+    let player_state_ptr = unsafe { CGameState::player_state(game_state) };
+    if player_state_ptr.is_null() {
+        return None;
+    }
+    let player_state = unsafe { ptr::read(player_state_ptr) };
+    if player_state.is_null() {
+        return None;
+    }
+
+    let curr_play_time = unsafe { CGameState::play_time(game_state) };
+    let play_time_updated = if ts.play_time_paused {
+        if curr_play_time != ts.play_time {
+            ts.play_time_paused = false;
+            true
+        } else {
+            false
+        }
+    } else {
+        if curr_play_time == ts.play_time {
+            ts.play_time_paused = true;
+            true
+        } else {
+            false
+        }
+    };
+    ts.play_time = curr_play_time;
+
+    let items_collected_updated;
+    let inventory_updated;
+    if time_only {
+        items_collected_updated = false;
+        inventory_updated = false;
+    } else {
+        let items_collected = current_items_collected(game_state);
+        items_collected_updated = ts.items_collected != items_collected;
+        ts.items_collected = items_collected;
+
+        let mut inventory = [0u8; 41];
+        for (i, inventory_slot) in inventory.iter_mut().enumerate() {
+            let cap = unsafe { CPlayerState::get_item_capacity(player_state, i as i32) };
+            *inventory_slot = cap as u8;
+        }
+        inventory_updated = ts.inventory[..] != inventory[..];
+        ts.inventory = inventory;
+    }
+
+    if !initial && !play_time_updated && !items_collected_updated && !inventory_updated {
+        return None;
+    }
+
+    let mut f = FmtCursor::new(msg_buf);
+    let r: Result<_, core::fmt::Error> = (|| {
+        write!(f, "{{")?;
+        if play_time_updated || initial {
+            write!(f, "\"play_time\":{{")?;
+            if ts.play_time_paused {
+                write!(f, "\"paused\":")?;
+            } else {
+                write!(f, "\"running\":")?;
+            }
+            write!(f, "{}", (ts.play_time * 100.0) as u32)?;
+            write!(f, "}},")?;
+        }
+        if items_collected_updated || initial {
+            write!(f, "\"items_collected\":[")?;
+            for i in 0..100 {
+                if ts.items_collected.test(i) {
+                    write!(f, "1,")?;
+                } else {
+                    write!(f, "0,")?;
+                }
+            }
+            // Clear the trailing comma
+            f.set_position(f.position() - 1);
+            write!(f, "],")?;
+        }
+        if inventory_updated || initial {
+            write!(f, "\"inventory\":[")?;
+            for i in ts.inventory.iter() {
+                write!(f, "{},", i)?;
+            }
+            // Clear the trailing comma
+            f.set_position(f.position() - 1);
+            write!(f, "],")?;
+        }
+        // Clear the trailing comma
+        f.set_position(f.position() - 1);
+        write!(f, "}}")?;
+        Ok(f.position())
+    })();
+    r.ok().and_then(|i| NonZeroUsize::new(i))
+}
 
 include!("../../patches_config.rs");
 extern "C" {

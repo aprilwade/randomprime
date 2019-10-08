@@ -6,7 +6,7 @@ use embedded_websocket::{
     Error as WebSocketError, WebSocketKey, WebSocketReceiveMessageType, WebSocketSendMessageType,
     WebSocketServer, WebSocketState,
 };
-use futures::future::{self, FutureExt, TryFutureExt};
+use futures::future::{self, TryFutureExt};
 use pin_utils::pin_mut;
 
 use alloc::borrow::{Cow, ToOwned};
@@ -181,7 +181,6 @@ impl SupportedHttpHeaderFields
 {
     fn accept_method(&mut self, method: HttpMethod, uri: &[u8]) -> Result<(), HttpSemanticError>
     {
-        // dbg!(method, core::str::from_utf8(uri));
         self.method = Some(method);
         self.uri = uri.to_owned();
         Ok(())
@@ -189,7 +188,6 @@ impl SupportedHttpHeaderFields
 
     fn accept_header_field(&mut self, name: &[u8], val: &[u8]) -> Result<(), HttpSemanticError>
     {
-        // dbg!(core::str::from_utf8(name), core::str::from_utf8(val));
         if name == b"Content-Length" {
             let len = core::str::from_utf8(val)
                 .map_err(|_| HttpSemanticError(HttpStatus::BadRequest400,
@@ -497,35 +495,12 @@ impl WebSocketHandler
         let msg_fut = async {
             let l = msg_buf.len();
             let (msg_encoded, msg_decoded) = msg_buf.split_at_mut(l / 2 + 1);
-            loop {
-                let game_state = primeapi::mp1::CGameState::global_instance();
-                if game_state.is_null() {
-                    async_utils::stall_once().await;
-                    continue
-                }
 
-                let player_state_ptr = unsafe { primeapi::mp1::CGameState::player_state(game_state) };
-                if player_state_ptr.is_null() {
-                    async_utils::stall_once().await;
-                    continue
-                }
-                let player_state = unsafe { ptr::read(player_state_ptr) };
-                if player_state.is_null() {
-                    async_utils::stall_once().await;
-                    continue
-                }
-
-                let len = match crate::build_tracker_data_json(msg_decoded, game_state, player_state) {
-                    Ok(len) => len,
-                    Err(e) => {
-                        primeapi::dbg!(e);
-                        continue
-                    },
-                };
+            let mut ts = crate::TrackerState::new();
+            if let Some(len) = crate::update_tracker_state(&mut ts, true, false, msg_decoded) {
+                let len = len.get();
                 let res = ws.borrow_mut()
                     .write(WebSocketSendMessageType::Text, true, &msg_decoded[..len], msg_encoded);
-
-                primeapi::dbg!(&res);
                 match res {
                     Ok(i) => {
                         // primeapi::dbg!(&msg_encoded[..i]);
@@ -535,9 +510,37 @@ impl WebSocketHandler
                         primeapi::dbg!(e);
                     },
                 }
+            };
 
-                crate::delay(crate::milliseconds_to_ticks(5000)).await;
-            }
+            let interval = crate::milliseconds_to_ticks(5000) as u64;
+            let mut next_full_update = primeapi::dol_sdk::os::OSGetTime() + interval;
+            loop {
+                crate::delay(crate::milliseconds_to_ticks(2500)).await;
+
+                let curr_time = primeapi::dol_sdk::os::OSGetTime();
+                let full_update = curr_time > next_full_update;
+                if full_update {
+                    next_full_update = curr_time + interval;
+                }
+
+                let len = if let Some(len) = crate::update_tracker_state(&mut ts, false, full_update, msg_decoded) {
+                    len.get()
+                } else {
+                    continue
+                };
+
+                let res = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::Text, true, &msg_decoded[..len], msg_encoded);
+                match res {
+                    Ok(i) => {
+                        // primeapi::dbg!(&msg_encoded[..i]);
+                        write_queue.sync_push(&msg_encoded[..i]).await
+                    },
+                    Err(e) => {
+                        primeapi::dbg!(e);
+                    },
+                }
+            };
         };
 
         let ping_fut = async {
@@ -620,12 +623,13 @@ impl WebSocketHandler
             }
         };
 
-        let f = future::try_join4(
+        pin_mut!(msg_fut, reader_fut, ping_fut, write_fut);
+        let f = future::select(
             write_fut.map_err(|e| { primeapi::dbg!(e); }),
-            reader_fut,
-            msg_fut.unit_error(),
-            ping_fut.unit_error(),
+            reader_fut
         );
+        let f = future::select(f, msg_fut);
+        let f = future::select(f, ping_fut);
         let _ = f.await;
     }
 }

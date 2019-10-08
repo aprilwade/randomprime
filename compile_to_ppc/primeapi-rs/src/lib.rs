@@ -79,17 +79,22 @@ extern "C"
     fn free(ptr: *const c_void);
 }
 
+// #[macro_export]
+// macro_rules! dbg {
+//     ($($tts:tt)*) => { { } }
+// }
+
 #[macro_export]
 macro_rules! dbg {
     () => {
-        core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
+        let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
     };
     ($val:expr) => {
         // Use of `match` here is intentional because it affects the lifetimes
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
         match $val {
             tmp => {
-                core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
+                let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
                     file!(), line!(), stringify!($val), &tmp);
                 tmp
             }
