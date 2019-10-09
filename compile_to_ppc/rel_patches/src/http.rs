@@ -216,8 +216,17 @@ impl SupportedHttpHeaderFields
                 etag[..s.len()].copy_from_slice(s.as_bytes());
                 self.if_none_match = Some(etag);
             }
-        } else if name == b"Connection" && val == b"Upgrade" {
-            self.connection_upgrade = true;
+        } else if name == b"Connection" {
+            let s = core::str::from_utf8(val)
+                .map_err(|_| HttpSemanticError(
+                        HttpStatus::BadRequest400,
+                        "Invalid Connection value".into()
+                    ))?;
+            for s in s.split(',') {
+                if s.trim() == "Upgrade" {
+                    self.connection_upgrade = true;
+                }
+            }
         } else if name == b"Upgrade" && val == b"websocket" {
             self.upgrade_websocket = true;
         } else if name == b"Sec-WebSocket-Key" {
