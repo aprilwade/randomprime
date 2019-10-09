@@ -1,13 +1,15 @@
 #![feature(associated_type_bounds)]
 #![feature(macros_in_extern)]
-#![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(type_alias_impl_trait)]
 #![no_std]
 
 extern crate alloc;
 
+use futures::future;
+use futures::never::Never;
 use linkme::distributed_slice;
+use pin_utils::pin_mut;
 
 use primeapi::{patch_fn, prolog_fn};
 use primeapi::mp1::{
@@ -52,7 +54,7 @@ pub fn milliseconds_to_ticks(ms: u32) -> u32
     ms * TB_TIMER_CLOCK
 }
 
-static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = !>>>> = None;
+static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Never>>>> = None;
 
 #[prolog_fn]
 unsafe extern "C" fn setup_global_state()
@@ -95,7 +97,7 @@ unsafe extern "C" fn hook_every_frame()
     let mut ctx = Context::from_waker(&waker);
     match event_loop.as_mut().poll(&mut ctx) {
         Poll::Pending => (),
-        Poll::Ready(never) => never,
+        Poll::Ready(never) => match never { },
     }
 }
 
@@ -140,37 +142,51 @@ impl<'a> core::fmt::Write for FmtCursor<'a>
     }
 }
 
-async fn event_loop() -> !
+async fn event_loop() -> Never
 {
     let ss = sock_async::SockSystem::new().await;
     let addr = sock_async::SockAddr {
         len: 8,
         family: sock_async::AF_INET as u8,
-        port: 9112,
+        port: 80,
         name: sock_async::INADDR_ANY,
         unused: Default::default(),
     };
+    let mut queue = async_utils::FutureQueue::<_, generic_array::typenum::U5>::new();
+    let (queue_poller, mut queue_pusher) = queue.split();
     let mut server = ss.tcp_listen(&addr, 1).await.unwrap();
-    loop {
-        let mut client = server.accept().await.unwrap();
+    let connect_fut = async {
+        loop {
+            // TODO: Allow multiple clients, maybe with a vec?
+            //       Set a recv timeout on the client for 30s or 60s
+            let mut client = server.accept().await.unwrap();
 
-        let (send, recv) = client.split();
-        let mut buf = Aligned32::new([MaybeUninit::uninit(); 4096]);
-        match crate::http::handle_http_request(&mut buf[..], recv, send).await {
-            Ok(_) => {
-                primeapi::dbg!("successful http request");
-            },
-            Err(crate::http::HttpRequestError::ReaderIO(e)) => {
-                primeapi::dbg!("Reader IO Error", e);
-            },
-            Err(crate::http::HttpRequestError::WriterIO(e)) => {
-                primeapi::dbg!("Writer IO Error", e);
-            },
-            Err(crate::http::HttpRequestError::Internal) => {
-                primeapi::dbg!("failed http request");
-            },
+            let fut = Box::pin(async move {
+                let (send, recv) = client.split();
+                let mut buf = Aligned32::new([MaybeUninit::uninit(); 4096]);
+                match crate::http::handle_http_request(&mut buf[..], recv, send).await {
+                    Ok(_) => {
+                        primeapi::dbg!("successful http request");
+                    },
+                    Err(crate::http::HttpRequestError::ReaderIO(e)) => {
+                        primeapi::dbg!("Reader IO Error", e);
+                    },
+                    Err(crate::http::HttpRequestError::WriterIO(e)) => {
+                        primeapi::dbg!("Writer IO Error", e);
+                    },
+                    Err(crate::http::HttpRequestError::Internal) => {
+                        primeapi::dbg!("failed http request");
+                    },
+                }
+            });
+            queue_pusher.push(fut).await;
         }
-    }
+    };
+    pin_mut!(connect_fut);
+    future::select(
+        connect_fut,
+        queue_poller
+    ).await.factor_first().0
 }
 
 const PICKUP_MEMORY_RELAY_IDS: &[(u32, &[(u8, u32)])] = &[

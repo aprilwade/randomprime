@@ -2,13 +2,15 @@
 
 extern crate alloc;
 
-use generic_array::{typenum, GenericArray};
+use futures::never::Never;
+use generic_array::{typenum, ArrayLength, GenericArray};
 use pin_utils::pin_mut;
 
 use alloc::borrow::{Borrow, BorrowMut};
 use alloc::boxed::Box;
-use core::cell::Cell;
+use core::cell::{Cell, RefCell};
 use core::future::Future;
+use core::marker::Unpin;
 use core::mem::{self, MaybeUninit};
 use core::pin::Pin;
 use core::ptr;
@@ -554,6 +556,72 @@ impl<T: ?Sized> Drop for MsgRef<T>
     {
         let msg = unsafe { &mut *self.0.as_ptr() };
         msg.data = None;
+    }
+}
+
+pub struct FutureQueue<F, N: ArrayLength<RefCell<Option<F>>>>
+{
+    array: GenericArray<RefCell<Option<F>>, N>,
+}
+
+pub struct FutureQueuePusher<'a, F, N: ArrayLength<RefCell<Option<F>>>>(&'a FutureQueue<F, N>);
+pub struct FutureQueuePoller<'a, F, N: ArrayLength<RefCell<Option<F>>>>(&'a FutureQueue<F, N>);
+
+impl<F, N> FutureQueue<F, N>
+    where N: generic_array::ArrayLength<RefCell<Option<F>>>
+{
+    pub fn new() -> Self
+    {
+        FutureQueue {
+            array: core::iter::repeat(()).map(|()| RefCell::new(None)).collect(),
+        }
+    }
+
+    pub fn split<'a>(&'a mut self) -> (FutureQueuePoller<'a, F, N>, FutureQueuePusher<'a, F, N>)
+    {
+        (FutureQueuePoller(self), FutureQueuePusher(self))
+    }
+}
+
+impl<'a, F, N> FutureQueuePusher<'a, F, N>
+    where N: generic_array::ArrayLength<RefCell<Option<F>>>
+{
+    pub async fn push(&mut self, f: F)
+    {
+        let mut f = Some(f);
+        poll_until(move || {
+            let empty_slot = self.0.array.iter()
+                .find(|slot| slot.try_borrow().map(|slot| slot.is_none()).unwrap_or(false));
+            if let Some(empty_slot) = empty_slot {
+                *empty_slot.borrow_mut() = f.take();
+                true
+            } else {
+                false
+            }
+        }).await
+    }
+}
+
+impl<'a, F, N> Future for FutureQueuePoller<'a, F, N>
+    where N: generic_array::ArrayLength<RefCell<Option<F>>>,
+          F: Future<Output = ()> + Unpin,
+{
+    type Output = Never;
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output>
+    {
+        for slot in self.0.array.iter() {
+            let mut slot = slot.borrow_mut();
+            let finished = if let Some(fut) = &mut *slot {
+                Pin::new(fut).poll(ctx).is_ready()
+            } else {
+                continue
+            };
+
+            if finished {
+                *slot = None;
+            }
+        }
+        Poll::Pending
     }
 }
 

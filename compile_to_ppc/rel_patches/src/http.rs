@@ -7,6 +7,7 @@ use embedded_websocket::{
     WebSocketServer, WebSocketState,
 };
 use futures::future::{self, TryFutureExt};
+use futures::never::Never;
 use pin_utils::pin_mut;
 
 use alloc::borrow::{Cow, ToOwned};
@@ -373,7 +374,7 @@ use primeapi::dol_sdk::dvd::DVDFileInfo;
 struct DvdFileSystemReader(DVDFileInfo, u32);
 impl DvdFileSystemReader
 {
-    async fn async_read(&mut self, mut buf: &mut [MaybeUninit<u8>]) -> Result<usize, !>
+    async fn async_read(&mut self, mut buf: &mut [MaybeUninit<u8>]) -> Result<usize, Never>
     {
         if self.1 >= self.0.file_length() {
             return Ok(0)
