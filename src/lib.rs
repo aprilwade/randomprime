@@ -45,16 +45,38 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
 {
     fn find_file(&self, name: &str) -> Option<&structs::FstEntry<'a>>
     {
-        let fst = &self.file_system_table;
-        fst.fst_entries.iter()
-            .find(|e| e.name.to_bytes() == name.as_bytes())
+        let mut entry = &self.file_system_root;
+        for seg in name.split('/') {
+            if seg.len() == 0 {
+                continue
+            }
+            match entry {
+                structs::FstEntry::Dir(_, entries) => {
+                    entry = entries.iter()
+                        .find(|e| e.name().to_bytes() == seg.as_bytes())?;
+                },
+                structs::FstEntry::File(_, _, _) => return None,
+            }
+        }
+        Some(entry)
     }
 
     fn find_file_mut(&mut self, name: &str) -> Option<&mut structs::FstEntry<'a>>
     {
-        let fst = &mut self.file_system_table;
-        fst.fst_entries.iter_mut()
-            .find(|e| e.name.to_bytes() == name.as_bytes())
+        let mut entry = &mut self.file_system_root;
+        for seg in name.split('/') {
+            if seg.len() == 0 {
+                continue
+            }
+            match entry {
+                structs::FstEntry::Dir(_, entries) => {
+                    entry = entries.iter_mut()
+                        .find(|e| e.name().to_bytes() == seg.as_bytes())?;
+                },
+                structs::FstEntry::File(_, _, _) => return None,
+            }
+        }
+        Some(entry)
     }
 
     fn find_resource<'r, F>(&'r self, pak_name: &str, mut f: F)
@@ -62,7 +84,7 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
         where F: FnMut(&structs::Resource<'a>) -> bool
     {
         let file_entry = self.find_file(pak_name)?;
-        match *file_entry.file()? {
+        match file_entry.file()? {
             structs::FstEntryFile::Pak(ref pak) => pak.resources.iter().find(|res| f(&res)),
             structs::FstEntryFile::Unknown(ref reader) => {
                 let pak: structs::Pak = reader.clone().read(());
@@ -80,7 +102,7 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
     {
         let file_entry = self.find_file_mut(pak_name)?;
         file_entry.guess_kind();
-        let pak = match *file_entry.file_mut()? {
+        let pak = match file_entry.file_mut()? {
             structs::FstEntryFile::Pak(ref mut pak) => pak,
             _ => panic!(),
         };

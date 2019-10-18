@@ -1929,20 +1929,22 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
 
-    gc_disc.file_system_table.add_file(
+    gc_disc.file_system_root.dir_entries_mut().unwrap().push(structs::FstEntry::File(
         b"randomprime.txt\0".as_cstr(),
         structs::FstEntryFile::Unknown(Reader::new(&ct)),
-    );
+        None,
+    ));
 
     let patches_rel_bytes = match version {
         Version::V0_00 => include_bytes!("../extra_assets/patches_1.00.rel"),
         Version::V0_01 => unreachable!(),
         Version::V0_02 => include_bytes!("../extra_assets/patches_1.02.rel"),
     };
-    gc_disc.file_system_table.add_file(
+    gc_disc.file_system_root.dir_entries_mut().unwrap().push(structs::FstEntry::File(
         b"patches.rel\0".as_cstr(),
         structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes)),
-    );
+        None,
+    ));
 
 
 
@@ -1999,30 +2001,31 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         add_skip_hudmemos_strgs(&mut pickup_resources);
     }
 
-    // XXX These values need to outlife the patcher
+    // XXX These values need to out live the patcher
     let select_game_fmv_suffix = rng.choose(&["A", "B", "C"]).unwrap();
-    let n = format!("02_start_fileselect_{}.thp", select_game_fmv_suffix);
-    let start_file_select_fmv = gc_disc.find_file(&n).unwrap().file.clone();
-    let n = format!("04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
-    let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file.clone();
+    let n = format!("Video/02_start_fileselect_{}.thp", select_game_fmv_suffix);
+    let start_file_select_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
+    let n = format!("Video/04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
+    let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
     let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
     patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
+
     if !config.keep_fmvs {
         // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
         // copy and to make compressed ISOs smaller.
         const FMV_NAMES: &[&[u8]] = &[
-            b"attract0.thp",
-            b"attract1.thp",
-            b"attract2.thp",
-            b"attract3.thp",
-            b"attract4.thp",
-            b"attract5.thp",
-            b"attract6.thp",
-            b"attract7.thp",
-            b"attract8.thp",
-            b"attract9.thp",
+            b"Video/attract0.thp",
+            b"Video/attract1.thp",
+            b"Video/attract2.thp",
+            b"Video/attract3.thp",
+            b"Video/attract4.thp",
+            b"Video/attract5.thp",
+            b"Video/attract6.thp",
+            b"Video/attract7.thp",
+            b"Video/attract8.thp",
+            b"Video/attract9.thp",
         ];
         const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
         for name in FMV_NAMES {
@@ -2048,15 +2051,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     // Replace the FMVs that play when you select a file so each ISO always plays the only one.
     const SELECT_GAMES_FMVS: &[&[u8]] = &[
-        b"02_start_fileselect_A.thp",
-        b"02_start_fileselect_B.thp",
-        b"02_start_fileselect_C.thp",
-        b"04_fileselect_playgame_A.thp",
-        b"04_fileselect_playgame_B.thp",
-        b"04_fileselect_playgame_C.thp",
+        b"Video/02_start_fileselect_A.thp",
+        b"Video/02_start_fileselect_B.thp",
+        b"Video/02_start_fileselect_C.thp",
+        b"Video/04_fileselect_playgame_A.thp",
+        b"Video/04_fileselect_playgame_B.thp",
+        b"Video/04_fileselect_playgame_C.thp",
     ];
     for fmv_name in SELECT_GAMES_FMVS {
-        let fmv_ref = if fmv_name[1] == b'2' {
+        let fmv_ref = if fmv_name[7] == b'2' {
             &start_file_select_fmv
         } else {
             &file_select_play_game_fmv
