@@ -563,6 +563,12 @@ impl WebSocketHandler
                     Ok(i) => write_queue.sync_push(&ping_buf[..i]).await,
                     Err(e) => { primeapi::dbg!(e); },
                 }
+                let res = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::Text, true, b"{\"ping\":null}", ping_buf);
+                match res {
+                    Ok(i) => write_queue.sync_push(&ping_buf[..i]).await,
+                    Err(e) => { primeapi::dbg!(e); },
+                }
             }
         };
 

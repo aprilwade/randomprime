@@ -1,5 +1,3 @@
-#![feature(associated_type_bounds)]
-#![feature(macros_in_extern)]
 #![feature(try_blocks)]
 #![feature(type_alias_impl_trait)]
 #![no_std]
@@ -60,7 +58,7 @@ static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Never>>>> = None;
 unsafe extern "C" fn setup_global_state()
 {
     debug_assert!(EVENT_LOOP.is_none());
-    EVENT_LOOP = Some(Pin::new_unchecked(Box::new(event_loop())));
+    EVENT_LOOP = Some(Box::pin(event_loop()));
     primeapi::dbg!(core::mem::size_of_val(&event_loop()));
 }
 
@@ -92,7 +90,11 @@ unsafe extern "C" fn hook_every_frame()
         return
     }
 
-    let event_loop = EVENT_LOOP.as_mut().unwrap();
+    let event_loop = if let Some(event_loop) = EVENT_LOOP.as_mut() {
+        event_loop
+    } else {
+        return
+    };
     let waker = async_utils::empty_waker();
     let mut ctx = Context::from_waker(&waker);
     match event_loop.as_mut().poll(&mut ctx) {

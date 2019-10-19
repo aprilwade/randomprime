@@ -1,6 +1,4 @@
 #![feature(alloc_error_handler)]
-// #![feature(async_await)]
-#![feature(macros_in_extern)]
 #![no_std]
 
 extern crate alloc;
