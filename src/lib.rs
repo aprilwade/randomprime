@@ -15,7 +15,7 @@ use sha2::{Digest, Sha512};
 
 use std::{
     borrow::Cow,
-    ffi::CStr,
+    ffi::{CStr, CString},
     iter,
 };
 
@@ -39,6 +39,8 @@ pub trait GcDiscLookupExtensions<'a>
     fn find_resource_mut<'r, F>(&'r mut self, pak_name: &str, f: F)
         -> Option<&'r mut structs::Resource<'a>>
         where F: FnMut(&structs::Resource<'a>) -> bool;
+
+    fn add_file(&mut self, path: &str, file: structs::FstEntryFile<'a>) -> Result<(), String>;
 }
 
 impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
@@ -116,6 +118,51 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
         cursor.into_value()
     }
 
+    fn add_file(&mut self, path: &str, file: structs::FstEntryFile<'a>) -> Result<(), String>
+    {
+        let mut split = path.rsplitn(2, '/');
+        let file_name = split.next()
+            .ok_or_else(|| "".to_owned())?;
+
+        let new_entry = structs::FstEntry::File(
+            Cow::Owned(CString::new(file_name).unwrap()),
+            file,
+            None,
+        );
+        let path = if let Some(path) = split.next() {
+            path
+        } else {
+            self.file_system_root.dir_entries_mut().unwrap().push(new_entry);
+            return Ok(())
+        };
+
+        let mut entry = &mut self.file_system_root;
+        for seg in path.split('/') {
+            if seg.len() == 0 {
+                continue
+            }
+            let dir_entries = entry.dir_entries_mut()
+                .ok_or_else(|| "".to_owned())?;
+
+            let maybe_pos = dir_entries
+                .iter()
+                .position(|e| e.name().to_bytes() == seg.as_bytes());
+            if let Some(pos) = maybe_pos {
+                entry = &mut dir_entries[pos];
+            } else {
+                dir_entries.push(structs::FstEntry::Dir(
+                    Cow::Owned(CString::new(seg).unwrap()),
+                    vec![],
+                ));
+                entry = dir_entries.last_mut().unwrap()
+            }
+        }
+
+        entry.dir_entries_mut()
+            .ok_or_else(|| "".to_owned())?
+            .push(new_entry);
+        Ok(())
+    }
 }
 
 pub fn extract_flaahgra_music_files(iso_path: &str) -> Result<[nod_wrapper::FileWrapper; 2], String>

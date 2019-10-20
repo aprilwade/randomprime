@@ -77,33 +77,33 @@ extern "C"
     fn free(ptr: *const c_void);
 }
 
-// #[macro_export]
-// macro_rules! dbg {
-//     ($($tts:tt)*) => { { } }
-// }
-
 #[macro_export]
 macro_rules! dbg {
-    () => {
-        let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
-    };
-    ($val:expr) => {
-        // Use of `match` here is intentional because it affects the lifetimes
-        // of temporaries - https://stackoverflow.com/a/48732525/1063961
-        match $val {
-            tmp => {
-                let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
-                    file!(), line!(), stringify!($val), &tmp);
-                tmp
-            }
-        }
-    };
-    // Trailing comma with single argument is ignored
-    ($val:expr,) => { $crate::dbg!($val) };
-    ($($val:expr),+ $(,)?) => {
-        ($($crate::dbg!($val)),+,)
-    };
+    ($($tts:tt)*) => { { } }
 }
+
+// #[macro_export]
+// macro_rules! dbg {
+//     () => {
+//         let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
+//     };
+//     ($val:expr) => {
+//         // Use of `match` here is intentional because it affects the lifetimes
+//         // of temporaries - https://stackoverflow.com/a/48732525/1063961
+//         match $val {
+//             tmp => {
+//                 let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
+//                     file!(), line!(), stringify!($val), &tmp);
+//                 tmp
+//             }
+//         }
+//     };
+//     // Trailing comma with single argument is ignored
+//     ($val:expr,) => { $crate::dbg!($val) };
+//     ($($val:expr),+ $(,)?) => {
+//         ($($crate::dbg!($val)),+,)
+//     };
+// }
 
 pub unsafe fn malloc(len: usize) -> *mut c_void
 {

@@ -14,6 +14,9 @@ generic-array = "0.13"
 linked_list_allocator = "0.6"
 linkme = "0.1"
 pin-utils = "0.1.0-alpha.4"
+serde = { version = "1", default-features = false, features = ["derive"] }
+serde_cbor = { version = "0.10", default-features = false, features = ["alloc"] }
+ssmarshal = { version = "1", default-features = false }
 
 
 async_utils = { path = "../async_utils", package = "async_utils" }

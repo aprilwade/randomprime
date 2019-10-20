@@ -10,12 +10,13 @@ use linkme::distributed_slice;
 use pin_utils::pin_mut;
 
 use primeapi::{patch_fn, prolog_fn};
+use primeapi::alignment_utils::{Aligned32, Aligned32SliceMut};
+use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
     CArchitectureQueue, CGameState, CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget,
     CMainFlow, CPlayerState, CRelayTracker, CStringTable, CWorldState,
 };
 use primeapi::rstl::WString;
-use primeapi::alignment_utils::Aligned32;
 
 use alloc::boxed::Box;
 
@@ -31,6 +32,12 @@ mod ipc_async;
 mod sock_async;
 mod http;
 
+
+include!("../../patches_config.rs");
+static mut REL_CONFIG: RelConfig = RelConfig {
+    quickplay_mlvl: 0xFFFFFFFF,
+    quickplay_mrea: 0xFFFFFFFF,
+};
 
 pub fn delay(ticks: u32) -> impl Future<Output = ()>
 {
@@ -57,6 +64,23 @@ static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Never>>>> = None;
 #[prolog_fn]
 unsafe extern "C" fn setup_global_state()
 {
+    {
+        let mut fi = if let Some(fi) = DVDFileInfo::new(b"rel_config.bin\0") {
+            fi
+        } else {
+            return;
+        };
+        let config_size = fi.file_length() as usize;
+        let mut recv_buf = alloc::vec![MaybeUninit::<u8>::uninit(); config_size + 63];
+        let mut recv_buf = Aligned32SliceMut::split_unaligned_prefix(&mut recv_buf[..]).1
+            .truncate_to_len((config_size + 31) & !31);
+        {
+            let _ = fi.read_async(recv_buf.reborrow(), 0, 0);
+        }
+        REL_CONFIG = ssmarshal::deserialize(&recv_buf.truncate_to_len(config_size).assume_init())
+            .unwrap().0;
+    }
+
     debug_assert!(EVENT_LOOP.is_none());
     EVENT_LOOP = Some(Box::pin(event_loop()));
     primeapi::dbg!(core::mem::size_of_val(&event_loop()));
@@ -487,11 +511,6 @@ fn update_tracker_state(ts: &mut TrackerState, initial: bool, time_only: bool, m
         Ok(f.position())
     })();
     r.ok().and_then(|i| NonZeroUsize::new(i))
-}
-
-include!("../../patches_config.rs");
-extern "C" {
-    static REL_CONFIG: RelConfig;
 }
 
 // Based on

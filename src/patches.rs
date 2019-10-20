@@ -5,7 +5,7 @@ use encoding::{
     Encoding,
     EncoderTrap,
 };
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::{
     custom_asset_ids,
@@ -45,6 +45,7 @@ use std::{
     fs::File,
     io::Write,
     iter,
+    mem,
 };
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
@@ -1541,14 +1542,12 @@ fn patch_starting_pickups(
     Ok(())
 }
 
-include!("../compile_to_ppc/patches_config.rs");
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
     patch_heat_damage: bool,
     patch_suit_damage: bool,
-    quickplay: bool,
 ) -> Result<(), String>
 {
     macro_rules! symbol_addr {
@@ -1723,18 +1722,6 @@ fn patch_dol<'r>(
         rel_loader_map_str.lines().map(|l| Ok(l.to_owned())),
     ).map_err(|e| e.to_string())?;
 
-
-    let rel_config = RelConfig {
-        quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
-        quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
-    };
-    let rel_config_size = <RelConfig as reader_writer::Readable>::fixed_size().unwrap();
-    let rel_config_offset = (rel_loader_map["REL_CONFIG"] - 0x80002000) as usize;
-    {
-        let rel_config_bytes = &mut rel_loader[rel_config_offset..(rel_config_offset + rel_config_size)];
-        rel_config.write_to(&mut std::io::Cursor::new(rel_config_bytes)).unwrap();
-    }
-
     let bytes_needed = ((rel_loader.len() + 31) & !31) - rel_loader.len();
     rel_loader.extend([0; 32][..bytes_needed].iter().copied());
 
@@ -1801,6 +1788,21 @@ fn patch_bnr(file: &mut structs::FstEntryFile, config: &ParsedConfig) -> Result<
     Ok(())
 }
 
+include!("../compile_to_ppc/patches_config.rs");
+fn create_rel_config_file(
+    spawn_room: SpawnRoom,
+    quickplay: bool,
+) -> Vec<u8>
+{
+    let config = RelConfig {
+        quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
+        quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
+    };
+    let mut buf = vec![0; mem::size_of::<RelConfig>()];
+    ssmarshal::serialize(&mut buf, &config).unwrap();
+    buf
+}
+
 // XXX Deserialize is implemented here for c_interface. Ideally this could be done in
 //     c_interface.rs itself...
 #[derive(Deserialize)]
@@ -1827,6 +1829,14 @@ pub enum ArtifactHintBehavior
     Default,
     None,
     All,
+}
+
+impl Default for ArtifactHintBehavior
+{
+    fn default() -> Self
+    {
+        ArtifactHintBehavior::Default
+    }
 }
 
 pub struct ParsedConfig
@@ -1929,22 +1939,17 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
 
-    gc_disc.file_system_root.dir_entries_mut().unwrap().push(structs::FstEntry::File(
-        b"randomprime.txt\0".as_cstr(),
-        structs::FstEntryFile::Unknown(Reader::new(&ct)),
-        None,
-    ));
+    gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
     let patches_rel_bytes = match version {
         Version::V0_00 => include_bytes!("../extra_assets/patches_1.00.rel"),
         Version::V0_01 => unreachable!(),
         Version::V0_02 => include_bytes!("../extra_assets/patches_1.02.rel"),
     };
-    gc_disc.file_system_root.dir_entries_mut().unwrap().push(structs::FstEntry::File(
-        b"patches.rel\0".as_cstr(),
-        structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes)),
-        None,
-    ));
+    gc_disc.add_file(
+        "patches.rel",
+        structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes))
+    )?;
 
 
 
@@ -2100,6 +2105,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         }
     }
 
+    let rel_config;
     if config.skip_frigate {
         patcher.add_file_patch(
             b"default.dol",
@@ -2109,10 +2115,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
-                config.quickplay,
             )
         );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
+        rel_config = create_rel_config_file(spawn_room, config.quickplay);
     } else {
         patcher.add_file_patch(
             b"default.dol",
@@ -2122,14 +2128,19 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
-                config.quickplay,
             )
         );
         patcher.add_scly_patch(
             resource_info!("01_intro_hanger.MREA").into(),
             move |_ps, area| patch_frigate_teleporter(area, spawn_room)
         );
+        rel_config = create_rel_config_file(SpawnRoom::frigate_spawn_room(), config.quickplay);
     }
+    gc_disc.add_file(
+        "rel_config.bin",
+        structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
+    )?;
+
 
     let (starting_items, print_sis) = if let Some(starting_items) = config.starting_items {
         (starting_items, true)

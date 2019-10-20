@@ -6,14 +6,6 @@ use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::dol_sdk::os::{OSLink, OSModuleHeader};
 use primeapi::alignment_utils::Aligned32SliceMut;
 
-include!("../../patches_config.rs");
-#[no_mangle]
-pub static REL_CONFIG: RelConfig = RelConfig {
-    quickplay_mlvl: 0xFFFFFFFF,
-    quickplay_mrea: 0xFFFFFFFF,
-};
-
-
 #[inline(always)]
 fn leak_aligned_slice<'a>(len: usize) -> Aligned32SliceMut<'a, MaybeUninit<u8>>
 {
