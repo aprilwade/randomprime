@@ -48,7 +48,7 @@ struct Config
 
     #[serde(default)]
     skip_impact_crater: bool,
-    #[serde(default = patches::ArtifactHintBehavior::Default)]
+    #[serde(default)]
     artifact_hint_behavior: patches::ArtifactHintBehavior,
 
     #[serde(default)]

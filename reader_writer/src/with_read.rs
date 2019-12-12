@@ -5,12 +5,12 @@ use std::io::{self, Read};
 pub trait WithRead: fmt::Debug
 {
     fn len(&self) -> usize;
-    fn boxed<'r>(&self) -> Box<WithRead + 'r>
+    fn boxed<'r>(&self) -> Box<dyn WithRead + 'r>
         where Self: 'r;
-    fn with_read(&self, f: &mut dyn FnMut(&mut Read) -> io::Result<u64>) -> io::Result<u64>;
+    fn with_read(&self, f: &mut dyn FnMut(&mut dyn Read) -> io::Result<u64>) -> io::Result<u64>;
 }
 
-impl<'r> Clone for Box<WithRead + 'r>
+impl<'r> Clone for Box<dyn WithRead + 'r>
 {
     fn clone(&self) -> Self
     {
@@ -26,13 +26,13 @@ impl<T> WithRead for T
         self.as_ref().len()
     }
 
-    fn boxed<'r>(&self) -> Box<WithRead + 'r>
+    fn boxed<'r>(&self) -> Box<dyn WithRead + 'r>
         where Self: 'r
     {
         Box::new(self.clone())
     }
 
-    fn with_read(&self, f: &mut dyn FnMut(&mut Read) -> io::Result<u64>) -> io::Result<u64>
+    fn with_read(&self, f: &mut dyn FnMut(&mut dyn Read) -> io::Result<u64>) -> io::Result<u64>
     {
         f(&mut io::Cursor::new(self.as_ref()))
     }

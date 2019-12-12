@@ -1,4 +1,3 @@
-#![feature(macros_in_extern)]
 #![no_std]
 
 use linkme::distributed_slice;

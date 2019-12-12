@@ -317,13 +317,13 @@ impl<'a> reader_writer::WithRead for DolPatcher<'a>
         0x100 + contents_len as usize
     }
 
-    fn boxed<'s>(&self) -> Box<reader_writer::WithRead + 's>
+    fn boxed<'s>(&self) -> Box<dyn reader_writer::WithRead + 's>
         where Self: 's
     {
         Box::new(self.clone())
     }
 
-    fn with_read(&self, f: &mut dyn FnMut(&mut io::Read) -> io::Result<u64>) -> io::Result<u64>
+    fn with_read(&self, f: &mut dyn FnMut(&mut dyn io::Read) -> io::Result<u64>) -> io::Result<u64>
     {
         let mut data_segment_refs = GenericArray::<_, U11>::from_exact_iter(&self.data_segments).unwrap();
         data_segment_refs.sort_by_key(|seg| if seg.is_empty() { 0xFFFFFFFF } else { seg.addr() });

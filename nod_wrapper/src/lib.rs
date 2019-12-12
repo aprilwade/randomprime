@@ -234,13 +234,13 @@ impl reader_writer::WithRead for FileWrapper
         self.len() as usize
     }
 
-    fn boxed<'a>(&self) -> Box<reader_writer::WithRead + 'a>
+    fn boxed<'a>(&self) -> Box<dyn reader_writer::WithRead + 'a>
         where Self: 'a
     {
         Box::new(self.clone())
     }
 
-    fn with_read(&self, f: &mut dyn FnMut(&mut io::Read) -> io::Result<u64>) -> io::Result<u64>
+    fn with_read(&self, f: &mut dyn FnMut(&mut dyn io::Read) -> io::Result<u64>) -> io::Result<u64>
     {
         f(&mut FileWrapperRead {
             fw: self,

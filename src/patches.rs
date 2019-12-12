@@ -1829,6 +1829,14 @@ pub enum ArtifactHintBehavior
     All,
 }
 
+impl Default for ArtifactHintBehavior
+{
+    fn default() -> Self
+    {
+        ArtifactHintBehavior::Default
+    }
+}
+
 pub struct ParsedConfig
 {
     pub input_iso: memmap::Mmap,

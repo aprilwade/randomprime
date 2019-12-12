@@ -321,7 +321,7 @@ pub enum FstEntryFile<'r>
     Pak(Pak<'r>),
     Thp(Thp<'r>),
     Bnr(Bnr<'r>),
-    ExternalFile(Box<WithRead + 'r>),
+    ExternalFile(Box<dyn WithRead + 'r>),
     Unknown(Reader<'r>),
 }
 
