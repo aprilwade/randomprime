@@ -211,7 +211,7 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
             parse_quote_spanned! {id.span()=> (#minus #id) }
         } else {
             let lit: LitInt = input.parse()?;
-            let v = lit.value() as i64;
+            let v = lit.base10_parse::<i64>()?;
             parse_quote_spanned! {lit.span()=> (#minus #v) }
         }
     };
@@ -289,7 +289,7 @@ macro_rules! decl_instrs {
                 if let Ok(_) = input.parse::<Token![.]>() {
                     let e = if let Ok(_) = input.parse::<kw::float>() {
                         let lit = input.parse::<LitFloat>()?;
-                        let f = lit.value() as f32;
+                        let f = lit.base10_parse::<f32>()?;
                         parse_quote_spanned! {lit.span()=> #f.to_bits() }
 
                     } else if let Ok(_) = input.parse::<kw::long>() {

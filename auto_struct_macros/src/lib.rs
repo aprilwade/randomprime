@@ -300,7 +300,7 @@ impl AutoStructDecl
                             let _paren = parenthesized!(content in input);
                             Punctuated::<RawAutoStructAttr, Token![,]>::parse_terminated(&content)
                         };
-                        let attrs = parser.parse2(attr.tts.clone())?;
+                        let attrs = parser.parse2(attr.tokens.clone())?;
                         if attrs.len() == 0 {
                             err(attr.span(), "Empty auto_struct attribute")?;
                         }
