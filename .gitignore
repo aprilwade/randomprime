@@ -3,3 +3,9 @@ target
 *.iso
 *.gcz
 *.ciso
+extra_assets/patches_1.00.rel
+extra_assets/patches_1.02.rel
+extra_assets/rel_loader_1.00.bin
+extra_assets/rel_loader_1.00.bin.map
+extra_assets/rel_loader_1.02.bin
+extra_assets/rel_loader_1.02.bin.map
