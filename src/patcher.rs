@@ -93,14 +93,12 @@ impl<'r, 's> PrimePatcher<'r, 's>
             .chain(self.scly_patches.iter().map(|p| p.0.pak_name))
             .chain(self.resource_patches.iter().map(|p| p.0.pak_name))
             .collect::<HashSet<_>>();
-        let files = gc_disc.file_system_table.fst_entries.iter_mut()
-            .filter(|e| files_to_patch.contains(&e.name.to_bytes()));
+        let files = gc_disc.file_system_root.dir_files_iter_mut()
+            .filter(|(path, _)| files_to_patch.contains(&path[..]));
 
-        for fst_entry in files {
-            let name = fst_entry.name.clone().into_owned();
-            let name = name.to_bytes();
 
-            if let Some(patch) = self.file_patches.get_mut(name) {
+        for (name, fst_entry) in files {
+            if let Some(patch) = self.file_patches.get_mut(&name[..]) {
                 fst_entry.guess_kind();
                 patch(&mut fst_entry.file_mut().unwrap())?
             }
@@ -108,7 +106,7 @@ impl<'r, 's> PrimePatcher<'r, 's>
             let pak_patch_exists = self.resource_patches.iter()
                 .map(|p| p.0.pak_name)
                 .chain(self.scly_patches.iter().map(|p| p.0.pak_name))
-                .any(|n| n == name);
+                .any(|n| n == &name[..]);
             if !pak_patch_exists {
                 continue;
             }
@@ -124,7 +122,7 @@ impl<'r, 's> PrimePatcher<'r, 's>
             // doesn't allow us to hold mutable references to both at the same time, so create a
             // copy on the stack to modify and then overwrite the canonical MLVL at the end of the
             // PAK.
-            let scly_patch_exists = self.scly_patches.iter().any(|p| p.0.pak_name == name);
+            let scly_patch_exists = self.scly_patches.iter().any(|p| p.0.pak_name == &name[..]);
             let mut mlvl_editor = if scly_patch_exists {
                 let mlvl = pak.resources.iter()
                     .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"))
@@ -139,7 +137,7 @@ impl<'r, 's> PrimePatcher<'r, 's>
             while cursor.peek().is_some() {
                 let mut cursor = cursor.cursor_advancer();
                 let res_key = ResourceKey {
-                    pak_name: name,
+                    pak_name: &name[..],
                     kind: cursor.peek().unwrap().fourcc(),
                     id: cursor.peek().unwrap().file_id,
                 };
@@ -149,7 +147,7 @@ impl<'r, 's> PrimePatcher<'r, 's>
                 }
 
                 let mrea_key = MreaKey {
-                    pak_name: name,
+                    pak_name: &name[..],
                     room_id: cursor.peek().unwrap().file_id,
                 };
                 if let Some((_, patches)) = self.scly_patches.iter_mut().find(|p| p.0 == mrea_key) {
