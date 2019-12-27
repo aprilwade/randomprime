@@ -34,9 +34,13 @@ mod http;
 
 
 include!("../../patches_config.rs");
-static mut REL_CONFIG: RelConfig = RelConfig {
+pub(crate) static mut REL_CONFIG: RelConfig = RelConfig {
     quickplay_mlvl: 0xFFFFFFFF,
     quickplay_mrea: 0xFFFFFFFF,
+    // use_etag: false,
+    // etag: [0; 16],
+    // use_modified_date: false,
+    modified_date: [0; 29],
 };
 
 pub fn delay(ticks: u32) -> impl Future<Output = ()>
@@ -83,7 +87,7 @@ unsafe extern "C" fn setup_global_state()
 
     debug_assert!(EVENT_LOOP.is_none());
     EVENT_LOOP = Some(Box::pin(event_loop()));
-    primeapi::dbg!(core::mem::size_of_val(&event_loop()));
+    // primeapi::dbg!(core::mem::size_of_val(&event_loop()));
 }
 
 

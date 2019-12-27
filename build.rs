@@ -59,7 +59,7 @@ fn main()
             &symbol_table,
             &bin_path,
         ).unwrap();
-        println!("cargo:rerun-if-changed={}", bin_path.display());
+        // println!("cargo:rerun-if-changed={}", bin_path.display());
         let map_path = bin_path.with_extension("bin.map");
         {
             let mut map_file = File::create(map_path).unwrap();
@@ -79,7 +79,7 @@ fn main()
             &symbol_table,
             &rel_path,
         ).unwrap();
-        println!("cargo:rerun-if-changed={}", rel_path.display());
+        // println!("cargo:rerun-if-changed={}", rel_path.display());
     }
 
     for entry in WalkDir::new(ppc_dir) {

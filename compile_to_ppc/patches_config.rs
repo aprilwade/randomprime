@@ -7,8 +7,10 @@ mod _rel_config {
     {
         pub quickplay_mlvl: u32,
         pub quickplay_mrea: u32,
+        // pub use_etag: bool,
+        // pub etag: [u8; 16],
+        // pub use_modified_date: bool,
+        pub modified_date: [u8; 29],
     }
 }
 pub(crate) use self::_rel_config::RelConfig;
-
-// Thu, 17 Oct 2019 12:53:11 GMT

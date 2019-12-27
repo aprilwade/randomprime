@@ -43,7 +43,7 @@ use std::{
     ffi::CString,
     fmt,
     fs::File,
-    io::Write,
+    io::{self, Write},
     iter,
     mem,
 };
@@ -1794,10 +1794,19 @@ fn create_rel_config_file(
     quickplay: bool,
 ) -> Vec<u8>
 {
-    let config = RelConfig {
+    let mut config = RelConfig {
         quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
         quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
+        // use_etag: false,
+        // etag: [b' '; 16],
+        // use_modified_date: false,
+        modified_date: [0; 29],
     };
+
+    let now: chrono::DateTime<chrono::Utc> = std::time::SystemTime::now().into();
+    let formatted = now.format("%a, %d %b %Y %T GMT");
+    write!(io::Cursor::new(&mut config.modified_date[..]), "{}", formatted).unwrap();
+
     let mut buf = vec![0; mem::size_of::<RelConfig>()];
     ssmarshal::serialize(&mut buf, &config).unwrap();
     buf
@@ -1950,6 +1959,13 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
         "patches.rel",
         structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes))
     )?;
+
+    for asset in web_tracker::ASSETS {
+        gc_disc.add_file(
+            &format!("web_tracker/{}", asset.name),
+            structs::FstEntryFile::ExternalFile(Box::new(asset.clone())),
+        )?;
+    }
 
 
 

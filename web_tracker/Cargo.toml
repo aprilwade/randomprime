@@ -1,0 +1,14 @@
+[package]
+name = "web_tracker"
+version = "0.1.0"
+authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+flate2 = "1.0"
+
+reader_writer = { path = "../reader_writer" }
+
+[build-dependencies]
+flate2 = "1.0"
+walkdir = "2"

@@ -369,11 +369,15 @@ impl DvdFileSystem
         } else {
             return None;
         };
+
+        let last_modified = unsafe {
+            core::str::from_utf8(&crate::REL_CONFIG.modified_date).unwrap()
+        };
         let metadata = FileMetadata {
             size: fi.file_length(),
             // TODO: We should pull these values from a global variable/the config
             etag: None,
-            last_modified: None,
+            last_modified: Some(last_modified),
         };
         Some((metadata, DvdFileSystemReader(fi, 0)))
     }

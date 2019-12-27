@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 adler32 = "1.0"
+chrono = "0.4"
 clap = "2.9"
 encoding = "0.2"
 flate2 = "1.0"
@@ -25,6 +26,7 @@ ppcasm = { path = "ppcasm" }
 reader_writer = { path = "reader_writer" }
 resource_info_table = { path = "resource_info_table" }
 structs = { path = "structs" }
+web_tracker = { path = "web_tracker" }
 
 [build-dependencies]
 walkdir = "2"
@@ -48,6 +50,7 @@ members = [
     "reader_writer",
     "resource_info_table",
     "structs",
+    "web_tracker",
 ]
 
 [lib]

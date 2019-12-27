@@ -287,3 +287,47 @@ impl CStrConversionExtension for [u8]
         Cow::Borrowed(ffi::CStr::from_bytes_with_nul(self).unwrap())
     }
 }
+
+macro_rules! define_array_readable {
+    ( $e:literal $($rest:literal)* ) => {
+        impl<'r, T> Readable<'r> for [T; $e]
+            where T: Readable<'r, Args = ()>
+        {
+            type Args = ();
+            fn read_from(_reader: &mut Reader<'r>, (): ()) -> [T; $e]
+            {
+                [$( { let _ = $rest; _reader.read(()) }, )*]
+            }
+
+            fn size(&self) -> usize
+            {
+                self.iter().map(|t| t.size()).sum::<usize>()
+            }
+
+            fn fixed_size() -> Option<usize>
+            {
+                T::fixed_size().map(|s| s * $e)
+            }
+        }
+        impl<T> Writable for [T; $e]
+            where T: Writable
+        {
+            fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+            {
+                let mut sum = 0;
+                for t in self.iter() {
+                    sum += t.write_to(writer)?;
+                }
+                Ok(sum)
+            }
+        }
+        define_array_readable!($($rest)*);
+    };
+    () => { };
+}
+define_array_readable!(
+    32 31 30
+    29 28 27 26 25 24 23 22 21 20
+    19 18 17 16 15 14 13 12 11 10
+     9  8  7  6  5  4  3  2  1  0
+);
