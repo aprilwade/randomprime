@@ -1,14 +1,47 @@
 #![no_std]
 
+extern crate alloc;
+
 use linkme::distributed_slice;
 
-use primeapi::patch_fn;
+use primeapi::{patch_fn, prolog_fn};
+use primeapi::alignment_utils::Aligned32SliceMut;
+use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
     CArchitectureQueue, CGameState, CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget,
     CMainFlow, CStringTable, CWorldState,
 };
 use primeapi::rstl::WString;
 
+use core::mem::MaybeUninit;
+
+include!("../../patches_config.rs");
+static mut REL_CONFIG: RelConfig = RelConfig {
+    quickplay_mlvl: 0xFFFFFFFF,
+    quickplay_mrea: 0xFFFFFFFF,
+};
+
+#[prolog_fn]
+unsafe extern "C" fn setup_global_state()
+{
+    {
+        let mut fi = if let Some(fi) = DVDFileInfo::new(b"rel_config.bin\0") {
+            fi
+        } else {
+            return;
+        };
+        let config_size = fi.file_length() as usize;
+        let mut recv_buf = alloc::vec![MaybeUninit::<u8>::uninit(); config_size + 63];
+        let mut recv_buf = Aligned32SliceMut::split_unaligned_prefix(&mut recv_buf[..]).1
+            .truncate_to_len((config_size + 31) & !31);
+        {
+            let _ = fi.read_async(recv_buf.reborrow(), 0, 0);
+        }
+        REL_CONFIG = ssmarshal::deserialize(&recv_buf.truncate_to_len(config_size).assume_init())
+            .unwrap().0;
+    }
+
+}
 
 
 #[patch_fn(kind = "call",
@@ -28,11 +61,6 @@ unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *
     }
 
     res
-}
-
-include!("../../patches_config.rs");
-extern "C" {
-    static REL_CONFIG: RelConfig;
 }
 
 // Based on

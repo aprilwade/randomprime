@@ -18,6 +18,7 @@ pub mod dol_sdk {
     pub mod os;
 }
 pub mod mp1;
+pub mod alignment_utils;
 
 #[doc(hidden)]
 pub mod reexport {

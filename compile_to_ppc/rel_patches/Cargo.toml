@@ -12,6 +12,8 @@ linkme = "0.1"
 
 core = { path = "../core-futures-tls", package = "core-futures-tls" }
 primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
+serde = { version = "1", default-features = false, features = ["derive"] }
+ssmarshal = { version = "1", default-features = false }
 
 [lib]
 crate-type = ["staticlib"]
