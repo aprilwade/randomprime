@@ -1482,7 +1482,7 @@ fn patch_starting_pickups(
             spawn_point.energy_tanks = fetch_bits(4);
             print_maybe!(first, "    energy_tanks: {}", spawn_point.energy_tanks);
 
-            spawn_point.power_bombs = fetch_bits(3);
+            spawn_point.power_bombs = fetch_bits(4);
             print_maybe!(first, "    power_bombs: {}", spawn_point.power_bombs);
 
             spawn_point.wave = fetch_bits(1);
@@ -1534,7 +1534,13 @@ fn patch_starting_pickups(
             print_maybe!(first, "    super_missile: {}", spawn_point.super_missile);
 
             spawn_point.wavebuster = fetch_bits(1);
-            print_maybe!(first, "    wavebuster: {}", spawn_point.super_missile);
+            print_maybe!(first, "    wavebuster: {}", spawn_point.wavebuster);
+
+            spawn_point.wavebuster = fetch_bits(1);
+            print_maybe!(first, "    ice_spreader: {}", spawn_point.ice_spreader);
+
+            spawn_point.wavebuster = fetch_bits(1);
+            print_maybe!(first, "    flamethrower: {}", spawn_point.flamethrower);
 
             first = false;
         }
