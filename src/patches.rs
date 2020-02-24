@@ -1536,10 +1536,10 @@ fn patch_starting_pickups(
             spawn_point.wavebuster = fetch_bits(1);
             print_maybe!(first, "    wavebuster: {}", spawn_point.wavebuster);
 
-            spawn_point.wavebuster = fetch_bits(1);
+            spawn_point.ice_spreader = fetch_bits(1);
             print_maybe!(first, "    ice_spreader: {}", spawn_point.ice_spreader);
 
-            spawn_point.wavebuster = fetch_bits(1);
+            spawn_point.flamethrower = fetch_bits(1);
             print_maybe!(first, "    flamethrower: {}", spawn_point.flamethrower);
 
             first = false;
