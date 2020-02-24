@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "core-futures-tls",
     "primeapi-rs",
         "primeapi-rs/primeapi_macros",
     "rel_loader",
