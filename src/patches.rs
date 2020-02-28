@@ -1254,23 +1254,23 @@ fn patch_main_ventilation_shaft_section_b_door<'r>(
     Ok(())
 }
 
-fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
 	let layer = &mut scly.layers.as_mut_vec()[0];
 
-	let trigger_dooropen_id = ps.fresh_instance_id_range.next().unwrap();
-	let timer_doorclose_id = ps.fresh_instance_id_range.next().unwrap();
-	let actor_doorshield_id = ps.fresh_instance_id_range.next().unwrap();
-	let relay_unlock_id = ps.fresh_instance_id_range.next().unwrap();
-	let trigger_doorunlock_id = ps.fresh_instance_id_range.next().unwrap();
+	let trigger_dooropen_id = 0x20007;
+	let timer_doorclose_id = 0x20008;
+	let actor_doorshield_id = 0x20004;
+	let relay_unlock_id = 0x20159;
+	let trigger_doorunlock_id = 0x2000F;
 
 	layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: trigger_doorunlock_id,
         property_data: structs::SclyProperty::DamageableTrigger(structs::DamageableTrigger {
                 name: b"Trigger_DoorUnlock\0".as_cstr(),
-                position: [152.03212, 86.451134, 24.472418].into(),
+                position: [152.232117, 86.451134, 24.472418].into(),
 				scale: [0.25, 4.5, 4.0].into(),
 				health_info: structs::structs::HealthInfo {
                     health: 1.0,
@@ -1322,6 +1322,11 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }),
 			connections: vec![
 				structs::Connection {
+					state: structs::ConnectionState::REFLECTED_DAMAGE,
+					message: structs::ConnectionMsg::SET_TO_ZERO,
+					target_object_id: 0x202FD,
+				},
+				structs::Connection {
 					state: structs::ConnectionState::DEAD,
 					message: structs::ConnectionMsg::DEACTIVATE,
 					target_object_id: actor_doorshield_id,
@@ -1334,7 +1339,7 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
 				structs::Connection {
 					state: structs::ConnectionState::DEAD,
 					message: structs::ConnectionMsg::ACTIVATE,
-					target_object_id: trigger_doorunlock_id,
+					target_object_id: trigger_dooropen_id,
 				},
 				structs::Connection {
 					state: structs::ConnectionState::DEAD,
@@ -1532,6 +1537,7 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     locked_door_scan.active = 0;
+	locked_door_scan.scan_param.scan = 0xFFFFFFFF;
 
 	let locked_door = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x20060)
@@ -1539,7 +1545,7 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
         .unwrap();
 	locked_door.ancs.file_id = 0x26886945; // newmetroiddoor.ANCS
 	locked_door.ancs.unknown = 2;
-    locked_door.open = 1;
+    locked_door.unknown0 = 0;
 
 	let trigger_remove_scan_target_locked_door_and_etank = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x202B8)
@@ -1547,11 +1553,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
         .unwrap();
     trigger_remove_scan_target_locked_door_and_etank.active = 0;
 	
-	let locked_door_obj = layer.objects.as_mut_vec().iter_mut()
+	layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x20060)
-        .unwrap();
-	
-	locked_door_obj.connections.as_mut_vec().push(
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::ACTIVATE,
@@ -1559,7 +1566,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::START,
@@ -1567,7 +1579,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             },
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::CLOSED,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1575,7 +1592,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1583,7 +1605,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1591,7 +1618,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::CLOSED,
                 message: structs::ConnectionMsg::SET_TO_ZERO,
@@ -1599,7 +1631,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::MAX_REACHED,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1607,7 +1644,12 @@ fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_w
             }
 		);
 
-	locked_door_obj.connections.as_mut_vec().push(
+	layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+		.connections
+		.as_mut_vec()
+		.push(
 			structs::Connection {
                 state: structs::ConnectionState::MAX_REACHED,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -2231,6 +2273,7 @@ pub struct ParsedConfig
     pub quiet: bool,
 
     pub skip_impact_crater: bool,
+	pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
@@ -2641,10 +2684,12 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-	patcher.add_scly_patch(
-        resource_info!("01_mainplaza.MREA").into(),
-        make_main_plaza_locked_door_two_ways
-    );
+	if config.enable_vault_ledge_door {
+		patcher.add_scly_patch(
+			resource_info!("01_mainplaza.MREA").into(),
+			make_main_plaza_locked_door_two_ways
+		);
+	}
 
     patcher.run(gc_disc)?;
     Ok(())
