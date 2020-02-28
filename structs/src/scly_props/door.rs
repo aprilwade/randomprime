@@ -29,7 +29,7 @@ pub struct Door<'r>
     pub active: u8,
     pub open: u8,
     
-    pub unk: u8,
+    pub unknown0: u8,
 
     pub open_close_animation_len: f32,
     
