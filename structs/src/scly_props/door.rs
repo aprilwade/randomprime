@@ -4,7 +4,7 @@ use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 use crate::SclyPropertyData;
-use crate::scly_props::structs::{DamageVulnerability, HealthInfo, VisorParameters};
+use crate::scly_props::structs::{AncsProp, ActorParameters};
 
 
 #[auto_struct(Readable, Writable)]

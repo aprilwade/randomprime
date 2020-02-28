@@ -1254,7 +1254,7 @@ fn patch_main_ventilation_shaft_section_b_door<'r>(
     Ok(())
 }
 
-fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn make_main_plaza_locked_door_two_ways(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1311,7 +1311,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
 				unknown0: 3,
 				pattern_txtr0: 0x544A9892, // testb.TXTR
 				pattern_txtr1: 0x544A9892, // testb.TXTR
-				color_txtr1: 0x8A7F3683, // blue.TXTR
+				color_txtr: 0x8A7F3683, // blue.TXTR
 				lock_on: 0,
 				active: 1,
 				visor_params: structs::structs::VisorParameters {
@@ -1466,9 +1466,9 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
 						unknown8: 0,
 						light_layer_id: 0
 					},
-					scannable_params: structs::structs::ScannableParameters {
+					scan_params: structs::structs::ScannableParameters {
 						scan: 0xFFFFFFFF // None
-					}
+					},
 					xray_cmdl: 0xFFFFFFFF, // None
 					xray_cskr: 0xFFFFFFFF, // None
 					thermal_cmdl: 0xFFFFFFFF, // None
@@ -1482,12 +1482,12 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
 						unknown0: 0,
 						target_passthrough: 0,
 						unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
-					}
+					},
 					enable_thermal_heat: 1,
 					unknown3: 0,
 					unknown4: 1,
 					unknown5: 1.0
-				}
+				},
 				looping: 1,
 				snow: 1,
 				solid: 0,
@@ -1500,6 +1500,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
 				unknown12: 0,
 				unknown13: 0
             }),
+			connections: vec![].into()
     });
 
 	layer.objects.as_mut_vec().push(structs::SclyObject {
@@ -1526,28 +1527,31 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
         ].into(),
     });
 
-	let locked_door_scan = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
+	let locked_door_scan = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x202F4)
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     locked_door_scan.active = 0;
 
-	let locked_door = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
+	let locked_door = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x20060)
         .and_then(|obj| obj.property_data.as_door_mut())
         .unwrap();
-	locked_door.file_id = 0x26886945; // newmetroiddoor.ANCS
+	locked_door.ancs.file_id = 0x26886945; // newmetroiddoor.ANCS
 	locked_door.ancs.unknown = 2;
     locked_door.open = 1;
 
-	let locked_door_connections = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
-        .find(|obj| obj.instance_id == 0x202F4)
-		.connections;
+	let trigger_remove_scan_target_locked_door_and_etank = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x202B8)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+    trigger_remove_scan_target_locked_door_and_etank.active = 0;
 	
-	locked_door_connections.push(
+	let locked_door_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap();
+	
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::ACTIVATE,
@@ -1555,7 +1559,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::START,
@@ -1563,7 +1567,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             },
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::CLOSED,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1571,7 +1575,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1579,7 +1583,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::OPEN,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1587,7 +1591,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::CLOSED,
                 message: structs::ConnectionMsg::SET_TO_ZERO,
@@ -1595,7 +1599,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::MAX_REACHED,
                 message: structs::ConnectionMsg::DEACTIVATE,
@@ -1603,20 +1607,13 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
             }
 		);
 
-	locked_door_connections.push(
+	locked_door_obj.connections.as_mut_vec().push(
 			structs::Connection {
                 state: structs::ConnectionState::MAX_REACHED,
                 message: structs::ConnectionMsg::DEACTIVATE,
                 target_object_id: trigger_doorunlock_id,
             }
 		);
-
-	let remove_scan_target_locked_door_and_etank = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
-        .find(|obj| obj.instance_id == 0x202B8)
-        .and_then(|obj| obj.property_data.as_door_mut())
-        .unwrap();
-    remove_scan_target_locked_door_and_etank.active = 0;
 
     Ok(())
 }
