@@ -48,8 +48,8 @@ struct Config
 
     #[serde(default)]
     skip_impact_crater: bool,
-	#[serde(default)]
-	enable_vault_ledge_door: bool,
+    #[serde(default)]
+    enable_vault_ledge_door: bool,
     #[serde(default)]
     artifact_hint_behavior: patches::ArtifactHintBehavior,
 
@@ -214,7 +214,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         quiet: false,
 
         skip_impact_crater: config.skip_impact_crater,
-		enable_vault_ledge_door: config.enable_vault_ledge_door,
+        enable_vault_ledge_door: config.enable_vault_ledge_door,
         artifact_hint_behavior: config.artifact_hint_behavior,
 
         flaahgra_music_files,

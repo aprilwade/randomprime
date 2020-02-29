@@ -26,7 +26,7 @@ mod scly_props
     mod actor;
     mod damageable_trigger;
     mod dock;
-	mod door;
+    mod door;
     mod effect;
     mod hud_memo;
     mod memory_relay;
@@ -49,7 +49,7 @@ mod scly_props
     pub use self::actor::*;
     pub use self::damageable_trigger::*;
     pub use self::dock::*;
-	pub use self::door::*;
+    pub use self::door::*;
     pub use self::effect::*;
     pub use self::hud_memo::*;
     pub use self::memory_relay::*;

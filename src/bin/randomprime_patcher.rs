@@ -108,7 +108,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         .arg(Arg::with_name("skip impact crater")
             .long("skip-impact-crater")
             .help("Elevators to the Impact Crater immediately go to the game end sequence"))
-		.arg(Arg::with_name("enable vault ledge door")
+        .arg(Arg::with_name("enable vault ledge door")
             .long("enable_vault_ledge_door")
             .help("Enable Chozo Ruins Vault door from Main Plaza"))
 
@@ -208,7 +208,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         obfuscate_items: matches.is_present("obfuscate items"),
         auto_enabled_elevators: matches.is_present("auto enabled elevators"),
         quiet: matches.is_present("quiet"),
-		enable_vault_ledge_door: matches.is_present("enable vault ledge door"),
+        enable_vault_ledge_door: matches.is_present("enable vault ledge door"),
 
         skip_impact_crater,
         artifact_hint_behavior,
