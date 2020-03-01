@@ -6,7 +6,7 @@ use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
-use resource_info_table::{resource_info, ResourceInfo};
+use generated::{resource_info, ResourceInfo};
 
 use std::{
     mem,

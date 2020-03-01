@@ -19,17 +19,11 @@ winapi = "0.3"
 
 auto_struct_macros = { path = "auto_struct_macros" }
 dol_linker = { path = "dol_linker" }
-dol_symbol_table = { path = "dol_symbol_table" }
+generated = { path = "generated" }
 nod_wrapper = { path = "nod_wrapper" }
 ppcasm = { path = "ppcasm" }
 reader_writer = { path = "reader_writer" }
-resource_info_table = { path = "resource_info_table" }
 structs = { path = "structs" }
-
-[build-dependencies]
-walkdir = "2"
-
-dol_linker = { path = "dol_linker" }
 
 [profile.release]
 lto = true
@@ -39,14 +33,13 @@ panic = "unwind"
 members = [
     "auto_struct_macros",
     "dol_linker",
-    "dol_symbol_table",
-    "macro_file_proxy",
-        "macro_file_proxy/macro_file_proxy_proc_macro",
+    "generated",
+        "generated/macro_file_proxy",
+            "generated/macro_file_proxy/macro_file_proxy_proc_macro",
     "nod_wrapper",
     "ppcasm",
         "ppcasm/ppcasm_macro",
     "reader_writer",
-    "resource_info_table",
     "structs",
 ]
 

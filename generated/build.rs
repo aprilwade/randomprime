@@ -37,10 +37,13 @@ fn invoke_cargo(ppc_manifest: &Path, package: &str)
 
 fn main()
 {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let out_dir = Path::new(&out_dir);
+
     let root_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let root_dir = Path::new(&root_dir);
 
-    let ppc_dir = root_dir.join("compile_to_ppc");
+    let ppc_dir = root_dir.join("..").join("compile_to_ppc");
     let ppc_manifest = ppc_dir.join("Cargo.toml");
     let ppc_target_dir = ppc_dir.join("target/powerpc-unknown-linux-gnu/release");
 
@@ -48,18 +51,17 @@ fn main()
     invoke_cargo(&ppc_manifest, "rel_patches");
 
     for version in &["1.00", "1.02"] {
-        let sym_table_path = format!("dol_symbol_table/{}.txt", version);
+        let sym_table_path = format!("src/dol_symbol_table/{}.txt", version);
         eprintln!("{:?}", root_dir.join(&sym_table_path));
         let mut symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();
 
-        let bin_path = root_dir.join(format!("extra_assets/rel_loader_{}.bin", version));
+        let bin_path = out_dir.join(format!("rel_loader_{}.bin", version));
         let symbols_map = link_obj_files_to_bin(
             [ppc_target_dir.join("librel_loader.a")].iter(),
             0x80002000,
             &symbol_table,
             &bin_path,
         ).unwrap();
-        println!("cargo:rerun-if-changed={}", bin_path.display());
         let map_path = bin_path.with_extension("bin.map");
         {
             let mut map_file = File::create(map_path).unwrap();
@@ -73,16 +75,20 @@ fn main()
                 .or_insert(addr);
         }
 
-        let rel_path = root_dir.join(format!("extra_assets/patches_{}.rel", version));
+        let rel_path = out_dir.join(format!("patches_{}.rel", version));
         link_obj_files_to_rel(
             [ppc_target_dir.join("librel_patches.a")].iter(),
             &symbol_table,
             &rel_path,
         ).unwrap();
-        println!("cargo:rerun-if-changed={}", rel_path.display());
     }
 
-    for entry in WalkDir::new(ppc_dir) {
+    let walkdir = WalkDir::new(ppc_dir)
+        .into_iter()
+        .filter_entry(|entry|
+            entry.depth() == 0 && entry.file_name().to_str().unwrap_or("") == "target"
+        );
+    for entry in walkdir {
         println!("cargo:rerun-if-changed={}", entry.unwrap().path().display());
     }
 }

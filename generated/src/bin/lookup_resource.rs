@@ -1,6 +1,5 @@
-use resource_info_table::{
-    resource_info, ResourceInfo
-};
+use generated::resource_info;
+use generated::resource_info_table::ResourceInfo;
 
 use macro_file_proxy::macro_file_proxy_item;
 
@@ -16,7 +15,7 @@ macro_rules! build_resource_info_array {
     };
 }
 
-macro_file_proxy_item! { "resource_info.txt", build_resource_info_array, ;}
+macro_file_proxy_item! { "src/resource_info_table/resource_info.txt", build_resource_info_array, ;}
 
 pub fn lookup_resource_info(res_id: u32) -> Option<ResourceInfo>
 {

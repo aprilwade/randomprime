@@ -190,14 +190,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dol_symbol_table"
-version = "0.1.0"
-dependencies = [
- "macro_file_proxy 0.1.0",
- "reader_writer 0.1.0",
-]
-
-[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -306,6 +298,16 @@ dependencies = [
 name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "generated"
+version = "0.1.0"
+dependencies = [
+ "dol_linker 0.1.0",
+ "macro_file_proxy 0.1.0",
+ "reader_writer 0.1.0",
+ "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "generic-array"
@@ -571,21 +573,19 @@ dependencies = [
  "auto_struct_macros 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dol_linker 0.1.0",
- "dol_symbol_table 0.1.0",
  "encoding 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generated 0.1.0",
  "memmap 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nod_wrapper 0.1.0",
  "ppcasm 0.1.0",
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "reader_writer 0.1.0",
- "resource_info_table 0.1.0",
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ssmarshal 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structs 0.1.0",
- "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -621,14 +621,6 @@ dependencies = [
 name = "regex-syntax"
 version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "resource_info_table"
-version = "0.1.0"
-dependencies = [
- "macro_file_proxy 0.1.0",
- "reader_writer 0.1.0",
-]
 
 [[package]]
 name = "rustc-serialize"

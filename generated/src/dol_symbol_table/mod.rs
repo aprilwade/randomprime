@@ -12,7 +12,7 @@ macro_rules! build_mp1_100_symbol {
         }
     }
 }
-macro_file_proxy_item!("1.00.txt", build_mp1_100_symbol, ;);
+macro_file_proxy_item!("src/dol_symbol_table/1.00.txt", build_mp1_100_symbol, ;);
 
 macro_rules! build_mp1_101_symbol {
     ($($addr:tt $sym_name:tt;)*) => {
@@ -25,7 +25,7 @@ macro_rules! build_mp1_101_symbol {
         }
     }
 }
-macro_file_proxy_item!("1.01.txt", build_mp1_101_symbol, ;);
+macro_file_proxy_item!("src/dol_symbol_table/1.01.txt", build_mp1_101_symbol, ;);
 
 macro_rules! build_mp1_102_symbol {
     ($($addr:tt $sym_name:tt;)*) => {
@@ -38,7 +38,7 @@ macro_rules! build_mp1_102_symbol {
         }
     }
 }
-macro_file_proxy_item!("1.02.txt", build_mp1_102_symbol, ;);
+macro_file_proxy_item!("src/dol_symbol_table/1.02.txt", build_mp1_102_symbol, ;);
 
 pub struct Mp1Symbol
 {

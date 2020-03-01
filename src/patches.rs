@@ -23,8 +23,7 @@ use crate::{
     ResourceData,
 };
 
-use dol_symbol_table::mp1_symbol;
-use resource_info_table::{resource_info, ResourceInfo};
+use generated::{mp1_symbol, resource_info, ResourceInfo};
 use ppcasm::ppcasm;
 
 use reader_writer::{
@@ -2078,14 +2077,14 @@ fn patch_dol<'r>(
     }
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::V0_00 => {
-            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.00.bin");
-            let map_str = include_str!("../extra_assets/rel_loader_1.00.bin.map");
+            let loader_bytes = generated::REL_LOADER_100;
+            let map_str = generated::REL_LOADER_100_MAP;
             (loader_bytes, map_str)
         },
         Version::V0_01 => unreachable!(),
         Version::V0_02 => {
-            let loader_bytes = include_bytes!("../extra_assets/rel_loader_1.02.bin");
-            let map_str = include_str!("../extra_assets/rel_loader_1.02.bin.map");
+            let loader_bytes = generated::REL_LOADER_102;
+            let map_str = generated::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
     };
@@ -2305,9 +2304,9 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
 
     let patches_rel_bytes = match version {
-        Version::V0_00 => include_bytes!("../extra_assets/patches_1.00.rel"),
+        Version::V0_00 => generated::PATCHES_100_REL,
         Version::V0_01 => unreachable!(),
-        Version::V0_02 => include_bytes!("../extra_assets/patches_1.02.rel"),
+        Version::V0_02 => generated::PATCHES_102_REL,
     };
     gc_disc.add_file(
         "patches.rel",

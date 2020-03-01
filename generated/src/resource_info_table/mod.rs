@@ -62,4 +62,4 @@ macro_rules! build_resource_info_macro {
 
 // The following resource metadata is derived from PrimeWorldEditor's metadata:
 // https://github.com/arukibree/PrimeWorldEditor/blob/master/resources/gameinfo/AssetNameMap32.xml
-macro_file_proxy_item! { "resource_info.txt", build_resource_info_macro, ;}
+macro_file_proxy_item! { "src/resource_info_table/resource_info.txt", build_resource_info_macro, ;}
