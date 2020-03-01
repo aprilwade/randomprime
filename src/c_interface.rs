@@ -178,7 +178,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
     let input_iso_file = File::open(config.input_iso.trim())
                 .map_err(|e| format!("Failed to open {}: {}", config.input_iso, e))?;
-    let input_iso = memmap::Mmap::open(&input_iso_file, memmap::Protection::Read)
+    let input_iso = unsafe { memmap::Mmap::map(&input_iso_file) }
             .map_err(|e| format!("Failed to open {}: {}", config.input_iso,  e))?;
 
     let output_iso = OpenOptions::new()

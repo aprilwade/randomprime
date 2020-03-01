@@ -157,7 +157,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     let input_iso_path = matches.value_of("input iso path").unwrap();
     let input_iso_file = File::open(input_iso_path)
                 .map_err(|e| format!("Failed to open input iso: {}", e))?;
-    let input_iso_mmap = memmap::Mmap::open(&input_iso_file, memmap::Protection::Read)
+    let input_iso_mmap = unsafe { memmap::Mmap::map(&input_iso_file) }
                 .map_err(|e| format!("Failed to open input iso: {}", e))?;
 
     let output_iso_path = matches.value_of("output iso path").unwrap();

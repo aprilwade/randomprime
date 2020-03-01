@@ -776,8 +776,8 @@ fn create_scan_visor(pickup_table: &mut HashMap<PickupType, PickupData>)
 fn main()
 {
     let file = File::open(args().nth(1).unwrap()).unwrap();
-    let mmap = memmap::Mmap::open(&file, memmap::Protection::Read).unwrap();
-    let mut reader = Reader::new(unsafe { mmap.as_slice() });
+    let mmap = unsafe { memmap::Mmap::map(&file).unwrap() };
+    let mut reader = Reader::new(&mmap[..]);
     let gc_disc: structs::GcDisc = reader.read(());
 
     let filenames = [

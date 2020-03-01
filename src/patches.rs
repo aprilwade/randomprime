@@ -1554,7 +1554,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
         .and_then(|obj| obj.property_data.as_trigger_mut())
         .unwrap();
     trigger_remove_scan_target_locked_door_and_etank.active = 0;
-    
+
     layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == 0x20060)
         .unwrap()
@@ -2275,7 +2275,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
-    let mut reader = Reader::new(unsafe { config.input_iso.as_slice() });
+    let mut reader = Reader::new(&config.input_iso[..]);
 
     let mut gc_disc: structs::GcDisc = reader.read(());
 

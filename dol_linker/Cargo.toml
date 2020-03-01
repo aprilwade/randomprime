@@ -9,7 +9,7 @@ clap = "2"
 enum-map = "0.5"
 goblin = "0.1"
 memmap = "0.7"
-snafu = "0.4"
+snafu = "0.6"
 
 auto_struct_macros = { "path" = "../auto_struct_macros" }
 reader_writer = { "path" = "../reader_writer" }
