@@ -1848,7 +1848,7 @@ fn patch_starting_pickups(
             print_maybe!(first, "    plasma: {}", spawn_point.plasma);
 
             spawn_point.charge = fetch_bits(1);
-            print_maybe!(first, "    charge: {}", spawn_point.plasma);
+            print_maybe!(first, "    charge: {}", spawn_point.charge);
 
             spawn_point.morph_ball = fetch_bits(1);
             print_maybe!(first, "    morph_ball: {}", spawn_point.morph_ball);
