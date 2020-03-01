@@ -109,7 +109,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("skip-impact-crater")
             .help("Elevators to the Impact Crater immediately go to the game end sequence"))
         .arg(Arg::with_name("enable vault ledge door")
-            .long("enable_vault_ledge_door")
+            .long("enable-vault-ledge-door")
             .help("Enable Chozo Ruins Vault door from Main Plaza"))
 
         .arg(Arg::with_name("all artifact hints")
