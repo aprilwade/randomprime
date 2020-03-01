@@ -1254,6 +1254,360 @@ fn patch_main_ventilation_shaft_section_b_door<'r>(
     Ok(())
 }
 
+fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    let trigger_dooropen_id = 0x20007;
+    let timer_doorclose_id = 0x20008;
+    let actor_doorshield_id = 0x20004;
+    let relay_unlock_id = 0x20159;
+    let trigger_doorunlock_id = 0x2000F;
+
+    layer.objects.as_mut_vec().extend_from_slice(&[
+        structs::SclyObject {
+            instance_id: trigger_doorunlock_id,
+            property_data: structs::SclyProperty::DamageableTrigger(structs::DamageableTrigger {
+                    name: b"Trigger_DoorUnlock\0".as_cstr(),
+                    position: [152.232117, 86.451134, 24.472418].into(),
+                    scale: [0.25, 4.5, 4.0].into(),
+                    health_info: structs::structs::HealthInfo {
+                        health: 1.0,
+                        knockback_resistance: 1.0
+                    },
+                    damage_vulnerability: structs::structs::DamageVulnerability {
+                        power: 1,
+                        ice: 1,
+                        wave: 1,
+                        plasma: 1,
+                        bomb: 1,
+                        power_bomb: 1,
+                        missile: 2,
+                        boost_ball: 2,
+                        phazon: 1,
+                        enemy_weapon0: 3,
+                        enemy_weapon1: 2,
+                        enemy_weapon2: 2,
+                        enemy_weapon3: 2,
+                        unknown_weapon0: 2,
+                        unknown_weapon1: 2,
+                        unknown_weapon2: 1,
+                        charged_beams: structs::structs::ChargedBeams {
+                            power: 1,
+                            ice: 1,
+                            wave: 1,
+                            plasma: 1,
+                            phazon: 1
+                        },
+                        beam_combos: structs::structs::BeamCombos {
+                            power: 2,
+                            ice: 2,
+                            wave: 2,
+                            plasma: 2,
+                            phazon: 1
+                        }
+                    },
+                    unknown0: 3,
+                    pattern_txtr0: 0x544A9892, // testb.TXTR
+                    pattern_txtr1: 0x544A9892, // testb.TXTR
+                    color_txtr: 0x8A7F3683, // blue.TXTR
+                    lock_on: 0,
+                    active: 1,
+                    visor_params: structs::structs::VisorParameters {
+                        unknown0: 0,
+                        target_passthrough: 0,
+                        unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                    }
+                }),
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::REFLECTED_DAMAGE,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x202FD,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::DEAD,
+                        message: structs::ConnectionMsg::DEACTIVATE,
+                        target_object_id: actor_doorshield_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::MAX_REACHED,
+                        message: structs::ConnectionMsg::ACTIVATE,
+                        target_object_id: actor_doorshield_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::DEAD,
+                        message: structs::ConnectionMsg::ACTIVATE,
+                        target_object_id: trigger_dooropen_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::DEAD,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x20060,
+                    },
+                ].into(),
+        },
+
+        structs::SclyObject {
+            instance_id: relay_unlock_id,
+            property_data: structs::SclyProperty::Relay(structs::Relay {
+                    name: b"Relay_Unlock\0".as_cstr(),
+                    active: 1,
+                }),
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message: structs::ConnectionMsg::ACTIVATE,
+                        target_object_id: actor_doorshield_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message: structs::ConnectionMsg::ACTIVATE,
+                        target_object_id: trigger_doorunlock_id,
+                    },
+                ].into(),
+        },
+
+        structs::SclyObject {
+            instance_id: trigger_dooropen_id,
+            property_data: structs::SclyProperty::Trigger(structs::Trigger {
+                    name: b"Trigger_DoorOpen\0".as_cstr(),
+                    position: [149.35614, 86.567917, 26.471249].into(),
+                    scale: [5.0, 5.0, 8.0].into(),
+                    damage_info: structs::structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    unknown0: [0.0, 0.0, 0.0].into(),
+                    unknown1: 1,
+                    active: 0,
+                    unknown2: 0,
+                    unknown3: 0
+                }),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::INSIDE,
+                    message: structs::ConnectionMsg::OPEN,
+                    target_object_id: 0x20060,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::INSIDE,
+                    message: structs::ConnectionMsg::RESET_AND_START,
+                    target_object_id: timer_doorclose_id,
+                },
+            ].into(),
+        },
+
+        structs::SclyObject {
+            instance_id: actor_doorshield_id,
+            property_data: structs::SclyProperty::Actor(structs::Actor {
+                    name: b"Actor_DoorShield\0".as_cstr(),
+                    position: [151.951187, 86.412575, 24.403177].into(),
+                    rotation: [0.0, 0.0, 0.0].into(),
+                    scale: [1.0, 1.0, 1.0].into(),
+                    unknown0: [0.0, 0.0, 0.0].into(),
+                    scan_offset: [0.0, 0.0, 0.0].into(),
+                    unknown1: 1.0,
+                    unknown2: 0.0,
+                    health_info: structs::structs::HealthInfo {
+                        health: 5.0,
+                        knockback_resistance: 1.0
+                    },
+                    damage_vulnerability: structs::structs::DamageVulnerability {
+                        power: 1,
+                        ice: 1,
+                        wave: 1,
+                        plasma: 1,
+                        bomb: 1,
+                        power_bomb: 1,
+                        missile: 1,
+                        boost_ball: 1,
+                        phazon: 1,
+                        enemy_weapon0: 2,
+                        enemy_weapon1: 2,
+                        enemy_weapon2: 2,
+                        enemy_weapon3: 2,
+                        unknown_weapon0: 2,
+                        unknown_weapon1: 2,
+                        unknown_weapon2: 0,
+                        charged_beams: structs::structs::ChargedBeams {
+                            power: 1,
+                            ice: 1,
+                            wave: 1,
+                            plasma: 1,
+                            phazon: 0
+                        },
+                        beam_combos: structs::structs::BeamCombos {
+                            power: 1,
+                            ice: 1,
+                            wave: 1,
+                            plasma: 1,
+                            phazon: 0
+                        }
+                    },
+                    cmdl: 0x0734977A, // blueShield_v1.CMDL
+                    ancs: structs::structs::AncsProp {
+                        file_id: 0xFFFFFFFF, // None
+                        node_index: 0,
+                        unknown: 0xFFFFFFFF, // -1
+                    },
+                    actor_params: structs::structs::ActorParameters {
+                        light_params: structs::structs::LightParameters {
+                            unknown0: 1,
+                            unknown1: 1.0,
+                            shadow_tessellation: 0,
+                            unknown2: 1.0,
+                            unknown3: 20.0,
+                            color: [1.0, 1.0, 1.0, 1.0].into(),
+                            unknown4: 1,
+                            world_lighting: 1,
+                            light_recalculation: 1,
+                            unknown5: [0.0, 0.0, 0.0].into(),
+                            unknown6: 4,
+                            unknown7: 4,
+                            unknown8: 0,
+                            light_layer_id: 0
+                        },
+                        scan_params: structs::structs::ScannableParameters {
+                            scan: 0xFFFFFFFF // None
+                        },
+                        xray_cmdl: 0xFFFFFFFF, // None
+                        xray_cskr: 0xFFFFFFFF, // None
+                        thermal_cmdl: 0xFFFFFFFF, // None
+                        thermal_cskr: 0xFFFFFFFF, // None
+
+                        unknown0: 1,
+                        unknown1: 1.0,
+                        unknown2: 1.0,
+
+                        visor_params: structs::structs::VisorParameters {
+                            unknown0: 0,
+                            target_passthrough: 0,
+                            unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                        },
+                        enable_thermal_heat: 1,
+                        unknown3: 0,
+                        unknown4: 1,
+                        unknown5: 1.0
+                    },
+                    looping: 1,
+                    snow: 1,
+                    solid: 0,
+                    camera_passthrough: 0,
+                    active: 1,
+                    unknown8: 0,
+                    unknown9: 1.0,
+                    unknown10: 1,
+                    unknown11: 0,
+                    unknown12: 0,
+                    unknown13: 0
+                }),
+                connections: vec![].into()
+        },
+
+        structs::SclyObject {
+            instance_id: timer_doorclose_id,
+            property_data: structs::SclyProperty::Timer(structs::Timer {
+                    name: b"Timer_DoorClose\0".as_cstr(),
+                    start_time: 0.25,
+                    max_random_add: 0.0,
+                    reset_to_zero: 1,
+                    start_immediately: 0,
+                    active: 1
+                }),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::CLOSE,
+                    target_object_id: 0x20060,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: trigger_dooropen_id,
+                },
+            ].into(),
+        },
+    ]);
+
+    let locked_door_scan = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x202F4)
+        .and_then(|obj| obj.property_data.as_point_of_interest_mut())
+        .unwrap();
+    locked_door_scan.active = 0;
+    locked_door_scan.scan_param.scan = 0xFFFFFFFF;
+
+    let locked_door = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .and_then(|obj| obj.property_data.as_door_mut())
+        .unwrap();
+    locked_door.ancs.file_id = 0x26886945; // newmetroiddoor.ANCS
+    locked_door.ancs.unknown = 2;
+    locked_door.unknown0 = 0;
+
+    let trigger_remove_scan_target_locked_door_and_etank = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x202B8)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+    trigger_remove_scan_target_locked_door_and_etank.active = 0;
+    
+    layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == 0x20060)
+        .unwrap()
+        .connections
+        .as_mut_vec()
+        .extend_from_slice(
+            &[
+                structs::Connection {
+                    state: structs::ConnectionState::OPEN,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: trigger_dooropen_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::OPEN,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id: timer_doorclose_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::CLOSED,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: trigger_dooropen_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::OPEN,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: trigger_doorunlock_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::OPEN,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: actor_doorshield_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::CLOSED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: relay_unlock_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::MAX_REACHED,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: actor_doorshield_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::MAX_REACHED,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: trigger_doorunlock_id,
+                },
+            ]
+        );
+
+    Ok(())
+}
+
 fn patch_ore_processing_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -1867,6 +2221,7 @@ pub struct ParsedConfig
     pub quiet: bool,
 
     pub skip_impact_crater: bool,
+    pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
@@ -2274,6 +2629,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("01_endcinema.MREA").into(),
             patch_ending_scene_straight_to_credits
+        );
+    }
+
+    if config.enable_vault_ledge_door {
+        patcher.add_scly_patch(
+            resource_info!("01_mainplaza.MREA").into(),
+            make_main_plaza_locked_door_two_ways
         );
     }
 
