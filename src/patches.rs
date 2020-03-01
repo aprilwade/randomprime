@@ -979,23 +979,34 @@ fn patch_artifact_hint_availability(
     Ok(())
 }
 
-
-fn patch_flaahgra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
+fn patch_sun_tower_prevent_wild_before_flaahgra(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea
+) -> Result<(), String>
 {
-    // Create a new layer. We want it to be active until Flaahgra is killed. It will contain
-    // objects that renable the Flaahgra fight after the artifact is collect.
-    area.add_layer(b"Post Wild Flaahgra\0".as_cstr());
     let scly = area.mrea().scly_section_mut();
-    let new_layer_id = scly.layers.len() - 1;
+    let idx = scly.layers.as_mut_vec()[0].objects.iter_mut()
+        .position(|obj| obj.instance_id == 0x001d015b)
+        .unwrap();
+    let sunchamber_layer_change_trigger = scly.layers.as_mut_vec()[0].objects.as_mut_vec().remove(idx);
+    *scly.layers.as_mut_vec()[1].objects.as_mut_vec() = vec![sunchamber_layer_change_trigger];
+    Ok(())
+}
 
-    let disable_post_wild_flaahgra_id = ps.fresh_instance_id_range.next().unwrap();
+
+fn patch_sunchamber_prevent_wild_before_flaahgra(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let enable_sun_tower_layer_id = ps.fresh_instance_id_range.next().unwrap();
     scly.layers.as_mut_vec()[1].objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: disable_post_wild_flaahgra_id,
+        instance_id: enable_sun_tower_layer_id,
         connections: vec![].into(),
         property_data: structs::SclyProperty::SpecialFunction(
             structs::SpecialFunction {
-                name: b"Disable Post Wild Flaahgra\0".as_cstr(),
+                name: b"Enable Sun Tower Layer Change Trigger\0".as_cstr(),
                 position: [0., 0., 0.].into(),
                 rotation: [0., 0., 0.].into(),
                 type_: 16,
@@ -1003,8 +1014,8 @@ fn patch_flaahgra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::Mlv
                 unknown1: 0.,
                 unknown2: 0.,
                 unknown3: 0.,
-                layer_change_room_id: 0xf262c1ea,
-                layer_change_layer_id: new_layer_id as u32,
+                layer_change_room_id: 0xcf4c7aa5,
+                layer_change_layer_id: 1,
                 item_id: 0,
                 unknown4: 1,
                 unknown5: 0.,
@@ -1019,89 +1030,8 @@ fn patch_flaahgra_after_wild(ps: &mut PatcherState, area: &mut mlvl_wrapper::Mlv
         .unwrap();
     flaahgra_dead_relay.connections.as_mut_vec().push(structs::Connection {
         state: structs::ConnectionState::ZERO,
-        message: structs::ConnectionMsg::DECREMENT,
-        target_object_id: disable_post_wild_flaahgra_id,
-    });
-
-    const LAYER_IDS: &[(u32, bool)] = &[(1, true), (2, false), (3, false)];
-    let inst_ids: Vec<_> = (&mut ps.fresh_instance_id_range).take(LAYER_IDS.len()).collect();
-    let new_layer = scly.layers.as_mut_vec().last_mut().unwrap();
-    new_layer.objects.as_mut_vec().extend(LAYER_IDS.iter().zip(inst_ids.iter())
-        .map(|((layer_id, _), inst_id)| structs::SclyObject {
-            instance_id: *inst_id,
-            connections: vec![].into(),
-            property_data: structs::SclyProperty::SpecialFunction(
-                structs::SpecialFunction {
-                    name: b"Re-enable Post Wild Flaahgra\0".as_cstr(),
-                    position: [0., 0., 0.].into(),
-                    rotation: [0., 0., 0.].into(),
-                    type_: 16,
-                    unknown0: b"\0".as_cstr(),
-                    unknown1: 0.,
-                    unknown2: 0.,
-                    unknown3: 0.,
-                    layer_change_room_id: 0xf262c1ea,
-                    layer_change_layer_id: *layer_id,
-                    item_id: 0,
-                    unknown4: 1,
-                    unknown5: 0.,
-                    unknown6: 0xFFFFFFFF,
-                    unknown7: 0xFFFFFFFF,
-                    unknown8: 0xFFFFFFFF,
-                }
-            ),
-        }));
-
-    let artifact_of_wild = scly.layers.as_mut_vec()[6].objects.iter_mut()
-        .find(|obj| obj.instance_id == 0x18252f7d)
-        .unwrap();
-    artifact_of_wild.connections.as_mut_vec().extend(LAYER_IDS.iter().zip(inst_ids.iter())
-        .map(|((_, enable), id)| structs::Connection {
-            state: structs::ConnectionState::ARRIVED,
-            message: if *enable { structs::ConnectionMsg::INCREMENT }
-                           else { structs::ConnectionMsg::DECREMENT },
-            target_object_id: *id,
-        }));
-
-    // Insert an intermediary relay between the trigger for the vines appearing and the vines
-    // actually appearing so we can disable it after the artifact has been collected.
-    let prevent_vines_relay_id = ps.fresh_instance_id_range.next().unwrap();
-    scly.layers.as_mut_vec()[1].objects.as_mut_vec().push(structs::SclyObject {
-        instance_id: prevent_vines_relay_id,
-        property_data: structs::SclyProperty::Relay(
-            structs::Relay {
-                name: b"\0".as_cstr(),
-                active: 1,
-            }
-        ),
-        connections: vec![
-            structs::Connection {
-                state: structs::ConnectionState::ZERO,
-                message: structs::ConnectionMsg::ACTIVATE,
-                target_object_id: 0x2528f8,// Memory Relay - [IN] Turn On Vines
-            }
-        ].into()
-    });
-    let cinematic_trigger = scly.layers.as_mut_vec()[1].objects.iter_mut()
-        .find(|obj| obj.instance_id == 0x4250064)
-        .unwrap();
-    cinematic_trigger.connections.as_mut_vec()
-        .retain(|conn| conn.target_object_id != 0x2528f8);
-
-
-    // Remove the object that deactivates the artifact layer
-    scly.layers.as_mut_vec()[6].objects.as_mut_vec()
-        .retain(|obj| obj.instance_id != 0x18253011);
-
-    // After the artifact is collected a memory relay is activated. Use it to deactivate the relay
-    // that enables the vines over the door.
-    let artifact_collected_memory_relay = scly.layers.as_mut_vec()[6].objects.iter_mut()
-        .find(|obj| obj.instance_id == 0x18253094)
-        .unwrap();
-    artifact_collected_memory_relay.connections.as_mut_vec().push(structs::Connection {
-        state: structs::ConnectionState::ACTIVE,
-        message: structs::ConnectionMsg::DEACTIVATE,
-        target_object_id: prevent_vines_relay_id
+        message: structs::ConnectionMsg::INCREMENT,
+        target_object_id: enable_sun_tower_layer_id,
     });
 
     Ok(())
@@ -2574,7 +2504,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
-    patcher.add_scly_patch(resource_info!("22_Flaahgra.MREA").into(), patch_flaahgra_after_wild);
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(),
+        patch_sunchamber_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(),
+        patch_sun_tower_prevent_wild_before_flaahgra
+    );
     patcher.add_scly_patch(
         resource_info!("00j_over_hall.MREA").into(),
         patch_temple_security_station_cutscene_trigger
