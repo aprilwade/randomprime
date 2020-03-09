@@ -1051,6 +1051,29 @@ fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: 
     Ok(())
 }
 
+fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[4];
+
+    const TRIGGER_OBJS: &[u32] = &[
+        0x2029D,
+        0x2032B,
+        0x2032C
+    ];
+
+    for trigger_obj_id in TRIGGER_OBJS {
+        let trigger_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == *trigger_obj_id)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+        trigger_obj.active = 0;
+    }
+
+    Ok(())
+}
+
 fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
 {
     patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |_ps, area| {
@@ -2532,6 +2555,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         resource_info!("00j_over_hall.MREA").into(),
         patch_temple_security_station_cutscene_trigger
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(),
+        patch_ridley_phendrana_shorelines_cinematic
     );
     patcher.add_scly_patch(
         resource_info!("08b_under_intro_ventshaft.MREA").into(),
