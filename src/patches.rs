@@ -1555,6 +1555,23 @@ fn patch_geothermal_core_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut m
     Ok(())
 }
 
+fn patch_hive_totem_boss_trigger_0_02(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    let trigger_obj_id = 0x240140;
+
+    let trigger_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == trigger_obj_id)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+    trigger_obj.position = [94.571053, 301.616028, 0.344905].into();
+    trigger_obj.scale = [6.052994, 24.659973, 7.878154].into();
+
+    Ok(())
+}
+
 fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2549,6 +2566,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("13_over_burningeffigy.MREA").into(),
             patch_geothermal_core_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("19_hive_totem.MREA").into(),
+            patch_hive_totem_boss_trigger_0_02
         );
     }
 
