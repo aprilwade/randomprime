@@ -214,7 +214,7 @@ build_scly_property!(
     HudMemo,           is_hud_memo,           as_hud_memo,           as_hud_memo_mut,
     MemoryRelay,       is_memory_relay,       as_memory_relay,       as_memory_relay_mut,
     Pickup,            is_pickup,             as_pickup,             as_pickup_mut,
-    Platform,          is_platorm,            as_platorm,            as_platorm_mut,
+    Platform,          is_platform,           as_platform,           as_platform_mut,
     PlayerActor,       is_player_actor,       as_player_actor,       as_player_actor_mut,
     PlayerHint,        is_player_hint,        as_player_hint,        as_player_hint_mut,
     PointOfInterest,   is_point_of_interest,  as_point_of_interest,  as_point_of_interest_mut,

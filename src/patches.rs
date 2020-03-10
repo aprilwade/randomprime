@@ -1202,6 +1202,10 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     let actor_doorshield_id = 0x20004;
     let relay_unlock_id = 0x20159;
     let trigger_doorunlock_id = 0x2000F;
+    let door_id = 0x20060;
+    let trigger_remove_scan_target_locked_door_id = 0x202B8;
+    let scan_target_locked_door_id = 0x202F4;
+    let relay_notice_ineffective_weapon_id = 0x202FD;
 
     layer.objects.as_mut_vec().extend_from_slice(&[
         structs::SclyObject {
@@ -1215,38 +1219,38 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                         knockback_resistance: 1.0
                     },
                     damage_vulnerability: structs::structs::DamageVulnerability {
-                        power: 1,
-                        ice: 1,
-                        wave: 1,
-                        plasma: 1,
-                        bomb: 1,
-                        power_bomb: 1,
-                        missile: 2,
-                        boost_ball: 2,
-                        phazon: 1,
-                        enemy_weapon0: 3,
-                        enemy_weapon1: 2,
-                        enemy_weapon2: 2,
-                        enemy_weapon3: 2,
-                        unknown_weapon0: 2,
-                        unknown_weapon1: 2,
-                        unknown_weapon2: 1,
+                        power: 1,           // Normal
+                        ice: 1,             // Normal
+                        wave: 1,            // Normal
+                        plasma: 1,          // Normal
+                        bomb: 1,            // Normal
+                        power_bomb: 1,      // Normal
+                        missile: 2,         // Reflect
+                        boost_ball: 2,      // Reflect
+                        phazon: 1,          // Normal
+                        enemy_weapon0: 3,   // Immune
+                        enemy_weapon1: 2,   // Reflect
+                        enemy_weapon2: 2,   // Reflect
+                        enemy_weapon3: 2,   // Reflect
+                        unknown_weapon0: 2, // Reflect
+                        unknown_weapon1: 2, // Reflect
+                        unknown_weapon2: 1, // Normal
                         charged_beams: structs::structs::ChargedBeams {
-                            power: 1,
-                            ice: 1,
-                            wave: 1,
-                            plasma: 1,
-                            phazon: 1
+                            power: 1,       // Normal
+                            ice: 1,         // Normal
+                            wave: 1,        // Normal
+                            plasma: 1,      // Normal
+                            phazon: 1       // Normal
                         },
                         beam_combos: structs::structs::BeamCombos {
-                            power: 2,
-                            ice: 2,
-                            wave: 2,
-                            plasma: 2,
-                            phazon: 1
+                            power: 2,       // Reflect
+                            ice: 2,         // Reflect
+                            wave: 2,        // Reflect
+                            plasma: 2,      // Reflect
+                            phazon: 1       // Normal
                         }
                     },
-                    unknown0: 3,
+                    unknown0: 3, // Render Side : East
                     pattern_txtr0: 0x544A9892, // testb.TXTR
                     pattern_txtr1: 0x544A9892, // testb.TXTR
                     color_txtr: 0x8A7F3683, // blue.TXTR
@@ -1262,7 +1266,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                     structs::Connection {
                         state: structs::ConnectionState::REFLECTED_DAMAGE,
                         message: structs::ConnectionMsg::SET_TO_ZERO,
-                        target_object_id: 0x202FD,
+                        target_object_id: relay_notice_ineffective_weapon_id,
                     },
                     structs::Connection {
                         state: structs::ConnectionState::DEAD,
@@ -1282,7 +1286,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                     structs::Connection {
                         state: structs::ConnectionState::DEAD,
                         message: structs::ConnectionMsg::SET_TO_ZERO,
-                        target_object_id: 0x20060,
+                        target_object_id: door_id,
                     },
                 ].into(),
         },
@@ -1329,7 +1333,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 structs::Connection {
                     state: structs::ConnectionState::INSIDE,
                     message: structs::ConnectionMsg::OPEN,
-                    target_object_id: 0x20060,
+                    target_object_id: door_id,
                 },
                 structs::Connection {
                     state: structs::ConnectionState::INSIDE,
@@ -1355,35 +1359,35 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                         knockback_resistance: 1.0
                     },
                     damage_vulnerability: structs::structs::DamageVulnerability {
-                        power: 1,
-                        ice: 1,
-                        wave: 1,
-                        plasma: 1,
-                        bomb: 1,
-                        power_bomb: 1,
-                        missile: 1,
-                        boost_ball: 1,
-                        phazon: 1,
-                        enemy_weapon0: 2,
-                        enemy_weapon1: 2,
-                        enemy_weapon2: 2,
-                        enemy_weapon3: 2,
-                        unknown_weapon0: 2,
-                        unknown_weapon1: 2,
-                        unknown_weapon2: 0,
+                        power: 1,           // Normal
+                        ice: 1,             // Normal
+                        wave: 1,            // Normal
+                        plasma: 1,          // Normal
+                        bomb: 1,            // Normal
+                        power_bomb: 1,      // Normal
+                        missile: 1,         // Normal
+                        boost_ball: 1,      // Normal
+                        phazon: 1,          // Normal
+                        enemy_weapon0: 2,   // Reflect
+                        enemy_weapon1: 2,   // Reflect
+                        enemy_weapon2: 2,   // Reflect
+                        enemy_weapon3: 2,   // Reflect
+                        unknown_weapon0: 2, // Reflect
+                        unknown_weapon1: 2, // Reflect
+                        unknown_weapon2: 0, // Double Damage
                         charged_beams: structs::structs::ChargedBeams {
-                            power: 1,
-                            ice: 1,
-                            wave: 1,
-                            plasma: 1,
-                            phazon: 0
+                            power: 1,       // Normal
+                            ice: 1,         // Normal
+                            wave: 1,        // Normal
+                            plasma: 1,      // Normal
+                            phazon: 0       // Double Damage
                         },
                         beam_combos: structs::structs::BeamCombos {
-                            power: 1,
-                            ice: 1,
-                            wave: 1,
-                            plasma: 1,
-                            phazon: 0
+                            power: 1,       // Normal
+                            ice: 1,         // Normal
+                            wave: 1,        // Normal
+                            plasma: 1,      // Normal
+                            phazon: 0       // Double Damage
                         }
                     },
                     cmdl: 0x0734977A, // blueShield_v1.CMDL
@@ -1460,7 +1464,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 structs::Connection {
                     state: structs::ConnectionState::ZERO,
                     message: structs::ConnectionMsg::CLOSE,
-                    target_object_id: 0x20060,
+                    target_object_id: door_id,
                 },
                 structs::Connection {
                     state: structs::ConnectionState::ZERO,
@@ -1472,14 +1476,14 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     ]);
 
     let locked_door_scan = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == 0x202F4)
+        .find(|obj| obj.instance_id == scan_target_locked_door_id)
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     locked_door_scan.active = 0;
-    locked_door_scan.scan_param.scan = 0xFFFFFFFF;
+    locked_door_scan.scan_param.scan = 0xFFFFFFFF; // None
 
     let locked_door = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == 0x20060)
+        .find(|obj| obj.instance_id == door_id)
         .and_then(|obj| obj.property_data.as_door_mut())
         .unwrap();
     locked_door.ancs.file_id = 0x26886945; // newmetroiddoor.ANCS
@@ -1487,13 +1491,13 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     locked_door.unknown0 = 0;
 
     let trigger_remove_scan_target_locked_door_and_etank = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == 0x202B8)
+        .find(|obj| obj.instance_id == trigger_remove_scan_target_locked_door_id)
         .and_then(|obj| obj.property_data.as_trigger_mut())
         .unwrap();
     trigger_remove_scan_target_locked_door_and_etank.active = 0;
 
     layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == 0x20060)
+        .find(|obj| obj.instance_id == door_id)
         .unwrap()
         .connections
         .as_mut_vec()
@@ -1545,7 +1549,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
-fn patch_ore_processing_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+fn patch_main_quarry_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -1567,8 +1571,8 @@ fn patch_hive_totem_boss_trigger_0_02(_ps: &mut PatcherState, area: &mut mlvl_wr
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
-    let layer = &mut scly.layers.as_mut_vec()[0];
-    let trigger_obj_id = 0x240140;
+    let layer = &mut scly.layers.as_mut_vec()[1];
+    let trigger_obj_id = 0x4240140;
 
     let trigger_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == trigger_obj_id)
@@ -1577,6 +1581,71 @@ fn patch_hive_totem_boss_trigger_0_02(_ps: &mut PatcherState, area: &mut mlvl_wr
     trigger_obj.position = [94.571053, 301.616028, 0.344905].into();
     trigger_obj.scale = [6.052994, 24.659973, 7.878154].into();
 
+    Ok(())
+}
+
+fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    
+    let platform_obj_id = 0x1403AE;
+    let scan_target_platform_obj_id = 0x1403B4;
+    
+    let platform_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == platform_obj_id)
+        .and_then(|obj| obj.property_data.as_platform_mut())
+        .unwrap();
+    platform_obj.active = 0;
+    
+    let scan_target_platform_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == scan_target_platform_obj_id)
+        .and_then(|obj| obj.property_data.as_point_of_interest_mut())
+        .unwrap();
+    scan_target_platform_obj.active = 0;
+    
+    Ok(())
+}
+
+fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    
+    let platform_obj_id = 0x60372;
+    let scan_target_platform_obj_id = 0x60378;
+    
+    let platform_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == platform_obj_id)
+        .and_then(|obj| obj.property_data.as_platform_mut())
+        .unwrap();
+    platform_obj.active = 0;
+    
+    let scan_target_platform_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == scan_target_platform_obj_id)
+        .and_then(|obj| obj.property_data.as_point_of_interest_mut())
+        .unwrap();
+    scan_target_platform_obj.active = 0;
+    
+    Ok(())
+}
+
+fn patch_main_quarry_door_lock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[7];
+    
+    let locked_door_actor_obj_id = 0x205DB;
+    
+    let locked_door_actor_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == locked_door_actor_obj_id)
+        .and_then(|obj| obj.property_data.as_actor_mut())
+        .unwrap();
+    locked_door_actor_obj.active = 0;
+    
     Ok(())
 }
 
@@ -2585,7 +2654,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     if version == Version::Ntsc0_02 {
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
-            patch_ore_processing_door_lock_0_02
+            patch_main_quarry_door_lock_0_02
         );
         patcher.add_scly_patch(
             resource_info!("13_over_burningeffigy.MREA").into(),
@@ -2594,6 +2663,21 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("19_hive_totem.MREA").into(),
             patch_hive_totem_boss_trigger_0_02
+        );
+    }
+    
+    if version == Version::Pal {
+        patcher.add_scly_patch(
+            resource_info!("04_mines_pillar.MREA").into(),
+            patch_ore_processing_destructible_rock_pal
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_destructible_rock_pal
+        );
+        patcher.add_scly_patch(
+            resource_info!("01_mines_mainplaza.MREA").into(),
+            patch_main_quarry_door_lock_pal
         );
     }
 
