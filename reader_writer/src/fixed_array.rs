@@ -41,7 +41,7 @@ impl<'r, T, N> Readable<'r> for FixedArray<T, N>
 
 impl<'r, T, N> Writable for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'r> + Default + Writable,
+          T: Readable<'r> + Writable,
           T::Args: Clone,
 {
     fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>

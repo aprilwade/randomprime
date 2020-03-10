@@ -1879,14 +1879,19 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
+    if version == Version::Pal {
+        return Ok(());
+    }
+
     macro_rules! symbol_addr {
         ($sym:tt, $version:expr) => {
             {
                 let s = mp1_symbol!($sym);
                 match &$version {
-                    Version::V0_00 => s.addr_0_00,
-                    Version::V0_01 => s.addr_0_01,
-                    Version::V0_02 => s.addr_0_02,
+                    Version::Ntsc0_00 => s.addr_0_00,
+                    Version::Ntsc0_01 => s.addr_0_01,
+                    Version::Ntsc0_02 => s.addr_0_02,
+                    Version::Pal      => unreachable!(),
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -2024,24 +2029,25 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if version == Version::V0_02 {
+    if version == Version::Ntsc0_02 {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
     let (rel_loader_bytes, rel_loader_map_str) = match version {
-        Version::V0_00 => {
+        Version::Ntsc0_00 => {
             let loader_bytes = generated::REL_LOADER_100;
             let map_str = generated::REL_LOADER_100_MAP;
             (loader_bytes, map_str)
         },
-        Version::V0_01 => unreachable!(),
-        Version::V0_02 => {
+        Version::Ntsc0_01 => unreachable!(),
+        Version::Ntsc0_02 => {
             let loader_bytes = generated::REL_LOADER_102;
             let map_str = generated::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
+        Version::Pal => unreachable!(),
     };
 
     let mut rel_loader = rel_loader_bytes.to_vec();
@@ -2109,11 +2115,19 @@ fn patch_bnr(file: &mut structs::FstEntryFile, config: &ParsedConfig) -> Result<
         Ok(())
     }
 
-    write_encoded_str("game_name", &config.bnr_game_name, &mut bnr.game_name)?;
-    write_encoded_str("developer", &config.bnr_developer, &mut bnr.developer)?;
-    write_encoded_str("game_name_full", &config.bnr_game_name_full, &mut bnr.game_name_full)?;
-    write_encoded_str("developer_full", &config.bnr_developer_full, &mut bnr.developer_full)?;
-    write_encoded_str("description", &config.bnr_description, &mut bnr.description)?;
+    write_encoded_str("game_name", &config.bnr_game_name, &mut bnr.english_fields.game_name)?;
+    write_encoded_str("developer", &config.bnr_developer, &mut bnr.english_fields.developer)?;
+    write_encoded_str(
+        "game_name_full",
+        &config.bnr_game_name_full,
+        &mut bnr.english_fields.game_name_full
+    )?;
+    write_encoded_str(
+        "developer_full",
+        &config.bnr_developer_full,
+        &mut bnr.english_fields.developer_full)
+    ?;
+    write_encoded_str("description", &config.bnr_description, &mut bnr.english_fields.description)?;
 
     Ok(())
 }
@@ -2198,9 +2212,10 @@ pub struct ParsedConfig
 #[derive(PartialEq, Copy, Clone)]
 enum Version
 {
-    V0_00,
-    V0_01,
-    V0_02,
+    Ntsc0_00,
+    Ntsc0_01,
+    Ntsc0_02,
+    Pal,
 }
 
 impl fmt::Display for Version
@@ -2208,9 +2223,10 @@ impl fmt::Display for Version
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
         match self {
-            Version::V0_00 => write!(f, "1.00"),
-            Version::V0_01 => write!(f, "1.01"),
-            Version::V0_02 => write!(f, "1.02"),
+            Version::Ntsc0_00 => write!(f, "1.00"),
+            Version::Ntsc0_01 => write!(f, "1.01"),
+            Version::Ntsc0_02 => write!(f, "1.02"),
+            Version::Pal      => write!(f, "pal"),
         }
     }
 }
@@ -2233,43 +2249,39 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
     let mut gc_disc: structs::GcDisc = reader.read(());
 
-    if &gc_disc.header.game_identifier() != b"GM8E01" {
-        Err("The input ISO doesn't appear to be NTSC-US Metroid Prime.".to_string())?
-    }
+    let version = match (&gc_disc.header.game_identifier(), gc_disc.header.disc_id, gc_disc.header.version) {
+        (b"GM8E01", 0, 0) => Version::Ntsc0_00,
+        (b"GM8E01", 0, 1) => Version::Ntsc0_01,
+        (b"GM8E01", 0, 2) => Version::Ntsc0_02,
+        (b"GM8P01", 0, 0) => Version::Pal,
+        _ => Err("The input ISO doesn't appear to be NTSC-US or PAL Metroid Prime.".to_string())?
+    };
     if gc_disc.find_file("randomprime.txt").is_some() {
         Err(concat!("The input ISO has already been randomized once before. ",
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    let version = match (gc_disc.header.disc_id, gc_disc.header.version) {
-        (0, 0) => Version::V0_00,
-        (0, 1) => Version::V0_01,
-        (0, 2) => Version::V0_02,
-        (a, b) => Err(format!("Unknown game version {}-{}", a, b))?
-    };
-    if config.skip_frigate && version == Version::V0_01 {
-        Err(concat!("The frigate level skip is not currently supported for the ",
-                    "0-01 version of Metroid Prime").to_string())?;
+    if version == Version::Ntsc0_01 || version == Version::Pal {
+        Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
     }
-
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
 
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    let patches_rel_bytes = match version {
-        Version::V0_00 => generated::PATCHES_100_REL,
-        Version::V0_01 => unreachable!(),
-        Version::V0_02 => generated::PATCHES_102_REL,
-    };
-    gc_disc.add_file(
-        "patches.rel",
-        structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes))
-    )?;
-
-
-
+    if version != Version::Ntsc0_01 && version != Version::Pal {
+        let patches_rel_bytes = match version {
+            Version::Ntsc0_00 => generated::PATCHES_100_REL,
+            Version::Ntsc0_01 => unreachable!(),
+            Version::Ntsc0_02 => generated::PATCHES_102_REL,
+            Version::Pal      => unreachable!(),
+        };
+        gc_disc.add_file(
+            "patches.rel",
+            structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes))
+        )?;
+    }
 
     match config.iso_format {
         IsoFormat::Iso => {
@@ -2570,7 +2582,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     );
 
 
-    if version == Version::V0_02 {
+    if version == Version::Ntsc0_02 {
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
             patch_ore_processing_door_lock_0_02

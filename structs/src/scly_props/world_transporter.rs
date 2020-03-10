@@ -10,7 +10,7 @@ use crate::scly_props::structs::AncsProp;
 #[derive(Debug, Clone)]
 pub struct WorldTransporter<'r>
 {
-    #[auto_struct(expect = 21)]
+    #[auto_struct(derive = 21 + 5 * pal_additions.is_some() as u32)]
     prop_count: u32,
 
     pub name: CStr<'r>,
@@ -35,6 +35,21 @@ pub struct WorldTransporter<'r>
     pub unknown10: f32,
     pub unknown11: f32,
     pub unknown12: f32,
+
+    #[auto_struct(init = if prop_count == 26 { Some(()) } else { None })]
+    pub pal_additions: Option<WorldTransporterPalAdditions<'r>>
+}
+
+
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct WorldTransporterPalAdditions<'r>
+{
+    pub audio_stream: CStr<'r>,
+    pub unknown0: u8,
+    pub unknown1: f32,
+    pub unknown2: f32,
+    pub unknown3: f32,
 }
 
 impl<'r> SclyPropertyData for WorldTransporter<'r>
