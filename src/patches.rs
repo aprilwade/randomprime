@@ -1055,22 +1055,7 @@ fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mu
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
-    let layer = &mut scly.layers.as_mut_vec()[4];
-
-    const TRIGGER_OBJS: &[u32] = &[
-        0x2029D,
-        0x2032B,
-        0x2032C
-    ];
-
-    for trigger_obj_id in TRIGGER_OBJS {
-        let trigger_obj = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == *trigger_obj_id)
-        .and_then(|obj| obj.property_data.as_trigger_mut())
-        .unwrap();
-        trigger_obj.active = 0;
-    }
-
+    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
     Ok(())
 }
 
