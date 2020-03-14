@@ -316,7 +316,7 @@ pub const ELEVATORS: &[Elevator] = &[
         name: "Magmoor Caverns West",// "Transport to Phendrana Drifts North",
         mlvl: 0x3ef8237c,
         mrea: 0xdca9a28b,
-        mrea_idx: 0,
+        mrea_idx: 13,
         scly_id: 0xd0022,
 
         room_strg: 0xE0E1C4DA,
