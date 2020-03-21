@@ -1772,6 +1772,7 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
 {
     use std::fmt::Write;
     const PICKUPS_TO_PRINT: &[PickupType] = &[
+        PickupType::ScanVisor,
         PickupType::ThermalVisor,
         PickupType::XRayVisor,
         PickupType::VariaSuit,
