@@ -1776,12 +1776,22 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
         PickupType::XRayVisor,
         PickupType::VariaSuit,
         PickupType::GravitySuit,
+        PickupType::PhazonSuit,
+        PickupType::MorphBall,
         PickupType::BoostBall,
         PickupType::SpiderBall,
+        PickupType::MorphBallBomb,
+        PickupType::PowerBomb,
         PickupType::ChargeBeam,
         PickupType::SpaceJumpBoots,
         PickupType::GrappleBeam,
         PickupType::SuperMissile,
+        PickupType::Wavebuster,
+        PickupType::IceSpreader,
+        PickupType::Flamethrower,
+        PickupType::WaveBeam,
+        PickupType::IceBeam,
+        PickupType::PlasmaBeam
     ];
 
     let mut output = concat!(
