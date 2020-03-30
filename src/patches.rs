@@ -753,20 +753,29 @@ fn make_elevators_patch<'a>(
             Ok(())
         });
 
+        let room_dest_name = dest.name.replace('\0', "\n");
+        let hologram_name = dest.name.replace('\0', " ");
+        let control_name = dest.name.replace('\0', " ");
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to {}\u{0}", dest.name);
+            let string = format!("Transport to {}\u{0}", room_dest_name);
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
-            let string = format!("Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}", dest.name);
+            let string = format!(
+                "Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}",
+                hologram_name,
+            );
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
         });
         patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}", dest.name);
+            let string = format!(
+                "Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}",
+                control_name,
+            );
             let strg = structs::Strg::from_strings(vec![string]);
             res.kind = structs::ResourceKind::Strg(strg);
             Ok(())
@@ -1589,22 +1598,22 @@ fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mu
 {
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
-    
+
     let platform_obj_id = 0x1403AE;
     let scan_target_platform_obj_id = 0x1403B4;
-    
+
     let platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == platform_obj_id)
         .and_then(|obj| obj.property_data.as_platform_mut())
         .unwrap();
     platform_obj.active = 0;
-    
+
     let scan_target_platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == scan_target_platform_obj_id)
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
-    
+
     Ok(())
 }
 
@@ -1613,22 +1622,22 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
 {
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
-    
+
     let platform_obj_id = 0x60372;
     let scan_target_platform_obj_id = 0x60378;
-    
+
     let platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == platform_obj_id)
         .and_then(|obj| obj.property_data.as_platform_mut())
         .unwrap();
     platform_obj.active = 0;
-    
+
     let scan_target_platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == scan_target_platform_obj_id)
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
-    
+
     Ok(())
 }
 
@@ -1637,15 +1646,15 @@ fn patch_main_quarry_door_lock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapp
 {
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[7];
-    
+
     let locked_door_actor_obj_id = 0x205DB;
-    
+
     let locked_door_actor_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == locked_door_actor_obj_id)
         .and_then(|obj| obj.property_data.as_actor_mut())
         .unwrap();
     locked_door_actor_obj.active = 0;
-    
+
     Ok(())
 }
 
@@ -2676,7 +2685,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             patch_hive_totem_boss_trigger_0_02
         );
     }
-    
+
     if version == Version::Pal {
         patcher.add_scly_patch(
             resource_info!("04_mines_pillar.MREA").into(),

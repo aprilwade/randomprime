@@ -85,7 +85,7 @@ impl SpawnRoom
 pub const ELEVATORS: &[Elevator] = &[
     Elevator {
         pak_name: "Metroid2.pak",
-        name: "Chozo Ruins West",// "Transport to Tallon Overworld North",
+        name: "Chozo Ruins West\0(Main Plaza)",// "Transport to Tallon Overworld North",
         mlvl: 0x83f6ff6f,
         mrea: 0x3e6b2bb7,
         mrea_idx: 0,
@@ -99,7 +99,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid2.pak",
-        name: "Chozo Ruins North",// "Transport to Magmoor Caverns North",
+        name: "Chozo Ruins North\0(Sun Tower)",// "Transport to Magmoor Caverns North",
         mlvl: 0x83f6ff6f,
         mrea: 0x8316edf5,
         mrea_idx: 24,
@@ -113,7 +113,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid2.pak",
-        name: "Chozo Ruins East",// "Transport to Tallon Overworld East",
+        name: "Chozo Ruins East\0(Reflecting Pool, Save Station)",// "Transport to Tallon Overworld East",
         mlvl: 0x83f6ff6f,
         mrea: 0xa5fa69a1,
         mrea_idx: 62,
@@ -127,7 +127,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid2.pak",
-        name: "Chozo Ruins South",// "Transport to Tallon Overworld South",
+        name: "Chozo Ruins South\0(Reflecting Pool, Far End)",// "Transport to Tallon Overworld South",
         mlvl: 0x83f6ff6f,
         mrea: 0x236e1b0f,
         mrea_idx: 63,
@@ -142,7 +142,7 @@ pub const ELEVATORS: &[Elevator] = &[
 
     Elevator {
         pak_name: "Metroid3.pak",
-        name: "Phendrana Drifts North",// "Transport to Magmoor Caverns West",
+        name: "Phendrana Drifts North\0(Phendrana Shorelines)",// "Transport to Magmoor Caverns West",
         mlvl: 0xa8be6291,
         mrea: 0xc00e3781,
         mrea_idx: 0,
@@ -156,7 +156,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid3.pak",
-        name: "Phendrana Drifts South",// "Transport to Magmoor Caverns South",
+        name: "Phendrana Drifts South\0(Quarantine Cave)",// "Transport to Magmoor Caverns South",
         mlvl: 0xa8be6291,
         mrea: 0xdd0b0739,
         mrea_idx: 29,
@@ -171,7 +171,7 @@ pub const ELEVATORS: &[Elevator] = &[
 
     Elevator {
         pak_name: "Metroid4.pak",
-        name: "Tallon Overworld North",// "Transport to Chozo Ruins West",
+        name: "Tallon Overworld North\0(Tallon Canyon)",// "Transport to Chozo Ruins West",
         mlvl: 0x39f2de28,
         mrea: 0x11a02448,
         mrea_idx: 14,
@@ -213,7 +213,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid4.pak",
-        name: "Tallon Overworld East",// "Transport to Chozo Ruins East",
+        name: "Tallon Overworld East\0(Frigate Crash Site)",// "Transport to Chozo Ruins East",
         mlvl: 0x39f2de28,
         mrea: 0x8a31665e,
         mrea_idx: 22,
@@ -227,7 +227,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid4.pak",
-        name: "Tallon Overworld West",// "Transport to Magmoor Caverns East",
+        name: "Tallon Overworld West\0(Root Cave)",// "Transport to Magmoor Caverns East",
         mlvl: 0x39f2de28,
         mrea: 0x15d6ff8b,
         mrea_idx: 23,
@@ -241,7 +241,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid4.pak",
-        name: "Tallon Overworld South",// "Transport to Chozo Ruins South",
+        name: "Tallon Overworld South\0(Great Tree Hall, Upper)",// "Transport to Chozo Ruins South",
         mlvl: 0x39f2de28,
         mrea: 0xca514f0,
         mrea_idx: 41,
@@ -255,7 +255,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid4.pak",
-        name: "Tallon Overworld South",// "Transport to Phazon Mines East",
+        name: "Tallon Overworld South\0(Great Tree Hall, Lower)",// "Transport to Phazon Mines East",
         mlvl: 0x39f2de28,
         mrea: 0x7d106670,
         mrea_idx: 43,
@@ -270,7 +270,7 @@ pub const ELEVATORS: &[Elevator] = &[
 
     Elevator {
         pak_name: "metroid5.pak",
-        name: "Phazon Mines East",// "Transport to Tallon Overworld South",
+        name: "Phazon Mines East\0(Main Quarry)",// "Transport to Tallon Overworld South",
         mlvl: 0xb1ac4d65,
         mrea: 0x430e999c,
         mrea_idx: 0,
@@ -284,7 +284,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "metroid5.pak",
-        name: "Phazon Mines West",// "Transport to Magmoor Caverns South",
+        name: "Phazon Mines West\0(Phazon Processing Center)",// "Transport to Magmoor Caverns South",
         mlvl: 0xb1ac4d65,
         mrea: 0xe2c2cf38,
         mrea_idx: 25,
@@ -299,7 +299,7 @@ pub const ELEVATORS: &[Elevator] = &[
 
     Elevator {
         pak_name: "Metroid6.pak",
-        name: "Magmoor Caverns North",// "Transport to Chozo Ruins North",
+        name: "Magmoor Caverns North\0(Lava Lake)",// "Transport to Chozo Ruins North",
         mlvl: 0x3ef8237c,
         mrea: 0x3beaadc9,
         mrea_idx: 0,
@@ -313,7 +313,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid6.pak",
-        name: "Magmoor Caverns West",// "Transport to Phendrana Drifts North",
+        name: "Magmoor Caverns West\0(Monitor Station)",// "Transport to Phendrana Drifts North",
         mlvl: 0x3ef8237c,
         mrea: 0xdca9a28b,
         mrea_idx: 13,
@@ -327,7 +327,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid6.pak",
-        name: "Magmoor Caverns East",// "Transport to Tallon Overworld West",
+        name: "Magmoor Caverns East\0(Twin Fires)",// "Transport to Tallon Overworld West",
         mlvl: 0x3ef8237c,
         mrea: 0x4c3d244c,
         mrea_idx: 16,
@@ -341,7 +341,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid6.pak",
-        name: "Magmoor Caverns South",// "Transport to Phazon Mines West",
+        name: "Magmoor Caverns South\0(Magmoor Workstation, Debris)",// "Transport to Phazon Mines West",
         mlvl: 0x3ef8237c,
         mrea: 0xef2f1440,
         mrea_idx: 26,
@@ -355,7 +355,7 @@ pub const ELEVATORS: &[Elevator] = &[
     },
     Elevator {
         pak_name: "Metroid6.pak",
-        name: "Magmoor Caverns South",// "Transport to Phendrana Drifts South",
+        name: "Magmoor Caverns South\0(Magmoor Workstation, Save Station)",// "Transport to Phendrana Drifts South",
         mlvl: 0x3ef8237c,
         mrea: 0xc1ac9233,
         mrea_idx: 27,
