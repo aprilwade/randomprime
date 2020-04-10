@@ -11,7 +11,7 @@ pub fn align_byte_count(align_to: usize, n: usize) -> usize
 {
     // TODO: Assert align_to is a power of 2?
     let adjust = align_to - 1;
-    ((n + adjust) & (usize::max_value() - adjust))
+    (n + adjust) & (usize::max_value() - adjust)
 }
 
 pub fn pad_bytes_count(align_to: usize, n: usize) -> usize

@@ -139,8 +139,8 @@ impl<'r> Readable<'r> for AreaDependencies<'r>
     fn size(&self) -> usize
     {
         let deps_count: usize = self.deps.iter().map(|i| i.len()).sum();
-        (u32::fixed_size().unwrap() * (2 + self.deps.len()) +
-         Dependency::fixed_size().unwrap() * deps_count)
+        let s = u32::fixed_size().unwrap();
+        s * (2 + self.deps.len()) + Dependency::fixed_size().unwrap() * deps_count
     }
 }
 
