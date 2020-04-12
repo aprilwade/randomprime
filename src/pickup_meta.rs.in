@@ -2981,18 +2981,18 @@ impl PickupType
             },
             PickupType::ScanVisor => {
                 const DATA: &[(u32, FourCC)] = &[
+                    (0x0AF51680, FourCC::from_bytes(b"CSKR")),
                     (0x0DEB9456, FourCC::from_bytes(b"PART")),
-                    (0x1544D478, FourCC::from_bytes(b"TXTR")),
-                    (0x394D3877, FourCC::from_bytes(b"ANIM")),
-                    (0x454FB170, FourCC::from_bytes(b"TXTR")),
-                    (0x4B26EFDA, FourCC::from_bytes(b"EVNT")),
-                    (0xAF9DEFBE, FourCC::from_bytes(b"CINF")),
-                    (0xDEAF0003, FourCC::from_bytes(b"TXTR")),
-                    (0xDEAF0004, FourCC::from_bytes(b"CMDL")),
-                    (0xDEAF0005, FourCC::from_bytes(b"ANCS")),
+                    (0x129FDDC5, FourCC::from_bytes(b"ANIM")),
+                    (0x35FFA9A8, FourCC::from_bytes(b"CINF")),
+                    (0x5A390DBB, FourCC::from_bytes(b"TXTR")),
+                    (0x61DAB956, FourCC::from_bytes(b"CMDL")),
+                    (0x6536B232, FourCC::from_bytes(b"TXTR")),
+                    (0x6E62EF9F, FourCC::from_bytes(b"EVNT")),
+                    (0x9F0C908A, FourCC::from_bytes(b"ANCS")),
+                    (0xC4AD9154, FourCC::from_bytes(b"TXTR")),
                     (0xDEAF000F, FourCC::from_bytes(b"STRG")),
                     (0xDEAF0010, FourCC::from_bytes(b"SCAN")),
-                    (0xFEBBC197, FourCC::from_bytes(b"CSKR")),
                 ];
                 DATA
             },

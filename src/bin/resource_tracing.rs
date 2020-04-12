@@ -756,7 +756,7 @@ fn create_scan_visor(pickup_table: &mut HashMap<PickupType, PickupData>)
         scan_visor_pickup.write_to(&mut scan_visor_bytes).unwrap();
     }
 
-    let mut scan_visor_deps: HashSet<_> = pickup_table[&PickupType::PhazonSuit].deps.iter()
+    let mut scan_visor_deps: HashSet<_> = pickup_table[&PickupType::XRayVisor].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into()].contains(&i.fourcc))
         .cloned()
         .collect();
