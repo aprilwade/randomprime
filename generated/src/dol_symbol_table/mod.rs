@@ -40,11 +40,25 @@ macro_rules! build_mp1_102_symbol {
 }
 macro_file_proxy_item!("src/dol_symbol_table/1.02.txt", build_mp1_102_symbol, ;);
 
+macro_rules! build_mp1_pal_symbol {
+    ($($addr:tt $sym_name:tt;)*) => {
+        #[macro_export]
+        macro_rules! mp1_pal_symbol {
+            $(
+                ($sym_name) => { Some($addr) };
+            )*
+            ($_s:tt) => { None };
+        }
+    }
+}
+macro_file_proxy_item!("src/dol_symbol_table/pal.txt", build_mp1_pal_symbol, ;);
+
 pub struct Mp1Symbol
 {
     pub addr_0_00: Option<u32>,
     pub addr_0_01: Option<u32>,
     pub addr_0_02: Option<u32>,
+    pub addr_pal: Option<u32>,
 }
 
 #[macro_export]
@@ -54,6 +68,7 @@ macro_rules! mp1_symbol {
             addr_0_00: $crate::mp1_100_symbol!($syn_name),
             addr_0_01: $crate::mp1_101_symbol!($syn_name),
             addr_0_02: $crate::mp1_102_symbol!($syn_name),
+            addr_pal: $crate::mp1_pal_symbol!($syn_name),
         }
     }
 }

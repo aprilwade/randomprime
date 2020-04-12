@@ -50,7 +50,7 @@ fn main()
     invoke_cargo(&ppc_manifest, "rel_loader");
     invoke_cargo(&ppc_manifest, "rel_patches");
 
-    for version in &["1.00", "1.02"] {
+    for version in &["1.00", "1.02", "pal"] {
         let sym_table_path = format!("src/dol_symbol_table/{}.txt", version);
         eprintln!("{:?}", root_dir.join(&sym_table_path));
         let mut symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();

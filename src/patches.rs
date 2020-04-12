@@ -1968,10 +1968,6 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
-    if version == Version::Pal {
-        return Ok(());
-    }
-
     macro_rules! symbol_addr {
         ($sym:tt, $version:expr) => {
             {
@@ -1980,7 +1976,7 @@ fn patch_dol<'r>(
                     Version::Ntsc0_00 => s.addr_0_00,
                     Version::Ntsc0_01 => s.addr_0_01,
                     Version::Ntsc0_02 => s.addr_0_02,
-                    Version::Pal      => unreachable!(),
+                    Version::Pal      => s.addr_pal,
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -1992,9 +1988,14 @@ fn patch_dol<'r>(
     };
 
     let mut dol_patcher = DolPatcher::new(reader);
-    dol_patcher
-        .patch(symbol_addr!("aMetroidprimeA", version), b"randomprime A\0"[..].into())?
-        .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
+    if version == Version::Pal {
+        dol_patcher
+            .patch(symbol_addr!("aMetroidprime", version), b"randomprime\0"[..].into())?;
+    } else {
+        dol_patcher
+            .patch(symbol_addr!("aMetroidprimeA", version), b"randomprime A\0"[..].into())?
+            .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
+    }
 
     let cinematic_skip_patch = ppcasm!(symbol_addr!("ShouldSkipCinematic__22CScriptSpecialFunctionFR13CStateManager", version), {
             li      r3, 0x1;
@@ -2002,6 +2003,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
+    // TODO: This offset needs to be adjusted for PAL, probably (or the patch temporarily disabled)
     let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {
             li      r6, 100;
             stw     r6, 0xcc(r3);
@@ -2009,6 +2011,7 @@ fn patch_dol<'r>(
             stw     r6, 0xd0(r3);
     });
     dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
+    // TODO: This offset needs to be adjusted for PAL, probably (or the patch temporarily disabled)
     let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
             li      r6, 100;
             stw     r6, 0xcc(r28);
@@ -2020,32 +2023,34 @@ fn patch_dol<'r>(
     dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
 
 
-    let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
-            b          skip;
-        fmt:
-            .asciiz b"%03d/%03d";
+    if version != Version::Pal {
+        let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
+                b          skip;
+            fmt:
+                .asciiz b"%03d/%03d";
 
-        skip:
-            stw        r30, 40(r1);// var_8(r1);
-            mr         r30, r3;
-            stw        r4, 8(r1);// var_28(r1)
+            skip:
+                stw        r30, 40(r1);// var_8(r1);
+                mr         r30, r3;
+                stw        r4, 8(r1);// var_28(r1)
 
-            lwz        r6, 4(r30);
+                lwz        r6, 4(r30);
 
-            mr         r5, r4;
+                mr         r5, r4;
 
-            lis        r4, fmt@h;
-            addi       r4, r4, fmt@l;
+                lis        r4, fmt@h;
+                addi       r4, r4, fmt@l;
 
-            addi       r3, r1, 12;// arg_C
+                addi       r3, r1, 12;// arg_C
 
-            nop; // crclr      cr6;
-            bl         { symbol_addr!("sprintf", version) };
+                nop; // crclr      cr6;
+                bl         { symbol_addr!("sprintf", version) };
 
-            addi       r3, r1, 20;// arg_14;
-            addi       r4, r1, 12;// arg_C
-    });
-    dol_patcher.ppcasm_patch(&missile_hud_formating_patch)?;
+                addi       r3, r1, 20;// arg_14;
+                addi       r4, r1, 12;// arg_C
+        });
+        dol_patcher.ppcasm_patch(&missile_hud_formating_patch)?;
+    }
 
     let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
             b skip;
@@ -2064,6 +2069,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
 
+    // TODO: The offset here needs to be higher for PAL. +16 and +28
     let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 4, {
             lis         r4, {spawn_room.mlvl}@h;
     });
@@ -2096,6 +2102,7 @@ fn patch_dol<'r>(
     }
 
     if patch_suit_damage {
+        // TODO: The jump offset is almost certainly wrong, so double check that
         let staggered_suit_damage_patch = ppcasm!(symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + 0x128, {
                 lwz     r3, 0x8b8(r25);
                 lwz     r3, 0(r3);
@@ -2118,7 +2125,7 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if version == Version::Ntsc0_02 {
+    if version == Version::Ntsc0_02 || version == Version::Pal {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
         });
@@ -2136,7 +2143,11 @@ fn patch_dol<'r>(
             let map_str = generated::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
-        Version::Pal => unreachable!(),
+        Version::Pal => {
+            let loader_bytes = generated::REL_LOADER_PAL;
+            let map_str = generated::REL_LOADER_PAL_MAP;
+            (loader_bytes, map_str)
+        },
     };
 
     let mut rel_loader = rel_loader_bytes.to_vec();
@@ -2350,7 +2361,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    if version == Version::Ntsc0_01 || version == Version::Pal {
+    if version == Version::Ntsc0_01 {
         Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
     }
 
@@ -2364,7 +2375,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
             Version::Ntsc0_00 => generated::PATCHES_100_REL,
             Version::Ntsc0_01 => unreachable!(),
             Version::Ntsc0_02 => generated::PATCHES_102_REL,
-            Version::Pal      => unreachable!(),
+            Version::Pal      => generated::PATCHES_PAL_REL,
         };
         gc_disc.add_file(
             "patches.rel",
