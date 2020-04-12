@@ -1647,7 +1647,7 @@ fn patch_main_quarry_door_lock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapp
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[7];
 
-    let locked_door_actor_obj_id = 0x205DB;
+    let locked_door_actor_obj_id = 0x1c0205db;
 
     let locked_door_actor_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == locked_door_actor_obj_id)
