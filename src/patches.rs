@@ -2306,6 +2306,8 @@ pub struct ParsedConfig
     pub bnr_game_name_full: Option<String>,
     pub bnr_developer_full: Option<String>,
     pub bnr_description: Option<String>,
+
+    pub pal_override: bool,
 }
 
 
@@ -2361,7 +2363,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    if version == Version::Ntsc0_01 {
+    if version == Version::Ntsc0_01 || (version == Version::Pal && !config.pal_override) {
         Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
     }
 
