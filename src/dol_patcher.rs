@@ -218,8 +218,8 @@ impl<'a> DolPatcher<'a>
     fn check_for_overlapping_segment(&self, addr: u32, len: u32) -> Result<(), String>
     {
         let check_overlap = |seg: &DolSegment| {
-            ((addr <= seg.addr() && addr + len > seg.addr()) ||
-             (seg.addr() <= addr && seg.addr() + seg.len() > addr))
+            (addr <= seg.addr() && addr + len > seg.addr()) ||
+                (seg.addr() <= addr && seg.addr() + seg.len() > addr)
         };
         for (i, seg) in self.data_segments.iter().enumerate() {
             if check_overlap(seg) {
