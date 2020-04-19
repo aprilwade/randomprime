@@ -1,7 +1,6 @@
 // Rexport these crates to make syncing version numbers less of a pain
 pub use byteorder;
 pub use generic_array;
-pub use num;
 
 pub mod reader;
 pub mod writer;

@@ -7,10 +7,13 @@ pub use memmap;
 use reader_writer::{
     LCow,
     Reader,
-    num::{BigUint, Integer, ToPrimitive},
 };
 
+
 use flate2::{Decompress, FlushDecompress};
+use num_bigint::BigUint;
+use num_integer::Integer;
+use num_traits::ToPrimitive;
 use sha2::{Digest, Sha512};
 
 use std::{
