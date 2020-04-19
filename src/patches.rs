@@ -2476,8 +2476,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     if let Some(flaahgra_music_files) = &config.flaahgra_music_files {
         const MUSIC_FILE_NAME: &[&[u8]] = &[
-            b"rui_flaaghraR.dsp",
-            b"rui_flaaghraL.dsp",
+            b"Audio/rui_flaaghraR.dsp",
+            b"Audio/rui_flaaghraL.dsp",
         ];
         for (file_name, music_file) in MUSIC_FILE_NAME.iter().zip(flaahgra_music_files.iter()) {
             patcher.add_file_patch(file_name, move |file| {
