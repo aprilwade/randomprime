@@ -1593,6 +1593,30 @@ fn patch_hive_totem_boss_trigger_0_02(_ps: &mut PatcherState, area: &mut mlvl_wr
     Ok(())
 }
 
+fn patch_ruined_courtyard_thermal_conduits_0_02(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    let thermal_conduit_actor_obj_id = 0xF01C7;
+    let thermal_conduit_damageable_trigger_obj_id = 0xF01C8;
+
+    let thermal_conduit_actor_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == thermal_conduit_actor_obj_id)
+        .and_then(|obj| obj.property_data.as_actor_mut())
+        .unwrap();
+    thermal_conduit_actor_obj.active = 1;
+
+    let thermal_conduit_damageable_trigger_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == thermal_conduit_damageable_trigger_obj_id)
+        .and_then(|obj| obj.property_data.as_damageable_trigger_mut())
+        .unwrap();
+    thermal_conduit_damageable_trigger_obj.active = 1;
+
+    Ok(())
+}
+
 fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2696,6 +2720,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("19_hive_totem.MREA").into(),
             patch_hive_totem_boss_trigger_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("05_ice_shorelines.MREA").into(),
+            patch_ruined_courtyard_thermal_conduits_0_02
         );
     }
 
