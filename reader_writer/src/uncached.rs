@@ -4,20 +4,39 @@ use std::{
 };
 
 use crate::{
+    lcow::LCow,
     reader::{Reader, Readable},
     writer::Writable,
 };
 
-pub struct Uncached<'r, T>(Reader<'r>, T::Args)
-    where T: Readable<'r>;
+pub enum Uncached<'r, T>
+    where T: Readable<'r>
+{
+    Borrowed(Reader<'r>, T::Args),
+    Owned(Box<T>),
+}
 
 impl<'r, T> Uncached<'r, T>
     where T: Readable<'r>,
           T::Args: Clone,
 {
-    pub fn get(&self) -> T
+    pub fn get(&self) -> LCow<T>
     {
-        self.0.clone().read(self.1.clone())
+        match self {
+            Self::Borrowed(reader, args) => LCow::Owned(reader.clone().read(args.clone())),
+            Self::Owned(t) => LCow::Borrowed(t),
+        }
+    }
+
+    pub fn get_mut(&mut self) -> &mut T
+    {
+        match self {
+            Self::Borrowed(reader, args) => {
+                *self = Uncached::Owned(Box::new(reader.clone().read(args.clone())));
+                self.get_mut()
+            }
+            Self::Owned(t) => t,
+        }
     }
 }
 
@@ -32,12 +51,15 @@ impl<'r, T> Readable<'r> for Uncached<'r, T>
         let _ = <T as Readable>::read_from(reader, args.clone());
         let size = start_reader.len() - reader.len();
 
-        Uncached(start_reader.truncated(size), args)
+        Uncached::Borrowed(start_reader.truncated(size), args)
     }
 
     fn size(&self) -> usize
     {
-        self.0.len()
+        match self {
+            Self::Borrowed(reader, _) => reader.len(),
+            Self::Owned(t) => t.size(),
+        }
     }
 }
 
@@ -52,22 +74,30 @@ impl<'r, T> Debug for Uncached<'r, T>
 }
 
 impl<'r, T> Clone for Uncached<'r, T>
-    where T: Readable<'r>,
+    where T: Readable<'r> + Clone,
           T::Args: Clone,
 {
     fn clone(&self) -> Self
     {
-        Uncached(self.0.clone(), self.1.clone())
+        match self {
+            Uncached::Borrowed(reader, args) => Uncached::Borrowed(reader.clone(), args.clone()),
+            Uncached::Owned(t) => Uncached::Owned(t.clone()),
+        }
     }
 }
 
 impl<'r, T> Writable for Uncached<'r, T>
-    where T: Readable<'r>,
+    where T: Readable<'r> + Writable,
           T::Args: Clone,
 {
     fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
-        writer.write_all(&self.0)?;
-        Ok(self.0.len() as u64)
+        match self {
+            Uncached::Borrowed(reader, _) => {
+                writer.write_all(&reader)?;
+                Ok(reader.len() as u64)
+            },
+            Uncached::Owned(t) => t.write_to(writer),
+        }
     }
 }

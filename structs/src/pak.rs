@@ -8,6 +8,7 @@ use std::io;
 use std::borrow::Cow;
 
 use crate::{
+    evnt::Evnt,
     frme::Frme,
     hint::Hint,
     mlvl::Mlvl,
@@ -329,6 +330,7 @@ macro_rules! build_resource_data {
 }
 
 build_resource_data!(
+    Evnt, b"EVNT", as_evnt, as_evnt_mut,
     Frme, b"FRME", as_frme, as_frme_mut,
     Hint, b"HINT", as_hint, as_hint_mut,
     Mlvl, b"MLVL", as_mlvl, as_mlvl_mut,

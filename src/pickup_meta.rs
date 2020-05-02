@@ -45,6 +45,7 @@ pub enum PickupType
     ArtifactOfStrength,
     Nothing,
     ScanVisor,
+    ShinyMissile,
 }
 
 impl PickupType
@@ -89,6 +90,7 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  "Artifact of Strength",
             PickupType::Nothing =>             "Nothing",
             PickupType::ScanVisor =>           "Scan Visor",
+            PickupType::ShinyMissile =>        "Shiny Missile",
         }
     }
 
@@ -132,6 +134,7 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  34,
             PickupType::Nothing =>             35,
             PickupType::ScanVisor =>           36,
+            PickupType::ShinyMissile =>        37,
         }
     }
 
@@ -250,6 +253,7 @@ impl PickupType
             PickupType::ArtifactOfStrength,
             PickupType::Nothing,
             PickupType::ScanVisor,
+            PickupType::ShinyMissile,
         ].iter().map(|i| *i)
     }
 }
@@ -325,6 +329,15 @@ const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
     // Nothing texture
     (custom_asset_ids::NOTHING_TXTR, *b"TXTR",
      include_bytes!("../extra_assets/nothing_texture.txtr")),
+    // Shiny Missile TXTR 0
+    (custom_asset_ids::SHINY_MISSILE_TXTR0, *b"TXTR",
+     include_bytes!("../extra_assets/shiny-missile0.txtr")),
+    // Shiny Missile TXTR 1
+    (custom_asset_ids::SHINY_MISSILE_TXTR1, *b"TXTR",
+     include_bytes!("../extra_assets/shiny-missile1.txtr")),
+    // Shiny Missile TXTR 2
+    (custom_asset_ids::SHINY_MISSILE_TXTR2, *b"TXTR",
+     include_bytes!("../extra_assets/shiny-missile2.txtr")),
 ];
 
 #[cfg(not(debug_assertions))]

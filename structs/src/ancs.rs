@@ -1,8 +1,13 @@
 use auto_struct_macros::auto_struct;
 
-use reader_writer::{CStr, FourCC, IteratorArray, Readable, Reader, RoArray, Uncached, RoArrayIter};
+use reader_writer::{
+    CStr, FourCC, LazyArray, IteratorArray, Readable, Reader, RoArray, Uncached, RoArrayIter,
+    Writable,
+};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
+
+use std::io;
 
 fn bool_to_opt(b: bool) -> Option<()>
 {
@@ -13,7 +18,7 @@ fn bool_to_opt(b: bool) -> Option<()>
     }
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Ancs<'r>
 {
@@ -24,19 +29,20 @@ pub struct Ancs<'r>
     pub anim_set: AnimationSet<'r>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct CharacterSet<'r>
 {
     #[auto_struct(expect = 1)]
     version: u16,
 
+    #[auto_struct(derive = char_info.len() as u32)]
     pub char_info_count: u32,
     #[auto_struct(init = (char_info_count as usize, ()))]
-    pub char_info: RoArray<'r, CharacterInfo<'r>>,
+    pub char_info: LazyArray<'r, CharacterInfo<'r>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct CharacterInfo<'r>
 {
@@ -96,7 +102,7 @@ pub struct CharacterInfo<'r>
 }
 
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct AnimationName<'r>
 {
@@ -110,7 +116,7 @@ pub struct AnimationName<'r>
 }
 
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct PasDatabase<'r>
 {
@@ -125,7 +131,7 @@ pub struct PasDatabase<'r>
 
 // PasDatabase inner details {{{
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct PasAnimState<'r>
 {
@@ -138,7 +144,7 @@ pub struct PasAnimState<'r>
     pub anim_info: RoArray<'r, PasAnimStateAnimInfo<'r>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct PasAnimStateParamInfo<'r>
 {
@@ -151,7 +157,7 @@ pub struct PasAnimStateParamInfo<'r>
     pub data1: RoArray<'r, u8>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct PasAnimStateAnimInfo<'r>
 {
@@ -163,7 +169,7 @@ pub struct PasAnimStateAnimInfo<'r>
     pub items: IteratorArray<'r, PasAnimStateAnimInfoInner<'r>, RoArrayIter<'r, PasAnimStateParamInfo<'r>>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct PasAnimStateAnimInfoInner<'r>
 {
@@ -175,21 +181,24 @@ pub struct PasAnimStateAnimInfoInner<'r>
 
 // }}}
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct ParticleResData<'r>
 {
     #[auto_struct(args)]
     info_type_count: u16,
 
+    #[auto_struct(derive = part_assets.len() as u32)]
     pub part_asset_count: u32,
     #[auto_struct(init = (part_asset_count as usize, ()))]
-    pub part_assets: RoArray<'r, u32>,
+    pub part_assets: LazyArray<'r, u32>,
 
+    #[auto_struct(derive = swhc_assets.len() as u32)]
     pub swhc_asset_count: u32,
     #[auto_struct(init = (swhc_asset_count as usize, ()))]
     pub swhc_assets: RoArray<'r, u32>,
 
+    #[auto_struct(derive = unknowns.len() as u32)]
     pub unknown_count: u32,
     #[auto_struct(init = (unknown_count as usize, ()))]
     pub unknowns: RoArray<'r, u32>,
@@ -200,7 +209,7 @@ pub struct ParticleResData<'r>
     pub elsc_assets: Option<RoArray<'r, u32>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct AnimationAABB<'r>
 {
@@ -208,7 +217,7 @@ pub struct AnimationAABB<'r>
     pub aabb: GenericArray<f32, U6>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct AnimationIndexedAABB
 {
@@ -217,7 +226,7 @@ pub struct AnimationIndexedAABB
 }
 
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Effect<'r>
 {
@@ -227,7 +236,7 @@ pub struct Effect<'r>
     pub components: RoArray<'r, EffectComponent<'r>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct EffectComponent<'r>
 {
@@ -241,14 +250,16 @@ pub struct EffectComponent<'r>
 }
 
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct AnimationSet<'r>
 {
     pub info_count: u16,
+
+    #[auto_struct(derive = animations.len() as u32)]
     pub animation_count: u32,
     #[auto_struct(init = (animation_count as usize, ()))]
-    pub animations: RoArray<'r, Animation<'r>>,
+    pub animations: LazyArray<'r, Animation<'r>>,
 
     pub transition_count: u32,
     #[auto_struct(init = (transition_count as usize, ()))]
@@ -269,13 +280,14 @@ pub struct AnimationSet<'r>
     pub half_transitions: Option<RoArray<'r, HalfTransition<'r>>>,
 
     #[auto_struct(init = bool_to_opt(info_count > 3))]
+    #[auto_struct(derive = animation_resources.as_ref().map(|a| a.len() as u32))]
     pub animation_resource_count: Option<u32>,
     #[auto_struct(init = animation_resource_count.map(|i| (i as usize, ())))]
-    pub animation_resources: Option<RoArray<'r, AnimationResource>>,
+    pub animation_resources: Option<LazyArray<'r, AnimationResource>>,
 }
 
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Animation<'r>
 {
@@ -324,8 +336,22 @@ impl<'r> Readable<'r> for MetaAnimation<'r>
     }
 }
 
+impl<'r> Writable for MetaAnimation<'r>
+{
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    {
+        Ok(match self {
+            MetaAnimation::Play(i) => 0u32.write_to(writer)? + i.write_to(writer)?,
+            MetaAnimation::Blend(i) => 1u32.write_to(writer)? + i.write_to(writer)?,
+            MetaAnimation::PhaseBlend(i) => 2u32.write_to(writer)? + i.write_to(writer)?,
+            MetaAnimation::Random(i) => 3u32.write_to(writer)? + i.write_to(writer)?,
+            MetaAnimation::Sequence(i) => 4u32.write_to(writer)? + i.write_to(writer)?,
+        })
+    }
+}
 
-#[auto_struct(Readable)]
+
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaAnimationPlay<'r>
 {
@@ -336,7 +362,7 @@ pub struct MetaAnimationPlay<'r>
     pub unknown1: u32,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaAnimationBlend<'r>
 {
@@ -346,7 +372,7 @@ pub struct MetaAnimationBlend<'r>
     pub unknown1: u8,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaAnimationRandom<'r>
 {
@@ -355,7 +381,7 @@ pub struct MetaAnimationRandom<'r>
     pub anims: RoArray<'r, MetaAnimationRandomPair<'r>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaAnimationRandomPair<'r>
 {
@@ -363,7 +389,7 @@ pub struct MetaAnimationRandomPair<'r>
     pub probability: u32,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaAnimationSequence<'r>
 {
@@ -372,7 +398,7 @@ pub struct MetaAnimationSequence<'r>
     pub anims: RoArray<'r, MetaAnimation<'r>>,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Transition<'r>
 {
@@ -418,14 +444,27 @@ impl<'r> Readable<'r> for MetaTransition<'r>
     }
 }
 
-#[auto_struct(Readable)]
+impl<'r> Writable for MetaTransition<'r>
+{
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    {
+        Ok(match self {
+            MetaTransition::Animation(i) => 0u32.write_to(writer)? + i.write_to(writer)?,
+            MetaTransition::Transition(i) => 1u32.write_to(writer)? + i.write_to(writer)?,
+            MetaTransition::PhaseTransition(i) => 2u32.write_to(writer)? + i.write_to(writer)?,
+            MetaTransition::NoTransition => 3u32.write_to(writer)?,
+        })
+    }
+}
+
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct MetaTransitionAnimation<'r>
 {
     pub meta: MetaAnimation<'r>,
 }
 
-#[auto_struct(Readable, FixedSize)]
+#[auto_struct(Readable, Writable, FixedSize)]
 #[derive(Debug, Clone)]
 pub struct MetaTransitionTransition
 {
@@ -437,7 +476,7 @@ pub struct MetaTransitionTransition
 }
 
 
-#[auto_struct(Readable, FixedSize)]
+#[auto_struct(Readable, Writable, FixedSize)]
 #[derive(Debug, Clone)]
 pub struct AdditiveAnimation
 {
@@ -446,7 +485,7 @@ pub struct AdditiveAnimation
     pub fade_out: f32,
 }
 
-#[auto_struct(Readable)]
+#[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct HalfTransition<'r>
 {
@@ -454,7 +493,7 @@ pub struct HalfTransition<'r>
     pub meta: MetaTransition<'r>,
 }
 
-#[auto_struct(Readable, FixedSize)]
+#[auto_struct(Readable, Writable, FixedSize)]
 #[derive(Debug, Clone)]
 pub struct AnimationResource
 {

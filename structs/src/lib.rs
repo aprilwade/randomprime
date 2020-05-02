@@ -1,5 +1,6 @@
 
 mod ancs;
+mod anim;
 mod bnr;
 mod cmdl;
 mod dol;
@@ -69,6 +70,7 @@ mod scly_props
 }
 pub use scly_props::*;
 
+pub use anim::*;
 pub use ancs::*;
 pub use bnr::*;
 pub use cmdl::*;

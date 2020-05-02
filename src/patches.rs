@@ -140,6 +140,18 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
             "&just=center;Scan Visor acquired!\0".to_owned(),
         ])),
     ));
+    new_assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::SHINY_MISSILE_SCAN,
+        custom_asset_ids::SHINY_MISSILE_SCAN_STRG,
+        "Shiny Missile\0",
+    ));
+    new_assets.extend_from_slice(&create_shiny_missile_assets(&found));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "&just=center;Shiny Missile acquired!\0".to_owned(),
+        ])),
+    ));
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
         if looking_for.remove(&key) {
@@ -154,8 +166,8 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
 
 fn create_suit_icon_cmdl_and_ancs<'r>(
     resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    new_cmdl: u32,
-    new_ancs: u32,
+    new_cmdl_id: u32,
+    new_ancs_id: u32,
     new_txtr1: u32,
     new_txtr2: u32,
 ) -> [structs::Resource<'r>; 2]
@@ -164,17 +176,21 @@ fn create_suit_icon_cmdl_and_ancs<'r>(
         let grav_suit_cmdl = ResourceData::new(
             &resources[&resource_info!("Node1_11.CMDL").into()]
         );
-        let mut new_cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+        let cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+        let mut cmdl = Reader::new(&cmdl_bytes[..]).read::<structs::Cmdl>(());
+
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr1;
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[3] = new_txtr2;
+
+        let mut new_cmdl_bytes = vec![];
+        cmdl.write_to(&mut new_cmdl_bytes).unwrap();
 
         // Ensure the length is a multiple of 32
         let len = new_cmdl_bytes.len();
         new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
-        // Change which texture this points to
-        new_txtr1.write_to(&mut &mut new_cmdl_bytes[0x64..]).unwrap();
-        new_txtr2.write_to(&mut &mut new_cmdl_bytes[0x70..]).unwrap();
         pickup_meta::build_resource(
-            new_cmdl,
+            new_cmdl_id,
             structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
         )
     };
@@ -182,20 +198,119 @@ fn create_suit_icon_cmdl_and_ancs<'r>(
         let grav_suit_ancs = ResourceData::new(
             &resources[&resource_info!("Node1_11.ANCS").into()]
         );
-        let mut new_ancs_bytes = grav_suit_ancs.decompress().into_owned();
+        let ancs_bytes = grav_suit_ancs.decompress().into_owned();
+        let mut ancs = Reader::new(&ancs_bytes[..]).read::<structs::Ancs>(());
+
+        ancs.char_set.char_info.as_mut_vec()[0].cmdl = new_cmdl_id;
+
+        let mut new_ancs_bytes = vec![];
+        ancs.write_to(&mut new_ancs_bytes).unwrap();
 
         // Ensure the length is a multiple of 32
         let len = new_ancs_bytes.len();
         new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
-        // Change this to refer to the CMDL above
-        new_cmdl.write_to(&mut &mut new_ancs_bytes[0x14..]).unwrap();
         pickup_meta::build_resource(
-            new_ancs,
+            new_ancs_id,
             structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
         )
     };
     [new_suit_cmdl, new_suit_ancs]
+}
+
+fn create_shiny_missile_assets<'r>(
+    resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+) -> [structs::Resource<'r>; 4]
+{
+    let shiny_missile_cmdl = {
+        let shiny_missile_cmdl = ResourceData::new(
+            &resources[&resource_info!("Node1_36_0.CMDL").into()]
+        );
+        let cmdl_bytes = shiny_missile_cmdl.decompress().into_owned();
+        let mut cmdl = Reader::new(&cmdl_bytes[..]).read::<structs::Cmdl>(());
+
+        // println!("{:#?}", cmdl);
+        cmdl.material_sets.as_mut_vec()[0].texture_ids = vec![
+            custom_asset_ids::SHINY_MISSILE_TXTR0,
+            custom_asset_ids::SHINY_MISSILE_TXTR1,
+            custom_asset_ids::SHINY_MISSILE_TXTR2,
+        ].into();
+
+        let mut new_cmdl_bytes = vec![];
+        cmdl.write_to(&mut new_cmdl_bytes).unwrap();
+
+        // Ensure the length is a multiple of 32
+        let len = new_cmdl_bytes.len();
+        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        pickup_meta::build_resource(
+            custom_asset_ids::SHINY_MISSILE_CMDL,
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
+        )
+    };
+    let shiny_missile_ancs = {
+        let shiny_missile_ancs = ResourceData::new(
+            &resources[&resource_info!("Node1_37_0.ANCS").into()]
+        );
+        let ancs_bytes = shiny_missile_ancs.decompress().into_owned();
+        let mut ancs = Reader::new(&ancs_bytes[..]).read::<structs::Ancs>(());
+
+        ancs.char_set.char_info.as_mut_vec()[0].cmdl = custom_asset_ids::SHINY_MISSILE_CMDL;
+        ancs.char_set.char_info.as_mut_vec()[0].particles.part_assets = vec![
+            resource_info!("healthnew.PART").res_id
+        ].into();
+        if let Some(animation_resources) = &mut ancs.anim_set.animation_resources {
+            animation_resources.as_mut_vec()[0].evnt = custom_asset_ids::SHINY_MISSILE_EVNT;
+            animation_resources.as_mut_vec()[0].anim = custom_asset_ids::SHINY_MISSILE_ANIM;
+        }
+
+        match &mut ancs.anim_set.animations.as_mut_vec()[..] {
+            [structs::Animation { meta: structs::MetaAnimation::Play(play), .. }] => {
+                play.get_mut().anim = custom_asset_ids::SHINY_MISSILE_ANIM;
+            },
+            _ => panic!(),
+        }
+
+        let mut new_ancs_bytes = vec![];
+        ancs.write_to(&mut new_ancs_bytes).unwrap();
+
+        // Ensure the length is a multiple of 32
+        let len = new_ancs_bytes.len();
+        new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        pickup_meta::build_resource(
+            custom_asset_ids::SHINY_MISSILE_ANCS,
+            structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
+        )
+    };
+    let shiny_missile_evnt = {
+        let mut evnt = resources[&resource_info!("Missile_Launcher_ready.EVNT").into()]
+            .kind.as_evnt()
+            .unwrap().into_owned();
+
+
+        evnt.effect_events.as_mut_vec()[0].effect_file_id = resource_info!("healthnew.PART").res_id;
+        evnt.effect_events.as_mut_vec()[1].effect_file_id = resource_info!("healthnew.PART").res_id;
+
+        pickup_meta::build_resource(
+            custom_asset_ids::SHINY_MISSILE_EVNT,
+            structs::ResourceKind::Evnt(evnt)
+        )
+    };
+    let shiny_missile_anim = {
+        let shiny_missile_anim = ResourceData::new(
+            &resources[&resource_info!("Missile_Launcher_ready.ANIM").into()]
+        );
+        let mut anim_bytes = shiny_missile_anim.decompress().into_owned();
+        custom_asset_ids::SHINY_MISSILE_EVNT.write_to(&mut std::io::Cursor::new(&mut anim_bytes[8..])).unwrap();
+        let len = anim_bytes.len();
+        anim_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+        pickup_meta::build_resource(
+            custom_asset_ids::SHINY_MISSILE_ANIM,
+            structs::ResourceKind::External(anim_bytes, b"ANIM".into())
+        )
+    };
+    [shiny_missile_cmdl, shiny_missile_ancs, shiny_missile_evnt, shiny_missile_anim]
 }
 
 fn create_item_scan_strg_pair<'r>(
@@ -2552,6 +2667,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             });
             let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
             for (&pickup_location, &pickup_type) in iter {
+                // 1 in 1024 chance of a missile being shiny means a player is likely to see a
+                // shiny missile every 40ish games (assuming most players collect about half of the
+                // missiles)
+                let pickup_type = if pickup_type == PickupType::Missile && rng.gen_ratio(1, 1024) {
+                    PickupType::ShinyMissile
+                } else {
+                    pickup_type
+                };
                 patcher.add_scly_patch(
                     (name.as_bytes(), room_info.room_id),
                     move |ps, area| modify_pickups_in_mrea(
