@@ -1,5 +1,10 @@
 
-use rand::{ChaChaRng, SeedableRng, Rng, Rand};
+use rand::{
+    rngs::StdRng,
+    seq::SliceRandom,
+    SeedableRng,
+    Rng,
+};
 use encoding::{
     all::WINDOWS_1252,
     Encoding,
@@ -290,7 +295,7 @@ fn add_skip_hudmemos_strgs(pickup_resources: &mut HashMap<(u32, FourCC), structs
 
 fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng: &mut R)
     -> [String; 12]
-    where R: Rng + Rand
+    where R: Rng
 {
     let mut generic_text_templates = [
         "I mean, maybe it'll be in the &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
@@ -306,7 +311,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you well, that you may find a key lost to our cause... Alright, whatever. It's at the &push;&main-color=#43CD80;{room}&pop;.\0",
         "I kind of just played Frisbee with mine. It flew and landed too far so I didn't want to walk over and grab it because I was lazy. It's in the &push;&main-color=#43CD80;{room}&pop; if you want to find it.\0",
     ];
-    rng.shuffle(&mut generic_text_templates);
+    generic_text_templates.shuffle(rng);
     let mut generic_templates_iter = generic_text_templates.iter();
 
     // TODO: If there end up being a large number of these, we could use a binary search
@@ -319,7 +324,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
     for rt in &mut specific_room_templates {
-        rng.shuffle(&mut rt.1);
+        rt.1.shuffle(rng);
     }
 
 
@@ -2300,7 +2305,7 @@ pub struct ParsedConfig
 
     pub pickup_layout: Vec<u8>,
     pub elevator_layout: Vec<u8>,
-    pub seed: [u32; 16],
+    pub seed: u64,
 
     pub iso_format: IsoFormat,
     pub skip_frigate: bool,
@@ -2454,7 +2459,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         .collect();
     let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
 
-    let mut rng = ChaChaRng::from_seed(&config.seed);
+    let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let mut pickup_resources = collect_pickup_resources(gc_disc);
@@ -2463,7 +2468,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
 
     // XXX These values need to out live the patcher
-    let select_game_fmv_suffix = rng.choose(&["A", "B", "C"]).unwrap();
+    let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
     let n = format!("Video/02_start_fileselect_{}.thp", select_game_fmv_suffix);
     let start_file_select_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
     let n = format!("Video/04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
