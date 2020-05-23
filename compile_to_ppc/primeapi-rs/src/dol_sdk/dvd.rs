@@ -2,7 +2,7 @@ use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ptr;
 
-use crate::alignment_utils::Aligned32SliceMut;
+use crate::alignment_utils::Aligned32;
 
 pub type DVDCBCallback = extern "C" fn(result: i32, block: *mut DVDCommandBlock);
 
@@ -76,7 +76,7 @@ impl DVDFileInfo
 
     pub fn read_async<'a>(
         &'a mut self,
-        mut buf: Aligned32SliceMut<'a, MaybeUninit<u8>>,
+        buf: &'a mut Aligned32<[MaybeUninit<u8>]>,
         offset: u32,
         prio: u32
     ) -> AsyncDVDReadHandle<'a>

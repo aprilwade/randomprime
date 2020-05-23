@@ -5,7 +5,7 @@ extern crate alloc;
 use linkme::distributed_slice;
 
 use primeapi::{patch_fn, prolog_fn};
-use primeapi::alignment_utils::Aligned32SliceMut;
+use primeapi::alignment_utils::Aligned32;
 use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
     CArchitectureQueue, CGameState, CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget,
@@ -32,12 +32,12 @@ unsafe extern "C" fn setup_global_state()
         };
         let config_size = fi.file_length() as usize;
         let mut recv_buf = alloc::vec![MaybeUninit::<u8>::uninit(); config_size + 63];
-        let mut recv_buf = Aligned32SliceMut::split_unaligned_prefix(&mut recv_buf[..]).1
-            .truncate_to_len((config_size + 31) & !31);
+        let recv_buf = Aligned32::split_unaligned_prefix_mut(&mut recv_buf[..]).1;
+        let recv_buf = &mut recv_buf[..(config_size + 31) & !31];
         {
-            let _ = fi.read_async(recv_buf.reborrow(), 0, 0);
+            let _ = fi.read_async(recv_buf, 0, 0);
         }
-        REL_CONFIG = ssmarshal::deserialize(&recv_buf.truncate_to_len(config_size).assume_init())
+        REL_CONFIG = ssmarshal::deserialize(&recv_buf[..config_size].assume_init())
             .unwrap().0;
     }
 

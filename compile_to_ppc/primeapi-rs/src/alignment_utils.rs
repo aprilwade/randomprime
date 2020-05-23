@@ -1,16 +1,14 @@
 use generic_array::{ArrayLength, GenericArray};
 
+use core::cmp;
 use core::mem::MaybeUninit;
+use core::ops::{Index, IndexMut, RangeTo};
+use core::slice;
 
 
-#[repr(align(32))]
+#[repr(align(32), C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Aligned32<T>(T);
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct Aligned32Slice<'a, T>(&'a [T]);
-#[derive(Debug, Eq, PartialEq)]
-pub struct Aligned32SliceMut<'a, T>(&'a mut [T]);
+pub struct Aligned32<T: ?Sized>(T);
 
 pub trait TrustedDerefSlice { }
 
@@ -30,44 +28,125 @@ trusted_deref_slice_array!(40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57
 trusted_deref_slice_array!(60 61 62 63 64);
 
 impl<T> Aligned32<T>
+    where T: TrustedDerefSlice,
 {
-    pub fn as_inner_slice<'a, R>(&'a self) -> Aligned32Slice<'a, R>
-        where T: TrustedDerefSlice + AsRef<[R]>,
+    #[inline(always)]
+    pub fn as_slice<'a, R>(&'a self) -> &'a Aligned32<[R]>
+        where T: AsRef<[R]>,
     {
-        Aligned32Slice(self.0.as_ref())
+        unsafe { Aligned32::from_ref_unchecked(self.0.as_ref()) }
     }
 
-    pub fn as_inner_slice_mut<'a, R>(&'a mut self) -> Aligned32SliceMut<'a, R>
-        where T: TrustedDerefSlice + AsMut<[R]>,
+    #[inline(always)]
+    pub fn as_slice_mut<'a, R>(&'a mut self) -> &'a mut Aligned32<[R]>
+        where T: AsMut<[R]>,
     {
-        Aligned32SliceMut(self.0.as_mut())
+        unsafe { Aligned32::from_mut_unchecked(self.0.as_mut()) }
     }
-
 }
 
 impl<T> Aligned32<T>
 {
+    #[inline(always)]
     pub const fn new(t: T) -> Aligned32<T>
     {
         Aligned32(t)
     }
 
+    #[inline(always)]
     pub fn into_inner(self) -> T
     {
         self.0
     }
-    pub fn as_slice<'a>(&'a self) -> Aligned32Slice<'a, T>
+
+    #[inline(always)]
+    pub fn as_unit_slice<'a>(&'a self) -> &'a Aligned32<[T]>
     {
-        Aligned32Slice(core::slice::from_ref(&self.0))
+        unsafe { Aligned32::from_ref_unchecked(slice::from_ref(&self.0)) }
     }
 
-    pub fn as_slice_mut<'a>(&'a mut self) -> Aligned32SliceMut<'a, T>
+    #[inline(always)]
+    pub fn as_unit_slice_mut<'a>(&'a mut self) -> &'a mut Aligned32<[T]>
     {
-        Aligned32SliceMut(core::slice::from_mut(&mut self.0))
+        unsafe { Aligned32::from_mut_unchecked(slice::from_mut(&mut self.0)) }
     }
 }
 
-impl<T> core::ops::Deref for Aligned32<T>
+impl<T> Aligned32<[T]>
+{
+    #[inline(always)]
+    pub fn empty<'a>() -> &'a Self
+    {
+        unsafe { Aligned32::from_ref_unchecked(&[]) }
+    }
+
+    #[inline(always)]
+    pub fn empty_mut<'a>() -> &'a mut Self
+    {
+        unsafe { Aligned32::from_mut_unchecked(&mut []) }
+    }
+
+}
+
+impl<T: ?Sized> Aligned32<T>
+{
+    pub fn from_ref<'a>(t: &'a T) -> Option<&'a Self>
+    {
+        if t as *const _ as *const u8 as usize & 31 == 0 {
+            Some(unsafe { Aligned32::from_ref_unchecked(t) })
+        } else {
+            None
+        }
+    }
+
+    pub fn from_mut<'a>(t: &'a mut T) -> Option<&'a mut Self>
+    {
+        if t as *const _ as *const u8 as usize & 31 == 0 {
+            Some(unsafe { Aligned32::from_mut_unchecked(t) })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub unsafe fn from_ref_unchecked<'a>(t: &'a T) -> &'a Self
+    {
+        &*(t as *const T as *const Self)
+    }
+
+    #[inline(always)]
+    pub unsafe fn from_mut_unchecked<'a>(t: &'a mut T) -> &'a mut Self
+    {
+        &mut *(t as *mut T as *mut Self)
+    }
+}
+
+impl<T> Aligned32<MaybeUninit<T>>
+{
+    #[inline(always)]
+    pub unsafe fn assume_init(self) -> Aligned32<T>
+    {
+        Aligned32(self.0.assume_init())
+    }
+}
+
+impl<T> Aligned32<[MaybeUninit<T>]>
+{
+    #[inline(always)]
+    pub unsafe fn assume_init(&self) -> &Aligned32<[T]>
+    {
+        Aligned32::from_ref_unchecked(&*(&self.0 as *const [MaybeUninit<T>] as *const [T]))
+    }
+
+    #[inline(always)]
+    pub unsafe fn assume_init_mut(&mut self) -> &mut Aligned32<[T]>
+    {
+        Aligned32::from_mut_unchecked(&mut *(&mut self.0 as *mut [MaybeUninit<T>] as *mut [T]))
+    }
+}
+
+
+impl<T: ?Sized> core::ops::Deref for Aligned32<T>
 {
     type Target = T;
     #[inline(always)]
@@ -77,8 +156,7 @@ impl<T> core::ops::Deref for Aligned32<T>
     }
 }
 
-
-impl<T> core::ops::DerefMut for Aligned32<T>
+impl<T: ?Sized> core::ops::DerefMut for Aligned32<T>
 {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target
@@ -87,38 +165,22 @@ impl<T> core::ops::DerefMut for Aligned32<T>
     }
 }
 
-impl<'a, T> Aligned32Slice<'a, T>
+impl<T> Index<RangeTo<usize>> for Aligned32<[T]>
 {
-    pub fn empty() -> Self
+    type Output = Aligned32<[T]>;
+    #[inline(always)]
+    fn index(&self, index: RangeTo<usize>) -> &Self::Output
     {
-        Aligned32Slice(&[])
-    }
-
-    pub fn truncate_to_len(self, len: usize) -> Aligned32Slice<'a, T>
-    {
-        Aligned32Slice(&self.0[..len])
-    }
-
-    pub fn from_slice(slice: &'a [T]) -> Option<Self>
-    {
-        if slice.as_ptr() as usize & 31 == 0 {
-            Some(Aligned32Slice(slice))
-        } else {
-            None
-        }
-    }
-
-    pub unsafe fn from_slice_unchecked(slice: &'a [T]) -> Self
-    {
-        Aligned32Slice(slice)
+        unsafe { Aligned32::from_ref_unchecked(&self.0[index]) }
     }
 }
 
-impl<'a, T> Aligned32Slice<'a, MaybeUninit<T>>
+impl<T> IndexMut<RangeTo<usize>> for Aligned32<[T]>
 {
-    pub unsafe fn assume_init(&self) -> Aligned32Slice<'a, T>
+    #[inline(always)]
+    fn index_mut(&mut self, index: RangeTo<usize>) -> &mut Self::Output
     {
-        Aligned32Slice(core::slice::from_raw_parts(self.as_ptr() as *mut T, self.len()))
+        unsafe { Aligned32::from_mut_unchecked(&mut self.0[index]) }
     }
 }
 
@@ -126,111 +188,27 @@ pub unsafe trait Splittable { }
 unsafe impl Splittable for u8 { }
 unsafe impl Splittable for MaybeUninit<u8>{ }
 
-impl<'a, T> Aligned32Slice<'a, T>
+impl<T> Aligned32<[T]>
     where T: Splittable
 {
-    pub fn split_unaligned_prefix(slice: &'a [T]) -> (&'a [T], Self)
+    pub fn split_unaligned_prefix<'a>(slice: &'a [T]) -> (&'a [T], &'a Self)
     {
         let buf_addr = slice.as_ptr() as usize;
         let aligned_addr = (buf_addr + 31) & !31;
-        let unaligned_prefix = core::cmp::min(aligned_addr - buf_addr, slice.len());
+        let unaligned_prefix = cmp::min(aligned_addr - buf_addr, slice.len());
 
-        (&slice[..unaligned_prefix], Aligned32Slice(&slice[unaligned_prefix..]))
-    }
-}
-
-pub fn empty_aligned_slice() -> Aligned32Slice<'static, u8>
-{
-    Aligned32Slice::empty()
-}
-
-impl<'a, T> Aligned32SliceMut<'a, T>
-{
-    pub fn empty() -> Self
-    {
-        Aligned32SliceMut(&mut [])
+        let (unaligned, aligned) = slice.split_at(unaligned_prefix);
+        (unaligned, unsafe { Aligned32::from_ref_unchecked(aligned) })
     }
 
-    pub fn truncate_to_len(self, len: usize) -> Aligned32SliceMut<'a, T>
-    {
-        Aligned32SliceMut(&mut self.0[..len])
-    }
-
-    pub fn reborrow<'b>(&'b mut self) -> Aligned32SliceMut<'b, T>
-    {
-        Aligned32SliceMut(self.0)
-    }
-
-    pub fn from_slice(slice: &'a mut [T]) -> Option<Self>
-    {
-        if slice.as_mut_ptr() as usize & 31 == 0 {
-            Some(Aligned32SliceMut(slice))
-        } else {
-            None
-        }
-    }
-
-    pub unsafe fn from_slice_unchecked(slice: &'a mut [T]) -> Self
-    {
-        Aligned32SliceMut(slice)
-    }
-}
-
-impl<'a, T> Aligned32SliceMut<'a, MaybeUninit<T>>
-{
-    pub unsafe fn assume_init<'b>(&'b mut self) -> Aligned32SliceMut<'b, T>
-    {
-        let len = self.len();
-        Aligned32SliceMut(core::slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len))
-    }
-}
-
-impl<'a, T> Aligned32SliceMut<'a, T>
-    where T: Splittable
-{
-    pub fn split_unaligned_prefix(slice: &'a mut [T]) -> (&'a mut [T], Self)
+    pub fn split_unaligned_prefix_mut<'a>(slice: &'a mut [T]) -> (&'a mut [T], &'a mut Self)
     {
         let buf_addr = slice.as_ptr() as usize;
         let aligned_addr = (buf_addr + 31) & !31;
-        let unaligned_prefix = core::cmp::min(aligned_addr - buf_addr, slice.len());
+        let unaligned_prefix = cmp::min(aligned_addr - buf_addr, slice.len());
 
         let (unaligned, aligned) = slice.split_at_mut(unaligned_prefix);
-        (unaligned, Aligned32SliceMut(aligned))
-    }
-}
-
-pub fn empty_aligned_slice_mut() -> Aligned32SliceMut<'static, u8>
-{
-    Aligned32SliceMut::empty()
-}
-
-impl<'a, T> core::ops::Deref for Aligned32Slice<'a, T>
-{
-    type Target = [T];
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target
-    {
-        &self.0
-    }
-}
-
-impl<'a, T> core::ops::Deref for Aligned32SliceMut<'a, T>
-{
-    type Target = [T];
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target
-    {
-        &self.0
-    }
-}
-
-
-impl<'a, T> core::ops::DerefMut for Aligned32SliceMut<'a, T>
-{
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target
-    {
-        &mut self.0
+        (unaligned, unsafe { Aligned32::from_mut_unchecked(aligned) })
     }
 }
 
@@ -239,6 +217,7 @@ pub struct EmptyArray;
 
 impl<T> Into<GenericArray<T, generic_array::typenum::U0>> for EmptyArray
 {
+    #[inline(always)]
     fn into(self) -> GenericArray<T, generic_array::typenum::U0>
     {
         generic_array::arr![T;]
