@@ -1678,6 +1678,23 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
+fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[4];
+
+    let forcefield_actor_obj_id = 0x100201DA;
+
+    let forcefield_actor_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == forcefield_actor_obj_id)
+        .and_then(|obj| obj.property_data.as_actor_mut())
+        .unwrap();
+    forcefield_actor_obj.actor_params.visor_params.target_passthrough = 1;
+
+    Ok(())
+}
+
 fn patch_main_quarry_door_lock_0_02<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2834,7 +2851,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("18_ice_gravity_chamber.MREA").into(),
         patch_gravity_chamber_stalactite_grapple_point
     );
-
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(),
+        patch_main_quarry_barrier
+    );
 
     if version == Version::Ntsc0_02 {
         patcher.add_scly_patch(
