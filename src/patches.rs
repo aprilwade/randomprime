@@ -1219,6 +1219,20 @@ fn patch_research_lab_hydra_barrier<'r>(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
+fn patch_lab_aether_cutscene_trigger(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let trigger = scly.layers.iter_mut()
+        .flat_map(|layer| layer.objects.iter_mut())
+        .find(|obj| obj.instance_id == 0x14330317) // 0x330317 + (5 << 26)
+        .and_then(|obj| obj.property_data.as_trigger_mut())
+        .unwrap();
+    trigger.active = 0;
+
+    Ok(())
+}
+
 fn patch_research_lab_aether_exploding_wall<'r>(
     ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
 )
@@ -2835,6 +2849,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         resource_info!("10_ice_research_a.MREA").into(),
         patch_research_lab_hydra_barrier);
+    patcher.add_scly_patch(
+        resource_info!("12_ice_research_b.MREA").into(),
+        patch_lab_aether_cutscene_trigger
+    );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(),
         patch_research_lab_aether_exploding_wall
