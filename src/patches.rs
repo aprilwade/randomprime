@@ -1219,13 +1219,22 @@ fn patch_research_lab_hydra_barrier<'r>(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
-fn patch_lab_aether_cutscene_trigger(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
+fn patch_lab_aether_cutscene_trigger(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+    version: Version,
+) -> Result<(), String>
 {
+    let layer_num = if version == Version::NtscTrilogy || version == Version::Pal {
+        4
+    } else {
+        5
+    };
+    let cutscene_trigger_id = 0x330317 + (layer_num << 26);
     let scly = area.mrea().scly_section_mut();
-    let trigger = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
-        .find(|obj| obj.instance_id == 0x14330317) // 0x330317 + (5 << 26)
+    let trigger = scly.layers.as_mut_vec()[layer_num as usize]
+        .objects.iter_mut()
+        .find(|obj| obj.instance_id == cutscene_trigger_id)
         .and_then(|obj| obj.property_data.as_trigger_mut())
         .unwrap();
     trigger.active = 0;
@@ -1744,26 +1753,33 @@ fn patch_hive_totem_boss_trigger_0_02(_ps: &mut PatcherState, area: &mut mlvl_wr
     Ok(())
 }
 
-fn patch_ruined_courtyard_thermal_conduits_0_02(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
+fn patch_ruined_courtyard_thermal_conduits(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+    version: Version,
+) -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
-
-    let thermal_conduit_actor_obj_id = 0xF01C7;
     let thermal_conduit_damageable_trigger_obj_id = 0xF01C8;
+    let thermal_conduit_actor_obj_id = 0xF01C7;
 
-    let thermal_conduit_actor_obj = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == thermal_conduit_actor_obj_id)
-        .and_then(|obj| obj.property_data.as_actor_mut())
-        .unwrap();
-    thermal_conduit_actor_obj.active = 1;
-
-    let thermal_conduit_damageable_trigger_obj = layer.objects.as_mut_vec().iter_mut()
+    layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == thermal_conduit_damageable_trigger_obj_id)
         .and_then(|obj| obj.property_data.as_damageable_trigger_mut())
-        .unwrap();
-    thermal_conduit_damageable_trigger_obj.active = 1;
+        .unwrap()
+        .active = 1;
+
+    if version == Version::Ntsc0_02 {
+        layer.objects.as_mut_vec().iter_mut()
+            .find(|obj| obj.instance_id == thermal_conduit_actor_obj_id)
+            .and_then(|obj| obj.property_data.as_actor_mut())
+            .unwrap()
+            .active = 1;
+    } else if version == Version::Pal || version == Version::NtscTrilogy {
+        let flags = &mut area.layer_flags.flags;
+        *flags |= 1 << 6; // Turn on "Thermal Target"
+    }
 
     Ok(())
 }
@@ -2143,15 +2159,20 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
+    if version == Version::NtscTrilogy {
+        return Ok(())
+    }
+
     macro_rules! symbol_addr {
         ($sym:tt, $version:expr) => {
             {
                 let s = mp1_symbol!($sym);
                 match &$version {
-                    Version::Ntsc0_00 => s.addr_0_00,
-                    Version::Ntsc0_01 => s.addr_0_01,
-                    Version::Ntsc0_02 => s.addr_0_02,
-                    Version::Pal      => s.addr_pal,
+                    Version::Ntsc0_00    => s.addr_0_00,
+                    Version::Ntsc0_01    => s.addr_0_01,
+                    Version::Ntsc0_02    => s.addr_0_02,
+                    Version::Pal         => s.addr_pal,
+                    Version::NtscTrilogy => s.addr_trilogy_ntsc,
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -2323,6 +2344,7 @@ fn patch_dol<'r>(
             let map_str = generated::REL_LOADER_PAL_MAP;
             (loader_bytes, map_str)
         },
+        Version::NtscTrilogy => unreachable!(),
     };
 
     let mut rel_loader = rel_loader_bytes.to_vec();
@@ -2493,6 +2515,7 @@ enum Version
     Ntsc0_01,
     Ntsc0_02,
     Pal,
+    NtscTrilogy,
 }
 
 impl fmt::Display for Version
@@ -2500,10 +2523,11 @@ impl fmt::Display for Version
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
         match self {
-            Version::Ntsc0_00 => write!(f, "1.00"),
-            Version::Ntsc0_01 => write!(f, "1.01"),
-            Version::Ntsc0_02 => write!(f, "1.02"),
-            Version::Pal      => write!(f, "pal"),
+            Version::Ntsc0_00    => write!(f, "1.00"),
+            Version::Ntsc0_01    => write!(f, "1.01"),
+            Version::Ntsc0_02    => write!(f, "1.02"),
+            Version::Pal         => write!(f, "pal"),
+            Version::NtscTrilogy => write!(f, "trilogy_ntsc"),
         }
     }
 }
@@ -2520,6 +2544,8 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
+    writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
+    writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
@@ -2531,7 +2557,11 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
         (b"GM8E01", 0, 1) => Version::Ntsc0_01,
         (b"GM8E01", 0, 2) => Version::Ntsc0_02,
         (b"GM8P01", 0, 0) => Version::Pal,
-        _ => Err("The input ISO doesn't appear to be NTSC-US or PAL Metroid Prime.".to_string())?
+        (b"R3ME01", 0, 0) => Version::NtscTrilogy,
+        _ => Err(concat!(
+                "The input ISO doesn't appear to be NTSC-US, PAL Metroid Prime, ",
+                "or NTSC-US Metroid Prime Trilogy."
+            ))?
     };
     if gc_disc.find_file("randomprime.txt").is_some() {
         Err(concat!("The input ISO has already been randomized once before. ",
@@ -2547,12 +2577,13 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    if version != Version::Ntsc0_01 && version != Version::Pal {
+    if version != Version::Ntsc0_01 && version != Version::Pal && version != Version::NtscTrilogy {
         let patches_rel_bytes = match version {
-            Version::Ntsc0_00 => generated::PATCHES_100_REL,
-            Version::Ntsc0_01 => unreachable!(),
-            Version::Ntsc0_02 => generated::PATCHES_102_REL,
-            Version::Pal      => generated::PATCHES_PAL_REL,
+            Version::Ntsc0_00    => generated::PATCHES_100_REL,
+            Version::Ntsc0_01    => unreachable!(),
+            Version::Ntsc0_02    => generated::PATCHES_102_REL,
+            Version::Pal         => generated::PATCHES_PAL_REL,
+            Version::NtscTrilogy => unreachable!(),
         };
         gc_disc.add_file(
             "patches.rel",
@@ -2746,6 +2777,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 config.staggered_suit_damage,
             )
         );
+
         patcher.add_scly_patch(
             resource_info!("01_intro_hanger.MREA").into(),
             move |_ps, area| patch_frigate_teleporter(area, spawn_room)
@@ -2848,10 +2880,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     );
     patcher.add_scly_patch(
         resource_info!("10_ice_research_a.MREA").into(),
-        patch_research_lab_hydra_barrier);
+        patch_research_lab_hydra_barrier
+    );
     patcher.add_scly_patch(
         resource_info!("12_ice_research_b.MREA").into(),
-        patch_lab_aether_cutscene_trigger
+        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(),
@@ -2874,6 +2907,17 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patch_main_quarry_barrier
     );
 
+    if version == Version::NtscTrilogy {
+        patcher.add_scly_patch(
+            resource_info!("04_mines_pillar.MREA").into(),
+            patch_ore_processing_destructible_rock_pal
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_destructible_rock_pal
+        );
+    }
+
     if version == Version::Ntsc0_02 {
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
@@ -2886,10 +2930,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("19_hive_totem.MREA").into(),
             patch_hive_totem_boss_trigger_0_02
-        );
-        patcher.add_scly_patch(
-            resource_info!("05_ice_shorelines.MREA").into(),
-            patch_ruined_courtyard_thermal_conduits_0_02
         );
     }
 
@@ -2905,6 +2945,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
             patch_main_quarry_door_lock_pal
+        );
+    }
+
+    if version != Version::Ntsc0_00 && version != Version::Ntsc0_01 {
+        patcher.add_scly_patch(
+            resource_info!("05_ice_shorelines.MREA").into(),
+            move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
         );
     }
 
