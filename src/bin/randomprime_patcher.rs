@@ -140,6 +140,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("main-menu-message")
             .hidden(true)
             .takes_value(true))
+        .arg(Arg::with_name("show starting items")
+            .long("show-starting-items")
+            .hidden(true))
         .arg(Arg::with_name("change starting items")
             .long("starting-items")
             .hidden(true)
@@ -224,6 +227,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         starting_items: matches.value_of("change starting items")
                                 .map(|s| StartingItems::from_u64(s.parse().unwrap()))
                                 .unwrap_or_default(),
+        show_starting_items: matches.is_present("show starting items"),
 
         comment: matches.value_of("text file comment").unwrap_or("").to_string(),
         main_menu_message: matches.value_of("main menu message").unwrap_or("").to_string(),

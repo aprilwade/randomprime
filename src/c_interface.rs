@@ -62,6 +62,8 @@ struct Config
 
     starting_items: Option<StartingItemsWrapper>,
     #[serde(default)]
+    show_starting_items: bool,
+    #[serde(default)]
     comment: String,
     #[serde(default)]
     main_menu_message: String,
@@ -240,6 +242,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         flaahgra_music_files,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
+        show_starting_items: config.show_starting_items,
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 
