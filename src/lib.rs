@@ -32,6 +32,7 @@ pub mod c_interface;
 pub mod gcz_writer;
 pub mod ciso_writer;
 pub mod dol_patcher;
+pub mod starting_items;
 
 pub trait GcDiscLookupExtensions<'a>
 {

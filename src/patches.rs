@@ -24,6 +24,7 @@ use crate::{
     reader_writer,
     patcher::{PatcherState, PrimePatcher},
     structs,
+    starting_items::StartingItems,
     GcDiscLookupExtensions,
     ResourceData,
 };
@@ -2030,107 +2031,16 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
 
 fn patch_starting_pickups(
     area: &mut mlvl_wrapper::MlvlArea,
-    mut starting_items: u64,
-    debug_print: bool,
+    starting_items: &StartingItems,
 ) -> Result<(), String>
 {
 
     let scly = area.mrea().scly_section_mut();
-    let mut first = debug_print;
-    macro_rules! print_maybe {
-        ($first:ident, $($tts:tt)*) => {
-            if $first {
-                println!($($tts)*);
-            }
-
-        };
-    }
     for layer in scly.layers.iter_mut() {
         for obj in layer.objects.iter_mut() {
-            let spawn_point = if let Some(spawn_point) = obj.property_data.as_spawn_point_mut() {
-                spawn_point
-            } else {
-                continue;
-            };
-
-            let mut fetch_bits = move |bits: u8| {
-                let ret = starting_items & ((1 << bits) - 1);
-                starting_items >>= bits;
-                ret as u32
-            };
-
-            print_maybe!(first, "Starting pickups set:");
-
-            spawn_point.scan_visor = fetch_bits(1);
-            print_maybe!(first, "    scan_visor: {}", spawn_point.scan_visor);
-
-            spawn_point.missiles = fetch_bits(8);
-            print_maybe!(first, "    missiles: {}", spawn_point.missiles);
-
-            spawn_point.energy_tanks = fetch_bits(4);
-            print_maybe!(first, "    energy_tanks: {}", spawn_point.energy_tanks);
-
-            spawn_point.power_bombs = fetch_bits(4);
-            print_maybe!(first, "    power_bombs: {}", spawn_point.power_bombs);
-
-            spawn_point.wave = fetch_bits(1);
-            print_maybe!(first, "    wave: {}", spawn_point.wave);
-
-            spawn_point.ice = fetch_bits(1);
-            print_maybe!(first, "    ice: {}", spawn_point.ice);
-
-            spawn_point.plasma = fetch_bits(1);
-            print_maybe!(first, "    plasma: {}", spawn_point.plasma);
-
-            spawn_point.charge = fetch_bits(1);
-            print_maybe!(first, "    charge: {}", spawn_point.charge);
-
-            spawn_point.morph_ball = fetch_bits(1);
-            print_maybe!(first, "    morph_ball: {}", spawn_point.morph_ball);
-
-            spawn_point.bombs = fetch_bits(1);
-            print_maybe!(first, "    bombs: {}", spawn_point.bombs);
-
-            spawn_point.spider_ball = fetch_bits(1);
-            print_maybe!(first, "    spider_ball: {}", spawn_point.spider_ball);
-
-            spawn_point.boost_ball = fetch_bits(1);
-            print_maybe!(first, "    boost_ball: {}", spawn_point.boost_ball);
-
-            spawn_point.varia_suit = fetch_bits(1);
-            print_maybe!(first, "    varia_suit: {}", spawn_point.varia_suit);
-
-            spawn_point.gravity_suit = fetch_bits(1);
-            print_maybe!(first, "    gravity_suit: {}", spawn_point.gravity_suit);
-
-            spawn_point.phazon_suit = fetch_bits(1);
-            print_maybe!(first, "    phazon_suit: {}", spawn_point.phazon_suit);
-
-            spawn_point.thermal_visor = fetch_bits(1);
-            print_maybe!(first, "    thermal_visor: {}", spawn_point.thermal_visor);
-
-            spawn_point.xray= fetch_bits(1);
-            print_maybe!(first, "    xray: {}", spawn_point.xray);
-
-            spawn_point.space_jump = fetch_bits(1);
-            print_maybe!(first, "    space_jump: {}", spawn_point.space_jump);
-
-            spawn_point.grapple = fetch_bits(1);
-            print_maybe!(first, "    grapple: {}", spawn_point.grapple);
-
-            spawn_point.super_missile = fetch_bits(1);
-            print_maybe!(first, "    super_missile: {}", spawn_point.super_missile);
-
-            spawn_point.wavebuster = fetch_bits(1);
-            print_maybe!(first, "    wavebuster: {}", spawn_point.wavebuster);
-
-            spawn_point.ice_spreader = fetch_bits(1);
-            print_maybe!(first, "    ice_spreader: {}", spawn_point.ice_spreader);
-
-            spawn_point.flamethrower = fetch_bits(1);
-            print_maybe!(first, "    flamethrower: {}", spawn_point.flamethrower);
-
-            first = false;
+            if let Some(spawn_point) = obj.property_data.as_spawn_point_mut() {
+                starting_items.update_spawn_point(spawn_point);
+            }
         }
     }
     Ok(())
@@ -2491,7 +2401,7 @@ pub struct ParsedConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
-    pub starting_items: Option<u64>,
+    pub starting_items: StartingItems,
     pub comment: String,
     pub main_menu_message: String,
 
@@ -2789,16 +2699,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
     )?;
 
-    let (starting_items, print_sis) = if let Some(starting_items) = config.starting_items {
-        (starting_items, true)
-    } else {
-        (1, false)
-    };
-    patcher.add_scly_patch(
-        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
-        move |_ps, area| patch_starting_pickups(area, starting_items, print_sis)
-    );
-
     const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
         resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
         resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
@@ -2850,6 +2750,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_resource_patch(
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
+    );
+
+    let starting_items = config.starting_items.clone();
+    patcher.add_scly_patch(
+        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
+        move |_ps, area| patch_starting_pickups(
+            area,
+            &starting_items,
+        )
     );
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
@@ -2981,4 +2890,3 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.run(gc_disc)?;
     Ok(())
 }
-

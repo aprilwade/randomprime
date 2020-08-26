@@ -2,6 +2,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::patches;
+use crate::starting_items::StartingItems;
 
 use std::{
     cell::Cell,
@@ -59,13 +60,32 @@ struct Config
     #[serde(default)]
     keep_fmvs: bool,
 
-    starting_items: Option<u64>,
+    starting_items: Option<StartingItemsWrapper>,
     #[serde(default)]
     comment: String,
     #[serde(default)]
     main_menu_message: String,
 
     banner: Option<ConfigBanner>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum StartingItemsWrapper
+{
+    Int(u64),
+    Struct(StartingItems),
+}
+
+impl Into<StartingItems> for StartingItemsWrapper
+{
+    fn into(self) -> StartingItems
+    {
+        match self {
+            StartingItemsWrapper::Struct(s) => s,
+            StartingItemsWrapper::Int(i) => StartingItems::from_u64(i),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -219,7 +239,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
         flaahgra_music_files,
 
-        starting_items: config.starting_items,
+        starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 
