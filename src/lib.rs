@@ -32,6 +32,7 @@ pub mod c_interface;
 pub mod gcz_writer;
 pub mod ciso_writer;
 pub mod dol_patcher;
+pub mod starting_items;
 
 pub trait GcDiscLookupExtensions<'a>
 {
@@ -372,6 +373,7 @@ pub mod custom_asset_ids {
         SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
         SHINY_MISSILE_SCAN_STRG,
         SHINY_MISSILE_SCAN,
+        STARTING_ITEMS_HUDMEMO_STRG,
 
         SKIP_HUDMEMO_STRG_START,
         SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 38,

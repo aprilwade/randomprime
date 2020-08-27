@@ -24,6 +24,7 @@ use crate::{
     reader_writer,
     patcher::{PatcherState, PrimePatcher},
     structs,
+    starting_items::StartingItems,
     GcDiscLookupExtensions,
     ResourceData,
 };
@@ -59,9 +60,10 @@ const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 // When changing a pickup, we need to give the room a copy of the resources/
 // assests used by the pickup. Create a cache of all the resources needed by
 // any pickup.
-fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
+fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>, starting_items: &StartingItems)
     -> HashMap<(u32, FourCC), structs::Resource<'r>>
 {
+
     let mut looking_for: HashSet<_> = PickupType::iter()
         .flat_map(|pt| pt.dependencies().iter().cloned())
         .chain(PickupType::iter().map(|pt| (pt.hudmemo_strg(), b"STRG".into())))
@@ -152,16 +154,126 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>)
             "&just=center;Shiny Missile acquired!\0".to_owned(),
         ])),
     ));
+    new_assets.push(pickup_meta::build_resource(
+        custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
+        structs::ResourceKind::Strg(create_starting_items_hud_memo_strg(starting_items)),
+    ));
+
     for res in new_assets {
         let key = (res.file_id, res.fourcc());
-        if looking_for.remove(&key) {
-            assert!(found.insert(key, res).is_none());
-        }
+        looking_for.remove(&key);
+        assert!(found.insert(key, res).is_none());
     }
 
     assert!(looking_for.is_empty());
 
     found
+}
+
+fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> structs::Strg<'r>
+{
+    let mut items = vec![];
+
+    if starting_items.scan_visor {
+        items.push("Scan Visor");
+    }
+
+    let missiles_text: String;
+    if starting_items.missiles > 1 {
+        missiles_text = format!("{} Missiles", starting_items.missiles);
+        items.push(&missiles_text[..]);
+    }
+
+    let energy_tanks_text: String;
+    if starting_items.energy_tanks >= 1 {
+        let text = if starting_items.energy_tanks == 1 {
+            "1 Energy Tank"
+        } else {
+            energy_tanks_text = format!("{} Energy Tanks", starting_items.energy_tanks);
+            &energy_tanks_text[..]
+        };
+        items.push(text);
+    }
+
+    let power_bombs_text: String;
+    if starting_items.power_bombs >= 1 {
+        let text = if starting_items.power_bombs == 1 {
+            "1 Power Bomb"
+        } else {
+            power_bombs_text = format!("{} Power Bombs", starting_items.power_bombs);
+            &power_bombs_text
+        };
+        items.push(text);
+    }
+
+    if starting_items.wave {
+        items.push("Wave Beam");
+    }
+    if starting_items.ice {
+        items.push("Ice Beam");
+    }
+    if starting_items.plasma {
+        items.push("Plasma Beam");
+    }
+    if starting_items.charge {
+        items.push("Charge Beam");
+    }
+    if starting_items.morph_ball {
+        items.push("Morph Ball");
+    }
+    if starting_items.bombs {
+        items.push("Morph Ball Bombs");
+    }
+    if starting_items.spider_ball {
+        items.push("Spider Ball");
+    }
+    if starting_items.boost_ball {
+        items.push("Boost Ball");
+    }
+    if starting_items.varia_suit {
+        items.push("Varia Suit");
+    }
+    if starting_items.gravity_suit {
+        items.push("Gravity Suit");
+    }
+    if starting_items.phazon_suit {
+        items.push("Phazon Suit");
+    }
+    if starting_items.thermal_visor {
+        items.push("Thermal Visor");
+    }
+    if starting_items.xray {
+        items.push("XRay Visor");
+    }
+    if starting_items.space_jump {
+        items.push("Space Jump Boots");
+    }
+    if starting_items.grapple {
+        items.push("Grapple Beam");
+    }
+    if starting_items.super_missile {
+        items.push("Super Missile");
+    }
+    if starting_items.wavebuster {
+        items.push("Wavebuster");
+    }
+    if starting_items.ice_spreader {
+        items.push("Ice Spreader");
+    }
+    if starting_items.flamethrower {
+        items.push("Flamethrower");
+    }
+
+    let mut items_arr = vec![];
+    for (i, item) in items.chunks(11).enumerate() {
+        if i == 0 {
+            items_arr.push(format!("&just=center;Starting Items : {}\0", item.join(", ")).to_owned());
+        } else {
+            items_arr.push(format!("&just=center;{}\0", item.join(", ")).to_owned());
+        }
+    }
+
+    structs::Strg::from_strings(items_arr)
 }
 
 fn create_suit_icon_cmdl_and_ancs<'r>(
@@ -2028,110 +2140,117 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
 }
 
 
-fn patch_starting_pickups(
-    area: &mut mlvl_wrapper::MlvlArea,
-    mut starting_items: u64,
-    debug_print: bool,
+fn patch_starting_pickups<'r>(
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    starting_items: &StartingItems,
+    show_starting_items: bool,
+    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 ) -> Result<(), String>
 {
+    let room_id = area.mlvl_area.internal_id;
+    let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
+
+    let needs_starting_items_msg = show_starting_items
+                                   && starting_items != &StartingItems::default();
+    if needs_starting_items_msg {
+        // Turn on "Randomizer - Starting Items popup Layer"
+        area.layer_flags.flags |= 1 << layer_count;
+        area.add_layer(b"Randomizer - Starting Items popup Layer\0".as_cstr());
+    }
 
     let scly = area.mrea().scly_section_mut();
-    let mut first = debug_print;
-    macro_rules! print_maybe {
-        ($first:ident, $($tts:tt)*) => {
-            if $first {
-                println!($($tts)*);
-            }
 
-        };
+    let mut next_object_id = 0;
+
+    for obj in scly.layers.as_mut_vec()[0].objects.iter_mut() {
+        if next_object_id < obj.instance_id {
+            next_object_id = obj.instance_id;
+        }
     }
+
+    let timer_starting_items_popup_id = (next_object_id + 1) + (layer_count << 26);
+    let hud_memo_starting_items_popup_id = (next_object_id + 2) + (layer_count << 26);
+    let special_function_starting_items_popup_id = (next_object_id + 3) + (layer_count << 26);
+
     for layer in scly.layers.iter_mut() {
         for obj in layer.objects.iter_mut() {
-            let spawn_point = if let Some(spawn_point) = obj.property_data.as_spawn_point_mut() {
-                spawn_point
-            } else {
-                continue;
-            };
-
-            let mut fetch_bits = move |bits: u8| {
-                let ret = starting_items & ((1 << bits) - 1);
-                starting_items >>= bits;
-                ret as u32
-            };
-
-            print_maybe!(first, "Starting pickups set:");
-
-            spawn_point.scan_visor = fetch_bits(1);
-            print_maybe!(first, "    scan_visor: {}", spawn_point.scan_visor);
-
-            spawn_point.missiles = fetch_bits(8);
-            print_maybe!(first, "    missiles: {}", spawn_point.missiles);
-
-            spawn_point.energy_tanks = fetch_bits(4);
-            print_maybe!(first, "    energy_tanks: {}", spawn_point.energy_tanks);
-
-            spawn_point.power_bombs = fetch_bits(4);
-            print_maybe!(first, "    power_bombs: {}", spawn_point.power_bombs);
-
-            spawn_point.wave = fetch_bits(1);
-            print_maybe!(first, "    wave: {}", spawn_point.wave);
-
-            spawn_point.ice = fetch_bits(1);
-            print_maybe!(first, "    ice: {}", spawn_point.ice);
-
-            spawn_point.plasma = fetch_bits(1);
-            print_maybe!(first, "    plasma: {}", spawn_point.plasma);
-
-            spawn_point.charge = fetch_bits(1);
-            print_maybe!(first, "    charge: {}", spawn_point.charge);
-
-            spawn_point.morph_ball = fetch_bits(1);
-            print_maybe!(first, "    morph_ball: {}", spawn_point.morph_ball);
-
-            spawn_point.bombs = fetch_bits(1);
-            print_maybe!(first, "    bombs: {}", spawn_point.bombs);
-
-            spawn_point.spider_ball = fetch_bits(1);
-            print_maybe!(first, "    spider_ball: {}", spawn_point.spider_ball);
-
-            spawn_point.boost_ball = fetch_bits(1);
-            print_maybe!(first, "    boost_ball: {}", spawn_point.boost_ball);
-
-            spawn_point.varia_suit = fetch_bits(1);
-            print_maybe!(first, "    varia_suit: {}", spawn_point.varia_suit);
-
-            spawn_point.gravity_suit = fetch_bits(1);
-            print_maybe!(first, "    gravity_suit: {}", spawn_point.gravity_suit);
-
-            spawn_point.phazon_suit = fetch_bits(1);
-            print_maybe!(first, "    phazon_suit: {}", spawn_point.phazon_suit);
-
-            spawn_point.thermal_visor = fetch_bits(1);
-            print_maybe!(first, "    thermal_visor: {}", spawn_point.thermal_visor);
-
-            spawn_point.xray= fetch_bits(1);
-            print_maybe!(first, "    xray: {}", spawn_point.xray);
-
-            spawn_point.space_jump = fetch_bits(1);
-            print_maybe!(first, "    space_jump: {}", spawn_point.space_jump);
-
-            spawn_point.grapple = fetch_bits(1);
-            print_maybe!(first, "    grapple: {}", spawn_point.grapple);
-
-            spawn_point.super_missile = fetch_bits(1);
-            print_maybe!(first, "    super_missile: {}", spawn_point.super_missile);
-
-            spawn_point.wavebuster = fetch_bits(1);
-            print_maybe!(first, "    wavebuster: {}", spawn_point.wavebuster);
-
-            spawn_point.ice_spreader = fetch_bits(1);
-            print_maybe!(first, "    ice_spreader: {}", spawn_point.ice_spreader);
-
-            spawn_point.flamethrower = fetch_bits(1);
-            print_maybe!(first, "    flamethrower: {}", spawn_point.flamethrower);
-
-            first = false;
+            if let Some(spawn_point) = obj.property_data.as_spawn_point_mut() {
+                starting_items.update_spawn_point(spawn_point);
+            }
         }
+    }
+
+    if needs_starting_items_msg {
+        scly.layers.as_mut_vec()[layer_count as usize].objects.as_mut_vec().extend_from_slice(
+            &[
+                structs::SclyObject {
+                    instance_id: timer_starting_items_popup_id,
+                    property_data: structs::SclyProperty::Timer(structs::Timer {
+                        name: b"Starting Items popup timer\0".as_cstr(),
+
+                        start_time: 0.025,
+                        max_random_add: 0f32,
+                        reset_to_zero: 0,
+                        start_immediately: 1,
+                        active: 1,
+                    }),
+                    connections: vec![
+                        structs::Connection {
+                            state: structs::ConnectionState::ZERO,
+                            message: structs::ConnectionMsg::SET_TO_ZERO,
+                            target_object_id: hud_memo_starting_items_popup_id,
+                        },
+                        structs::Connection {
+                            state: structs::ConnectionState::ZERO,
+                            message: structs::ConnectionMsg::DECREMENT,
+                            target_object_id: special_function_starting_items_popup_id,
+                        },
+                    ].into(),
+                },
+                structs::SclyObject {
+                    instance_id: hud_memo_starting_items_popup_id,
+                    connections: vec![].into(),
+                    property_data: structs::SclyProperty::HudMemo(structs::HudMemo {
+                        name: b"Starting Items popup hudmemo\0".as_cstr(),
+
+                        first_message_timer: 0.5,
+                        unknown: 1,
+                        memo_type: 1,
+                        strg: custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
+                        active: 1,
+                    }),
+                },
+                structs::SclyObject {
+                    instance_id: special_function_starting_items_popup_id,
+                    connections: vec![].into(),
+                    property_data: structs::SclyProperty::SpecialFunction(
+                        structs::SpecialFunction {
+                            name: b"Disable Starting Items popup Layer\0".as_cstr(),
+                            position: [0., 0., 0.].into(),
+                            rotation: [0., 0., 0.].into(),
+                            type_: 16,
+                            unknown0: b"\0".as_cstr(),
+                            unknown1: 0.,
+                            unknown2: 0.,
+                            unknown3: 0.,
+                            layer_change_room_id: room_id,
+                            layer_change_layer_id: layer_count,
+                            item_id: 0,
+                            unknown4: 1,
+                            unknown5: 0.,
+                            unknown6: 0xFFFFFFFF,
+                            unknown7: 0xFFFFFFFF,
+                            unknown8: 0xFFFFFFFF,
+                        }
+                    ),
+                },
+            ]
+        );
+
+        area.add_dependencies(&pickup_resources, 0, iter::once(structs::Dependency {
+            asset_id: custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
+            asset_type: FourCC::from_bytes(b"STRG"),
+        }));
     }
     Ok(())
 }
@@ -2491,7 +2610,8 @@ pub struct ParsedConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
-    pub starting_items: Option<u64>,
+    pub starting_items: StartingItems,
+    pub show_starting_items: bool,
     pub comment: String,
     pub main_menu_message: String,
 
@@ -2639,7 +2759,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let mut pickup_resources = collect_pickup_resources(gc_disc);
+    let mut pickup_resources = collect_pickup_resources(gc_disc, &config.starting_items);
     if config.skip_hudmenus {
         add_skip_hudmemos_strgs(&mut pickup_resources);
     }
@@ -2789,16 +2909,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
     )?;
 
-    let (starting_items, print_sis) = if let Some(starting_items) = config.starting_items {
-        (starting_items, true)
-    } else {
-        (1, false)
-    };
-    patcher.add_scly_patch(
-        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
-        move |_ps, area| patch_starting_pickups(area, starting_items, print_sis)
-    );
-
     const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
         resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
         resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
@@ -2850,6 +2960,17 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_resource_patch(
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
+    );
+
+    let starting_items = config.starting_items.clone();
+    patcher.add_scly_patch(
+        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
+        move |_ps, area| patch_starting_pickups(
+            area,
+            &starting_items,
+            config.show_starting_items,
+            &pickup_resources,
+        )
     );
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
@@ -2981,4 +3102,3 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.run(gc_disc)?;
     Ok(())
 }
-
