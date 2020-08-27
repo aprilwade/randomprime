@@ -1820,12 +1820,42 @@ fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::Ml
     let layer = &mut scly.layers.as_mut_vec()[4];
 
     let forcefield_actor_obj_id = 0x100201DA;
-
-    let forcefield_actor_obj = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == forcefield_actor_obj_id)
-        .and_then(|obj| obj.property_data.as_actor_mut())
-        .unwrap();
-    forcefield_actor_obj.actor_params.visor_params.target_passthrough = 1;
+    let turn_off_barrier_special_function_obj_id = 0x202B5;
+    let turn_off_barrier_trigger_obj_id = 0x1002044D;
+    
+    layer.objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: turn_off_barrier_trigger_obj_id,
+            property_data: structs::SclyProperty::Trigger(structs::Trigger {
+                    name: b"Trigger - Disable Main Quarry barrier\0".as_cstr(),
+                    position: [82.412056, 9.354454, 2.807631].into(),
+                    scale: [10.0, 5.0, 7.0].into(),
+                    damage_info: structs::structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    unknown0: [0.0, 0.0, 0.0].into(),
+                    unknown1: 1,
+                    active: 1,
+                    unknown2: 1,
+                    unknown3: 0
+                }),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: forcefield_actor_obj_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::DECREMENT,
+                    target_object_id: turn_off_barrier_special_function_obj_id,
+                },
+            ].into(),
+        }
+    );
 
     Ok(())
 }
