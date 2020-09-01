@@ -1,6 +1,6 @@
 use auto_struct_macros::auto_struct;
 
-use reader_writer::CStr;
+use reader_writer::{CStr, CStrConversionExtension};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 use crate::SclyPropertyData;
@@ -40,4 +40,29 @@ pub struct SpecialFunction<'r>
 impl<'r> SclyPropertyData for SpecialFunction<'r>
 {
     const OBJECT_TYPE: u8 = 0x3A;
+}
+
+impl<'r> SpecialFunction<'r>
+{
+    pub fn layer_change_fn(name: CStr<'r>, room_id: u32, layer_num: u32) -> Self
+    {
+        SpecialFunction {
+            name: name,
+            position: [0., 0., 0.].into(),
+            rotation: [0., 0., 0.].into(),
+            type_: 16,
+            unknown0: b"\0".as_cstr(),
+            unknown1: 0.,
+            unknown2: 0.,
+            unknown3: 0.,
+            layer_change_room_id: room_id,
+            layer_change_layer_id: layer_num,
+            item_id: 0,
+            unknown4: 1,
+            unknown5: 0.,
+            unknown6: 0xFFFFFFFF,
+            unknown7: 0xFFFFFFFF,
+            unknown8: 0xFFFFFFFF,
+        }
+    }
 }

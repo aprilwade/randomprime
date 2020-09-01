@@ -108,24 +108,11 @@ fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     structs::SclyObject {
         instance_id,
         connections: vec![].into(),
-        property_data: structs::SpecialFunction {
-            name: b"Artifact Layer Switch\0".as_cstr(),
-            position: [0., 0., 0.].into(),
-            rotation: [0., 0., 0.].into(),
-            type_: 16,
-            unknown0: b"\0".as_cstr(),
-            unknown1: 0.,
-            unknown2: 0.,
-            unknown3: 0.,
-            layer_change_room_id: 0xCD2B0EA2,
-            layer_change_layer_id: layer,
-            item_id: 0,
-            unknown4: 1,
-            unknown5: 0.,
-            unknown6: 0xFFFFFFFF,
-            unknown7: 0xFFFFFFFF,
-            unknown8: 0xFFFFFFFF,
-        }.into(),
+        property_data: structs::SpecialFunction::layer_change_fn(
+            b"Artifact Layer Switch\0".as_cstr(),
+            0xCD2B0EA2,
+            layer
+        ).into(),
     }
 }
 
@@ -867,24 +854,11 @@ fn patch_sunchamber_prevent_wild_before_flaahgra(
     scly.layers.as_mut_vec()[1].objects.as_mut_vec().push(structs::SclyObject {
         instance_id: enable_sun_tower_layer_id,
         connections: vec![].into(),
-        property_data: structs::SpecialFunction {
-            name: b"Enable Sun Tower Layer Change Trigger\0".as_cstr(),
-            position: [0., 0., 0.].into(),
-            rotation: [0., 0., 0.].into(),
-            type_: 16,
-            unknown0: b"\0".as_cstr(),
-            unknown1: 0.,
-            unknown2: 0.,
-            unknown3: 0.,
-            layer_change_room_id: 0xcf4c7aa5,
-            layer_change_layer_id: 1,
-            item_id: 0,
-            unknown4: 1,
-            unknown5: 0.,
-            unknown6: 0xFFFFFFFF,
-            unknown7: 0xFFFFFFFF,
-            unknown8: 0xFFFFFFFF,
-        }.into(),
+        property_data: structs::SpecialFunction::layer_change_fn(
+            b"Enable Sun Tower Layer Change Trigger\0".as_cstr(),
+            0xcf4c7aa5,
+            1,
+        ).into(),
     });
     let flaahgra_dead_relay = scly.layers.as_mut_vec()[1].objects.iter_mut()
         .find(|obj| obj.instance_id == 0x42500D4)
@@ -995,24 +969,11 @@ fn patch_research_lab_aether_exploding_wall<'r>(
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: id,
-        property_data: structs::SpecialFunction {
-            name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
-            position: [0., 0., 0.].into(),
-            rotation: [0., 0., 0.].into(),
-            type_: 16,
-            unknown0: b"\0".as_cstr(),
-            unknown1: 0.0,
-            unknown2: 0.0,
-            unknown3: 0.0,
-            layer_change_room_id: 0x354889CE,
-            layer_change_layer_id: 3,
-            item_id: 0,
-            unknown4: 1,
-            unknown5: 0.0,
-            unknown6: 0xFFFFFFFF,
-            unknown7: 0xFFFFFFFF,
-            unknown8: 0xFFFFFFFF
-        }.into(),
+        property_data: structs::SpecialFunction::layer_change_fn(
+            b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
+            0x354889CE,
+            3,
+        ).into(),
         connections: vec![].into(),
     });
     Ok(())
@@ -1872,24 +1833,11 @@ fn patch_starting_pickups<'r>(
                 structs::SclyObject {
                     instance_id: special_function_starting_items_popup_id,
                     connections: vec![].into(),
-                    property_data: structs::SpecialFunction {
-                        name: b"Disable Starting Items popup Layer\0".as_cstr(),
-                        position: [0., 0., 0.].into(),
-                        rotation: [0., 0., 0.].into(),
-                        type_: 16,
-                        unknown0: b"\0".as_cstr(),
-                        unknown1: 0.,
-                        unknown2: 0.,
-                        unknown3: 0.,
-                        layer_change_room_id: room_id,
-                        layer_change_layer_id: layer_count,
-                        item_id: 0,
-                        unknown4: 1,
-                        unknown5: 0.,
-                        unknown6: 0xFFFFFFFF,
-                        unknown7: 0xFFFFFFFF,
-                        unknown8: 0xFFFFFFFF,
-                    }.into(),
+                    property_data: structs::SpecialFunction::layer_change_fn(
+                        b"Disable Starting Items popup Layer\0".as_cstr(),
+                        room_id,
+                        layer_count,
+                    ).into(),
                 },
             ]
         );
