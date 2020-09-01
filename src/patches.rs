@@ -108,26 +108,24 @@ fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     structs::SclyObject {
         instance_id,
         connections: vec![].into(),
-        property_data: structs::SclyProperty::SpecialFunction(
-            structs::SpecialFunction {
-                name: b"Artifact Layer Switch\0".as_cstr(),
-                position: [0., 0., 0.].into(),
-                rotation: [0., 0., 0.].into(),
-                type_: 16,
-                unknown0: b"\0".as_cstr(),
-                unknown1: 0.,
-                unknown2: 0.,
-                unknown3: 0.,
-                layer_change_room_id: 0xCD2B0EA2,
-                layer_change_layer_id: layer,
-                item_id: 0,
-                unknown4: 1,
-                unknown5: 0.,
-                unknown6: 0xFFFFFFFF,
-                unknown7: 0xFFFFFFFF,
-                unknown8: 0xFFFFFFFF,
-            }
-        ),
+        property_data: structs::SpecialFunction {
+            name: b"Artifact Layer Switch\0".as_cstr(),
+            position: [0., 0., 0.].into(),
+            rotation: [0., 0., 0.].into(),
+            type_: 16,
+            unknown0: b"\0".as_cstr(),
+            unknown1: 0.,
+            unknown2: 0.,
+            unknown3: 0.,
+            layer_change_room_id: 0xCD2B0EA2,
+            layer_change_layer_id: layer,
+            item_id: 0,
+            unknown4: 1,
+            unknown5: 0.,
+            unknown6: 0xFFFFFFFF,
+            unknown7: 0xFFFFFFFF,
+            unknown8: 0xFFFFFFFF,
+        }.into(),
     }
 }
 
@@ -137,10 +135,10 @@ fn post_pickup_relay_template<'r>(instance_id: u32, connections: &'static [struc
     structs::SclyObject {
         instance_id,
         connections: connections.to_owned().into(),
-        property_data: structs::SclyProperty::Relay(structs::Relay {
+        property_data: structs::Relay {
             name: b"Randomizer Post Pickup Relay\0".as_cstr(),
             active: 1,
-        })
+        }.into(),
     }
 }
 
@@ -586,7 +584,7 @@ fn make_elevators_patch<'a>(
                 if let Some(mr_id) = mr_id {
                     layer.objects.as_mut_vec().push(structs::SclyObject {
                         instance_id: ps.fresh_instance_id_range.next().unwrap(),
-                        property_data: structs::SclyProperty::Timer(structs::Timer {
+                        property_data: structs::Timer {
                             name: b"Auto enable elevator\0".as_cstr(),
 
                             start_time: 0.001,
@@ -594,7 +592,7 @@ fn make_elevators_patch<'a>(
                             reset_to_zero: 0,
                             start_immediately: 1,
                             active: 1,
-                        }),
+                        }.into(),
                         connections: vec![
                             structs::Connection {
                                 state: structs::ConnectionState::ZERO,
@@ -663,7 +661,7 @@ fn patch_landing_site_cutscene_triggers(
     }
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: timer_id,
-        property_data: structs::SclyProperty::Timer(structs::Timer {
+        property_data: structs::Timer {
             name: b"Cutscene fixup timer\0".as_cstr(),
 
             start_time: 0.001,
@@ -671,7 +669,7 @@ fn patch_landing_site_cutscene_triggers(
             reset_to_zero: 0,
             start_immediately: 1,
             active: 1,
-        }),
+        }.into(),
         connections: vec![
             structs::Connection {
                 state: structs::ConnectionState::ZERO,
@@ -778,10 +776,10 @@ fn fix_artifact_of_truth_requirements(
                 target_object_id: 1048869,
             },
         ].into(),
-        property_data: structs::SclyProperty::Relay(structs::Relay {
+        property_data: structs::Relay {
             name: b"Relay Show Progress1\0".as_cstr(),
             active: 1,
-        }),
+        }.into(),
     };
     scly.layers.as_mut_vec()[truth_req_layer_id as usize].objects.as_mut_vec().push(new_relay);
 
@@ -869,26 +867,24 @@ fn patch_sunchamber_prevent_wild_before_flaahgra(
     scly.layers.as_mut_vec()[1].objects.as_mut_vec().push(structs::SclyObject {
         instance_id: enable_sun_tower_layer_id,
         connections: vec![].into(),
-        property_data: structs::SclyProperty::SpecialFunction(
-            structs::SpecialFunction {
-                name: b"Enable Sun Tower Layer Change Trigger\0".as_cstr(),
-                position: [0., 0., 0.].into(),
-                rotation: [0., 0., 0.].into(),
-                type_: 16,
-                unknown0: b"\0".as_cstr(),
-                unknown1: 0.,
-                unknown2: 0.,
-                unknown3: 0.,
-                layer_change_room_id: 0xcf4c7aa5,
-                layer_change_layer_id: 1,
-                item_id: 0,
-                unknown4: 1,
-                unknown5: 0.,
-                unknown6: 0xFFFFFFFF,
-                unknown7: 0xFFFFFFFF,
-                unknown8: 0xFFFFFFFF,
-            }
-        ),
+        property_data: structs::SpecialFunction {
+            name: b"Enable Sun Tower Layer Change Trigger\0".as_cstr(),
+            position: [0., 0., 0.].into(),
+            rotation: [0., 0., 0.].into(),
+            type_: 16,
+            unknown0: b"\0".as_cstr(),
+            unknown1: 0.,
+            unknown2: 0.,
+            unknown3: 0.,
+            layer_change_room_id: 0xcf4c7aa5,
+            layer_change_layer_id: 1,
+            item_id: 0,
+            unknown4: 1,
+            unknown5: 0.,
+            unknown6: 0xFFFFFFFF,
+            unknown7: 0xFFFFFFFF,
+            unknown8: 0xFFFFFFFF,
+        }.into(),
     });
     let flaahgra_dead_relay = scly.layers.as_mut_vec()[1].objects.iter_mut()
         .find(|obj| obj.instance_id == 0x42500D4)
@@ -999,25 +995,24 @@ fn patch_research_lab_aether_exploding_wall<'r>(
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: id,
-        property_data: structs::SclyProperty:: SpecialFunction(structs::SpecialFunction {
-                name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
-                position: [0., 0., 0.].into(),
-                rotation: [0., 0., 0.].into(),
-                type_: 16,
-                unknown0: b"\0".as_cstr(),
-                unknown1: 0.0,
-                unknown2: 0.0,
-                unknown3: 0.0,
-                layer_change_room_id: 0x354889CE,
-                layer_change_layer_id: 3,
-                item_id: 0,
-                unknown4: 1,
-                unknown5: 0.0,
-                unknown6: 0xFFFFFFFF,
-                unknown7: 0xFFFFFFFF,
-                unknown8: 0xFFFFFFFF
-            }
-        ),
+        property_data: structs::SpecialFunction {
+            name: b"SpecialFunction - Remove Research Lab Aether wall\0".as_cstr(),
+            position: [0., 0., 0.].into(),
+            rotation: [0., 0., 0.].into(),
+            type_: 16,
+            unknown0: b"\0".as_cstr(),
+            unknown1: 0.0,
+            unknown2: 0.0,
+            unknown3: 0.0,
+            layer_change_room_id: 0x354889CE,
+            layer_change_layer_id: 3,
+            item_id: 0,
+            unknown4: 1,
+            unknown5: 0.0,
+            unknown6: 0xFFFFFFFF,
+            unknown7: 0xFFFFFFFF,
+            unknown8: 0xFFFFFFFF
+        }.into(),
         connections: vec![].into(),
     });
     Ok(())
@@ -1052,22 +1047,22 @@ fn patch_main_ventilation_shaft_section_b_door<'r>(
 
     layer.objects.as_mut_vec().push(structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
-        property_data: structs::SclyProperty::Trigger(structs::Trigger {
-                name: b"Trigger_DoorOpen-component\0".as_cstr(),
-                position: [31.232622, 442.69165, -64.20529].into(),
-                scale: [6.0, 17.0, 6.0].into(),
-                damage_info: structs::structs::DamageInfo {
-                    weapon_type: 0,
-                    damage: 0.0,
-                    radius: 0.0,
-                    knockback_power: 0.0
-                },
-                unknown0: [0.0, 0.0, 0.0].into(),
-                unknown1: 1,
-                active: 1,
-                unknown2: 0,
-                unknown3: 0
-            }),
+        property_data: structs::Trigger {
+            name: b"Trigger_DoorOpen-component\0".as_cstr(),
+            position: [31.232622, 442.69165, -64.20529].into(),
+            scale: [6.0, 17.0, 6.0].into(),
+            damage_info: structs::structs::DamageInfo {
+                weapon_type: 0,
+                damage: 0.0,
+                radius: 0.0,
+                knockback_power: 0.0
+            },
+            unknown0: [0.0, 0.0, 0.0].into(),
+            unknown1: 1,
+            active: 1,
+            unknown2: 0,
+            unknown3: 0
+        }.into(),
         connections: vec![
             structs::Connection {
                 state: structs::ConnectionState::INSIDE,
@@ -1098,125 +1093,125 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     layer.objects.as_mut_vec().extend_from_slice(&[
         structs::SclyObject {
             instance_id: trigger_doorunlock_id,
-            property_data: structs::SclyProperty::DamageableTrigger(structs::DamageableTrigger {
-                    name: b"Trigger_DoorUnlock\0".as_cstr(),
-                    position: [152.232117, 86.451134, 24.472418].into(),
-                    scale: [0.25, 4.5, 4.0].into(),
-                    health_info: structs::structs::HealthInfo {
-                        health: 1.0,
-                        knockback_resistance: 1.0
+            property_data: structs::DamageableTrigger {
+                name: b"Trigger_DoorUnlock\0".as_cstr(),
+                position: [152.232117, 86.451134, 24.472418].into(),
+                scale: [0.25, 4.5, 4.0].into(),
+                health_info: structs::structs::HealthInfo {
+                    health: 1.0,
+                    knockback_resistance: 1.0
+                },
+                damage_vulnerability: structs::structs::DamageVulnerability {
+                    power: 1,           // Normal
+                    ice: 1,             // Normal
+                    wave: 1,            // Normal
+                    plasma: 1,          // Normal
+                    bomb: 1,            // Normal
+                    power_bomb: 1,      // Normal
+                    missile: 2,         // Reflect
+                    boost_ball: 2,      // Reflect
+                    phazon: 1,          // Normal
+                    enemy_weapon0: 3,   // Immune
+                    enemy_weapon1: 2,   // Reflect
+                    enemy_weapon2: 2,   // Reflect
+                    enemy_weapon3: 2,   // Reflect
+                    unknown_weapon0: 2, // Reflect
+                    unknown_weapon1: 2, // Reflect
+                    unknown_weapon2: 1, // Normal
+                    charged_beams: structs::structs::ChargedBeams {
+                        power: 1,       // Normal
+                        ice: 1,         // Normal
+                        wave: 1,        // Normal
+                        plasma: 1,      // Normal
+                        phazon: 1       // Normal
                     },
-                    damage_vulnerability: structs::structs::DamageVulnerability {
-                        power: 1,           // Normal
-                        ice: 1,             // Normal
-                        wave: 1,            // Normal
-                        plasma: 1,          // Normal
-                        bomb: 1,            // Normal
-                        power_bomb: 1,      // Normal
-                        missile: 2,         // Reflect
-                        boost_ball: 2,      // Reflect
-                        phazon: 1,          // Normal
-                        enemy_weapon0: 3,   // Immune
-                        enemy_weapon1: 2,   // Reflect
-                        enemy_weapon2: 2,   // Reflect
-                        enemy_weapon3: 2,   // Reflect
-                        unknown_weapon0: 2, // Reflect
-                        unknown_weapon1: 2, // Reflect
-                        unknown_weapon2: 1, // Normal
-                        charged_beams: structs::structs::ChargedBeams {
-                            power: 1,       // Normal
-                            ice: 1,         // Normal
-                            wave: 1,        // Normal
-                            plasma: 1,      // Normal
-                            phazon: 1       // Normal
-                        },
-                        beam_combos: structs::structs::BeamCombos {
-                            power: 2,       // Reflect
-                            ice: 2,         // Reflect
-                            wave: 2,        // Reflect
-                            plasma: 2,      // Reflect
-                            phazon: 1       // Normal
-                        }
-                    },
-                    unknown0: 3, // Render Side : East
-                    pattern_txtr0: 0x544A9892, // testb.TXTR
-                    pattern_txtr1: 0x544A9892, // testb.TXTR
-                    color_txtr: 0x8A7F3683, // blue.TXTR
-                    lock_on: 0,
-                    active: 1,
-                    visor_params: structs::structs::VisorParameters {
-                        unknown0: 0,
-                        target_passthrough: 0,
-                        unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                    beam_combos: structs::structs::BeamCombos {
+                        power: 2,       // Reflect
+                        ice: 2,         // Reflect
+                        wave: 2,        // Reflect
+                        plasma: 2,      // Reflect
+                        phazon: 1       // Normal
                     }
-                }),
-                connections: vec![
-                    structs::Connection {
-                        state: structs::ConnectionState::REFLECTED_DAMAGE,
-                        message: structs::ConnectionMsg::SET_TO_ZERO,
-                        target_object_id: relay_notice_ineffective_weapon_id,
-                    },
-                    structs::Connection {
-                        state: structs::ConnectionState::DEAD,
-                        message: structs::ConnectionMsg::DEACTIVATE,
-                        target_object_id: actor_doorshield_id,
-                    },
-                    structs::Connection {
-                        state: structs::ConnectionState::MAX_REACHED,
-                        message: structs::ConnectionMsg::ACTIVATE,
-                        target_object_id: actor_doorshield_id,
-                    },
-                    structs::Connection {
-                        state: structs::ConnectionState::DEAD,
-                        message: structs::ConnectionMsg::ACTIVATE,
-                        target_object_id: trigger_dooropen_id,
-                    },
-                    structs::Connection {
-                        state: structs::ConnectionState::DEAD,
-                        message: structs::ConnectionMsg::SET_TO_ZERO,
-                        target_object_id: door_id,
-                    },
-                ].into(),
+                },
+                unknown0: 3, // Render Side : East
+                pattern_txtr0: 0x544A9892, // testb.TXTR
+                pattern_txtr1: 0x544A9892, // testb.TXTR
+                color_txtr: 0x8A7F3683, // blue.TXTR
+                lock_on: 0,
+                active: 1,
+                visor_params: structs::structs::VisorParameters {
+                    unknown0: 0,
+                    target_passthrough: 0,
+                    unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                }
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::REFLECTED_DAMAGE,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: relay_notice_ineffective_weapon_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: actor_doorshield_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::MAX_REACHED,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: actor_doorshield_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: trigger_dooropen_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: door_id,
+                },
+            ].into(),
         },
 
         structs::SclyObject {
             instance_id: relay_unlock_id,
-            property_data: structs::SclyProperty::Relay(structs::Relay {
+            property_data: structs::Relay {
                     name: b"Relay_Unlock\0".as_cstr(),
                     active: 1,
-                }),
-                connections: vec![
-                    structs::Connection {
-                        state: structs::ConnectionState::ZERO,
-                        message: structs::ConnectionMsg::ACTIVATE,
-                        target_object_id: actor_doorshield_id,
-                    },
-                    structs::Connection {
-                        state: structs::ConnectionState::ZERO,
-                        message: structs::ConnectionMsg::ACTIVATE,
-                        target_object_id: trigger_doorunlock_id,
-                    },
-                ].into(),
+                }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: actor_doorshield_id,
+                },
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: trigger_doorunlock_id,
+                },
+            ].into(),
         },
 
         structs::SclyObject {
             instance_id: trigger_dooropen_id,
-            property_data: structs::SclyProperty::Trigger(structs::Trigger {
-                    name: b"Trigger_DoorOpen\0".as_cstr(),
-                    position: [149.35614, 86.567917, 26.471249].into(),
-                    scale: [5.0, 5.0, 8.0].into(),
-                    damage_info: structs::structs::DamageInfo {
-                        weapon_type: 0,
-                        damage: 0.0,
-                        radius: 0.0,
-                        knockback_power: 0.0
-                    },
-                    unknown0: [0.0, 0.0, 0.0].into(),
-                    unknown1: 1,
-                    active: 0,
-                    unknown2: 0,
-                    unknown3: 0
-                }),
+            property_data: structs::Trigger {
+                name: b"Trigger_DoorOpen\0".as_cstr(),
+                position: [149.35614, 86.567917, 26.471249].into(),
+                scale: [5.0, 5.0, 8.0].into(),
+                damage_info: structs::structs::DamageInfo {
+                    weapon_type: 0,
+                    damage: 0.0,
+                    radius: 0.0,
+                    knockback_power: 0.0
+                },
+                unknown0: [0.0, 0.0, 0.0].into(),
+                unknown1: 1,
+                active: 0,
+                unknown2: 0,
+                unknown3: 0
+            }.into(),
             connections: vec![
                 structs::Connection {
                     state: structs::ConnectionState::INSIDE,
@@ -1233,121 +1228,121 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
 
         structs::SclyObject {
             instance_id: actor_doorshield_id,
-            property_data: structs::SclyProperty::Actor(structs::Actor {
-                    name: b"Actor_DoorShield\0".as_cstr(),
-                    position: [151.951187, 86.412575, 24.403177].into(),
-                    rotation: [0.0, 0.0, 0.0].into(),
-                    scale: [1.0, 1.0, 1.0].into(),
-                    unknown0: [0.0, 0.0, 0.0].into(),
-                    scan_offset: [0.0, 0.0, 0.0].into(),
-                    unknown1: 1.0,
-                    unknown2: 0.0,
-                    health_info: structs::structs::HealthInfo {
-                        health: 5.0,
-                        knockback_resistance: 1.0
+            property_data: structs::Actor {
+                name: b"Actor_DoorShield\0".as_cstr(),
+                position: [151.951187, 86.412575, 24.403177].into(),
+                rotation: [0.0, 0.0, 0.0].into(),
+                scale: [1.0, 1.0, 1.0].into(),
+                unknown0: [0.0, 0.0, 0.0].into(),
+                scan_offset: [0.0, 0.0, 0.0].into(),
+                unknown1: 1.0,
+                unknown2: 0.0,
+                health_info: structs::structs::HealthInfo {
+                    health: 5.0,
+                    knockback_resistance: 1.0
+                },
+                damage_vulnerability: structs::structs::DamageVulnerability {
+                    power: 1,           // Normal
+                    ice: 1,             // Normal
+                    wave: 1,            // Normal
+                    plasma: 1,          // Normal
+                    bomb: 1,            // Normal
+                    power_bomb: 1,      // Normal
+                    missile: 1,         // Normal
+                    boost_ball: 1,      // Normal
+                    phazon: 1,          // Normal
+                    enemy_weapon0: 2,   // Reflect
+                    enemy_weapon1: 2,   // Reflect
+                    enemy_weapon2: 2,   // Reflect
+                    enemy_weapon3: 2,   // Reflect
+                    unknown_weapon0: 2, // Reflect
+                    unknown_weapon1: 2, // Reflect
+                    unknown_weapon2: 0, // Double Damage
+                    charged_beams: structs::structs::ChargedBeams {
+                        power: 1,       // Normal
+                        ice: 1,         // Normal
+                        wave: 1,        // Normal
+                        plasma: 1,      // Normal
+                        phazon: 0       // Double Damage
                     },
-                    damage_vulnerability: structs::structs::DamageVulnerability {
-                        power: 1,           // Normal
-                        ice: 1,             // Normal
-                        wave: 1,            // Normal
-                        plasma: 1,          // Normal
-                        bomb: 1,            // Normal
-                        power_bomb: 1,      // Normal
-                        missile: 1,         // Normal
-                        boost_ball: 1,      // Normal
-                        phazon: 1,          // Normal
-                        enemy_weapon0: 2,   // Reflect
-                        enemy_weapon1: 2,   // Reflect
-                        enemy_weapon2: 2,   // Reflect
-                        enemy_weapon3: 2,   // Reflect
-                        unknown_weapon0: 2, // Reflect
-                        unknown_weapon1: 2, // Reflect
-                        unknown_weapon2: 0, // Double Damage
-                        charged_beams: structs::structs::ChargedBeams {
-                            power: 1,       // Normal
-                            ice: 1,         // Normal
-                            wave: 1,        // Normal
-                            plasma: 1,      // Normal
-                            phazon: 0       // Double Damage
-                        },
-                        beam_combos: structs::structs::BeamCombos {
-                            power: 1,       // Normal
-                            ice: 1,         // Normal
-                            wave: 1,        // Normal
-                            plasma: 1,      // Normal
-                            phazon: 0       // Double Damage
-                        }
-                    },
-                    cmdl: 0x0734977A, // blueShield_v1.CMDL
-                    ancs: structs::structs::AncsProp {
-                        file_id: 0xFFFFFFFF, // None
-                        node_index: 0,
-                        unknown: 0xFFFFFFFF, // -1
-                    },
-                    actor_params: structs::structs::ActorParameters {
-                        light_params: structs::structs::LightParameters {
-                            unknown0: 1,
-                            unknown1: 1.0,
-                            shadow_tessellation: 0,
-                            unknown2: 1.0,
-                            unknown3: 20.0,
-                            color: [1.0, 1.0, 1.0, 1.0].into(),
-                            unknown4: 1,
-                            world_lighting: 1,
-                            light_recalculation: 1,
-                            unknown5: [0.0, 0.0, 0.0].into(),
-                            unknown6: 4,
-                            unknown7: 4,
-                            unknown8: 0,
-                            light_layer_id: 0
-                        },
-                        scan_params: structs::structs::ScannableParameters {
-                            scan: 0xFFFFFFFF // None
-                        },
-                        xray_cmdl: 0xFFFFFFFF, // None
-                        xray_cskr: 0xFFFFFFFF, // None
-                        thermal_cmdl: 0xFFFFFFFF, // None
-                        thermal_cskr: 0xFFFFFFFF, // None
-
+                    beam_combos: structs::structs::BeamCombos {
+                        power: 1,       // Normal
+                        ice: 1,         // Normal
+                        wave: 1,        // Normal
+                        plasma: 1,      // Normal
+                        phazon: 0       // Double Damage
+                    }
+                },
+                cmdl: 0x0734977A, // blueShield_v1.CMDL
+                ancs: structs::structs::AncsProp {
+                    file_id: 0xFFFFFFFF, // None
+                    node_index: 0,
+                    unknown: 0xFFFFFFFF, // -1
+                },
+                actor_params: structs::structs::ActorParameters {
+                    light_params: structs::structs::LightParameters {
                         unknown0: 1,
                         unknown1: 1.0,
+                        shadow_tessellation: 0,
                         unknown2: 1.0,
-
-                        visor_params: structs::structs::VisorParameters {
-                            unknown0: 0,
-                            target_passthrough: 0,
-                            unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
-                        },
-                        enable_thermal_heat: 1,
-                        unknown3: 0,
+                        unknown3: 20.0,
+                        color: [1.0, 1.0, 1.0, 1.0].into(),
                         unknown4: 1,
-                        unknown5: 1.0
+                        world_lighting: 1,
+                        light_recalculation: 1,
+                        unknown5: [0.0, 0.0, 0.0].into(),
+                        unknown6: 4,
+                        unknown7: 4,
+                        unknown8: 0,
+                        light_layer_id: 0
                     },
-                    looping: 1,
-                    snow: 1,
-                    solid: 0,
-                    camera_passthrough: 0,
-                    active: 1,
-                    unknown8: 0,
-                    unknown9: 1.0,
-                    unknown10: 1,
-                    unknown11: 0,
-                    unknown12: 0,
-                    unknown13: 0
-                }),
-                connections: vec![].into()
+                    scan_params: structs::structs::ScannableParameters {
+                        scan: 0xFFFFFFFF // None
+                    },
+                    xray_cmdl: 0xFFFFFFFF, // None
+                    xray_cskr: 0xFFFFFFFF, // None
+                    thermal_cmdl: 0xFFFFFFFF, // None
+                    thermal_cskr: 0xFFFFFFFF, // None
+
+                    unknown0: 1,
+                    unknown1: 1.0,
+                    unknown2: 1.0,
+
+                    visor_params: structs::structs::VisorParameters {
+                        unknown0: 0,
+                        target_passthrough: 0,
+                        unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                    },
+                    enable_thermal_heat: 1,
+                    unknown3: 0,
+                    unknown4: 1,
+                    unknown5: 1.0
+                },
+                looping: 1,
+                snow: 1,
+                solid: 0,
+                camera_passthrough: 0,
+                active: 1,
+                unknown8: 0,
+                unknown9: 1.0,
+                unknown10: 1,
+                unknown11: 0,
+                unknown12: 0,
+                unknown13: 0
+            }.into(),
+            connections: vec![].into()
         },
 
         structs::SclyObject {
             instance_id: timer_doorclose_id,
-            property_data: structs::SclyProperty::Timer(structs::Timer {
-                    name: b"Timer_DoorClose\0".as_cstr(),
-                    start_time: 0.25,
-                    max_random_add: 0.0,
-                    reset_to_zero: 1,
-                    start_immediately: 0,
-                    active: 1
-                }),
+            property_data: structs::Timer {
+                name: b"Timer_DoorClose\0".as_cstr(),
+                start_time: 0.25,
+                max_random_add: 0.0,
+                reset_to_zero: 1,
+                start_immediately: 0,
+                active: 1
+            }.into(),
             connections: vec![
                 structs::Connection {
                     state: structs::ConnectionState::ZERO,
@@ -1450,22 +1445,22 @@ fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::Ml
     layer.objects.as_mut_vec().push(
         structs::SclyObject {
             instance_id: turn_off_barrier_trigger_obj_id,
-            property_data: structs::SclyProperty::Trigger(structs::Trigger {
-                    name: b"Trigger - Disable Main Quarry barrier\0".as_cstr(),
-                    position: [82.412056, 9.354454, 2.807631].into(),
-                    scale: [10.0, 5.0, 7.0].into(),
-                    damage_info: structs::structs::DamageInfo {
-                        weapon_type: 0,
-                        damage: 0.0,
-                        radius: 0.0,
-                        knockback_power: 0.0
-                    },
-                    unknown0: [0.0, 0.0, 0.0].into(),
-                    unknown1: 1,
-                    active: 1,
-                    unknown2: 1,
-                    unknown3: 0
-                }),
+            property_data: structs::Trigger {
+                name: b"Trigger - Disable Main Quarry barrier\0".as_cstr(),
+                position: [82.412056, 9.354454, 2.807631].into(),
+                scale: [10.0, 5.0, 7.0].into(),
+                damage_info: structs::structs::DamageInfo {
+                    weapon_type: 0,
+                    damage: 0.0,
+                    radius: 0.0,
+                    knockback_power: 0.0
+                },
+                unknown0: [0.0, 0.0, 0.0].into(),
+                unknown1: 1,
+                active: 1,
+                unknown2: 1,
+                unknown3: 0
+            }.into(),
             connections: vec![
                 structs::Connection {
                     state: structs::ConnectionState::ENTERED,
@@ -1839,7 +1834,7 @@ fn patch_starting_pickups<'r>(
             &[
                 structs::SclyObject {
                     instance_id: timer_starting_items_popup_id,
-                    property_data: structs::SclyProperty::Timer(structs::Timer {
+                    property_data: structs::Timer {
                         name: b"Starting Items popup timer\0".as_cstr(),
 
                         start_time: 0.025,
@@ -1847,7 +1842,7 @@ fn patch_starting_pickups<'r>(
                         reset_to_zero: 0,
                         start_immediately: 1,
                         active: 1,
-                    }),
+                    }.into(),
                     connections: vec![
                         structs::Connection {
                             state: structs::ConnectionState::ZERO,
@@ -1864,7 +1859,7 @@ fn patch_starting_pickups<'r>(
                 structs::SclyObject {
                     instance_id: hud_memo_starting_items_popup_id,
                     connections: vec![].into(),
-                    property_data: structs::SclyProperty::HudMemo(structs::HudMemo {
+                    property_data: structs::HudMemo {
                         name: b"Starting Items popup hudmemo\0".as_cstr(),
 
                         first_message_timer: 0.5,
@@ -1872,31 +1867,29 @@ fn patch_starting_pickups<'r>(
                         memo_type: 1,
                         strg: custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
                         active: 1,
-                    }),
+                    }.into(),
                 },
                 structs::SclyObject {
                     instance_id: special_function_starting_items_popup_id,
                     connections: vec![].into(),
-                    property_data: structs::SclyProperty::SpecialFunction(
-                        structs::SpecialFunction {
-                            name: b"Disable Starting Items popup Layer\0".as_cstr(),
-                            position: [0., 0., 0.].into(),
-                            rotation: [0., 0., 0.].into(),
-                            type_: 16,
-                            unknown0: b"\0".as_cstr(),
-                            unknown1: 0.,
-                            unknown2: 0.,
-                            unknown3: 0.,
-                            layer_change_room_id: room_id,
-                            layer_change_layer_id: layer_count,
-                            item_id: 0,
-                            unknown4: 1,
-                            unknown5: 0.,
-                            unknown6: 0xFFFFFFFF,
-                            unknown7: 0xFFFFFFFF,
-                            unknown8: 0xFFFFFFFF,
-                        }
-                    ),
+                    property_data: structs::SpecialFunction {
+                        name: b"Disable Starting Items popup Layer\0".as_cstr(),
+                        position: [0., 0., 0.].into(),
+                        rotation: [0., 0., 0.].into(),
+                        type_: 16,
+                        unknown0: b"\0".as_cstr(),
+                        unknown1: 0.,
+                        unknown2: 0.,
+                        unknown3: 0.,
+                        layer_change_room_id: room_id,
+                        layer_change_layer_id: layer_count,
+                        item_id: 0,
+                        unknown4: 1,
+                        unknown5: 0.,
+                        unknown6: 0xFFFFFFFF,
+                        unknown7: 0xFFFFFFFF,
+                        unknown8: 0xFFFFFFFF,
+                    }.into(),
                 },
             ]
         );

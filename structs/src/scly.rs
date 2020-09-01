@@ -202,6 +202,16 @@ macro_rules! build_scly_property {
             }
         }
 
+        $(
+        impl<'r> From<scly_props::$name<'r>> for SclyProperty<'r>
+        {
+            fn from(prop: scly_props::$name<'r>) -> SclyProperty<'r>
+            {
+                SclyProperty::$name(prop)
+            }
+        }
+        )*
+
     };
 }
 
