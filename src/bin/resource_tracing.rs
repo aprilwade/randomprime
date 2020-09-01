@@ -2,6 +2,7 @@
 //! The location of the ISO should be provided as a command line argument.
 
 pub use randomprime::*;
+use randomprime::custom_assets::custom_asset_ids;
 use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};

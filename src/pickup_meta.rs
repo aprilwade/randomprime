@@ -1,9 +1,9 @@
 use std::mem;
 
 use reader_writer::{FourCC, Reader};
-use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, Resource, ResourceKind};
+use structs::{Connection, ConnectionMsg, ConnectionState, Pickup};
 
-use crate::custom_asset_ids;
+use crate::custom_assets::custom_asset_ids;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PickupType
@@ -317,54 +317,6 @@ pub struct ScriptObjectLocation
 {
     pub layer: u32,
     pub instance_id: u32,
-}
-
-const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
-    // Phazon Suit TXTR 1
-    (custom_asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
-     include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
-    // Phazon Suit TXTR 2
-    (custom_asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
-     include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
-    // Nothing texture
-    (custom_asset_ids::NOTHING_TXTR, *b"TXTR",
-     include_bytes!("../extra_assets/nothing_texture.txtr")),
-    // Shiny Missile TXTR 0
-    (custom_asset_ids::SHINY_MISSILE_TXTR0, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile0.txtr")),
-    // Shiny Missile TXTR 1
-    (custom_asset_ids::SHINY_MISSILE_TXTR1, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile1.txtr")),
-    // Shiny Missile TXTR 2
-    (custom_asset_ids::SHINY_MISSILE_TXTR2, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile2.txtr")),
-];
-
-#[cfg(not(debug_assertions))]
-pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
-{
-    Resource {
-        compressed: false,
-        file_id,
-        kind,
-    }
-}
-
-#[cfg(debug_assertions)]
-pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
-{
-    Resource {
-        compressed: false,
-        file_id,
-        kind,
-        original_offset: 0,
-    }
-}
-pub fn extra_assets<'r>() -> Vec<Resource<'r>>
-{
-    EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
-        build_resource(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
-    }).collect()
 }
 
 #[derive(Clone, Copy, Debug)]

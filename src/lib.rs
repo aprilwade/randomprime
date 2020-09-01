@@ -23,15 +23,16 @@ use std::{
     iter,
 };
 
-pub mod elevators;
-pub mod mlvl_wrapper;
-pub mod pickup_meta;
-pub mod patcher;
-pub mod patches;
 pub mod c_interface;
-pub mod gcz_writer;
+pub mod custom_assets;
 pub mod ciso_writer;
 pub mod dol_patcher;
+pub mod elevators;
+pub mod gcz_writer;
+pub mod mlvl_wrapper;
+pub mod patcher;
+pub mod patches;
+pub mod pickup_meta;
 pub mod starting_items;
 
 pub trait GcDiscLookupExtensions<'a>
@@ -326,56 +327,5 @@ impl<'a> ResourceData<'a>
         } else {
             Cow::Borrowed(&self.data)
         }
-    }
-}
-
-macro_rules! def_asset_ids {
-    (@Build { $prev:expr } $id:ident, $($rest:tt)*) => {
-        def_asset_ids!(@Build { $prev } $id = $prev + 1, $($rest)*);
-    };
-    (@Build { $_prev:expr } $id:ident = $e:expr, $($rest:tt)*) => {
-        pub const $id: u32 = $e;
-        def_asset_ids!(@Build { $id } $($rest)*);
-    };
-    (@Build { $prev:expr }) => {
-    };
-    ($($tokens:tt)*) => {
-        def_asset_ids!(@Build { 0 } $($tokens)*);
-    };
-}
-
-pub mod custom_asset_ids {
-    def_asset_ids! {
-        PHAZON_SUIT_SCAN = 0xDEAF0000,
-        PHAZON_SUIT_STRG,
-        PHAZON_SUIT_TXTR1,
-        PHAZON_SUIT_TXTR2,
-        PHAZON_SUIT_CMDL,
-        PHAZON_SUIT_ANCS,
-        NOTHING_ACQUIRED_HUDMEMO_STRG,
-        NOTHING_SCAN_STRG, // 0xDEAF0007
-        NOTHING_SCAN,
-        NOTHING_TXTR,
-        NOTHING_CMDL,
-        NOTHING_ANCS,
-        THERMAL_VISOR_SCAN,
-        THERMAL_VISOR_STRG,
-        SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
-        SCAN_VISOR_SCAN_STRG,
-        SCAN_VISOR_SCAN,
-        SHINY_MISSILE_TXTR0,
-        SHINY_MISSILE_TXTR1,
-        SHINY_MISSILE_TXTR2,
-        SHINY_MISSILE_CMDL,
-        SHINY_MISSILE_ANCS,
-        SHINY_MISSILE_EVNT,
-        SHINY_MISSILE_ANIM,
-        SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
-        SHINY_MISSILE_SCAN_STRG,
-        SHINY_MISSILE_SCAN,
-        STARTING_ITEMS_HUDMEMO_STRG,
-
-        SKIP_HUDMEMO_STRG_START,
-        SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 38,
     }
 }
