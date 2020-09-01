@@ -90,7 +90,7 @@ macro_rules! build_scly_property {
                 data: Reader<'r>
             },
 
-            $($name(scly_props::$name<'r>),)*
+            $($name(Box<scly_props::$name<'r >> ),)*
         }
 
         impl<'r> SclyProperty<'r>
@@ -207,7 +207,7 @@ macro_rules! build_scly_property {
         {
             fn from(prop: scly_props::$name<'r>) -> SclyProperty<'r>
             {
-                SclyProperty::$name(prop)
+                SclyProperty::$name(Box::new(prop))
             }
         }
         )*
