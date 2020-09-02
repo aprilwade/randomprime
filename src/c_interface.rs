@@ -1,6 +1,9 @@
 
+
+use enum_map::EnumMap;
 use serde::{Serialize, Deserialize};
 
+use crate::elevators::{Elevator, SpawnRoom};
 use crate::patches;
 use crate::starting_items::StartingItems;
 
@@ -29,6 +32,7 @@ struct Config
 {
     input_iso: String,
     output_iso: String,
+    #[serde(alias = "layout")]
     layout_string: String,
 
     #[serde(default)]
@@ -210,7 +214,14 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         .open(&config.output_iso)
         .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
 
-    let (pickup_layout, elevator_layout, seed) = crate::parse_layout(&config.layout_string)?;
+    let (pickup_layout, elevator_nums, seed) = crate::parse_layout(&config.layout_string)?;
+
+    let starting_location = SpawnRoom::from_u32(elevator_nums[0] as u32).unwrap();
+    let mut elevator_layout = EnumMap::<Elevator, SpawnRoom>::new();
+    elevator_layout.extend(elevator_nums[1..].iter()
+        .zip(Elevator::iter())
+        .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
+    );
 
     let flaahgra_music_files = if let Some(path) = &config.trilogy_disc_path {
         Some(crate::extract_flaahgra_music_files(&path)?)
@@ -221,7 +232,11 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     let mut config = config;
     let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
-        pickup_layout, elevator_layout, seed,
+
+        pickup_layout,
+        elevator_layout,
+        starting_location,
+        seed,
 
         layout_string: config.layout_string,
 

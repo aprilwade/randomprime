@@ -1,11 +1,13 @@
 use std::mem;
 
+use serde::Deserialize;
+
 use reader_writer::{FourCC, Reader};
 use structs::{Connection, ConnectionMsg, ConnectionState, Pickup};
 
 use crate::custom_assets::custom_asset_ids;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Deserialize)]
 pub enum PickupType
 {
     Missile,
@@ -45,6 +47,7 @@ pub enum PickupType
     ArtifactOfStrength,
     Nothing,
     ScanVisor,
+    #[serde(skip)]
     ShinyMissile,
 }
 

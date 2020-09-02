@@ -10,13 +10,14 @@ use encoding::{
     Encoding,
     EncoderTrap,
 };
+use enum_map::EnumMap;
 use serde::Deserialize;
 
 use crate::{
     custom_assets::custom_asset_ids,
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{ELEVATORS, Elevator, SpawnRoom},
+    elevators::{Elevator, SpawnRoom},
     gcz_writer::GczWriter,
     memmap,
     mlvl_wrapper,
@@ -537,15 +538,11 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
-    layout: &'a [Elevator],
+    layout: &'a EnumMap<Elevator, SpawnRoom>,
     auto_enabled_elevators: bool,
 )
 {
-    for (elv, dest) in ELEVATORS.iter().zip(layout) {
-        if elv.pak_name.len() == 0 {
-            // Skip destination only elevators
-            continue
-        }
+    for (elv, dest) in layout.iter() {
         patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
             let scly = area.mrea().scly_section_mut();
             for layer in scly.layers.iter_mut() {
@@ -2186,7 +2183,8 @@ pub struct ParsedConfig
     pub layout_string: String,
 
     pub pickup_layout: Vec<u8>,
-    pub elevator_layout: Vec<u8>,
+    pub elevator_layout: EnumMap<Elevator, SpawnRoom>,
+    pub starting_location: SpawnRoom,
     pub seed: u64,
 
     pub iso_format: IsoFormat,
@@ -2341,15 +2339,16 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         .collect();
     let pickup_layout = &pickup_layout[..];
 
-    let elevator_layout: Vec<_> = config.elevator_layout[..ELEVATORS.len()].iter()
-        .map(|i| ELEVATORS[*i as usize])
-        .map(|elv| if config.skip_impact_crater && elv.name == "Crater Entry Point" {
-                Elevator::end_game_elevator()
-            } else {
-                elv
-            })
-        .collect();
-    let spawn_room = SpawnRoom::from_room_idx(config.elevator_layout[20] as usize);
+    let mut elevator_layout = config.elevator_layout.clone();
+    if config.skip_impact_crater {
+        for spawn_room in elevator_layout.values_mut() {
+            if *spawn_room == Elevator::CraterEntryPoint {
+                *spawn_room = SpawnRoom::EndingCinematic;
+            }
+        }
+    }
+    let elevator_layout = &elevator_layout;
+    let spawn_room = config.starting_location;
 
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2483,7 +2482,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             b"default.dol",
             |file| patch_dol(
                 file,
-                SpawnRoom::frigate_spawn_room(),
+                SpawnRoom::FrigateExteriorDockingHangar,
                 version,
                 config.nonvaria_heat_damage,
                 config.staggered_suit_damage,
@@ -2494,7 +2493,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             resource_info!("01_intro_hanger.MREA").into(),
             move |_ps, area| patch_frigate_teleporter(area, spawn_room)
         );
-        rel_config = create_rel_config_file(SpawnRoom::frigate_spawn_room(), config.quickplay);
+        rel_config = create_rel_config_file(
+            SpawnRoom::FrigateExteriorDockingHangar,
+            config.quickplay
+        );
     }
     gc_disc.add_file(
         "rel_config.bin",
@@ -2668,7 +2670,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-    if spawn_room != SpawnRoom::landing_site_spawn_room() {
+    if spawn_room != SpawnRoom::LandingSite {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(

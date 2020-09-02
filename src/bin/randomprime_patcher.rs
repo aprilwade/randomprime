@@ -5,9 +5,11 @@ use clap::{
     Format, // XXX This is an undocumented enum
     crate_version,
 };
+use enum_map::EnumMap;
 
 use randomprime::{
     extract_flaahgra_music_files, parse_layout, patches, reader_writer,
+    elevators::{Elevator, SpawnRoom},
     starting_items::StartingItems, structs,
 };
 
@@ -185,8 +187,16 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     };
 
     let layout_string = matches.value_of("pickup layout").unwrap().to_string();
-    let (pickup_layout, elevator_layout, seed) = parse_layout(&layout_string)?;
+    let (pickup_layout, elevator_nums, seed) = parse_layout(&layout_string)?;
     let skip_impact_crater = matches.is_present("skip impact crater");
+
+    let starting_location = SpawnRoom::from_u32(elevator_nums[0] as u32).unwrap();
+    let mut elevator_layout = EnumMap::<Elevator, SpawnRoom>::new();
+    elevator_layout.extend(elevator_nums[1..].iter()
+        .zip(Elevator::iter())
+        .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
+    );
+
 
     let artifact_hint_behavior = if matches.is_present("all artifact hints") {
         patches::ArtifactHintBehavior::All
@@ -205,7 +215,13 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     Ok(patches::ParsedConfig {
         input_iso: input_iso_mmap,
         output_iso: out_iso,
-        pickup_layout, elevator_layout, seed, layout_string,
+
+        pickup_layout,
+        elevator_layout,
+        starting_location,
+
+        layout_string,
+        seed,
 
         iso_format,
         skip_hudmenus: matches.is_present("skip hudmenus"),
