@@ -294,7 +294,7 @@ fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> st
     let mut items_arr = vec![];
     for (i, item) in items.chunks(11).enumerate() {
         if i == 0 {
-            items_arr.push(format!("&just=center;Starting Items : {}\0", item.join(", ")).to_owned());
+            items_arr.push(format!("&just=center;Additional Starting Items : {}\0", item.join(", ")).to_owned());
         } else {
             items_arr.push(format!("&just=center;{}\0", item.join(", ")).to_owned());
         }

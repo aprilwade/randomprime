@@ -1,4 +1,5 @@
 use serde::{Deserialize};
+use std::cmp;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct StartingItems
@@ -110,6 +111,43 @@ impl StartingItems
             Ok(Wrapper::Int(i)) => Ok(StartingItems::from_u64(i)),
             Err(e) => Err(e)
         }
+    }
+    
+    pub fn merge(&self, starting_items_: &StartingItems) -> StartingItems
+    {
+        StartingItems {
+            scan_visor: self.scan_visor | starting_items_.scan_visor,
+            missiles: cmp::min(self.missiles + starting_items_.missiles, 250),
+            energy_tanks: cmp::min(self.energy_tanks + starting_items_.energy_tanks, 14),
+            power_bombs: cmp::min(self.power_bombs + starting_items_.power_bombs, 8),
+            wave: self.wave | starting_items_.wave,
+            ice: self.ice | starting_items_.ice,
+            plasma: self.plasma | starting_items_.plasma,
+            charge: self.charge | starting_items_.charge,
+            morph_ball: self.morph_ball | starting_items_.morph_ball,
+            bombs: self.bombs | starting_items_.bombs,
+            spider_ball: self.spider_ball | starting_items_.spider_ball,
+            boost_ball: self.boost_ball | starting_items_.boost_ball,
+            varia_suit: self.varia_suit | starting_items_.varia_suit,
+            gravity_suit: self.gravity_suit | starting_items_.gravity_suit,
+            phazon_suit: self.phazon_suit | starting_items_.phazon_suit,
+            thermal_visor: self.thermal_visor | starting_items_.thermal_visor,
+            xray: self.xray | starting_items_.xray,
+            space_jump: self.space_jump | starting_items_.space_jump,
+            grapple: self.grapple | starting_items_.grapple,
+            super_missile: self.super_missile | starting_items_.super_missile,
+            wavebuster: self.wavebuster | starting_items_.wavebuster,
+            ice_spreader: self.ice_spreader | starting_items_.ice_spreader,
+            flamethrower: self.flamethrower | starting_items_.flamethrower,
+        }
+    }
+    
+    pub fn empty() -> Self
+    {
+        let mut _starting_items = StartingItems::default();
+        _starting_items.scan_visor = false;
+        
+        _starting_items
     }
 }
 
