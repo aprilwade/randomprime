@@ -215,9 +215,9 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
     let (pickup_layout, elevator_nums, seed) = crate::parse_layout(&config.layout_string)?;
 
-    let starting_location = SpawnRoom::from_u32(elevator_nums[0] as u32).unwrap();
+    let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32).unwrap();
     let mut elevator_layout = EnumMap::<Elevator, SpawnRoom>::new();
-    elevator_layout.extend(elevator_nums[1..].iter()
+    elevator_layout.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
         .zip(Elevator::iter())
         .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
     );
@@ -229,6 +229,9 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     };
 
     let mut config = config;
+    let random_starting_items = config.random_starting_items.map(|i| i.into())
+        .unwrap_or(StartingItems::from_u64(0));
+
     let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
 
@@ -256,7 +259,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         flaahgra_music_files,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
-        random_starting_items: config.random_starting_items.map(|i| i.into()).unwrap_or_default(),
+        random_starting_items,
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 

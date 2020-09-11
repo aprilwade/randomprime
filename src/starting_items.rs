@@ -113,41 +113,60 @@ impl StartingItems
         }
     }
     
-    pub fn merge(&self, starting_items_: &StartingItems) -> StartingItems
+    pub fn merge(manual_starting_items: StartingItems, random_starting_items: StartingItems) -> Self
     {
         StartingItems {
-            scan_visor: self.scan_visor | starting_items_.scan_visor,
-            missiles: cmp::min(self.missiles + starting_items_.missiles, 250),
-            energy_tanks: cmp::min(self.energy_tanks + starting_items_.energy_tanks, 14),
-            power_bombs: cmp::min(self.power_bombs + starting_items_.power_bombs, 8),
-            wave: self.wave | starting_items_.wave,
-            ice: self.ice | starting_items_.ice,
-            plasma: self.plasma | starting_items_.plasma,
-            charge: self.charge | starting_items_.charge,
-            morph_ball: self.morph_ball | starting_items_.morph_ball,
-            bombs: self.bombs | starting_items_.bombs,
-            spider_ball: self.spider_ball | starting_items_.spider_ball,
-            boost_ball: self.boost_ball | starting_items_.boost_ball,
-            varia_suit: self.varia_suit | starting_items_.varia_suit,
-            gravity_suit: self.gravity_suit | starting_items_.gravity_suit,
-            phazon_suit: self.phazon_suit | starting_items_.phazon_suit,
-            thermal_visor: self.thermal_visor | starting_items_.thermal_visor,
-            xray: self.xray | starting_items_.xray,
-            space_jump: self.space_jump | starting_items_.space_jump,
-            grapple: self.grapple | starting_items_.grapple,
-            super_missile: self.super_missile | starting_items_.super_missile,
-            wavebuster: self.wavebuster | starting_items_.wavebuster,
-            ice_spreader: self.ice_spreader | starting_items_.ice_spreader,
-            flamethrower: self.flamethrower | starting_items_.flamethrower,
+            scan_visor: manual_starting_items.scan_visor | random_starting_items.scan_visor,
+            missiles: cmp::min(manual_starting_items.missiles + random_starting_items.missiles, 250),
+            energy_tanks: cmp::min(manual_starting_items.energy_tanks + random_starting_items.energy_tanks, 14),
+            power_bombs: cmp::min(manual_starting_items.power_bombs + random_starting_items.power_bombs, 8),
+            wave: manual_starting_items.wave | random_starting_items.wave,
+            ice: manual_starting_items.ice | random_starting_items.ice,
+            plasma: manual_starting_items.plasma | random_starting_items.plasma,
+            charge: manual_starting_items.charge | random_starting_items.charge,
+            morph_ball: manual_starting_items.morph_ball | random_starting_items.morph_ball,
+            bombs: manual_starting_items.bombs | random_starting_items.bombs,
+            spider_ball: manual_starting_items.spider_ball | random_starting_items.spider_ball,
+            boost_ball: manual_starting_items.boost_ball | random_starting_items.boost_ball,
+            varia_suit: manual_starting_items.varia_suit | random_starting_items.varia_suit,
+            gravity_suit: manual_starting_items.gravity_suit | random_starting_items.gravity_suit,
+            phazon_suit: manual_starting_items.phazon_suit | random_starting_items.phazon_suit,
+            thermal_visor: manual_starting_items.thermal_visor | random_starting_items.thermal_visor,
+            xray: manual_starting_items.xray | random_starting_items.xray,
+            space_jump: manual_starting_items.space_jump | random_starting_items.space_jump,
+            grapple: manual_starting_items.grapple | random_starting_items.grapple,
+            super_missile: manual_starting_items.super_missile | random_starting_items.super_missile,
+            wavebuster: manual_starting_items.wavebuster | random_starting_items.wavebuster,
+            ice_spreader: manual_starting_items.ice_spreader | random_starting_items.ice_spreader,
+            flamethrower: manual_starting_items.flamethrower | random_starting_items.flamethrower,
         }
     }
     
-    pub fn empty() -> Self
+    pub fn is_empty(&self) -> bool
     {
-        let mut _starting_items = StartingItems::default();
-        _starting_items.scan_visor = false;
-        
-        _starting_items
+        !self.scan_visor &&
+        self.missiles == 0 &&
+        self.energy_tanks == 0 &&
+        self.power_bombs == 0 &&
+        !self.wave &&
+        !self.ice &&
+        !self.plasma &&
+        !self.charge &&
+        !self.morph_ball &&
+        !self.bombs &&
+        !self.spider_ball &&
+        !self.boost_ball &&
+        !self.varia_suit &&
+        !self.gravity_suit &&
+        !self.phazon_suit &&
+        !self.thermal_visor &&
+        !self.xray &&
+        !self.space_jump &&
+        !self.grapple &&
+        !self.super_missile &&
+        !self.wavebuster &&
+        !self.ice_spreader &&
+        !self.flamethrower
     }
 }
 
