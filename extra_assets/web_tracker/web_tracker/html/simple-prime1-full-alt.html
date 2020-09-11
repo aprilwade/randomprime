@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="../libs/webcomponents-lite.js"></script>
+    <script type="text/javascript" src="../js/simple-tracker.js"></script>
+    <link type="text/css" rel="stylesheet" href="../css/simple-tracker.css"/>
+    <link type="text/css" rel="stylesheet" href="../css/simple-tracker-prime1-simple.css"/>
+    <title>Prime Item Tracker</title>
+</head>
+<body>
+<div center>
+    <div flex-column>
+        <div flex-row>
+            <item-counter big item="etank-count" max="14">
+                <span counter></span>
+            </item-counter>
+            <item-counter big item="missile-count" max="250" increment="5">
+                <span counter></span>
+            </item-counter>
+            <item-counter big item="pb-count" max="8">
+                <span counter></span>
+            </item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="missile"></item-counter>
+            <item-counter item="super-missile"></item-counter>
+            <item-counter item="wavebuster"></item-counter>
+            <item-counter item="ice-spreader"></item-counter>
+            <item-counter item="flamethrower"></item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="morph"></item-counter>
+            <item-counter item="bombs"></item-counter>
+            <item-counter item="boost"></item-counter>
+            <item-counter item="spider"></item-counter>
+            <item-counter item="power-bombs"></item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="charge"></item-counter>
+            <item-counter item="wave"></item-counter>
+            <item-counter item="ice"></item-counter>
+            <item-counter item="plasma"></item-counter>
+            <item-counter item="grapple"></item-counter>
+        </div>
+        <div flex-row>
+            <div flex-column>
+                <div artifact-wrapper>
+                    <item-counter artifact item="truth"></item-counter>
+                    <item-counter artifact item="strength"></item-counter>
+                    <item-counter artifact item="elder"></item-counter>
+                    <item-counter artifact item="wild"></item-counter>
+                    <item-counter artifact item="lifegiver"></item-counter>
+                    <item-counter artifact item="warrior"></item-counter>
+                    <item-counter artifact item="chozo"></item-counter>
+                    <item-counter artifact item="nature"></item-counter>
+                    <item-counter artifact item="sun"></item-counter>
+                    <item-counter artifact item="world"></item-counter>
+                    <item-counter artifact item="spirit"></item-counter>
+                    <item-counter artifact item="newborn"></item-counter>
+                </div>
+            </div>
+            <div flex-column>
+                <div flex-row>
+                    <item-counter item="space-jump"></item-counter>
+                    <item-counter item="thermal"></item-counter>
+                    <item-counter item="xray"></item-counter>
+                </div>
+                <div flex-row>
+                    <item-counter item="varia"></item-counter>
+                    <item-counter item="gravity"></item-counter>
+                    <item-counter item="phazon"></item-counter>
+                </div>
+            </div>
+        </div>
+        <div flex-row top-pad>
+            <item-toggle item="truth">Truth</item-toggle>
+            <item-toggle item="strength">Strength</item-toggle>
+            <item-toggle item="elder">Elder</item-toggle>
+            <item-toggle item="wild">Wild</item-toggle>
+            <item-toggle item="lifegiver">Lifegiver</item-toggle>
+            <item-toggle item="warrior">Warrior</item-toggle>
+        </div>
+        <div flex-row>
+            <item-toggle item="chozo">Chozo</item-toggle>
+            <item-toggle item="nature">Nature</item-toggle>
+            <item-toggle item="sun">Sun</item-toggle>
+            <item-toggle item="world">World</item-toggle>
+            <item-toggle item="spirit">Spirit</item-toggle>
+            <item-toggle item="newborn">Newborn</item-toggle>
+        </div>
+        <div flex-row>
+            <newtab-link>Toolbar-less Window</newtab-link>
+        </div>
+    </div>
+</div>
+</body>
+</html>

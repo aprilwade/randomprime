@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="../libs/webcomponents-lite.js"></script>
+    <script type="text/javascript" src="../js/simple-tracker.js"></script>
+    <link type="text/css" rel="stylesheet" href="../css/simple-tracker.css"/>
+    <link type="text/css" rel="stylesheet" href="../css/simple-tracker-prime1-game.css"/>
+    <title>Prime Item Tracker</title>
+</head>
+<body>
+<div center>
+    <div flex-column>
+        <div flex-row>
+            <item-counter item="missile" max="250" increment="5">
+                <span counter></span></item-counter>
+            <item-counter item="morph"></item-counter>
+            <item-counter item="space-jump"></item-counter>
+            <item-counter item="wave"></item-counter>
+            <item-counter item="thermal"></item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="charge"></item-counter>
+            <item-counter item="bombs"></item-counter>
+            <item-counter item="spider"></item-counter>
+            <item-counter item="ice"></item-counter>
+            <item-counter item="xray"></item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="super-missile"></item-counter>
+            <item-counter item="boost"></item-counter>
+            <item-counter item="grapple"></item-counter>
+            <item-counter item="plasma"></item-counter>
+            <item-counter item="power-bombs" max="8">
+                <span counter></span></item-counter>
+        </div>
+        <div flex-row>
+            <item-counter item="suits" max="3"></item-counter>
+            <item-counter item="artifacts" max="12"></item-counter>
+            <item-counter item="etank-count" max="14">
+                <span counter></span></item-counter>
+        </div>
+    </div>
+</div>
+</body>
+</html>

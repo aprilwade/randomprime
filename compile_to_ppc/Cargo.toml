@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "async_utils",
-    "core-futures-tls",
+    "bba-rs",
+    "mini_http_server",
     "primeapi-rs",
         "primeapi-rs/primeapi_macros",
     "rel_loader",
@@ -17,6 +18,5 @@ codegen-units = 1
 panic = "abort"
 lto = true
 codegen-units = 1
-incremental = false
 opt-level = 's'
 

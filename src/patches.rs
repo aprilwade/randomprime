@@ -1800,12 +1800,12 @@ fn create_rel_config_file(
         // use_etag: false,
         // etag: [b' '; 16],
         // use_modified_date: false,
-        modified_date: [0; 29],
+        // modified_date: [0; 29],
     };
 
-    let now: chrono::DateTime<chrono::Utc> = std::time::SystemTime::now().into();
-    let formatted = now.format("%a, %d %b %Y %T GMT");
-    write!(io::Cursor::new(&mut config.modified_date[..]), "{}", formatted).unwrap();
+    // let now: chrono::DateTime<chrono::Utc> = std::time::SystemTime::now().into();
+    // let formatted = now.format("%a, %d %b %Y %T GMT");
+    // write!(io::Cursor::new(&mut config.modified_date[..]), "{}", formatted).unwrap();
 
     let mut buf = vec![0; mem::size_of::<RelConfig>()];
     ssmarshal::serialize(&mut buf, &config).unwrap();

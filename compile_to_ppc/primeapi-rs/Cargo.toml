@@ -4,16 +4,14 @@ version = "0.1.0"
 authors = ["April Wade <wayedt@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 linkme = "0.1"
 generic-array = "0.13"
 # pin-utils = "0.1.0-alpha.4"
 paste = "0.1"
+ufmt = "0.1"
 
 primeapi_macros = { path = "primeapi_macros" }
-core = { path = "../core-futures-tls", package = "core-futures-tls" }
 
 [features]
 rel_prolog = []

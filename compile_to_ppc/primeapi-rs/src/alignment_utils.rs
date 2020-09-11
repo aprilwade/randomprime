@@ -70,6 +70,7 @@ impl<T> Aligned32<T>
 impl<T> core::ops::Deref for Aligned32<T>
 {
     type Target = T;
+    #[inline(always)]
     fn deref(&self) -> &Self::Target
     {
         &self.0
@@ -79,6 +80,7 @@ impl<T> core::ops::Deref for Aligned32<T>
 
 impl<T> core::ops::DerefMut for Aligned32<T>
 {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target
     {
         &mut self.0
@@ -205,6 +207,7 @@ pub fn empty_aligned_slice_mut() -> Aligned32SliceMut<'static, u8>
 impl<'a, T> core::ops::Deref for Aligned32Slice<'a, T>
 {
     type Target = [T];
+    #[inline(always)]
     fn deref(&self) -> &Self::Target
     {
         &self.0
@@ -214,6 +217,7 @@ impl<'a, T> core::ops::Deref for Aligned32Slice<'a, T>
 impl<'a, T> core::ops::Deref for Aligned32SliceMut<'a, T>
 {
     type Target = [T];
+    #[inline(always)]
     fn deref(&self) -> &Self::Target
     {
         &self.0
@@ -223,6 +227,7 @@ impl<'a, T> core::ops::Deref for Aligned32SliceMut<'a, T>
 
 impl<'a, T> core::ops::DerefMut for Aligned32SliceMut<'a, T>
 {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target
     {
         &mut self.0

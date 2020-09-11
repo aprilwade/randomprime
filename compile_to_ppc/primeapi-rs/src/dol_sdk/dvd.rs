@@ -1,4 +1,5 @@
 use core::cell::UnsafeCell;
+use core::fmt;
 use core::mem::MaybeUninit;
 use core::ptr;
 
@@ -6,6 +7,7 @@ use crate::alignment_utils::Aligned32SliceMut;
 
 pub type DVDCBCallback = extern "C" fn(result: i32, block: *mut DVDCommandBlock);
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct DVDCommandBlock
 {
@@ -25,6 +27,7 @@ pub struct DVDCommandBlock
 }
 
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct RawDVDFileInfo
 {
@@ -40,17 +43,31 @@ pub type DVDCallback = extern "C" fn(result: i32, file_info: *mut RawDVDFileInfo
 
 extern "C" {
     fn DVDOpen(file_name: *const u8, file_info: *mut RawDVDFileInfo) -> u8;
-    fn DVDReadAsyncPrio(file_info: *mut RawDVDFileInfo, addr: *mut u8, length: u32, offset: u32, callback: DVDCallback, prio: u32) -> u8;
+    fn DVDReadAsyncPrio(file_info: *mut RawDVDFileInfo, addr: *mut u8, length: u32, offset: u32, callback: Option<DVDCallback>, prio: u32) -> u8;
     fn DVDClose(file_info: *mut RawDVDFileInfo) -> u8;
 }
 
 
 pub struct DVDFileInfo(UnsafeCell<RawDVDFileInfo>);
 
-pub struct AsyncDVDReadHandle<'a>(*mut *mut u8, core::marker::PhantomData<(&'a mut DVDFileInfo, &'a mut [u8])>);
+impl fmt::Debug for DVDFileInfo
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
+    {
+        let raw_fi = unsafe { ptr::read(self.0.get()) };
+        fmt::Debug::fmt(&raw_fi, f)
+    }
+}
+
+pub struct AsyncDVDReadHandle<'a, F>
+{
+    state_ptr: ptr::NonNull<i32>,
+    phantom: core::marker::PhantomData<(&'a mut F, &'a mut [u8], &'a mut DVDFileInfo)>
+}
 
 impl DVDFileInfo
 {
+    // #[inline(always)]
     pub fn new(filename: &[u8]) -> Option<Self>
     {
         let mut fi = MaybeUninit::<RawDVDFileInfo>::uninit();
@@ -74,25 +91,58 @@ impl DVDFileInfo
         mut buf: Aligned32SliceMut<'a, MaybeUninit<u8>>,
         offset: u32,
         prio: u32
-    ) -> AsyncDVDReadHandle<'a>
+    ) -> AsyncDVDReadHandle<'a, ()>
     {
-        extern "C" fn callback(_result: i32, file_info: *mut RawDVDFileInfo)
-        {
-            unsafe {
-                ptr::write_volatile(&mut (*file_info).cb.user_data, 0x00 as *mut u8);
-            }
-        }
         unsafe {
-            ptr::write(&mut (*self.0.get()).cb.user_data, 0x01 as *mut u8);
+            let state_ptr: *mut i32 = &mut (*self.0.get()).cb.state;
             DVDReadAsyncPrio(
                 self.0.get(),
                 buf.as_mut_ptr() as *mut u8,
                 buf.len() as u32,
                 offset,
-                callback,
+                None,// callback,
                 prio
             );
-            AsyncDVDReadHandle(&mut (*self.0.get()).cb.user_data, core::marker::PhantomData)
+            AsyncDVDReadHandle {
+                state_ptr: ptr::NonNull::new_unchecked(state_ptr),
+                phantom: core::marker::PhantomData
+            }
+        }
+    }
+
+    pub fn read_async_with_callback<'a, F>(
+        &'a mut self,
+        mut buf: Aligned32SliceMut<'a, MaybeUninit<u8>>,
+        offset: u32,
+        prio: u32,
+        cb: &'a mut F
+    ) -> AsyncDVDReadHandle<'a, F>
+        where F: FnMut(i32)
+    {
+        extern "C" fn callback<F>(status: i32, fi: *mut RawDVDFileInfo)
+            where F: FnMut(i32)
+        {
+            unsafe {
+                let f = &mut *((*fi).cb.user_data as *mut F);
+                f(status)
+            }
+        }
+
+        unsafe {
+            (*self.0.get()).cb.user_data = cb as *mut _ as *mut u8;
+            let state_ptr: *mut i32 = &mut (*self.0.get()).cb.state;
+            DVDReadAsyncPrio(
+                self.0.get(),
+                buf.as_mut_ptr() as *mut u8,
+                buf.len() as u32,
+                offset,
+                Some(callback::<F>),
+                prio
+            );
+            AsyncDVDReadHandle {
+                state_ptr: ptr::NonNull::new_unchecked(state_ptr),
+                phantom: core::marker::PhantomData
+            }
         }
     }
 }
@@ -108,7 +158,7 @@ impl Drop for DVDFileInfo
     }
 }
 
-impl<'a> Drop for AsyncDVDReadHandle<'a>
+impl<'a, F> Drop for AsyncDVDReadHandle<'a, F>
 {
     fn drop(&mut self)
     {
@@ -116,13 +166,13 @@ impl<'a> Drop for AsyncDVDReadHandle<'a>
     }
 }
 
-impl<'a> AsyncDVDReadHandle<'a>
+impl<'a, F> AsyncDVDReadHandle<'a, F>
 {
     #[inline(always)]
     pub fn is_finished(&self) -> bool
     {
         unsafe {
-            ptr::read_volatile(self.0) == 0x00 as *mut u8
+            ptr::read_volatile(self.state_ptr.as_ptr()) == 0x00
         }
     }
 }

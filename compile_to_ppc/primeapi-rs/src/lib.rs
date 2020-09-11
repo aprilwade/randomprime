@@ -5,12 +5,14 @@ extern crate alloc;
 
 use linkme::distributed_slice;
 
+use ufmt::uwriteln;
+
 // Rexport these macros
 pub use primeapi_macros::{cpp_method, cw_link_name, patch_fn, prolog_fn};
 
 use core::alloc::{GlobalAlloc, Layout};
+use core::convert::Infallible;
 use core::ffi::c_void;
-use core::fmt::{self, Write as _};
 
 pub mod rstl;
 pub mod dol_sdk {
@@ -63,7 +65,7 @@ macro_rules! cpp_field {
 
 extern "C"
 {
-    fn fwrite(bytes: *const u8, len: usize, count: usize) -> usize;
+    fn fwrite(bytes: *const u8, len: usize, count: usize, fd: *const u32) -> usize;
 
     pub fn printf(fmt: *const u8, ...);
 
@@ -84,12 +86,14 @@ macro_rules! dbg {
 
 // #[macro_export]
 // macro_rules! dbg {
-//     () => {
+//     () => {{
+//         use core::fmt::Write;
 //         let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
-//     };
-//     ($val:expr) => {
+//     }};
+//     ($val:expr) => {{
 //         // Use of `match` here is intentional because it affects the lifetimes
 //         // of temporaries - https://stackoverflow.com/a/48732525/1063961
+//         use core::fmt::Write;
 //         match $val {
 //             tmp => {
 //                 let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
@@ -97,7 +101,7 @@ macro_rules! dbg {
 //                 tmp
 //             }
 //         }
-//     };
+//     }};
 //     // Trailing comma with single argument is ignored
 //     ($val:expr,) => { $crate::dbg!($val) };
 //     ($($val:expr),+ $(,)?) => {
@@ -127,15 +131,34 @@ unsafe impl GlobalAlloc for Mp1Allocator
 #[global_allocator]
 static A: Mp1Allocator = Mp1Allocator;
 
+
 pub struct Mp1Stdout;
 
-impl fmt::Write for Mp1Stdout
+impl core::fmt::Write for Mp1Stdout
 {
-    fn write_str(&mut self, s: &str) -> fmt::Result
+    fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error>
     {
         unsafe {
             // TODO: Check result?
-            fwrite(s.as_bytes().as_ptr(), s.len(), 1);
+            // printf(b"%s\0".as_ptr(), s.as);
+            // printf(b"test %d\n\0".as_ptr(), s.len());
+            fwrite(s.as_bytes().as_ptr(), s.len(), 1, 0x803f27c8 as *const _);
+        }
+        Ok(())
+    }
+}
+
+
+impl ufmt::uWrite for Mp1Stdout
+{
+    type Error = Infallible;
+    fn write_str(&mut self, s: &str) -> Result<(), Self::Error>
+    {
+        unsafe {
+            // TODO: Check result?
+            // printf(b"%s\0".as_ptr(), s.as);
+            // printf(b"test %d\n\0".as_ptr(), s.len());
+            fwrite(s.as_bytes().as_ptr(), s.len(), 1, 0x803f27c8 as *const _);
         }
         Ok(())
     }
@@ -156,7 +179,14 @@ fn halt() -> !
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     if cfg!(debug_assertions) {
-        writeln!(Mp1Stdout, "{}", info).ok();
+        if let Some(loc) = info.location() {
+            uwriteln!(Mp1Stdout, "Panic at {}:{}", loc.file(), loc.line()).ok();
+        } else {
+            uwriteln!(Mp1Stdout, "Panic").ok();
+        }
+        if let Some(msg) = info.payload().downcast_ref::<&str>() {
+            uwriteln!(Mp1Stdout, "msg: {}", msg).ok();
+        }
     }
 
     halt()
@@ -165,7 +195,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 #[alloc_error_handler]
 fn alloc_error(_layout: Layout) -> ! {
     if cfg!(debug_assertions) {
-        writeln!(Mp1Stdout, "Alloc failed").ok();
+        uwriteln!(Mp1Stdout, "Alloc failed").ok();
     }
 
     halt()
@@ -267,7 +297,7 @@ unsafe extern "C" fn __rel_prolog()
     }
 
     for prolog_func in PROLOG_FUNCS.iter() {
-        printf(b"calling prolog func ptr\n\0".as_ptr());
+        printf(b"calling prolog func ptr %p\n\0".as_ptr(), *prolog_func);
         prolog_func();
     }
 }

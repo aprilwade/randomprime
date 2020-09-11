@@ -1,93 +1,75 @@
-#![feature(try_blocks)]
-#![feature(type_alias_impl_trait)]
 #![no_std]
+#![type_length_limit = "10794634"]
 
 extern crate alloc;
 
-use futures::future;
-use futures::never::Never;
 use linkme::distributed_slice;
-use pin_utils::pin_mut;
+use ufmt::uwriteln;
 
 use primeapi::{patch_fn, prolog_fn};
-use primeapi::alignment_utils::{Aligned32, Aligned32SliceMut};
+use primeapi::alignment_utils::Aligned32SliceMut;
 use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
     CArchitectureQueue, CGameState, CGuiFrame, CGuiTextSupport, CGuiTextPane, CGuiWidget,
-    CMainFlow, CPlayerState, CRelayTracker, CStringTable, CWorldState,
+    CMainFlow, CStringTable, CWorldState,
 };
 use primeapi::rstl::WString;
 
-use alloc::boxed::Box;
-
-use core::fmt::Write;
-use core::future::Future;
 use core::mem::MaybeUninit;
-use core::num::NonZeroUsize;
-use core::pin::Pin;
-use core::ptr;
-use core::task::{Context, Poll};
 
-mod ipc_async;
-mod sock_async;
-mod http;
-
+mod nintendont_sock;
+mod tracker_state;
 
 include!("../../patches_config.rs");
-pub(crate) static mut REL_CONFIG: RelConfig = RelConfig {
+static mut REL_CONFIG: RelConfig = RelConfig {
     quickplay_mlvl: 0xFFFFFFFF,
     quickplay_mrea: 0xFFFFFFFF,
-    // use_etag: false,
-    // etag: [0; 16],
-    // use_modified_date: false,
-    modified_date: [0; 29],
 };
-
-pub fn delay(ticks: u32) -> impl Future<Output = ()>
-{
-    extern "C" {
-        fn OSGetTime() -> u64;
-    }
-
-    let finished = ticks as u64 + unsafe { OSGetTime() };
-    async_utils::poll_until(move || unsafe { OSGetTime() } >= finished)
-}
-
-pub fn milliseconds_to_ticks(ms: u32) -> u32
-{
-    const TB_BUS_CLOCK: u32 = 162000000;
-    // const TB_CORE_CLOCK: u32 = 486000000;
-    const TB_TIMER_CLOCK: u32 = (TB_BUS_CLOCK / 4000);
-
-
-    ms * TB_TIMER_CLOCK
-}
-
-static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Never>>>> = None;
 
 #[prolog_fn]
 unsafe extern "C" fn setup_global_state()
 {
+    // core::writeln!(primeapi::Mp1Stdout, "-1");
+    // primeapi::printf(b"-1\n\0".as_ptr());
     {
+        // core::writeln!(primeapi::Mp1Stdout, "0");
         let mut fi = if let Some(fi) = DVDFileInfo::new(b"rel_config.bin\0") {
+            // uwriteln!(primeapi::Mp1Stdout, "found").ok();
+            // primeapi::printf(b"found\n\0".as_ptr());
             fi
         } else {
+            // uwriteln!(primeapi::Mp1Stdout, "failed").ok();
+            // primeapi::printf(b"failed\n\0".as_ptr());
             return;
         };
         let config_size = fi.file_length() as usize;
         let mut recv_buf = alloc::vec![MaybeUninit::<u8>::uninit(); config_size + 63];
         let mut recv_buf = Aligned32SliceMut::split_unaligned_prefix(&mut recv_buf[..]).1
             .truncate_to_len((config_size + 31) & !31);
-        {
-            let _ = fi.read_async(recv_buf.reborrow(), 0, 0);
-        }
+
+        // core::writeln!(primeapi::Mp1Stdout, "1");
+        let _ = fi.read_async(recv_buf.reborrow(), 0, 0);
+        // core::writeln!(primeapi::Mp1Stdout, "2");
+
+        // core::writeln!(primeapi::Mp1Stdout, "Before");
+
+        // core::writeln!(primeapi::Mp1Stdout, "{:#?}", fi);
+
+        // core::writeln!(primeapi::Mp1Stdout, "After");
+
         REL_CONFIG = ssmarshal::deserialize(&recv_buf.truncate_to_len(config_size).assume_init())
             .unwrap().0;
     }
 
-    debug_assert!(EVENT_LOOP.is_none());
+    if running_on_dolphin() {
+        return
+    }
+
+    // primeapi::printf(b"Before\n\0".as_ptr());
+    crate::nintendont_sock::SocketApi::global_instance();
+    // primeapi::printf(b"After\n\0".as_ptr());
+    // primeapi::printf(b"After?\n\0".as_ptr());
     EVENT_LOOP = Some(Box::pin(event_loop()));
-    // primeapi::dbg!(core::mem::size_of_val(&event_loop()));
 }
 
 
@@ -108,413 +90,6 @@ unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *
     }
 
     res
-}
-
-#[patch_fn(kind = "return",
-           target = "Draw__13CIOWinManagerCFv" + 0x124)]
-unsafe extern "C" fn hook_every_frame()
-{
-    if ipc_async::running_on_dolphin() {
-        return
-    }
-
-    let event_loop = if let Some(event_loop) = EVENT_LOOP.as_mut() {
-        event_loop
-    } else {
-        return
-    };
-    let waker = async_utils::empty_waker();
-    let mut ctx = Context::from_waker(&waker);
-    match event_loop.as_mut().poll(&mut ctx) {
-        Poll::Pending => (),
-        Poll::Ready(never) => match never { },
-    }
-}
-
-pub struct FmtCursor<'a>
-{
-    idx: usize,
-    buf: &'a mut [u8]
-}
-
-impl<'a> FmtCursor<'a>
-{
-    pub fn new(buf: &'a mut [u8]) -> Self
-    {
-        FmtCursor {
-            idx: 0,
-            buf,
-        }
-    }
-
-    pub fn position(&self) -> usize
-    {
-        self.idx
-    }
-
-    pub fn set_position(&mut self, pos: usize)
-    {
-        self.idx = pos
-    }
-}
-
-impl<'a> core::fmt::Write for FmtCursor<'a>
-{
-    fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error>
-    {
-        if s.len() + self.idx > self.buf.len() {
-            Err(core::fmt::Error)
-        } else {
-            self.buf[self.idx..self.idx + s.len()].copy_from_slice(s.as_bytes());
-            self.idx += s.len();
-            Ok(())
-        }
-    }
-}
-
-async fn event_loop() -> Never
-{
-    let ss = sock_async::SockSystem::new().await;
-    let addr = sock_async::SockAddr {
-        len: 8,
-        family: sock_async::AF_INET as u8,
-        port: 80,
-        name: sock_async::INADDR_ANY,
-        unused: Default::default(),
-    };
-    let mut queue = async_utils::FutureQueue::<_, generic_array::typenum::U5>::new();
-    let (queue_poller, mut queue_pusher) = queue.split();
-    let mut server = ss.tcp_listen(&addr, 1).await.unwrap();
-    let connect_fut = async {
-        loop {
-            // TODO: Allow multiple clients, maybe with a vec?
-            //       Set a recv timeout on the client for 30s or 60s
-            let mut client = server.accept().await.unwrap();
-
-            let fut = Box::pin(async move {
-                let (send, recv) = client.split();
-                let mut buf = Aligned32::new([MaybeUninit::uninit(); 4096]);
-                match crate::http::handle_http_request(&mut buf[..], recv, send).await {
-                    Ok(_) => {
-                        primeapi::dbg!("successful http request");
-                    },
-                    Err(crate::http::HttpRequestError::ReaderIO(e)) => {
-                        primeapi::dbg!("Reader IO Error", e);
-                    },
-                    Err(crate::http::HttpRequestError::WriterIO(e)) => {
-                        primeapi::dbg!("Writer IO Error", e);
-                    },
-                    Err(crate::http::HttpRequestError::Internal) => {
-                        primeapi::dbg!("failed http request");
-                    },
-                }
-            });
-            queue_pusher.push(fut).await;
-        }
-    };
-    pin_mut!(connect_fut);
-    future::select(
-        connect_fut,
-        queue_poller
-    ).await.factor_first().0
-}
-
-const PICKUP_MEMORY_RELAY_IDS: &[(u32, &[(u8, u32)])] = &[
-    (0x83f6ff6f, &[
-        (0, 131373),
-        (1, 131378),
-        (2, 131179),
-        (3, 131417),
-        (4, 524407),
-        (5, 589864),
-        (6, 589929),
-        (7, 589934),
-        (8, 720958),
-        (9, 786477),
-        (10, 1048580),
-        (11, 1179652),
-        (12, 1310958),
-        (13, 1377078),
-        (14, 1769498),
-        (15, 1835055),
-        (16, 1835105),
-        (17, 1966451),
-        (18, 2097240),
-        (19, 2359773),
-        (20, 2435311),
-        (21, 405090452),
-        (21, 405090174),
-        (22, 2490377),
-        (23, 2687110),
-        (24, 2697191),
-        (25, 2949155),
-        (26, 2949294),
-        (27, 3145783),
-        (28, 3145755),
-        (28, 3155851),
-        (29, 3211363),
-        (30, 3211276),
-        (31, 3408607),
-        (32, 3474121),
-        (33, 3735556),
-        (34, 3997700),
-    ]),
-    (0xa8be6291, &[
-        (35, 131439),
-        (36, 131447),
-        (37, 524888),
-        (38, 600302),
-        (39, 655532),
-        (40, 655762),
-        (41, 917667),
-        (41, 917593),
-        (42, 983597),
-        (43, 1049222),
-        (43, 1048803),
-        (44, 1573324),
-        (45, 1639700),
-        (46, 1769490),
-        (47, 1966839),
-        (48, 2031782),
-        (49, 2557136),
-        (50, 69730589),
-        (51, 2687368),
-        (52, 3343329),
-        (53, 3343378),
-        (54, 3473441),
-        (55, 3473709),
-        (56, 3539114),
-        (57, 3604506),
-    ]),
-    (0x39f2de28, &[
-        (58, 133),
-        (59, 262158),
-        (60, 524796),
-        (61, 852167),
-        (62, 983294),
-        (63, 68157909),
-        (64, 1245495),
-        (65, 1310742),
-        (66, 1769750),
-        (67, 1966829),
-        (68, 2293844),
-        (69, 2424846),
-        (70, 2555959),
-        (71, 2752546),
-        (72, 2753077),
-    ]),
-    (0xb1ac4d65, &[
-        (73, 131636),
-        (74, 328072),
-        (75, 589962),
-        (75, 589829),
-        (76, 786471),
-        (77, 852801),
-        (78, 853234),
-        (79, 983182),
-        (80, 1179918),
-        (81, 1247079),
-        (82, 1441960),
-        (83, 1705145),
-        (84, 1770865),
-        (84, 1770863),
-        (84, 1770674),
-        (85, 2032134),
-        (86, 2098667),
-        (87, 2359592),
-        (88, 2556032),
-        (89, 2621699),
-    ]),
-    (0x3ef8237c, &[
-        (90, 272509),
-        (91, 393485),
-        (92, 524304),
-        (93, 655428),
-        (94, 720952),
-        (95, 786473),
-        (96, 917979),
-        (97, 918080),
-        (98, 1376288),
-        (99, 1507983),
-    ])
-];
-
-#[derive(Clone, Debug, PartialEq)]
-struct ItemsCollected([u8; 13]);
-impl ItemsCollected
-{
-    fn new() -> Self
-    {
-        ItemsCollected([0; 13])
-    }
-
-    fn set(&mut self, i: u8, val: bool)
-    {
-        if i >= 100 {
-            return;
-        }
-        if val {
-            self.0[(i >> 3) as usize] |= 1 << (i & 3);
-        } else {
-            self.0[(i >> 3) as usize] &= !(1 << (i & 3));
-        }
-    }
-
-    fn test(&self, i: u8) -> bool
-    {
-        (self.0[(i >> 3) as usize] & (1 << (i & 3))) != 0
-    }
-}
-
-fn current_items_collected(game_state: *mut CGameState) -> ItemsCollected
-{
-    let mut locs = ItemsCollected::new();
-    let world_states = unsafe { &*CGameState::world_states(game_state) };
-    for world_state in world_states.iter() {
-        let mlvl_relays = PICKUP_MEMORY_RELAY_IDS.iter()
-            .find(|(mlvl, _)| *mlvl == unsafe { CWorldState::mlvl(world_state) });
-        let mlvl_relays = if let Some(mlvl_relays) = mlvl_relays {
-            mlvl_relays.1
-        } else {
-            continue
-        };
-
-        let relay_tracker = unsafe { CWorldState::relay_tracker(world_state) };
-        if !relay_tracker.is_null() && !unsafe { *relay_tracker }.is_null() {
-            let relay_tracker = unsafe { *relay_tracker };
-            let relays = unsafe { &*CRelayTracker::relays(relay_tracker) };
-
-            for relay in relays.iter() {
-                if let Some((loc_idx, _)) = mlvl_relays.iter().find(|(_, id)| id == relay) {
-                    locs.set(*loc_idx, true);
-                }
-            }
-        }
-    }
-
-    locs
-}
-
-#[derive(Clone)]
-struct TrackerState
-{
-    play_time: f64,
-    play_time_paused: bool,
-    items_collected: ItemsCollected,
-    inventory: [u8; 41],
-}
-
-impl TrackerState
-{
-    fn new() -> Self {
-        TrackerState {
-            play_time: 0.0,
-            play_time_paused: false,
-            items_collected: ItemsCollected::new(),
-            inventory: [0; 41],
-        }
-    }
-}
-
-fn update_tracker_state(ts: &mut TrackerState, initial: bool, time_only: bool, msg_buf: &mut [u8])
-    -> Option<NonZeroUsize>
-{
-    let game_state = CGameState::global_instance();
-    if game_state.is_null() {
-        return None;
-    }
-
-    let player_state_ptr = unsafe { CGameState::player_state(game_state) };
-    if player_state_ptr.is_null() {
-        return None;
-    }
-    let player_state = unsafe { ptr::read(player_state_ptr) };
-    if player_state.is_null() {
-        return None;
-    }
-
-    let curr_play_time = unsafe { CGameState::play_time(game_state) };
-    let play_time_updated = if ts.play_time_paused {
-        if curr_play_time != ts.play_time {
-            ts.play_time_paused = false;
-            true
-        } else {
-            false
-        }
-    } else {
-        if curr_play_time == ts.play_time {
-            ts.play_time_paused = true;
-            true
-        } else {
-            false
-        }
-    };
-    ts.play_time = curr_play_time;
-
-    let items_collected_updated;
-    let inventory_updated;
-    if time_only {
-        items_collected_updated = false;
-        inventory_updated = false;
-    } else {
-        let items_collected = current_items_collected(game_state);
-        items_collected_updated = ts.items_collected != items_collected;
-        ts.items_collected = items_collected;
-
-        let mut inventory = [0u8; 41];
-        for (i, inventory_slot) in inventory.iter_mut().enumerate() {
-            let cap = unsafe { CPlayerState::get_item_capacity(player_state, i as i32) };
-            *inventory_slot = cap as u8;
-        }
-        inventory_updated = ts.inventory[..] != inventory[..];
-        ts.inventory = inventory;
-    }
-
-    if !initial && !play_time_updated && !items_collected_updated && !inventory_updated {
-        return None;
-    }
-
-    let mut f = FmtCursor::new(msg_buf);
-    let r: Result<_, core::fmt::Error> = (|| {
-        write!(f, "{{")?;
-        if play_time_updated || initial {
-            write!(f, "\"play_time\":{{")?;
-            if ts.play_time_paused {
-                write!(f, "\"paused\":")?;
-            } else {
-                write!(f, "\"running\":")?;
-            }
-            write!(f, "{}", (ts.play_time * 100.0) as u32)?;
-            write!(f, "}},")?;
-        }
-        if items_collected_updated || initial {
-            write!(f, "\"items_collected\":[")?;
-            for i in 0..100 {
-                if ts.items_collected.test(i) {
-                    write!(f, "1,")?;
-                } else {
-                    write!(f, "0,")?;
-                }
-            }
-            // Clear the trailing comma
-            f.set_position(f.position() - 1);
-            write!(f, "],")?;
-        }
-        if inventory_updated || initial {
-            write!(f, "\"inventory\":[")?;
-            for i in ts.inventory.iter() {
-                write!(f, "{},", i)?;
-            }
-            // Clear the trailing comma
-            f.set_position(f.position() - 1);
-            write!(f, "],")?;
-        }
-        // Clear the trailing comma
-        f.set_position(f.position() - 1);
-        write!(f, "}}")?;
-        Ok(f.position())
-    })();
-    r.ok().and_then(|i| NonZeroUsize::new(i))
 }
 
 // Based on
@@ -541,3 +116,576 @@ unsafe extern "C" fn quickplay_hook_advance_game_state(
     CMainFlow::advance_game_state(flow, q)
 }
 
+use alloc::boxed::Box;
+use core::convert::Infallible;
+use core::future::Future;
+use core::pin::Pin;
+use core::ptr;
+use core::task::{Context, Poll, RawWakerVTable, RawWaker, Waker};
+
+use async_utils::io::{AsyncRead, AsyncBufRead, AsyncWriteExt};
+
+static EMPTY_RAW_WAKER_VTABLE: RawWakerVTable = RawWakerVTable::new(
+        |p| RawWaker::new(p, &EMPTY_RAW_WAKER_VTABLE),
+        |_| (),
+        |_| (),
+        |_| (),
+    );
+
+fn empty_raw_waker() -> RawWaker
+{
+    RawWaker::new(ptr::null(), &EMPTY_RAW_WAKER_VTABLE)
+}
+
+pub fn empty_waker() -> Waker
+{
+    unsafe { Waker::from_raw(empty_raw_waker()) }
+}
+
+
+pub fn running_on_dolphin() -> bool
+{
+    unsafe { core::ptr::read(0xCD000004 as *mut u32) == 0xFFFFFFFF }
+}
+
+static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Infallible>>>> = None;
+
+/* async fn event_loop() -> Infallible
+{
+    let sock_api = crate::nintendont_sock::SocketApi::global_instance();
+    let mut server = sock_api.tcp_server(80, 1).unwrap();
+    loop {
+        let (mut stream, _) = match server.accept().await {
+            Ok(s) => s,
+            Err(e) => {
+                unsafe {
+                    primeapi::printf(b"accept failed: %d\n\0".as_ptr(), e);
+                }
+                continue
+            }
+        };
+        match stream.write_all(b"testing").await {
+            Ok(()) => (),
+            Err(e) => {
+                unsafe {
+                    primeapi::printf(b"write_all failed: %d\n\0".as_ptr(), e);
+                }
+                continue
+            }
+
+        }
+        let _ = stream.close().await;
+    }
+}*/
+
+use nintendont_sock::SocketApi;
+use futures::never::Never;
+use pin_utils::pin_mut;
+async fn event_loop() -> Never
+{
+    let mut server = SocketApi::global_instance().tcp_server(80, 1).unwrap();
+    // let addr = nintendont_sock::SockAddr {
+    //     len: 8,
+    //     family: sock_async::AF_INET as u8,
+    //     port: 80,
+    //     name: sock_async::INADDR_ANY,
+    //     unused: Default::default(),
+    // };
+    let mut queue = async_utils::FutureQueue::<_, generic_array::typenum::U5>::new();
+    let (queue_poller, mut queue_pusher) = queue.split();
+    // let mut server = ss.tcp_listen(&addr, 1).await.unwrap();
+    let connect_fut = async {
+        loop {
+            // TODO: Allow multiple clients, maybe with a vec?
+            //       Set a recv timeout on the client for 30s or 60s
+            let (mut client, _addr) = server.accept().await.unwrap();
+
+            let fut = Box::pin(async move {
+                let (mut reader, mut writer) = client.split();
+                let handler = mini_http_server::HttpRequestHandler::new()
+                    .reader(&mut reader)
+                    .writer(&mut writer)
+                    .fs(DvdFileSystem)
+                    // .ws(|_, _, _, w| -> Result<futures::future::Ready<Result<(), ()>>, _> { Err(w) });
+                    .ws(|_uri, key, r, w| {
+                        Ok(websocket_logic(r, w, key))
+                    });
+
+                match handler.handle_http_request().await {
+                    Ok(_) => {
+                        primeapi::dbg!("successful http request");
+                    },
+                    Err(mini_http_server::HttpRequestError::ReaderIO(e)) => {
+                        primeapi::dbg!("Reader IO Error", e);
+                    },
+                    Err(mini_http_server::HttpRequestError::WriterIO(e)) => {
+                        primeapi::dbg!("Writer IO Error", e);
+                    },
+                    Err(mini_http_server::HttpRequestError::Internal) => {
+                        primeapi::dbg!("failed http request");
+                    },
+                }
+            });
+            queue_pusher.push(fut).await;
+        }
+    };
+    pin_mut!(connect_fut);
+    futures::future::select(
+        connect_fut,
+        queue_poller
+    ).await.factor_first().0
+}
+
+#[patch_fn(kind = "return",
+           target = "Draw__13CIOWinManagerCFv" + 0x124)]
+unsafe extern "C" fn hook_every_frame()
+{
+    if running_on_dolphin() {
+        return
+    }
+
+    static mut COUNTER: u32 = 0;
+    COUNTER += 1;
+    if COUNTER == 4000 {
+        COUNTER = 0;
+        primeapi::printf(b"COUNTER reset\n\0".as_ptr());
+    }
+
+    let event_loop = if let Some(event_loop) = EVENT_LOOP.as_mut() {
+        event_loop
+    } else {
+        return
+    };
+    let waker = empty_waker();
+    let mut ctx = Context::from_waker(&waker);
+    match event_loop.as_mut().poll(&mut ctx) {
+        Poll::Pending => (),
+        Poll::Ready(never) => match never { },
+    }
+}
+
+// use alloc::rc::Rc;
+// use alloc::vec::Vec;
+// use core::cell::Cell;
+
+// struct Reactor
+// {
+//     // TODO: SmallVec?
+//     futures: Vec<(Pin<Box<dyn Future<Output = ()>>>, Rc<Cell<bool>>)>,
+// }
+
+// impl Reactor
+// {
+//     fn turn(&mut self)
+//     {
+//         static RAW_WAKER_VTABLE: RawWakerVTable = RawWakerVTable::new(
+//             // TODO: Should be Weak<Cell<bool>>, but the into_raw/from_raw apis are unstable
+//             // clone
+//             |p| {
+//                 let rc = unsafe { Rc::from_raw(p as *const Cell<bool>) };
+//                 Rc::into_raw(rc.clone());
+//                 RawWaker::new(Rc::into_raw(rc) as *const (), &RAW_WAKER_VTABLE)
+//             },
+//             // wake
+//             |p| {
+//                 let rc = unsafe { Rc::from_raw(p as *const Cell<bool>) };
+//                 rc.set(true);
+//             },
+//             // wake_by_ref
+//             |p| {
+//                 let rc = unsafe { Rc::from_raw(p as *const Cell<bool>) };
+//                 rc.set(true);
+//                 Rc::into_raw(rc);
+//             },
+//             // drop
+//             |p| {
+//                 unsafe { Rc::from_raw(p as *const Cell<bool>) };
+//             }
+//         );
+
+//         for (fut, waker_flag) in self.futures.iter_mut() {
+//             if !waker_flag.get() {
+//                 continue
+//             }
+
+//             waker_flag.set(false);
+//             let raw_waker = RawWaker::new(
+//                 Rc::into_raw(waker_flag.clone()) as *const (),
+//                 &RAW_WAKER_VTABLE
+//             );
+//             let waker = unsafe { Waker::from_raw(raw_waker) };
+//             let mut context = Context::from_waker(&waker);
+
+//             match fut.as_mut().poll(&mut context) {
+//                 // TODO: How do I remove the future from the vec? Call this from retain
+//                 Poll::Ready(()) => (),// TODO
+//                 Poll::Pending => (),
+//             }
+//         }
+//     }
+// }
+
+use alloc::vec::Vec;
+
+use core::cmp;
+use core::mem;
+use core::ops::Range;
+use core::marker::PhantomPinned;
+// use primeapi::alignment_utils::{Aligned32, Aligned32Slice};
+use primeapi::dol_sdk::dvd::AsyncDVDReadHandle;
+
+use async_utils::MaybeUninitSliceExt;
+
+use futures::ready;
+
+use mini_http_server::{FileSystem, FileMetadata};
+
+struct DvdFileSystem;
+impl FileSystem for DvdFileSystem
+{
+    type File = DvdFile;
+    fn open_file(&self, uri: &[u8]) -> Option<(DvdFile, FileMetadata)>
+    {
+        const MAX_FILENAME_LEN: usize = 128;
+
+        if uri.len() >= MAX_FILENAME_LEN {
+            return None;
+        }
+
+        // Ensure our filename is null-terminated
+        let mut buf = [MaybeUninit::uninit(); MAX_FILENAME_LEN];
+        buf[..uri.len()].copy_from_slice(<[MaybeUninit<_>]>::from_inited_slice(uri));
+        buf[uri.len()] = MaybeUninit::new(0);
+        let filename = unsafe { buf[..uri.len() + 1].assume_init_mut() };
+
+        let fi = if let Some(fi) = DVDFileInfo::new(filename) {
+            fi
+        } else {
+            return None;
+        };
+        let metadata = FileMetadata {
+            size: fi.file_length(),
+            // TODO: We should pull these values from a global variable/the config
+            etag: None,
+            last_modified: None,
+        };
+        let file = DvdFile {
+            fi,
+            pos: 0,
+            read_state: DvdFileReadState::Empty,
+            _pinned: PhantomPinned,
+        };
+        Some((file, metadata))
+
+    }
+
+}
+
+struct DvdFile
+{
+    fi: DVDFileInfo,
+
+    pos: u32,
+    read_state: DvdFileReadState<'static>,
+
+    _pinned: PhantomPinned,
+}
+
+enum DvdFileReadState<'a>
+{
+    InProgress(AsyncDVDReadHandle<'a, ()>, Box<[MaybeUninit<u8>]>),
+    Filled(Range<usize>, Box<[MaybeUninit<u8>]>),
+    Empty,
+}
+
+impl AsyncRead for DvdFile
+{
+    type Error = ();
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context,
+        buf: &mut [MaybeUninit<u8>]
+    ) -> Poll<Result<usize, Self::Error>>
+    {
+        let filled_buf = ready!(self.as_mut().poll_fill_buf(cx)?);
+
+        let amt = cmp::min(buf.len(), filled_buf.len());
+        let filled_buf = <[MaybeUninit<u8>]>::from_inited_slice(&filled_buf[..amt]);
+        buf[..amt].copy_from_slice(filled_buf);
+        self.consume(amt);
+        Poll::Ready(Ok(amt))
+    }
+}
+
+impl AsyncBufRead for DvdFile
+{
+    fn poll_fill_buf(
+        self: Pin<&mut Self>,
+        cx: &mut Context
+    ) -> Poll<Result<&[u8], Self::Error>>
+    {
+        let this = unsafe { self.get_unchecked_mut() };
+
+        match mem::replace(&mut this.read_state, DvdFileReadState::Empty) {
+            DvdFileReadState::InProgress(op, buffer) if op.is_finished() => {
+                // TODO: Check error?
+                let real_bytes_read = cmp::min(
+                    (this.fi.file_length() - this.pos) as usize,
+                    buffer.len()
+                );
+                this.pos += real_bytes_read as u32;
+                this.read_state = DvdFileReadState::Filled(0..real_bytes_read, buffer);
+                unsafe { Pin::new_unchecked(this) }.poll_fill_buf(cx)
+            },
+            DvdFileReadState::InProgress(op, buffer) => {
+                this.read_state = DvdFileReadState::InProgress(op, buffer);
+                Poll::Pending
+            },
+
+            DvdFileReadState::Filled(valid_range, buffer) => {
+                this.read_state = DvdFileReadState::Filled(valid_range.clone(), buffer);
+                let buffer = match &mut this.read_state {
+                    DvdFileReadState::Filled(_, buffer) => buffer,
+                    _ => unreachable!(),
+                };
+                Poll::Ready(Ok(unsafe { &buffer[valid_range.clone()].assume_init() }))
+            },
+            DvdFileReadState::Empty => {
+                if this.pos == this.fi.file_length() {
+                    return Poll::Ready(Ok(&[]))
+                }
+
+                // XXX We're taking advantage of the fact that MP1's malloc always returns a
+                //     32-byte aligned pointer.
+                let l = cmp::min(4096, (this.fi.file_length() - this.pos + 31) & !31) as usize;
+                let mut buf = unsafe {
+                    Vec::from_raw_parts(primeapi::malloc(l) as *mut MaybeUninit<u8>, l, l)
+                        .into_boxed_slice()
+                };
+                let op = unsafe {
+                    // TODO: Use the callback version to do the waker thang
+                    mem::transmute(this.fi.read_async(
+                        Aligned32SliceMut::from_slice_unchecked(&mut buf[..]),
+                        0,
+                        0
+                    ))
+                };
+                this.read_state = DvdFileReadState::InProgress(op, buf);
+                Poll::Pending
+            },
+        }
+    }
+
+    fn consume(self: Pin<&mut Self>, amt: usize)
+    {
+        let this = unsafe { self.get_unchecked_mut() };
+
+        match &mut this.read_state {
+            DvdFileReadState::InProgress(_, _) => (), // XXX panic?
+            DvdFileReadState::Empty => (),
+            DvdFileReadState::Filled(valid_range, _buffer) => {
+                valid_range.start += amt;
+                if valid_range.start >= valid_range.end {
+                    this.read_state = DvdFileReadState::Empty;
+                }
+            },
+        }
+    }
+}
+
+use primeapi::dol_sdk::os::{OSGetTime, Ticks};
+
+pub fn delay(ticks: Ticks) -> impl Future<Output = ()>
+{
+    let finished = ticks.ticks() + OSGetTime();
+    async_utils::poll_until(move || OSGetTime() >= finished)
+}
+
+use embedded_websocket::{
+    Error as WebSocketError, WebSocketKey, WebSocketReceiveMessageType, WebSocketSendMessageType,
+    WebSocketServer, WebSocketState,
+};
+use futures::future::{self, TryFutureExt};
+
+use async_utils::io::{AsyncWrite, AsyncReadExt};
+use core::cell::RefCell;
+
+use crate::tracker_state::{TrackerState, update_tracker_state};
+
+async fn websocket_logic<W, R>(
+    mut reader: R,
+    mut writer: W,
+    ws_key: [u8; 24]
+) -> Result<(), ()>
+    where R: AsyncRead + Unpin,
+          W: AsyncWrite + Unpin,
+          W::Error: core::fmt::Debug + async_utils::io::AsyncIoError,
+{
+    let mut ws = WebSocketServer::new_server();
+    let res: Result<(), ()> = async {
+        let key_str = core::str::from_utf8(&ws_key[..])
+            .map_err(|_| ())?;
+        let key = <WebSocketKey as core::str::FromStr>::from_str(key_str)
+            .map_err(|_| ())?;
+
+        let mut buf = Box::new([0; 128]);
+        let written = ws.server_accept(&key, None, &mut buf[..])
+            .map_err(|_| ())?;
+        writer.write_all(&buf[..written]).await
+            .map_err(|_| ())?;
+        Ok(())
+    }.await;
+    if res.is_err() {
+        return Ok(())
+    }
+
+    let mut msg_buf = Box::new([0; 768]);
+    let ws = RefCell::new(ws);
+    let write_queue = async_utils::AsyncMsgQueue::new();
+
+    let msg_fut = async {
+        let l = msg_buf.len();
+        let (msg_encoded, msg_decoded) = msg_buf.split_at_mut(l / 2 + 1);
+
+        let mut ts = TrackerState::new();
+        if let Some(len) = update_tracker_state(&mut ts, true, false, msg_decoded) {
+            let len = len.get();
+            let res = ws.borrow_mut()
+                .write(WebSocketSendMessageType::Text, true, &msg_decoded[..len], msg_encoded);
+            match res {
+                Ok(i) => {
+                    // primeapi::dbg!(&msg_encoded[..i]);
+                    write_queue.sync_push(&msg_encoded[..i]).await
+                },
+                Err(e) => {
+                    primeapi::dbg!(e);
+                },
+            }
+        };
+
+        let interval = Ticks::from_millis(5000);
+        let mut next_full_update = OSGetTime() + interval.ticks();
+        loop {
+            crate::delay(Ticks::from_millis(2500)).await;
+
+            let curr_time = OSGetTime();
+            let full_update = curr_time > next_full_update;
+            if full_update {
+                next_full_update = curr_time + interval.ticks();
+            }
+
+            let len = if let Some(len) = update_tracker_state(&mut ts, false, full_update, msg_decoded) {
+                len.get()
+            } else {
+                continue
+            };
+
+            let res = ws.borrow_mut()
+                .write(WebSocketSendMessageType::Text, true, &msg_decoded[..len], msg_encoded);
+            match res {
+                Ok(i) => {
+                    // primeapi::dbg!(&msg_encoded[..i]);
+                    write_queue.sync_push(&msg_encoded[..i]).await
+                },
+                Err(e) => {
+                    primeapi::dbg!(e);
+                },
+            }
+        };
+    };
+
+    let ping_fut = async {
+        let mut ping_buf = Box::new([0; 64]);
+        // Every ~10 seconds send a ping
+        loop {
+            crate::delay(Ticks::from_millis(10000)).await;
+            let res = ws.borrow_mut()
+                .write(WebSocketSendMessageType::Ping, true, &[], &mut ping_buf[..]);
+            match res {
+                Ok(i) => write_queue.sync_push(&ping_buf[..i]).await,
+                Err(e) => { primeapi::dbg!(e); },
+            }
+            let res = ws.borrow_mut()
+                .write(WebSocketSendMessageType::Text, true, b"{\"ping\":null}", &mut ping_buf[..]);
+            match res {
+                Ok(i) => write_queue.sync_push(&ping_buf[..i]).await,
+                Err(e) => { primeapi::dbg!(e); },
+            }
+        }
+    };
+
+    let reader_fut = async {
+        let mut recv_encoded = Box::new([0; 512 + 32]);
+        let mut recv_decoded = Box::new([0; 512]);
+        let mut recv_encoded_len = 0;
+        let r = loop {
+            if ws.borrow().state != WebSocketState::Open {
+                break Ok(())
+            }
+
+            let res = ws
+                .borrow_mut()
+                .read(&recv_encoded[..recv_encoded_len], &mut recv_decoded[..]);
+            let res = match res {
+                Ok(res) => res,
+                Err(WebSocketError::ReadFrameIncomplete) => {
+                    let buf = <[MaybeUninit<u8>]>::from_inited_slice_mut(&mut recv_encoded[..]);
+                    recv_encoded_len += reader.read(buf).await.map_err(|_| ())?;
+                    continue
+                },
+                Err(e) => {
+                    primeapi::dbg!(e);
+                    break Err(());
+                },
+            };
+
+            recv_encoded_len -= res.len_from;
+            unsafe {
+                ptr::copy(
+                    recv_encoded[res.len_from..].as_ptr(),
+                    recv_encoded.as_mut_ptr(),
+                    res.len_from,
+                );
+            }
+
+            if res.message_type == WebSocketReceiveMessageType::Ping {
+                // Send a pong
+                let l = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::Pong, true, &[], &mut recv_decoded[..])
+                    .map_err(|e| { primeapi::dbg!(e); })?;
+                    // .map_err(|_| ())?;
+                write_queue.sync_push(&recv_decoded[..l]).await;
+            } else if res.message_type == WebSocketReceiveMessageType::CloseMustReply {
+                let l = ws.borrow_mut()
+                    .write(WebSocketSendMessageType::CloseReply, true, &[], &mut recv_decoded[..])
+                    .map_err(|e| { primeapi::dbg!(e); })?;
+                    // .map_err(|_| ())?;
+                write_queue.sync_push(&recv_decoded[..l]).await;
+            } else if res.message_type == WebSocketReceiveMessageType::CloseCompleted {
+                return Err(())
+            }
+        };
+        r
+    };
+
+    let write_fut = async {
+        loop {
+            if false {
+                // XXX Type hint
+                break Result::<(), W::Error>::Ok(())
+            }
+            let buf_ref = write_queue.sync_pop().await;
+            writer.write_all(&buf_ref).await?;
+        }
+    };
+
+    pin_mut!(msg_fut, reader_fut, ping_fut, write_fut);
+    let f = future::select(
+        write_fut.map_err(|e| { primeapi::dbg!(e); }),
+        reader_fut
+    );
+    let f = future::select(f, msg_fut);
+    let f = future::select(f, ping_fut);
+    let _ = f.await;
+    Ok(())
+}

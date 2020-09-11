@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 adler32 = "1.0"
-chrono = "0.4"
 clap = "2.9"
 encoding = "0.2"
 flate2 = "1.0"

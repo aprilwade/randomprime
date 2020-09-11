@@ -1,0 +1,239 @@
+item-counter[artifact][count="0"] {
+    filter: /* blur(1px) */ saturate(20%) hue-rotate(170deg);
+}
+
+item-counter[item="etank-count"][count="0"] [counter] {
+    opacity: 0;
+}
+
+item-counter[item="etank-count"] {
+    background-image: url("../img/prime/game/etank.png");
+}
+
+item-counter[item="pb-count"][count="0"] [counter] {
+    opacity: 0;
+}
+
+item-counter[item="pb-count"] {
+    background-image: url("../img/prime/game/power_bombs_big.png");
+}
+
+item-counter[item="missile-count"][count="0"] [counter] {
+    opacity: 0;
+}
+
+item-counter[item="missile-count"] {
+    background-image: url("../img/prime/game/missile_big.png");
+}
+
+item-counter[item="missile"][count="0"] [counter] {
+    opacity: 0;
+}
+
+item-counter[item="missile"] {
+    background-image: url("../img/prime/game/missile_launcher.png");
+}
+
+item-counter[item="super-missile"] {
+    background-image: url("../img/prime/game/super_missile.png");
+}
+
+item-counter[item="wavebuster"] {
+    background-image: url("../img/prime/game/wavebuster.png");
+}
+
+item-counter[item="ice-spreader"] {
+    background-image: url("../img/prime/game/ice_spreader.png");
+}
+
+item-counter[item="flamethrower"] {
+    background-image: url("../img/prime/game/flamethrower.png");
+}
+
+item-counter[item="space-jump"] {
+    background-image: url("../img/prime/game/space_jump_boots.png");
+}
+
+item-counter[item="grapple"] {
+    background-image: url("../img/prime/game/grapple_beam.png");
+}
+
+item-counter[item="bombs"] {
+    background-image: url("../img/prime/game/bombs.png");
+}
+
+item-counter[item="boost"] {
+    background-image: url("../img/prime/game/boost_ball.png");
+}
+
+item-counter[item="spider"] {
+    background-image: url("../img/prime/game/spider_ball.png");
+}
+
+item-counter[item="varia"] {
+    background-image: url("../img/prime/game/varia_suit.png");
+}
+
+item-counter[item="gravity"] {
+    background-image: url("../img/prime/game/gravity_suit.png");
+}
+
+item-counter[item="phazon"] {
+    background-image: url("../img/prime/game/phazon_suit.png");
+}
+
+item-counter[item="thermal"] {
+    background-image: url("../img/prime/game/thermal_visor.png");
+}
+
+item-counter[item="xray"] {
+    background-image: url("../img/prime/game/xray_visor.png");
+}
+
+item-counter[item="charge"] {
+    background-image: url("../img/prime/game/charge_beam.png");
+}
+
+item-counter[item="wave"] {
+    background-image: url("../img/prime/game/wave_beam.png");
+}
+
+item-counter[item="ice"] {
+    background-image: url("../img/prime/game/ice_beam.png");
+}
+
+item-counter[item="plasma"] {
+    background-image: url("../img/prime/game/plasma_beam.png");
+}
+
+item-counter[item="power-bombs"][count="0"] [counter] {
+    opacity: 0;
+}
+
+item-counter[item="power-bombs"] {
+    background-image: url("../img/prime/game/power_bomb.png");
+}
+
+item-counter[item="morph"] {
+    background-image: url("../img/prime/game/morph_ball.png");
+}
+
+item-counter[item="truth"] {
+    background-image: url("../img/prime/artifacts/truth.png")
+}
+
+item-counter[item="strength"] {
+    background-image: url("../img/prime/artifacts/strength.png")
+}
+
+item-counter[item="elder"] {
+    background-image: url("../img/prime/artifacts/elder.png")
+}
+
+item-counter[item="wild"] {
+    background-image: url("../img/prime/artifacts/wild.png")
+}
+
+item-counter[item="lifegiver"] {
+    background-image: url("../img/prime/artifacts/lifegiver.png")
+}
+
+item-counter[item="warrior"] {
+    background-image: url("../img/prime/artifacts/warrior.png")
+}
+
+item-counter[item="chozo"] {
+    background-image: url("../img/prime/artifacts/chozo.png")
+}
+
+item-counter[item="nature"] {
+    background-image: url("../img/prime/artifacts/nature.png")
+}
+
+item-counter[item="sun"] {
+    background-image: url("../img/prime/artifacts/sun.png")
+}
+
+item-counter[item="world"] {
+    background-image: url("../img/prime/artifacts/world.png")
+}
+
+item-counter[item="spirit"] {
+    background-image: url("../img/prime/artifacts/spirit.png")
+}
+
+item-counter[item="newborn"] {
+    background-image: url("../img/prime/artifacts/newborn.png")
+}
+
+item-counter[item="all"]{
+	 background-image: url("../img/prime/artifacts/all.png")
+}
+
+item-counter[item="artifacts"][count="0"]{
+	 background-image: url("../img/prime/artifacts/all blue.png")
+}
+
+item-counter[item="artifacts"][count="1"] {
+    background-image: url("../img/prime/artifacts/1.png")
+}
+
+item-counter[item="artifacts"][count="2"] {
+    background-image: url("../img/prime/artifacts/2.png")
+}
+
+item-counter[item="artifacts"][count="3"] {
+    background-image: url("../img/prime/artifacts/3.png")
+}
+
+item-counter[item="artifacts"][count="4"] {
+    background-image: url("../img/prime/artifacts/4.png")
+}
+
+item-counter[item="artifacts"][count="5"] {
+    background-image: url("../img/prime/artifacts/5.png")
+}
+
+item-counter[item="artifacts"][count="6"] {
+    background-image: url("../img/prime/artifacts/6.png")
+}
+
+item-counter[item="artifacts"][count="7"] {
+    background-image: url("../img/prime/artifacts/7.png")
+}
+
+item-counter[item="artifacts"][count="8"] {
+    background-image: url("../img/prime/artifacts/8.png")
+}
+
+item-counter[item="artifacts"][count="9"] {
+    background-image: url("../img/prime/artifacts/9.png")
+}
+
+item-counter[item="artifacts"][count="10"] {
+    background-image: url("../img/prime/artifacts/10.png")
+}
+
+item-counter[item="artifacts"][count="11"] {
+    background-image: url("../img/prime/artifacts/11.png")
+}
+
+item-counter[item="artifacts"][count="12"] {
+    background-image: url("../img/prime/artifacts/all.png")
+}
+
+item-counter[item="suits"][count="0"] {
+    background-image: url("../img/prime/game/varia_suit.png");
+}
+
+item-counter[item="suits"][count="1"] {
+    background-image: url("../img/prime/game/varia_suit.png");
+}
+
+item-counter[item="suits"][count="2"] {
+    background-image: url("../img/prime/game/gravity_suit.png");
+}
+
+item-counter[item="suits"][count="3"] {
+    background-image: url("../img/prime/game/phazon_suit.png");
+}

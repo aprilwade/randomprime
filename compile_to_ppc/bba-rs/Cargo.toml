@@ -1,0 +1,16 @@
+[package]
+name = "bba-rs"
+version = "0.1.0"
+authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.smoltcp]
+version = "0.6"
+default-features = false
+features = [
+    "alloc", "ethernet",
+    "proto-ipv4", "proto-dhcpv4",
+    "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
+]

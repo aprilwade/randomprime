@@ -1,0 +1,15 @@
+[package]
+name = "mini_http_server"
+version = "0.1.0"
+authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# embedded-websocket = { git = "https://github.com/aprilwade/embedded-websocket" }
+futures = { version = "0.3", default-features = false, features = ["async-await"] }
+ufmt = "0.1"
+
+async_utils = { path = "../async_utils" }
+
+[lib]
+doctest = false

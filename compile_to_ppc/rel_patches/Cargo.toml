@@ -7,21 +7,20 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arrayvec = { version = "0.4", default-features = false }
 embedded-websocket = { git = "https://github.com/aprilwade/embedded-websocket" }
-futures-preview = { version = "=0.3.0-alpha.19", default-features = false }
+futures = { version = "0.3", default-features = false, features = ["async-await"] }
 generic-array = "0.13"
-linked_list_allocator = "0.6"
 linkme = "0.1"
 pin-utils = "0.1.0-alpha.4"
-serde = { version = "1", default-features = false, features = ["derive"] }
-serde_cbor = { version = "0.10", default-features = false, features = ["alloc"] }
 ssmarshal = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive"] }
+smallvec = "1"
+ufmt = "0.1"
 
-
-async_utils = { path = "../async_utils", package = "async_utils" }
-core = { path = "../core-futures-tls", package = "core-futures-tls" }
+async_utils = { path = "../async_utils" }
+mini_http_server = { path = "../mini_http_server" }
 primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
+
 
 [lib]
 crate-type = ["staticlib"]
