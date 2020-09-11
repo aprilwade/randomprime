@@ -1756,10 +1756,8 @@ fn patch_starting_pickups<'r>(
 {
     let room_id = area.mlvl_area.internal_id;
     let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
-
-    let needs_starting_items_msg = show_starting_items
-                                   && starting_items != &StartingItems::default();
-    if needs_starting_items_msg {
+    
+    if show_starting_items {
         // Turn on "Randomizer - Starting Items popup Layer"
         area.layer_flags.flags |= 1 << layer_count;
         area.add_layer(b"Randomizer - Starting Items popup Layer\0".as_cstr());
@@ -1787,7 +1785,7 @@ fn patch_starting_pickups<'r>(
         }
     }
 
-    if needs_starting_items_msg {
+    if show_starting_items {
         scly.layers.as_mut_vec()[layer_count as usize].objects.as_mut_vec().extend_from_slice(
             &[
                 structs::SclyObject {
@@ -2204,7 +2202,7 @@ pub struct ParsedConfig
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
     pub starting_items: StartingItems,
-    pub show_starting_items: bool,
+    pub random_starting_items: StartingItems,
     pub comment: String,
     pub main_menu_message: String,
 
@@ -2353,7 +2351,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let pickup_resources = collect_pickup_resources(gc_disc, &config.starting_items);
+    let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
+    let starting_items = config.starting_items.merge(&config.random_starting_items).clone();
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -2555,14 +2554,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
     );
-
-    let starting_items = config.starting_items.clone();
+    
+    let show_starting_items = config.random_starting_items != StartingItems::empty();
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
         move |_ps, area| patch_starting_pickups(
             area,
             &starting_items,
-            config.show_starting_items,
+            show_starting_items,
             &pickup_resources,
         )
     );

@@ -65,8 +65,7 @@ struct Config
     keep_fmvs: bool,
 
     starting_items: Option<StartingItemsWrapper>,
-    #[serde(default)]
-    show_starting_items: bool,
+    random_starting_items: Option<StartingItemsWrapper>,
     #[serde(default)]
     comment: String,
     #[serde(default)]
@@ -257,7 +256,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         flaahgra_music_files,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
-        show_starting_items: config.show_starting_items,
+        random_starting_items: config.random_starting_items.map(|i| i.into()).unwrap_or_default(),
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 
