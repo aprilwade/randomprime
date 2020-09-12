@@ -73,9 +73,27 @@ impl CPlayerState
     { }
 }
 
-pub enum CWorldState { }
+pub enum CRelayTracker { }
+impl CRelayTracker
+{
+    cpp_field!(len: u32; val @ 0x0);
+
+    pub unsafe fn relays(this: *const Self) -> *const [u32]
+    {
+        let len = Self::len(this);
+        let array_start = (this as *const u32).offset(1);
+        core::slice::from_raw_parts(array_start, len as usize)
+    }
+}
+
+#[repr(C)]
+pub struct CWorldState([u32; 0x18 / 4]);
 impl CWorldState
 {
+    // XXX shared_ptr
+    cpp_field!(relay_tracker: *mut *mut CRelayTracker; val @ 0x8);
+    cpp_field!(mlvl: u32; val @ 0x0);
+
     #[cpp_method(CWorldState::SetDesiredAreaAssetId(unsigned int))]
     pub unsafe fn set_desired_area_asset_id(this: *mut CWorldState, id: u32)
     { }
@@ -87,6 +105,7 @@ impl CGameState
     // TODO: I guess this should actually be shared_ptr
     cpp_field!(player_state: *mut *mut CPlayerState; val @ 0x98);
     cpp_field!(play_time: f64; val @ 0xa0);
+    cpp_field!(world_states: Vector<CWorldState>; ptr @ 0x88);
 
     pub fn global_instance() -> *mut Self
     {

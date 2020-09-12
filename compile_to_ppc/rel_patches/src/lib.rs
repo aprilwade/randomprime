@@ -1,10 +1,17 @@
 #![no_std]
+#![type_length_limit = "10853194"]
 
 extern crate alloc;
 
-use linkme::distributed_slice;
+use alloc::boxed::Box;
 
-use primeapi::{patch_fn, prolog_fn};
+use core::convert::Infallible;
+use core::future::Future;
+use core::mem::MaybeUninit;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+
+use primeapi::{patch_fn, prolog_fn, running_on_dolphin};
 use primeapi::alignment_utils::Aligned32;
 use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
@@ -13,13 +20,20 @@ use primeapi::mp1::{
 };
 use primeapi::rstl::WString;
 
-use core::mem::MaybeUninit;
+use futures::task::noop_waker;
+use linkme::distributed_slice;
+
+mod nintendont_sock;
+mod tracker_state;
+mod tracker_event_loop;
 
 include!("../../patches_config.rs");
 static mut REL_CONFIG: RelConfig = RelConfig {
     quickplay_mlvl: 0xFFFFFFFF,
     quickplay_mrea: 0xFFFFFFFF,
 };
+
+static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Infallible>>>> = None;
 
 #[prolog_fn]
 unsafe extern "C" fn setup_global_state()
@@ -41,6 +55,12 @@ unsafe extern "C" fn setup_global_state()
             .unwrap().0;
     }
 
+    if running_on_dolphin() {
+        return
+    }
+
+    crate::nintendont_sock::SocketApi::global_instance();
+    EVENT_LOOP = Some(Box::pin(crate::tracker_event_loop::event_loop()));
 }
 
 
@@ -85,4 +105,32 @@ unsafe extern "C" fn quickplay_hook_advance_game_state(
         }
     }
     CMainFlow::advance_game_state(flow, q)
+}
+
+#[patch_fn(kind = "return",
+           target = "Draw__13CIOWinManagerCFv" + 0x124)]
+unsafe extern "C" fn hook_every_frame()
+{
+    if running_on_dolphin() {
+        return
+    }
+
+    // static mut COUNTER: u32 = 0;
+    // COUNTER += 1;
+    // if COUNTER == 4000 {
+    //     COUNTER = 0;
+    //     primeapi::printf(b"COUNTER reset\n\0".as_ptr());
+    // }
+
+    let event_loop = if let Some(event_loop) = EVENT_LOOP.as_mut() {
+        event_loop
+    } else {
+        return
+    };
+    let waker = noop_waker();
+    let mut ctx = Context::from_waker(&waker);
+    match event_loop.as_mut().poll(&mut ctx) {
+        Poll::Pending => (),
+        Poll::Ready(never) => match never { },
+    }
 }

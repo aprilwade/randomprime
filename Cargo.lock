@@ -168,7 +168,7 @@ version = "0.1.0"
 dependencies = [
  "auto_struct_macros",
  "clap",
- "enum-map 0.5.0",
+ "enum-map",
  "goblin",
  "memmap",
  "reader_writer",
@@ -247,16 +247,6 @@ checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "enum-map"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccd9b2d5e0eb5c2ff851791e2af90ab4531b1168cfc239d1c0bf467e60ba3c89"
-dependencies = [
- "enum-map-derive",
- "enum-map-internals",
-]
-
-[[package]]
-name = "enum-map"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70a375f899a53b9848ad9fb459b5bf90e4851ae5d9fea89134b062dc1828b26e"
@@ -278,15 +268,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enum-map-internals"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b0bacf3ea7aba18ce84032efc3f0fa29f5c814048b742ab3e64d07d83ac3e8"
-dependencies = [
- "array-macro",
-]
-
-[[package]]
 name = "flate2"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -303,6 +284,7 @@ name = "generated"
 version = "0.1.0"
 dependencies = [
  "dol_linker",
+ "flate2",
  "macro_file_proxy",
  "reader_writer",
  "walkdir",
@@ -575,7 +557,7 @@ dependencies = [
  "clap",
  "dol_linker",
  "encoding",
- "enum-map 0.6.2",
+ "enum-map",
  "flate2",
  "generated",
  "memmap",

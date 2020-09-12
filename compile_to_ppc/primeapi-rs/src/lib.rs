@@ -5,12 +5,14 @@ extern crate alloc;
 
 use linkme::distributed_slice;
 
+use ufmt::uwriteln;
+
 // Rexport these macros
 pub use primeapi_macros::{cpp_method, cw_link_name, patch_fn, prolog_fn};
 
 use core::alloc::{GlobalAlloc, Layout};
+use core::convert::Infallible;
 use core::ffi::c_void;
-use core::fmt::{self, Write as _};
 
 pub mod rstl;
 pub mod dol_sdk {
@@ -61,9 +63,16 @@ macro_rules! cpp_field {
     };
 }
 
+pub fn running_on_dolphin() -> bool
+{
+    unsafe { core::ptr::read(0xCD000004 as *mut u32) == 0xFFFFFFFF }
+}
+
+
 extern "C"
 {
-    fn fwrite(bytes: *const u8, len: usize, count: usize) -> usize;
+    static stdout: u32;
+    fn fwrite(bytes: *const u8, len: usize, count: usize, fd: *const u32) -> usize;
 
     pub fn printf(fmt: *const u8, ...);
 
@@ -77,6 +86,32 @@ extern "C"
     fn free(ptr: *const c_void);
 }
 
+#[macro_export]
+macro_rules! dbg {
+    () => {{
+        // use core::fmt::Write;
+        // let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}]", file!(), line!());
+    }};
+    ($val:expr) => {{
+        // Use of `match` here is intentional because it affects the lifetimes
+        // of temporaries - https://stackoverflow.com/a/48732525/1063961
+        match $val {
+            tmp => {
+                // use core::fmt::Write;
+                // let _ = core::writeln!($crate::Mp1Stdout, "[{}:{}] {} = {:#?}",
+                //     file!(), line!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    }};
+    // Trailing comma with single argument is ignored
+    ($val:expr,) => { $crate::dbg!($val) };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::dbg!($val)),+,)
+    };
+}
+
+#[inline(always)]
 pub unsafe fn malloc(len: usize) -> *mut c_void
 {
     operator_new(len, b"??\0".as_ptr(), b"??\0".as_ptr())
@@ -101,13 +136,28 @@ static A: Mp1Allocator = Mp1Allocator;
 
 pub struct Mp1Stdout;
 
-impl fmt::Write for Mp1Stdout
+impl core::fmt::Write for Mp1Stdout
 {
-    fn write_str(&mut self, s: &str) -> fmt::Result
+    fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error>
     {
         unsafe {
             // TODO: Check result?
-            fwrite(s.as_bytes().as_ptr(), s.len(), 1);
+            // TODO: This depends on game version
+            fwrite(s.as_bytes().as_ptr(), s.len(), 1, &stdout);
+        }
+        Ok(())
+    }
+}
+
+
+impl ufmt::uWrite for Mp1Stdout
+{
+    type Error = Infallible;
+    fn write_str(&mut self, s: &str) -> Result<(), Self::Error>
+    {
+        unsafe {
+            // TODO: Check result?
+            fwrite(s.as_bytes().as_ptr(), s.len(), 1, &stdout);
         }
         Ok(())
     }
@@ -128,7 +178,14 @@ fn halt() -> !
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     if cfg!(debug_assertions) {
-        writeln!(Mp1Stdout, "{}", info).ok();
+        if let Some(loc) = info.location() {
+            uwriteln!(Mp1Stdout, "Panic at {}:{}", loc.file(), loc.line()).ok();
+        } else {
+            uwriteln!(Mp1Stdout, "Panic").ok();
+        }
+        if let Some(msg) = info.payload().downcast_ref::<&str>() {
+            uwriteln!(Mp1Stdout, "msg: {}", msg).ok();
+        }
     }
 
     halt()
@@ -137,7 +194,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 #[alloc_error_handler]
 fn alloc_error(_layout: Layout) -> ! {
     if cfg!(debug_assertions) {
-        writeln!(Mp1Stdout, "Alloc failed").ok();
+        uwriteln!(Mp1Stdout, "Alloc failed").ok();
     }
 
     halt()
@@ -223,7 +280,7 @@ unsafe extern "C" fn __rel_prolog()
             PatchKind::Call => {
                 let rel_addr = patch.target_fn_ptr as i64 - instr_ptr as i64;
                 let imm = bounds_check_and_mask(24, rel_addr);
-                ((instr & 0xfc000003) | imm)
+                (instr & 0xfc000003) | imm
             },
             PatchKind::Return => {
                 // Assert the instr is actually a return
@@ -231,7 +288,7 @@ unsafe extern "C" fn __rel_prolog()
 
                 let rel_addr = patch.target_fn_ptr as i64 - instr_ptr as i64;
                 let imm = bounds_check_and_mask(24, rel_addr);
-                (0x48000000 | imm) // Uncondtional jump
+                0x48000000 | imm // Uncondtional jump
             },
         };
 
@@ -239,29 +296,7 @@ unsafe extern "C" fn __rel_prolog()
     }
 
     for prolog_func in PROLOG_FUNCS.iter() {
-        printf(b"calling prolog func ptr\n\0".as_ptr());
+        printf(b"calling prolog func ptr %p\n\0".as_ptr(), *prolog_func);
         prolog_func();
     }
 }
-
-
-// TODO: Maybe re-enable this later? The core::fmt machinery seems to need it sometimes
-// #[no_mangle]
-// unsafe extern "C" fn bcmp(mut b1: *const u8, mut b2: *const u8, mut len: u32) -> u32
-// {
-//     if len == 0 {
-//         return 0
-//     }
-
-//     while len > 0 {
-//         if ptr::read(b1) != ptr::read(b2) {
-//             break
-//         }
-
-//         b1 = b1.offset(1);
-//         b2 = b2.offset(1);
-//         len -= 1;
-//     }
-
-//     len
-// }

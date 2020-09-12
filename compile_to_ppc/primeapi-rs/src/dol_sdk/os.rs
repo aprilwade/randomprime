@@ -53,3 +53,28 @@ pub fn OSGetTime() -> u64
         OSGetTime()
     }
 }
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Ticks(u64);
+
+const TB_BUS_CLOCK: u32 = 162000000;
+// const TB_CORE_CLOCK: u32 = 486000000;
+const TB_TIMER_CLOCK: u32 = TB_BUS_CLOCK / 4000;
+
+impl Ticks
+{
+    pub fn from_millis(millis: u64) -> Ticks
+    {
+        Ticks(millis * TB_TIMER_CLOCK as u64)
+    }
+
+    pub fn from_seconds(seconds: u64) -> Ticks
+    {
+        Ticks(seconds * 1000 * TB_TIMER_CLOCK as u64)
+    }
+
+    pub fn ticks(self) -> u64
+    {
+        self.0
+    }
+}

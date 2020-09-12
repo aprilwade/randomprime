@@ -1756,7 +1756,7 @@ fn patch_starting_pickups<'r>(
 {
     let room_id = area.mlvl_area.internal_id;
     let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
-    
+
     if show_starting_items {
         // Turn on "Randomizer - Starting Items popup Layer"
         area.layer_flags.flags |= 1 << layer_count;
@@ -2073,6 +2073,40 @@ fn patch_dol<'r>(
         b      { rel_loader_map["rel_loader_hook"] };
     }))?;
 
+    // let mut so_startup_bytes = vec![0u8; 0x4D4];
+    let mut so_startup_bytes: Vec<u8> = vec![];
+
+    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
+
+    let iter_instr = |bs: &'static [u8], c| iter::repeat(bs).take(c).flat_map(|i| i.iter());
+
+    // loads: 111,  stores: 31,   fcalls: 30,  branches: 41,   moves: 24
+    // loads
+    so_startup_bytes.extend(iter_instr(&[0x38, 0x00, 0x00, 0x00], 111 - 1));
+    // stores
+    so_startup_bytes.extend(iter_instr(&[0x94, 0x00, 0x00, 0x00], 31));
+    // fcalls
+    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x01], 30));
+    // branches
+    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x00], 41));
+    // moves
+    so_startup_bytes.extend(iter_instr(&[0x7C, 0x00, 0x00, 0x00], 24));
+
+    // nops/filler
+    so_startup_bytes.extend(iter_instr(&[0x00, 0x00, 0x77, 0x77], (0x4D4 - 944) / 4));
+
+    assert_eq!(so_startup_bytes.len() - 4, 0x4D4);
+    // Return instr
+    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
+
+    // TODO +/-4
+    so_startup_bytes[0x40C + 4..0x40C + 8].copy_from_slice(&[0x38, 0x00, 0x00, 0x01]);
+    so_startup_bytes.extend(&[0x0; 4]);
+
+
+    dol_patcher.add_text_segment(0x80602000, Cow::Owned(so_startup_bytes))?;
+
+
 
     *file = structs::FstEntryFile::ExternalFile(Box::new(dol_patcher));
     Ok(())
@@ -2282,6 +2316,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     if version == Version::Ntsc0_01 || (version == Version::Pal && !config.pal_override) {
         Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
     }
+    gc_disc.header.country_code = 'R' as u8;
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
 
@@ -2347,7 +2382,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
     let elevator_layout = &elevator_layout;
     let spawn_room = config.starting_location;
-    
+
 
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2503,6 +2538,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
     )?;
 
+    for file in generated::WEB_TRACKER_ASSETS {
+        gc_disc.add_file(
+            &format!("tracker/{}", file.name),
+            structs::FstEntryFile::ExternalFile(Box::new(file.decompress())),
+        )?;
+    }
+
     const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
         resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
         resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
@@ -2555,7 +2597,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
     );
-    
+
     let show_starting_items = !config.random_starting_items.is_empty();
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),

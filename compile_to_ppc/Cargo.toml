@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "async_utils",
+    "mini_http_server",
     "primeapi-rs",
         "primeapi-rs/primeapi_macros",
     "rel_loader",
@@ -14,6 +16,7 @@ codegen-units = 1
 [profile.release]
 panic = "abort"
 lto = true
+incremental = false
 codegen-units = 1
 opt-level = 's'
 

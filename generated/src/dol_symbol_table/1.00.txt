@@ -14325,5 +14325,6 @@
 0x803CB0C4 "__GBAX02"
 0x803d47cc "aMetroidprimeA"
 0x803d47db "aMetroidprimeB"
+0x803f27c8 "stdout"
 0x805a8c34 "g_MainStringTable"
 0x805a8c40 "g_GameState"

@@ -6,9 +6,9 @@ edition = "2018"
 
 [dependencies]
 linkme = "0.1"
-generic-array = "0.13"
-# pin-utils = "0.1.0-alpha.4"
+generic-array = "0.14"
 paste = "0.1"
+ufmt = "0.1"
 
 primeapi_macros = { path = "primeapi_macros" }
 

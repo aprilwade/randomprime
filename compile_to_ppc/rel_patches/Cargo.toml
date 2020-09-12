@@ -7,12 +7,19 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-generic-array = "0.13"
+embedded-websocket = "0.3"
+futures = { version = "0.3", default-features = false, features = ["async-await"] }
+generic-array = "0.14"
 linkme = "0.1"
-
-primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
-serde = { version = "1", default-features = false, features = ["derive"] }
+pin-utils = "0.1"
 ssmarshal = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive"] }
+smallvec = "1.4"
+ufmt = "0.1"
+
+async_utils = { path = "../async_utils" }
+mini_http_server = { path = "../mini_http_server" }
+primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
 
 [lib]
 crate-type = ["staticlib"]

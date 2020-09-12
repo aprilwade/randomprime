@@ -1,0 +1,102 @@
+body {
+    background: black;
+}
+
+[center] {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+[flex-column] {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+[flex-row] {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+[top-pad] {
+    padding-top: 0px;
+}
+
+item-counter {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 2px;
+    width: 41px;
+    height: 41px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+item-counter, item-toggle {
+    /*transition: 0.3s;*/
+    transition-property: filter, opacity;
+    /* cursor: pointer; */
+}
+
+item-counter[big] {
+    width: 60px;        /*90*/
+    height: 68px;   /*98*/
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+item-counter [counter], item-toggle {
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    color: rgba(255, 255, 255, 1);
+    font-family: sans-serif;
+    font-weight: normal;
+    font-size: 18px;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black, 2px 2px 4px #000000;
+}
+
+item-counter[count="0"], item-toggle[count="0"] {
+    opacity: 0.25;
+    filter: /*blur(1px)*/ saturate(50%);
+}
+
+item-toggle {
+    padding: 6px;
+    font-size: 18px;
+}
+
+[artifact-wrapper] {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+[artifact-wrapper] item-counter {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+}
+
+[translator-wrapper] {
+    position: relative;
+    width: 45px;
+    height: 45px;
+}
+
+[translator-wrapper] item-counter {
+    position: absolute;
+    width: 45px;
+    height: 45px;
+}
