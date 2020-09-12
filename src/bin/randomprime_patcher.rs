@@ -193,9 +193,9 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     let (pickup_layout, elevator_nums, seed) = parse_layout(&layout_string)?;
     let skip_impact_crater = matches.is_present("skip impact crater");
 
-    let starting_location = SpawnRoom::from_u32(elevator_nums[0] as u32).unwrap();
+    let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32).unwrap();
     let mut elevator_layout = EnumMap::<Elevator, SpawnRoom>::new();
-    elevator_layout.extend(elevator_nums[1..].iter()
+    elevator_layout.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
         .zip(Elevator::iter())
         .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
     );
@@ -214,6 +214,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
     } else {
         None
     };
+
+    let random_starting_items = matches.value_of("random starting items")
+        .map(|s| StartingItems::from_u64(s.parse().unwrap()))
+        .unwrap_or(StartingItems::from_u64(0));
 
     Ok(patches::ParsedConfig {
         input_iso: input_iso_mmap,
@@ -246,9 +250,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         starting_items: matches.value_of("change starting items")
                                 .map(|s| StartingItems::from_u64(s.parse().unwrap()))
                                 .unwrap_or_default(),
-        random_starting_items: matches.value_of("random starting items")
-                                .map(|s| StartingItems::from_u64(s.parse().unwrap()))
-                                .unwrap_or_default(),
+        random_starting_items,
 
         comment: matches.value_of("text file comment").unwrap_or("").to_string(),
         main_menu_message: matches.value_of("main menu message").unwrap_or("").to_string(),

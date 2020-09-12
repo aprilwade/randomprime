@@ -517,7 +517,7 @@ impl From<ElevatorData> for SpawnRoomData
 
 decl_spawn_rooms! {
     LandingSite => {
-        pak_name: "metroid4.pak",
+        pak_name: "Metroid4.pak",
         mlvl: 0x39f2de28,
         mrea: 0xb2701146,
         mrea_idx: 0,

@@ -2347,12 +2347,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
     let elevator_layout = &elevator_layout;
     let spawn_room = config.starting_location;
+    
 
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
-    let starting_items = config.starting_items.merge(&config.random_starting_items).clone();
+    let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -2555,7 +2556,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patch_save_banner_txtr
     );
     
-    let show_starting_items = config.random_starting_items != StartingItems::empty();
+    let show_starting_items = !config.random_starting_items.is_empty();
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
         move |_ps, area| patch_starting_pickups(
