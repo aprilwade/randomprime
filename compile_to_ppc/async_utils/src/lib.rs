@@ -18,6 +18,16 @@ use core::task::{Context, Poll};
 
 pub mod io;
 
+#[macro_export]
+macro_rules! async_type_hint {
+    ($t:ty) => {
+        unsafe {
+            if false {
+                return core::mem::MaybeUninit::<$t>::uninit().assume_init();
+            }
+        }
+    };
+}
 
 pub fn poll_until_complete<F: Future>(f: F) -> F::Output
 {

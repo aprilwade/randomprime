@@ -1,5 +1,5 @@
 #![no_std]
-#![type_length_limit = "10853194"]
+#![type_length_limit = "14435114"]
 
 extern crate alloc;
 
