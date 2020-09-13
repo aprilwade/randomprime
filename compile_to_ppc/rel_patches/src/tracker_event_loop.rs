@@ -47,34 +47,64 @@ pub(crate) async fn event_loop() -> Never
             primeapi::dbg!("Accepted connection");
             let fut = Box::pin(async move {
                 let (mut reader, mut writer) = client.split();
-                let handler = mini_http_server::HttpRequestHandler::new()
-                    .reader(&mut reader)
-                    .writer(&mut writer)
-                    .fs(DvdFileSystem)
-                    .ws(|_uri, key, r, w| {
-                        Ok(websocket_logic(r, w, key))
-                    });
+                loop {
+                    let handler = mini_http_server::HttpRequestHandler::new()
+                        .reader(&mut reader)
+                        .writer(&mut writer)
+                        .fs(DvdFileSystem)
+                        .ws(|_uri, key, r, w| {
+                            Ok(websocket_logic(r, w, key))
+                        });
 
-                match handler.handle_http_request().await {
-                    Ok(b) => {
-                        primeapi::dbg!("successful http request", b);
-                    },
-                    Err(mini_http_server::HttpRequestError::ReaderIO(_e)) => {
-                        primeapi::dbg!("Reader IO Error", _e);
-                    },
-                    Err(mini_http_server::HttpRequestError::WriterIO(_e)) => {
-                        primeapi::dbg!("Writer IO Error", _e);
-                    },
-                    Err(mini_http_server::HttpRequestError::Internal) => {
-                        primeapi::dbg!("failed http request");
-                    },
+                    primeapi::dbg!("Handing request");
+                    // TODO: Place some kind of timeout on a non-websocket http request
+                    match handler.handle_http_request().await {
+                        // If we got a true, we can reuse this connection.
+                        Ok(true) => { primeapi::dbg!("successful http request - reusing"); },
+                        Ok(false) => {
+                            primeapi::dbg!("successful http request - closing");
+                            break
+                        },
+                        Err(mini_http_server::HttpRequestError::ReaderIO(e)) => {
+                            primeapi::dbg!("Reader IO Error", e);
+                            break
+                        },
+                        Err(mini_http_server::HttpRequestError::WriterIO(e)) => {
+                            primeapi::dbg!("Writer IO Error", e);
+                            break
+                        },
+                        Err(mini_http_server::HttpRequestError::Internal) => {
+                            primeapi::dbg!("failed http request");
+                            break
+                        },
+                    }
+
+                    // Wait until either we have additional data to read (indicating another
+                    // requests over the persistent connection), or a timeout expires.
+                    let res = future::select(
+                        reader.wait_until_read_available(),
+                        delay(Ticks::from_seconds(5)),
+                    ).await;
+                    match res {
+                        future::Either::Left((Ok(()), _)) => {
+                            primeapi::dbg!("Data available to read");
+                        },
+                        future::Either::Left((Err(e), _)) => {
+                            primeapi::dbg!("Reader IO Error", e);
+                            break
+                        }
+                        future::Either::Right(((), _)) => {
+                            primeapi::dbg!("keep-alive timeout");
+                            break
+                        },
+                    }
                 }
             });
             queue_pusher.push(fut).await;
         }
     };
     pin_mut!(connect_fut);
-    futures::future::select(
+    future::select(
         connect_fut,
         queue_poller
     ).await.factor_first().0

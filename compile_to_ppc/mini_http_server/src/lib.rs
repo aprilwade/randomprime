@@ -172,10 +172,9 @@ pub(crate) struct SupportedHttpHeaderFields
     pub(crate) content_length: Option<usize>,
     pub(crate) if_modified_since: Option<HttpDate>,
     pub(crate) if_none_match: Option<[u8; 16]>,
-    // TODO If we receive "Connection: close", then we should terminate the connection after
-    //      sending our response
 
     pub(crate) connection_upgrade: bool,
+    pub(crate) connection_close: bool,
     pub(crate) upgrade_websocket: bool,
     pub(crate) websocket_key: Option<[u8; 24]>,
     pub(crate) websocket_version_13: bool,
@@ -226,8 +225,10 @@ impl SupportedHttpHeaderFields
                         "Invalid Connection value".into()
                     ))?;
             for s in s.split(',') {
-                if s.trim() == "Upgrade" {
-                    self.connection_upgrade = true;
+                match s.trim() {
+                    "Upgrade" => self.connection_upgrade = true,
+                    "close" => self.connection_close = true,
+                    _ => (),
                 }
             }
         } else if name == b"Upgrade" && val == b"websocket" {
@@ -446,8 +447,8 @@ impl<R, W, FS, WS, WSF, WSE> HttpRequestHandler<R, W, FS, WS>
     {
         let Self { mut reader, mut writer, fs, ws } = self;
 
-        let res: Result<_, HttpError<R::Error, W::Error>> = try {
-            let mut handler = SupportedHttpHeaderFields::default();
+        let mut handler = SupportedHttpHeaderFields::default();
+        let res: Result<(), HttpError<R::Error, W::Error>> = try {
             let already_read_len = {
                 let mut lr = (&mut reader).line_reader(Box::new_uninit_slice(512));
                 parse_http_request_headers(&mut lr, &mut handler).await?;
@@ -512,7 +513,12 @@ impl<R, W, FS, WS, WSF, WSE> HttpRequestHandler<R, W, FS, WS>
                 buf_writer.write_all("HTTP/1.1 ".as_bytes()).await.map_err(HttpError::WriterIO)?;
                 buf_writer.write_all(HttpStatus::NotModified304.header_message().as_bytes()).await
                     .map_err(HttpError::WriterIO)?;
-                buf_writer.write_all(b"Connection: close\r\n").await.map_err(HttpError::WriterIO)?;
+                let conn_msg = if handler.connection_close {
+                    &b"Connection: close\r\n"[..]
+                } else {
+                    &b"Connection: keep-alive\r\n"[..]
+                };
+                buf_writer.write_all(conn_msg).await.map_err(HttpError::WriterIO)?;
                 buf_writer.write_all(b"\r\n").await.map_err(HttpError::WriterIO)?;
                 buf_writer.flush().await.map_err(HttpError::WriterIO)?;
             } else {
@@ -550,7 +556,12 @@ impl<R, W, FS, WS, WSF, WSE> HttpRequestHandler<R, W, FS, WS>
 
                 let _ = line_buf;
 
-                buf_writer.write_all(b"Connection: close\r\n").await.map_err(HttpError::WriterIO)?;
+                let conn_msg = if handler.connection_close {
+                    &b"Connection: close\r\n"[..]
+                } else {
+                    &b"Connection: keep-alive\r\n"[..]
+                };
+                buf_writer.write_all(conn_msg).await.map_err(HttpError::WriterIO)?;
 
                 buf_writer.write_all(b"\r\n").await.map_err(HttpError::WriterIO)?;
                 buf_writer.flush().await.map_err(HttpError::WriterIO)?;
@@ -564,22 +575,25 @@ impl<R, W, FS, WS, WSF, WSE> HttpRequestHandler<R, W, FS, WS>
                         Either::Right(e) => HttpError::WriterIO(e),
                     })?;
             }
-
-            false
         };
 
         match res {
-            Ok(b) => Ok(b),
+            Ok(()) => Ok(!handler.connection_close),
             Err(HttpError::Semantic(HttpSemanticError(status, _msg))) => {
                 let res: Result<_, W::Error> = async {
                     // TODO Actually write out _msg
                     let mut buf_writer = writer.buf_writer(Box::new_uninit_slice(512));
                     buf_writer.write_all("HTTP/1.1 ".as_bytes()).await?;
                     buf_writer.write_all(status.header_message().as_bytes()).await?;
-                    buf_writer.write_all(b"Connection: close\r\n").await?;
+                    let conn_msg = if handler.connection_close {
+                        &b"Connection: close\r\n"[..]
+                    } else {
+                        &b"Connection: keep-alive\r\n"[..]
+                    };
+                    buf_writer.write_all(conn_msg).await?;
                     buf_writer.write_all(b"\r\n").await?;
                     buf_writer.flush().await?;
-                    Ok(false)
+                    Ok(!handler.connection_close)
                 }.await;
                 res.map_err(|e| HttpRequestError::WriterIO(e))
             },
@@ -653,7 +667,7 @@ mod test
         assert_eq!(&writer[..], "\
             HTTP/1.1 200 OK\r\n\
             Content-Length: 7\r\n\
-            Connection: close\r\n\
+            Connection: keep-alive\r\n\
             \r\n\
             testing".as_bytes()
         );
@@ -661,6 +675,7 @@ mod test
         let request = "\
             HEAD /testing HTTP/1.1\r\n\
             Host: example.com\r\n\
+            Connection: close\r\n\
             \r\n";
         let mut writer = vec![];
         let handler = HttpRequestHandler::new()
@@ -689,7 +704,7 @@ mod test
         poll_until_complete(handler.handle_http_request()).unwrap();
         assert_eq!(&writer[..], "\
             HTTP/1.1 404 Not Found\r\n\
-            Connection: close\r\n\
+            Connection: keep-alive\r\n\
             \r\n".as_bytes()
         );
 

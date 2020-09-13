@@ -22,6 +22,7 @@ const SO_PF_INET: i32 = 2;
 const SO_F_GETFL: i32 = 3;
 const SO_F_SETFL: i32 = 4;
 const SO_O_NONBLOCK: u32 = 0x04;
+const SO_MSG_PEEK: i32 = 0x2;
 
 const SO_POLLRDNORM: u16 = 0x000; // Normal data read
 const SO_POLLRDBAND: u16 = 0x000; // Priority data read
@@ -465,6 +466,11 @@ impl TcpStream
     {
         (TcpStreamReadHalf(self.0, PhantomData), TcpStreamWriteHalf(self.0, PhantomData))
     }
+
+    // fn wait_until_read_available(&'a mut self) -> impl Future<Output = Result<(), Error>> + 'a
+    // {
+    //     TcpStreamReadHalf(self.0, PhantomData).wait_until_read_available()
+    // }
 }
 
 impl Drop for TcpStream
@@ -483,6 +489,32 @@ impl Drop for TcpStream
         if let Err(_e) = res {
             primeapi::dbg!(_e);
         }
+    }
+}
+
+impl<'a> TcpStreamReadHalf<'a>
+{
+    pub fn wait_until_read_available<'b>(&'b mut self) -> impl Future<Output = Result<(), Error>> + 'b
+    {
+        let s = self.0;
+        poll_fn(move |_cx| {
+            let mut b = MaybeUninit::uninit();
+            let r = unsafe {
+                SORecvFrom(
+                    s as i32,
+                    b.as_mut_ptr(),
+                    1,
+                    SO_MSG_PEEK,
+                    ptr::null_mut()
+                )
+            };
+            match convert_sock_res(r) {
+                Ok(0) => Poll::Pending,
+                Ok(_) => Poll::Ready(Ok(())),
+                Err(Error::EAGAIN) => Poll::Pending,
+                Err(e) => Poll::Ready(Err(e)),
+            }
+        })
     }
 }
 
