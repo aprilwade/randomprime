@@ -171,7 +171,7 @@ item-counter[item="all"]{
 }
 
 item-counter[item="artifacts"][count="0"]{
-	 background-image: url("../img/prime/artifacts/all blue.png")
+	 background-image: url("../img/prime/artifacts/all_blue.png")
 }
 
 item-counter[item="artifacts"][count="1"] {

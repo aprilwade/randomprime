@@ -33,7 +33,6 @@ use primeapi::dol_sdk::os::{OSGetTime, Ticks};
 use crate::nintendont_sock::SocketApi;
 use crate::tracker_state::{TrackerState, update_tracker_state};
 
-
 pub(crate) async fn event_loop() -> Never
 {
     let mut server = SocketApi::global_instance().tcp_server(80, 1).unwrap();
@@ -118,16 +117,29 @@ impl FileSystem for DvdFileSystem
     {
         const MAX_FILENAME_LEN: usize = 128;
 
-        if uri.len() >= MAX_FILENAME_LEN {
+        let prefix = &b"/tracker"[..];
+        let suffix = if let Some(b'/') = uri.last() {
+            &b"index.html"[..]
+        } else {
+            &b""[..]
+        };
+
+        if prefix.len() + uri.len() + suffix.len() >= MAX_FILENAME_LEN {
             return None;
         }
 
-        // Ensure our filename is null-terminated
         let mut buf = [MaybeUninit::uninit(); MAX_FILENAME_LEN];
-        buf[..uri.len()].copy_from_slice(<[MaybeUninit<_>]>::from_inited_slice(uri));
-        buf[uri.len()] = MaybeUninit::new(0);
-        let filename = unsafe { buf[..uri.len() + 1].assume_init_mut() };
+        let mut idx = 0;
+        for slice in &[prefix, uri, suffix] {
+            buf[idx..idx + slice.len()].copy_from_slice(<[MaybeUninit<_>]>::from_inited_slice(slice));
+            idx += slice.len();
+        }
+        // TODO: Perform percent/url decode in-place
 
+        // Ensure the filename is null-terminated
+        buf[idx] = MaybeUninit::new(0);
+
+        let filename = unsafe { buf[..idx + 1].assume_init_mut() };
         let fi = if let Some(fi) = DVDFileInfo::new(filename) {
             fi
         } else {
