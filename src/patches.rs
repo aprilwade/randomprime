@@ -1860,6 +1860,46 @@ fn create_rel_config_file(
     buf
 }
 
+// In order for Nintendont to enable BBA emulation, it must be able to find a copy of SOStartup in
+// the game's DOL. Luckily, the fingerprinting system Nintedont uses is simple enough that it's
+// easy to create a false positive without actually redistributing Nintendo's IP.
+fn make_so_startup_placeholder() -> Vec<u8>
+{
+    let mut so_startup_bytes: Vec<u8> = vec![];
+
+    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
+
+    let iter_instr = |bs: &'static [u8], c| iter::repeat(bs).take(c).flat_map(|i| i.iter());
+
+    // loads: 111,  stores: 31,   fcalls: 30,  branches: 41,   moves: 24
+    // loads
+    so_startup_bytes.extend(iter_instr(&[0x38, 0x00, 0x00, 0x00], 111 - 1));
+    // stores
+    so_startup_bytes.extend(iter_instr(&[0x94, 0x00, 0x00, 0x00], 31));
+    // fcalls
+    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x01], 30));
+    // branches
+    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x00], 41));
+    // moves
+    so_startup_bytes.extend(iter_instr(&[0x7C, 0x00, 0x00, 0x00], 24));
+
+    // nops/filler
+    // XXX The 0x7777 is significant here. It prevents a crash and is part of how the REL
+    //     determines if BBA emulation is enable
+    so_startup_bytes.extend(iter_instr(&[0x00, 0x00, 0x77, 0x77], (0x4D4 - 944) / 4));
+
+    assert_eq!(so_startup_bytes.len() - 4, 0x4D4);
+    // Return instr
+    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
+
+    // To help filter false positives, Nintendont checks the contents of this specific instruction
+    so_startup_bytes[0x40C + 4..0x40C + 8].copy_from_slice(&[0x38, 0x00, 0x00, 0x01]);
+
+    so_startup_bytes.extend(&[0x0; 4]);
+
+    so_startup_bytes
+}
+
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
@@ -2073,38 +2113,8 @@ fn patch_dol<'r>(
         b      { rel_loader_map["rel_loader_hook"] };
     }))?;
 
-    // let mut so_startup_bytes = vec![0u8; 0x4D4];
-    let mut so_startup_bytes: Vec<u8> = vec![];
 
-    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
-
-    let iter_instr = |bs: &'static [u8], c| iter::repeat(bs).take(c).flat_map(|i| i.iter());
-
-    // loads: 111,  stores: 31,   fcalls: 30,  branches: 41,   moves: 24
-    // loads
-    so_startup_bytes.extend(iter_instr(&[0x38, 0x00, 0x00, 0x00], 111 - 1));
-    // stores
-    so_startup_bytes.extend(iter_instr(&[0x94, 0x00, 0x00, 0x00], 31));
-    // fcalls
-    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x01], 30));
-    // branches
-    so_startup_bytes.extend(iter_instr(&[0x48, 0x00, 0x00, 0x00], 41));
-    // moves
-    so_startup_bytes.extend(iter_instr(&[0x7C, 0x00, 0x00, 0x00], 24));
-
-    // nops/filler
-    so_startup_bytes.extend(iter_instr(&[0x00, 0x00, 0x77, 0x77], (0x4D4 - 944) / 4));
-
-    assert_eq!(so_startup_bytes.len() - 4, 0x4D4);
-    // Return instr
-    so_startup_bytes.extend(&[0x4E, 0x80, 0x00, 0x20]);
-
-    // TODO +/-4
-    so_startup_bytes[0x40C + 4..0x40C + 8].copy_from_slice(&[0x38, 0x00, 0x00, 0x01]);
-    so_startup_bytes.extend(&[0x0; 4]);
-
-
-    dol_patcher.add_text_segment(0x80602000, Cow::Owned(so_startup_bytes))?;
+    dol_patcher.add_text_segment(0x80602000, Cow::Owned(make_so_startup_placeholder()))?;
 
 
 

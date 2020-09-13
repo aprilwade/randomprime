@@ -55,12 +55,16 @@ unsafe extern "C" fn setup_global_state()
             .unwrap().0;
     }
 
-    if running_on_dolphin() {
-        return
+    if !running_on_dolphin() && bba_emulation_enabled() {
+        crate::nintendont_sock::SocketApi::global_instance();
+        EVENT_LOOP = Some(Box::pin(crate::tracker_event_loop::event_loop()));
     }
+}
 
-    crate::nintendont_sock::SocketApi::global_instance();
-    EVENT_LOOP = Some(Box::pin(crate::tracker_event_loop::event_loop()));
+unsafe fn bba_emulation_enabled() -> bool
+{
+    const SO_STARTED_OFFSET_ADDR: *const u16 = 0x93026c96 as *const u16;
+    SO_STARTED_OFFSET_ADDR.read() == 0x7777
 }
 
 
