@@ -6,6 +6,7 @@ mod _rel_config {
     {
         pub quickplay_mlvl: u32,
         pub quickplay_mrea: u32,
+        pub last_modified: [u8; 29],
     }
 }
 pub(crate) use self::_rel_config::RelConfig;

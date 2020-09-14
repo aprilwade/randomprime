@@ -31,6 +31,7 @@ include!("../../patches_config.rs");
 static mut REL_CONFIG: RelConfig = RelConfig {
     quickplay_mlvl: 0xFFFFFFFF,
     quickplay_mrea: 0xFFFFFFFF,
+    last_modified: [0; 29],
 };
 
 static mut EVENT_LOOP: Option<Pin<Box<dyn Future<Output = Infallible>>>> = None;

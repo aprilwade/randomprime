@@ -1,16 +1,16 @@
 
-use rand::{
-    rngs::StdRng,
-    seq::SliceRandom,
-    SeedableRng,
-    Rng,
-};
 use encoding::{
     all::WINDOWS_1252,
     Encoding,
     EncoderTrap,
 };
 use enum_map::EnumMap;
+use rand::{
+    rngs::StdRng,
+    seq::SliceRandom,
+    SeedableRng,
+    Rng,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -1851,9 +1851,16 @@ fn create_rel_config_file(
     quickplay: bool,
 ) -> Vec<u8>
 {
+
+    let mut last_modified = [0u8; 29];
+    let now = chrono::Utc::now()
+        .format("%a, %d %b %Y %H:%M:%S GMT")
+        .to_string();
+    last_modified[..].copy_from_slice(now.as_bytes());
     let config = RelConfig {
         quickplay_mlvl: if quickplay { spawn_room.mlvl } else { 0xFFFFFFFF },
         quickplay_mrea: if quickplay { spawn_room.mrea } else { 0xFFFFFFFF },
+        last_modified,
     };
     let mut buf = vec![0; mem::size_of::<RelConfig>()];
     ssmarshal::serialize(&mut buf, &config).unwrap();

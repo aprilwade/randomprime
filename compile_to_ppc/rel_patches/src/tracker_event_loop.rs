@@ -147,9 +147,12 @@ impl FileSystem for DvdFileSystem
         };
         let metadata = FileMetadata {
             size: fi.file_length(),
-            // TODO: We should pull these values from a global variable/the config
             etag: None,
-            last_modified: None,
+            last_modified: if unsafe { crate::REL_CONFIG.last_modified[0] } != 0 {
+                core::str::from_utf8(unsafe { &crate::REL_CONFIG.last_modified[..] }).ok()
+            } else {
+                None
+            },
         };
         let file = DvdFile {
             fi,
