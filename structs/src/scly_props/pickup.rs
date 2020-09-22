@@ -3,8 +3,9 @@ use auto_struct_macros::auto_struct;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use crate::SclyPropertyData;
+use crate::{ResId, SclyPropertyData};
 use crate::scly_props::structs::{ActorParameters, AncsProp};
+use crate::res_id::*;
 
 
 #[auto_struct(Readable, Writable)]
@@ -31,13 +32,13 @@ pub struct Pickup<'r>
     pub disappear_timer: f32,
     pub fade_in_timer: f32,
 
-    pub cmdl: u32,
+    pub cmdl: ResId<CMDL>,
     pub ancs: AncsProp,
     pub actor_params: ActorParameters,
 
     pub active: u8,
     pub spawn_delay: f32,
-    pub part: u32,
+    pub part: ResId<CMDL>,
 }
 
 impl<'r> SclyPropertyData for Pickup<'r>

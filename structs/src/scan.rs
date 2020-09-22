@@ -2,6 +2,10 @@ use auto_struct_macros::auto_struct;
 
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
+
+use crate::ResId;
+use crate::res_id::*;
+
 use std::marker::PhantomData;
 
 #[auto_struct(Readable, Writable, FixedSize)]
@@ -13,8 +17,8 @@ pub struct Scan<'r>
     #[auto_struct(expect = 0x0BADBEEF)]
     magic: u32,
 
-    pub frme: u32,
-    pub strg: u32,
+    pub frme: ResId<FRME>,
+    pub strg: ResId<STRG>,
 
     pub scan_speed: u32,
     pub category: u32,
@@ -31,7 +35,7 @@ pub struct Scan<'r>
 #[derive(Debug, Clone)]
 pub struct ScanImage
 {
-    pub txtr: u32,
+    pub txtr: ResId<TXTR>,
     pub appearance_percent: f32,
     pub image_position: u32,
     pub width: u32,
@@ -45,7 +49,7 @@ impl Default for ScanImage
     fn default() -> Self
     {
         ScanImage {
-            txtr: 0xFFFFFFFF,
+            txtr: ResId::invalid(),
             appearance_percent: 0.0,
             image_position: 0xFFFFFFFF,
             width: 0,

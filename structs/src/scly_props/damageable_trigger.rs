@@ -3,7 +3,8 @@ use auto_struct_macros::auto_struct;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use crate::SclyPropertyData;
+use crate::{ResId, SclyPropertyData};
+use crate::res_id::*;
 use crate::scly_props::structs::{DamageVulnerability, HealthInfo, VisorParameters};
 
 
@@ -23,9 +24,9 @@ pub struct DamageableTrigger<'r>
 
     pub unknown0: u32,
 
-    pub pattern_txtr0: u32,
-    pub pattern_txtr1: u32,
-    pub color_txtr: u32,
+    pub pattern_txtr0: ResId<TXTR>,
+    pub pattern_txtr1: ResId<TXTR>,
+    pub color_txtr: ResId<TXTR>,
 
     pub lock_on: u8,
     pub active: u8,

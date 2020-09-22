@@ -2235,9 +2235,9 @@ const PICKUP_CMDL_AABBS: [(u32, [u32; 6]); 35] = [
 ];
 impl PickupType
 {
-    pub fn hudmemo_strg(&self) -> u32
+    pub fn hudmemo_strg(&self) -> ResId<res_id::STRG>
     {
-        match self {
+        ResId::new(match self {
             PickupType::Missile => 0x6741f09a,
             PickupType::EnergyTank => 0x994c3aa8,
             PickupType::ThermalVisor => 0x69152af7,
@@ -2276,7 +2276,7 @@ impl PickupType
             PickupType::Nothing => 0xdeaf0006,
             PickupType::ScanVisor => 0xdeaf000e,
             PickupType::ShinyMissile => 0xdeaf0018,
-        }
+        })
     }
     pub fn attainment_audio_file_name(&self) -> &'static str
     {

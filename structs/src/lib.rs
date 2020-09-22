@@ -1,4 +1,6 @@
 
+pub mod res_id;
+
 mod ancs;
 mod anim;
 mod bnr;
@@ -24,26 +26,26 @@ mod txtr;
 mod scly_props
 {
     // http://www.metroid2002.com/retromodding/wiki/User:Parax0/Sandbox
-    mod actor;
-    mod damageable_trigger;
-    mod dock;
-    mod door;
-    mod effect;
-    mod hud_memo;
-    mod memory_relay;
-    mod pickup;
-    mod platorm;
-    mod point_of_interest;
-    mod player_actor;
-    mod player_hint;
-    mod relay;
-    mod sound;
-    mod spawn_point;
-    mod special_function;
-    mod streamed_audio;
-    mod timer;
-    mod trigger;
-    mod world_transporter;
+    pub mod actor;
+    pub mod damageable_trigger;
+    pub mod dock;
+    pub mod door;
+    pub mod effect;
+    pub mod hud_memo;
+    pub mod memory_relay;
+    pub mod pickup;
+    pub mod platorm;
+    pub mod point_of_interest;
+    pub mod player_actor;
+    pub mod player_hint;
+    pub mod relay;
+    pub mod sound;
+    pub mod spawn_point;
+    pub mod special_function;
+    pub mod streamed_audio;
+    pub mod timer;
+    pub mod trigger;
+    pub mod world_transporter;
 
     pub mod structs;
 
@@ -68,7 +70,29 @@ mod scly_props
     pub use self::trigger::*;
     pub use self::world_transporter::*;
 }
-pub use scly_props::*;
+pub use scly_props::structs as scly_structs;
+pub use scly_props::actor::*;
+pub use scly_props::damageable_trigger::*;
+pub use scly_props::dock::*;
+pub use scly_props::door::*;
+pub use scly_props::effect::*;
+pub use scly_props::hud_memo::*;
+pub use scly_props::memory_relay::*;
+pub use scly_props::pickup::*;
+pub use scly_props::platorm::*;
+pub use scly_props::point_of_interest::*;
+pub use scly_props::player_actor::*;
+pub use scly_props::player_hint::*;
+pub use scly_props::relay::*;
+pub use scly_props::sound::*;
+pub use scly_props::spawn_point::*;
+pub use scly_props::special_function::*;
+pub use scly_props::streamed_audio::*;
+pub use scly_props::timer::*;
+pub use scly_props::trigger::*;
+pub use scly_props::world_transporter::*;
+
+pub use res_id::ResId;
 
 pub use anim::*;
 pub use ancs::*;

@@ -3,10 +3,10 @@ use auto_struct_macros::auto_struct;
 // This is intentionally _very_ incomplete. The particle format is huge, so only some of
 // the substructures are implemented.
 
-
 use reader_writer::RoArray;
 
-
+use crate::ResId;
+use crate::res_id::*;
 
 #[auto_struct(Readable)]
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ pub struct KssmFrameInfo<'r>
 #[derive(Debug, Clone)]
 pub struct KssmFrameInfoItem
 {
-    pub part: u32,
+    pub part: ResId<PART>,
     pub unknown0: u32,
     pub unknown1: u32,
     pub unknown2: u32,

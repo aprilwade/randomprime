@@ -3,6 +3,9 @@ use auto_struct_macros::auto_struct;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
+use crate::ResId;
+use crate::res_id:: *;
+
 #[auto_struct(Readable, Writable, FixedSize)]
 #[derive(Debug, Clone)]
 pub struct ActorParameters
@@ -12,11 +15,11 @@ pub struct ActorParameters
     pub light_params: LightParameters,
     pub scan_params: ScannableParameters,
 
-    pub xray_cmdl: u32,
-    pub xray_cskr: u32,
+    pub xray_cmdl: ResId<CMDL>,
+    pub xray_cskr: ResId<CSKR>,
 
-    pub thermal_cmdl: u32,
-    pub thermal_cskr: u32,
+    pub thermal_cmdl: ResId<CMDL>,
+    pub thermal_cskr: ResId<CSKR>,
 
     pub unknown0: u8,
     pub unknown1: f32,
@@ -34,9 +37,9 @@ pub struct ActorParameters
 #[derive(Debug, Clone)]
 pub struct AncsProp
 {
-    pub file_id: u32,
+    pub file_id: ResId<ANCS>,
     pub node_index: u32,
-    pub unknown: u32,
+    pub default_animation: u32,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
@@ -68,7 +71,7 @@ pub struct ScannableParameters
 {
     #[auto_struct(expect = 1)]
     prop_count: u32,
-    pub scan: u32,
+    pub scan: ResId<SCAN>,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
@@ -79,7 +82,7 @@ pub struct VisorParameters
     prop_count: u32,
     pub unknown0: u8,
     pub target_passthrough: u8,
-    pub unknown2: u32,
+    pub visor_mask: u32,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
@@ -180,4 +183,51 @@ pub struct PlayerActorParams
     pub unknown4: u8,
     #[auto_struct(init = if prop_count == 6 { Some(()) } else { None })]
     pub unknown5: Option<u8>,
+}
+
+#[auto_struct(Readable, Writable, FixedSize)]
+#[derive(Debug, Clone)]
+pub struct PatternedInfo
+{
+    #[auto_struct(derive = 38)]
+    prop_count: u32,
+
+    pub mass: f32,
+    pub speed: f32,
+    pub turn_speed: f32,
+    pub detection_range: f32,
+    pub detection_height_range: f32,
+    pub dectection_angle: f32,
+    pub min_attack_range: f32,
+    pub max_attack_range: f32,
+    pub average_attack_time: f32,
+    pub attack_time_variation: f32,
+    pub leash_radius: f32,
+    pub player_leash_radius: f32,
+    pub player_leash_time: f32,
+    pub contact_damage: DamageInfo,
+    pub damage_wait_time: f32,
+    pub health_info: HealthInfo,
+    pub damage_vulnerability: DamageVulnerability,
+    pub half_extent: f32,
+    pub height: f32,
+    pub body_origin: GenericArray<f32, U3>,
+    pub step_up_height: f32,
+    pub x_damage: f32,
+    pub frozen_x_damage: f32,
+    pub x_damage_delay: f32,
+    pub death_sfx: u32,
+    pub animation_parameters: AncsProp,
+    pub active: u8,
+    pub state_machine: ResId<AFSM>,
+    pub into_freeze_dur: f32,
+    pub out_of_freeze_dur: f32,
+    pub unknown0: f32,
+    pub pathfinding_index: u32,
+    pub particle0_scale: GenericArray<f32, U3>,
+    pub particle0: ResId<PART>,
+    pub electric: ResId<ELSC>,
+    pub particle1_scale: GenericArray<f32, U3>,
+    pub particle1: ResId<PART>,
+    pub ice_shatter_sfx: u32,
 }

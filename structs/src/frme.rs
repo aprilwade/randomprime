@@ -6,6 +6,9 @@ use reader_writer::{
 use reader_writer::generic_array::GenericArray;
 use reader_writer::generic_array::typenum:: *;
 
+use crate::ResId;
+use crate::res_id::*;
+
 use std::io;
 
 #[auto_struct(Readable, Writable)]
@@ -227,7 +230,7 @@ pub struct LightWidget
 #[derive(Debug, Clone)]
 pub struct EnergyWidget
 {
-    pub txtr: u32,
+    pub txtr: ResId<TXTR>,
 }
 
 #[auto_struct(Readable, Writable)]
@@ -299,7 +302,7 @@ pub struct TextPaneWidget
     pub z_dim: f32,
     pub scale_center: GenericArray<f32, U3>,
 
-    pub font: u32,
+    pub font: ResId<FONT>,
     pub word_wrap: u8,
     pub horizontal: u8,
     pub justification: u32,
@@ -309,7 +312,7 @@ pub struct TextPaneWidget
     pub block_extent: GenericArray<f32, U2>,
 
     #[auto_struct(init = if version == 1 { Some(()) } else { None })]
-    pub jpn_font: Option<u32>,
+    pub jpn_font: Option<ResId<FONT>>,
     #[auto_struct(init = if version == 1 { Some(()) } else { None })]
     pub jpn_point_scale: Option<GenericArray<u32, U2>>,
     // TODO: If Frme::version == 1, then theres three extra fields
@@ -319,7 +322,7 @@ pub struct TextPaneWidget
 #[derive(Debug, Clone)]
 pub struct ImageWidget<'r>
 {
-    pub texture: u32,
+    pub texture: ResId<TXTR>,
     pub unknown0: u32,
     pub unknown1: u32,
 
@@ -338,7 +341,7 @@ pub struct ImageWidget<'r>
 #[derive(Debug, Clone)]
 pub struct ModelWidget
 {
-    pub model: u32,
+    pub model: ResId<CMDL>,
     pub blend_mode: u32,
     pub light_mask: u32,
 }

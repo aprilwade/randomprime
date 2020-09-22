@@ -1,4 +1,6 @@
 use auto_struct_macros::auto_struct;
+use crate::ResId;
+use crate::res_id:: *;
 
 use reader_writer::{
     CStr, FourCC, LazyArray, IteratorArray, Readable, Reader, RoArray, Uncached, RoArrayIter,
@@ -52,9 +54,9 @@ pub struct CharacterInfo<'r>
 
     pub name: CStr<'r>,
 
-    pub cmdl: u32,
-    pub cskr: u32,
-    pub cinf: u32,
+    pub cmdl: ResId<CMDL>,
+    pub cskr: ResId<CSKR>,
+    pub cinf: ResId<CINF>,
 
     pub animation_count: u32,
     #[auto_struct(init = (animation_count as usize, info_type_count))]
@@ -81,9 +83,9 @@ pub struct CharacterInfo<'r>
     pub effects: Option<RoArray<'r, Effect<'r>>>,
 
     #[auto_struct(init = bool_to_opt(info_type_count > 3))]
-    pub overlay_cmdl: Option<u32>,
+    pub overlay_cmdl: Option<ResId<CMDL>>,
     #[auto_struct(init = bool_to_opt(info_type_count > 3))]
-    pub overlay_cskr: Option<u32>,
+    pub overlay_cskr: Option<ResId<CSKR>>,
 
     #[auto_struct(init = bool_to_opt(info_type_count > 4))]
     pub animation_index_count: Option<u32>,
@@ -196,7 +198,7 @@ pub struct ParticleResData<'r>
     #[auto_struct(derive = swhc_assets.len() as u32)]
     pub swhc_asset_count: u32,
     #[auto_struct(init = (swhc_asset_count as usize, ()))]
-    pub swhc_assets: RoArray<'r, u32>,
+    pub swhc_assets: RoArray<'r, ResId<SHWC>>,
 
     #[auto_struct(derive = unknowns.len() as u32)]
     pub unknown_count: u32,
@@ -206,7 +208,7 @@ pub struct ParticleResData<'r>
     #[auto_struct(init = bool_to_opt(info_type_count > 5))]
     pub elsc_count: Option<u32>,
     #[auto_struct(init = elsc_count.map(|i| (i as usize, ())))]
-    pub elsc_assets: Option<RoArray<'r, u32>>,
+    pub elsc_assets: Option<RoArray<'r, ResId<ELSC>>>,
 }
 
 #[auto_struct(Readable, Writable)]
@@ -355,7 +357,7 @@ impl<'r> Writable for MetaAnimation<'r>
 #[derive(Debug, Clone)]
 pub struct MetaAnimationPlay<'r>
 {
-    pub anim: u32,
+    pub anim: ResId<ANIM>,
     pub index: u32,
     pub name: CStr<'r>,
     pub unknown0: f32,
@@ -497,6 +499,6 @@ pub struct HalfTransition<'r>
 #[derive(Debug, Clone)]
 pub struct AnimationResource
 {
-    pub anim: u32,
-    pub evnt: u32,
+    pub anim: ResId<ANIM>,
+    pub evnt: ResId<EVNT>,
 }

@@ -3,7 +3,7 @@ use std::mem;
 use serde::Deserialize;
 
 use reader_writer::{FourCC, Reader};
-use structs::{Connection, ConnectionMsg, ConnectionState, Pickup};
+use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, ResId, res_id};
 
 use crate::custom_assets::custom_asset_ids;
 
@@ -204,11 +204,11 @@ impl PickupType
         }
     }
 
-    pub fn skip_hudmemos_strg(&self) -> u32
+    pub fn skip_hudmemos_strg(&self) -> ResId<res_id::STRG>
     {
-        (custom_asset_ids::SKIP_HUDMEMO_STRG_START..custom_asset_ids::SKIP_HUDMEMO_STRG_END)
-            .nth(self.idx())
-            .unwrap()
+        let start = custom_asset_ids::SKIP_HUDMEMO_STRG_START.to_u32();
+        let end = custom_asset_ids::SKIP_HUDMEMO_STRG_END.to_u32();
+        ResId::new((start..end).nth(self.idx()).unwrap())
     }
 
     pub fn pickup_data<'a>(&self) -> &'a Pickup<'static>
@@ -293,10 +293,11 @@ impl std::ops::Index<PickupType> for PickupTable
 }
 
 /// Lookup a pre-computed AABB for a pickup's CMDL
-pub fn aabb_for_pickup_cmdl(cmdl_id: u32) -> Option<[f32; 6]>
+pub fn aabb_for_pickup_cmdl(id: structs::ResId<structs::res_id::CMDL>) -> Option<[f32; 6]>
 {
+    let id: u32 = id.into();
     // The aabb array is sorted, so we can binary search.
-    if let Ok(idx) = PICKUP_CMDL_AABBS.binary_search_by_key(&cmdl_id, |&(k, _)| k) {
+    if let Ok(idx) = PICKUP_CMDL_AABBS.binary_search_by_key(&id, |&(k, _)| k) {
         // The arrays contents are stored as u32s to reduce percision loss from
         // being converted to/from decimal literals. We use mem::transmute to
         // convert the u32s into f32s.

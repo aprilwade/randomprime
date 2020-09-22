@@ -19,7 +19,7 @@ pub struct PointOfInterest<'r>
     pub rotation: GenericArray<f32, U3>,
     pub active: u8,
     pub scan_param: ScannableParameters,
-    pub unknown1: f32,
+    pub point_size: f32,
 }
 
 impl<'r> SclyPropertyData for PointOfInterest<'r>

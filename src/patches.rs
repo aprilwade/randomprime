@@ -1,16 +1,16 @@
 
-use rand::{
-    rngs::StdRng,
-    seq::SliceRandom,
-    SeedableRng,
-    Rng,
-};
 use encoding::{
     all::WINDOWS_1252,
     Encoding,
     EncoderTrap,
 };
 use enum_map::EnumMap;
+use rand::{
+    rngs::StdRng,
+    seq::SliceRandom,
+    SeedableRng,
+    Rng,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -22,9 +22,7 @@ use crate::{
     memmap,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
-    reader_writer,
     patcher::{PatcherState, PrimePatcher},
-    structs,
     starting_items::StartingItems,
     GcDiscLookupExtensions,
 };
@@ -40,10 +38,12 @@ use reader_writer::{
     LCow,
     Reader,
 };
+use structs::{res_id, ResId};
 
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
+    convert::TryInto,
     ffi::CString,
     fmt,
     fs::File,
@@ -65,7 +65,7 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>, starting_items: &
 
     let mut looking_for: HashSet<_> = PickupType::iter()
         .flat_map(|pt| pt.dependencies().iter().cloned())
-        .chain(PickupType::iter().map(|pt| (pt.hudmemo_strg(), b"STRG".into())))
+        .chain(PickupType::iter().map(|pt| pt.hudmemo_strg().into()))
         .collect();
 
     let mut found = HashMap::with_capacity(looking_for.len());
@@ -238,7 +238,7 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     // ammo counter
     match &mut widget.kind {
         structs::FrmeWidgetKind::TextPane(textpane) => {
-            textpane.font = resource_info!("Deface18B.FONT").res_id;
+            textpane.font = resource_info!("Deface18B.FONT").try_into().unwrap();
             textpane.word_wrap = 0;
         }
         _ => panic!("Widget \"textpane_bombdigits\" should be a TXPN"),
@@ -272,7 +272,7 @@ fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
     // Add a scan for the Phazon suit.
     let savw = res.kind.as_savw_mut().unwrap();
     savw.scan_array.as_mut_vec().push(structs::ScannableObject {
-        scan: custom_asset_ids::PHAZON_SUIT_SCAN,
+        scan: custom_asset_ids::PHAZON_SUIT_SCAN.into(),
         logbook_category: 0,
     });
     Ok(())
@@ -308,12 +308,12 @@ impl MaybeObfuscatedPickup
         }
     }
 
-    fn hudmemo_strg(&self) -> u32
+    fn hudmemo_strg(&self) -> ResId<res_id::STRG>
     {
         self.orig().hudmemo_strg()
     }
 
-    fn skip_hudmemos_strg(&self) -> u32
+    fn skip_hudmemos_strg(&self) -> ResId<res_id::STRG>
     {
         self.orig().skip_hudmemos_strg()
     }
@@ -373,13 +373,10 @@ fn modify_pickups_in_mrea<'r>(
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     // Add our custom STRG
-    let hudmemo_dep = structs::Dependency {
-        asset_id: if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
-                pickup_type.skip_hudmemos_strg()
-            } else {
-                pickup_type.hudmemo_strg()
-            },
-        asset_type: b"STRG".into(),
+    let hudmemo_dep = if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+        pickup_type.skip_hudmemos_strg().into()
+    } else {
+        pickup_type.hudmemo_strg().into()
     };
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
@@ -550,8 +547,8 @@ fn make_elevators_patch<'a>(
                     .find(|obj| obj.instance_id == elv.scly_id);
                 if let Some(obj) = obj {
                     let wt = obj.property_data.as_world_transporter_mut().unwrap();
-                    wt.mrea = dest.mrea;
-                    wt.mlvl = dest.mlvl;
+                    wt.mrea = ResId::new(dest.mrea);
+                    wt.mlvl = ResId::new(dest.mlvl);
                 }
             }
 
@@ -707,8 +704,8 @@ fn patch_frigate_teleporter<'r>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: S
         .find(|obj| obj.property_data.is_world_transporter())
         .and_then(|obj| obj.property_data.as_world_transporter_mut())
         .unwrap();
-    wt.mlvl = spawn_room.mlvl;
-    wt.mrea = spawn_room.mrea;
+    wt.mlvl = ResId::new(spawn_room.mlvl);
+    wt.mrea = ResId::new(spawn_room.mrea);
     Ok(())
 }
 
@@ -1009,17 +1006,17 @@ fn patch_main_ventilation_shaft_section_b_door<'r>(
             name: b"Trigger_DoorOpen-component\0".as_cstr(),
             position: [31.232622, 442.69165, -64.20529].into(),
             scale: [6.0, 17.0, 6.0].into(),
-            damage_info: structs::structs::DamageInfo {
+            damage_info: structs::scly_structs::DamageInfo {
                 weapon_type: 0,
                 damage: 0.0,
                 radius: 0.0,
                 knockback_power: 0.0
             },
-            unknown0: [0.0, 0.0, 0.0].into(),
-            unknown1: 1,
+            force: [0.0, 0.0, 0.0].into(),
+            flags: 1,
             active: 1,
-            unknown2: 0,
-            unknown3: 0
+            deactivate_on_enter: 0,
+            deactivate_on_exit: 0
         }.into(),
         connections: vec![
             structs::Connection {
@@ -1055,11 +1052,11 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 name: b"Trigger_DoorUnlock\0".as_cstr(),
                 position: [152.232117, 86.451134, 24.472418].into(),
                 scale: [0.25, 4.5, 4.0].into(),
-                health_info: structs::structs::HealthInfo {
+                health_info: structs::scly_structs::HealthInfo {
                     health: 1.0,
                     knockback_resistance: 1.0
                 },
-                damage_vulnerability: structs::structs::DamageVulnerability {
+                damage_vulnerability: structs::scly_structs::DamageVulnerability {
                     power: 1,           // Normal
                     ice: 1,             // Normal
                     wave: 1,            // Normal
@@ -1076,14 +1073,14 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                     unknown_weapon0: 2, // Reflect
                     unknown_weapon1: 2, // Reflect
                     unknown_weapon2: 1, // Normal
-                    charged_beams: structs::structs::ChargedBeams {
+                    charged_beams: structs::scly_structs::ChargedBeams {
                         power: 1,       // Normal
                         ice: 1,         // Normal
                         wave: 1,        // Normal
                         plasma: 1,      // Normal
                         phazon: 1       // Normal
                     },
-                    beam_combos: structs::structs::BeamCombos {
+                    beam_combos: structs::scly_structs::BeamCombos {
                         power: 2,       // Reflect
                         ice: 2,         // Reflect
                         wave: 2,        // Reflect
@@ -1092,15 +1089,15 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                     }
                 },
                 unknown0: 3, // Render Side : East
-                pattern_txtr0: 0x544A9892, // testb.TXTR
-                pattern_txtr1: 0x544A9892, // testb.TXTR
-                color_txtr: 0x8A7F3683, // blue.TXTR
+                pattern_txtr0: resource_info!("testb.TXTR").try_into().unwrap(),
+                pattern_txtr1: resource_info!("testb.TXTR").try_into().unwrap(),
+                color_txtr: resource_info!("blue.TXTR").try_into().unwrap(),
                 lock_on: 0,
                 active: 1,
-                visor_params: structs::structs::VisorParameters {
+                visor_params: structs::scly_structs::VisorParameters {
                     unknown0: 0,
                     target_passthrough: 0,
-                    unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                    visor_mask: 15 // Combat|Scan|Thermal|XRay
                 }
             }.into(),
             connections: vec![
@@ -1158,17 +1155,17 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 name: b"Trigger_DoorOpen\0".as_cstr(),
                 position: [149.35614, 86.567917, 26.471249].into(),
                 scale: [5.0, 5.0, 8.0].into(),
-                damage_info: structs::structs::DamageInfo {
+                damage_info: structs::scly_structs::DamageInfo {
                     weapon_type: 0,
                     damage: 0.0,
                     radius: 0.0,
                     knockback_power: 0.0
                 },
-                unknown0: [0.0, 0.0, 0.0].into(),
-                unknown1: 1,
+                force: [0.0, 0.0, 0.0].into(),
+                flags: 1,
                 active: 0,
-                unknown2: 0,
-                unknown3: 0
+                deactivate_on_enter: 0,
+                deactivate_on_exit: 0
             }.into(),
             connections: vec![
                 structs::Connection {
@@ -1195,11 +1192,11 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 scan_offset: [0.0, 0.0, 0.0].into(),
                 unknown1: 1.0,
                 unknown2: 0.0,
-                health_info: structs::structs::HealthInfo {
+                health_info: structs::scly_structs::HealthInfo {
                     health: 5.0,
                     knockback_resistance: 1.0
                 },
-                damage_vulnerability: structs::structs::DamageVulnerability {
+                damage_vulnerability: structs::scly_structs::DamageVulnerability {
                     power: 1,           // Normal
                     ice: 1,             // Normal
                     wave: 1,            // Normal
@@ -1216,14 +1213,14 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                     unknown_weapon0: 2, // Reflect
                     unknown_weapon1: 2, // Reflect
                     unknown_weapon2: 0, // Double Damage
-                    charged_beams: structs::structs::ChargedBeams {
+                    charged_beams: structs::scly_structs::ChargedBeams {
                         power: 1,       // Normal
                         ice: 1,         // Normal
                         wave: 1,        // Normal
                         plasma: 1,      // Normal
                         phazon: 0       // Double Damage
                     },
-                    beam_combos: structs::structs::BeamCombos {
+                    beam_combos: structs::scly_structs::BeamCombos {
                         power: 1,       // Normal
                         ice: 1,         // Normal
                         wave: 1,        // Normal
@@ -1231,14 +1228,14 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                         phazon: 0       // Double Damage
                     }
                 },
-                cmdl: 0x0734977A, // blueShield_v1.CMDL
-                ancs: structs::structs::AncsProp {
-                    file_id: 0xFFFFFFFF, // None
+                cmdl: resource_info!("blueShield_v1.CMDL").try_into().unwrap(),
+                ancs: structs::scly_structs::AncsProp {
+                    file_id: ResId::invalid(), // None
                     node_index: 0,
-                    unknown: 0xFFFFFFFF, // -1
+                    default_animation: 0xFFFFFFFF, // -1
                 },
-                actor_params: structs::structs::ActorParameters {
-                    light_params: structs::structs::LightParameters {
+                actor_params: structs::scly_structs::ActorParameters {
+                    light_params: structs::scly_structs::LightParameters {
                         unknown0: 1,
                         unknown1: 1.0,
                         shadow_tessellation: 0,
@@ -1254,22 +1251,22 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                         unknown8: 0,
                         light_layer_id: 0
                     },
-                    scan_params: structs::structs::ScannableParameters {
-                        scan: 0xFFFFFFFF // None
+                    scan_params: structs::scly_structs::ScannableParameters {
+                        scan: ResId::invalid(), // None
                     },
-                    xray_cmdl: 0xFFFFFFFF, // None
-                    xray_cskr: 0xFFFFFFFF, // None
-                    thermal_cmdl: 0xFFFFFFFF, // None
-                    thermal_cskr: 0xFFFFFFFF, // None
+                    xray_cmdl: ResId::invalid(), // None
+                    xray_cskr: ResId::invalid(), // None
+                    thermal_cmdl: ResId::invalid(), // None
+                    thermal_cskr: ResId::invalid(), // None
 
                     unknown0: 1,
                     unknown1: 1.0,
                     unknown2: 1.0,
 
-                    visor_params: structs::structs::VisorParameters {
+                    visor_params: structs::scly_structs::VisorParameters {
                         unknown0: 0,
                         target_passthrough: 0,
-                        unknown2: 15 // Visor Flags : Combat|Scan|Thermal|XRay
+                        visor_mask: 15 // Combat|Scan|Thermal|XRay
                     },
                     enable_thermal_heat: 1,
                     unknown3: 0,
@@ -1321,15 +1318,15 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     locked_door_scan.active = 0;
-    locked_door_scan.scan_param.scan = 0xFFFFFFFF; // None
+    locked_door_scan.scan_param.scan = ResId::invalid(); // None
 
     let locked_door = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == door_id)
         .and_then(|obj| obj.property_data.as_door_mut())
         .unwrap();
-    locked_door.ancs.file_id = 0x26886945; // newmetroiddoor.ANCS
-    locked_door.ancs.unknown = 2;
-    locked_door.unknown0 = 0;
+    locked_door.ancs.file_id = resource_info!("newmetroiddoor.ANCS").try_into().unwrap();
+    locked_door.ancs.default_animation = 2;
+    locked_door.projectiles_collide = 0;
 
     let trigger_remove_scan_target_locked_door_and_etank = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == trigger_remove_scan_target_locked_door_id)
@@ -1407,17 +1404,17 @@ fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::Ml
                 name: b"Trigger - Disable Main Quarry barrier\0".as_cstr(),
                 position: [82.412056, 9.354454, 2.807631].into(),
                 scale: [10.0, 5.0, 7.0].into(),
-                damage_info: structs::structs::DamageInfo {
+                damage_info: structs::scly_structs::DamageInfo {
                     weapon_type: 0,
                     damage: 0.0,
                     radius: 0.0,
                     knockback_power: 0.0
                 },
-                unknown0: [0.0, 0.0, 0.0].into(),
-                unknown1: 1,
+                force: [0.0, 0.0, 0.0].into(),
+                flags: 1,
                 active: 1,
-                unknown2: 1,
-                unknown3: 0
+                deactivate_on_enter: 1,
+                deactivate_on_exit: 0
             }.into(),
             connections: vec![
                 structs::Connection {
@@ -1644,7 +1641,7 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
                     0.0,
                     -0.51,
                 ].into(),
-                font: 3265024497,
+                font: resource_info!("Deface14B_O.FONT").try_into().unwrap(),
                 word_wrap: 0,
                 horizontal: 1,
                 justification: 0,
@@ -1837,10 +1834,11 @@ fn patch_starting_pickups<'r>(
             ]
         );
 
-        area.add_dependencies(&pickup_resources, 0, iter::once(structs::Dependency {
-            asset_id: custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
-            asset_type: FourCC::from_bytes(b"STRG"),
-        }));
+        area.add_dependencies(
+            &pickup_resources,
+            0,
+            iter::once(custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG.into())
+        );
     }
     Ok(())
 }
@@ -2089,7 +2087,7 @@ fn empty_frigate_pak<'r>(file: &mut structs::FstEntryFile)
 
     // XXX This is a workaround for a bug in some versions of Nintendont.
     //     The details can be found in a comment on issue #5.
-    let res = crate::custom_assets::build_resource(
+    let res = crate::custom_assets::build_resource_raw(
         0,
         structs::ResourceKind::External(vec![0; 64], b"XXXX".into())
     );

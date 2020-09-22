@@ -1,6 +1,6 @@
 use generated::resource_info;
 use reader_writer::{FourCC, Reader, Writable};
-use structs::{Resource, ResourceKind};
+use structs::{res_id, ResId, Resource, ResourceKind};
 
 use crate::{
     pickup_meta::PickupType,
@@ -11,12 +11,12 @@ use crate::{
 use std::collections::HashMap;
 
 macro_rules! def_asset_ids {
-    (@Build { $prev:expr } $id:ident, $($rest:tt)*) => {
-        def_asset_ids!(@Build { $prev } $id = $prev + 1, $($rest)*);
+    (@Build { $prev:expr } $id:ident: $fc:ident, $($rest:tt)*) => {
+        def_asset_ids!(@Build { $prev } $id: $fc = $prev + 1, $($rest)*);
     };
-    (@Build { $_prev:expr } $id:ident = $e:expr, $($rest:tt)*) => {
-        pub const $id: u32 = $e;
-        def_asset_ids!(@Build { $id } $($rest)*);
+    (@Build { $_prev:expr } $id:ident: $fc:ident = $e:expr, $($rest:tt)*) => {
+        pub const $id: structs::ResId<structs::res_id::$fc> = structs::ResId::new($e);
+        def_asset_ids!(@Build { $id.to_u32() } $($rest)*);
     };
     (@Build { $prev:expr }) => {
     };
@@ -27,63 +27,49 @@ macro_rules! def_asset_ids {
 
 pub mod custom_asset_ids {
     def_asset_ids! {
-        PHAZON_SUIT_SCAN = 0xDEAF0000,
-        PHAZON_SUIT_STRG,
-        PHAZON_SUIT_TXTR1,
-        PHAZON_SUIT_TXTR2,
-        PHAZON_SUIT_CMDL,
-        PHAZON_SUIT_ANCS,
-        NOTHING_ACQUIRED_HUDMEMO_STRG,
-        NOTHING_SCAN_STRG, // 0xDEAF0007
-        NOTHING_SCAN,
-        NOTHING_TXTR,
-        NOTHING_CMDL,
-        NOTHING_ANCS,
-        THERMAL_VISOR_SCAN,
-        THERMAL_VISOR_STRG,
-        SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
-        SCAN_VISOR_SCAN_STRG,
-        SCAN_VISOR_SCAN,
-        SHINY_MISSILE_TXTR0,
-        SHINY_MISSILE_TXTR1,
-        SHINY_MISSILE_TXTR2,
-        SHINY_MISSILE_CMDL,
-        SHINY_MISSILE_ANCS,
-        SHINY_MISSILE_EVNT,
-        SHINY_MISSILE_ANIM,
-        SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
-        SHINY_MISSILE_SCAN_STRG,
-        SHINY_MISSILE_SCAN,
-        STARTING_ITEMS_HUDMEMO_STRG,
+        PHAZON_SUIT_SCAN: SCAN = 0xDEAF0000,
+        PHAZON_SUIT_STRG: STRG,
+        PHAZON_SUIT_TXTR1: TXTR,
+        PHAZON_SUIT_TXTR2: TXTR,
+        PHAZON_SUIT_CMDL: CMDL,
+        PHAZON_SUIT_ANCS: ANCS,
+        NOTHING_ACQUIRED_HUDMEMO_STRG: STRG,
+        NOTHING_SCAN_STRG: STRG, // 0xDEAF0007
+        NOTHING_SCAN: SCAN,
+        NOTHING_TXTR: TXTR,
+        NOTHING_CMDL: CMDL,
+        NOTHING_ANCS: ANCS,
+        THERMAL_VISOR_SCAN: SCAN,
+        THERMAL_VISOR_STRG: STRG,
+        SCAN_VISOR_ACQUIRED_HUDMEMO_STRG: STRG,
+        SCAN_VISOR_SCAN_STRG: STRG,
+        SCAN_VISOR_SCAN: SCAN,
+        SHINY_MISSILE_TXTR0: TXTR,
+        SHINY_MISSILE_TXTR1: TXTR,
+        SHINY_MISSILE_TXTR2: TXTR,
+        SHINY_MISSILE_CMDL: CMDL,
+        SHINY_MISSILE_ANCS: ANCS,
+        SHINY_MISSILE_EVNT: EVNT,
+        SHINY_MISSILE_ANIM: ANIM,
+        SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG: STRG,
+        SHINY_MISSILE_SCAN_STRG: STRG,
+        SHINY_MISSILE_SCAN: SCAN,
+        STARTING_ITEMS_HUDMEMO_STRG: STRG,
 
-        SKIP_HUDMEMO_STRG_START,
-        SKIP_HUDMEMO_STRG_END = SKIP_HUDMEMO_STRG_START + 38,
+        SKIP_HUDMEMO_STRG_START: STRG,
+        SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
     }
 }
 
-const EXTRA_ASSETS: &[(u32, [u8; 4], &[u8])] = &[
-    // Phazon Suit TXTR 1
-    (custom_asset_ids::PHAZON_SUIT_TXTR1, *b"TXTR",
-     include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
-    // Phazon Suit TXTR 2
-    (custom_asset_ids::PHAZON_SUIT_TXTR2, *b"TXTR",
-     include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
-    // Nothing texture
-    (custom_asset_ids::NOTHING_TXTR, *b"TXTR",
-     include_bytes!("../extra_assets/nothing_texture.txtr")),
-    // Shiny Missile TXTR 0
-    (custom_asset_ids::SHINY_MISSILE_TXTR0, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile0.txtr")),
-    // Shiny Missile TXTR 1
-    (custom_asset_ids::SHINY_MISSILE_TXTR1, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile1.txtr")),
-    // Shiny Missile TXTR 2
-    (custom_asset_ids::SHINY_MISSILE_TXTR2, *b"TXTR",
-     include_bytes!("../extra_assets/shiny-missile2.txtr")),
-];
+pub fn build_resource<'r, K>(file_id: ResId<K>, kind: ResourceKind<'r>) -> Resource<'r>
+    where K: res_id::ResIdKind,
+{
+    assert_eq!(K::FOURCC, kind.fourcc());
+    build_resource_raw(file_id.to_u32(), kind)
+}
 
 #[cfg(not(debug_assertions))]
-pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
+pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 {
     Resource {
         compressed: false,
@@ -93,7 +79,7 @@ pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 }
 
 #[cfg(debug_assertions)]
-pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
+pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 {
     Resource {
         compressed: false,
@@ -104,8 +90,29 @@ pub fn build_resource<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<'r>
 }
 fn extra_assets<'r>() -> Vec<Resource<'r>>
 {
-    EXTRA_ASSETS.iter().map(|&(file_id, ref fourcc, bytes)| {
-        build_resource(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
+    let extra_assets: &[((u32, FourCC), &[u8])] = &[
+        // Phazon Suit TXTR 1
+        (custom_asset_ids::PHAZON_SUIT_TXTR1.into(),
+        include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
+        // Phazon Suit TXTR 2
+        (custom_asset_ids::PHAZON_SUIT_TXTR2.into(),
+        include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
+        // Nothing texture
+        (custom_asset_ids::NOTHING_TXTR.into(),
+        include_bytes!("../extra_assets/nothing_texture.txtr")),
+        // Shiny Missile TXTR 0
+        (custom_asset_ids::SHINY_MISSILE_TXTR0.into(),
+        include_bytes!("../extra_assets/shiny-missile0.txtr")),
+        // Shiny Missile TXTR 1
+        (custom_asset_ids::SHINY_MISSILE_TXTR1.into(),
+        include_bytes!("../extra_assets/shiny-missile1.txtr")),
+        // Shiny Missile TXTR 2
+        (custom_asset_ids::SHINY_MISSILE_TXTR2.into(),
+        include_bytes!("../extra_assets/shiny-missile2.txtr")),
+    ];
+
+    extra_assets.iter().map(|&((file_id, fourcc), bytes)| {
+        build_resource_raw(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc))
     }).collect()
 }
 
@@ -305,10 +312,10 @@ fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> st
 
 fn create_suit_icon_cmdl_and_ancs<'r>(
     resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    new_cmdl_id: u32,
-    new_ancs_id: u32,
-    new_txtr1: u32,
-    new_txtr2: u32,
+    new_cmdl_id: ResId<res_id::CMDL>,
+    new_ancs_id: ResId<res_id::ANCS>,
+    new_txtr1: ResId<res_id::TXTR>,
+    new_txtr2: ResId<res_id::TXTR>,
 ) -> [structs::Resource<'r>; 2]
 {
     let new_suit_cmdl = {
@@ -453,15 +460,15 @@ fn create_shiny_missile_assets<'r>(
 }
 
 fn create_item_scan_strg_pair<'r>(
-    new_scan: u32,
-    new_strg: u32,
+    new_scan: ResId<res_id::SCAN>,
+    new_strg: ResId<res_id::STRG>,
     contents: &str,
 ) -> [structs::Resource<'r>; 2]
 {
     let scan = build_resource(
         new_scan,
         structs::ResourceKind::Scan(structs::Scan {
-            frme: 0xFFFFFFFF,
+            frme: ResId::invalid(),
             strg: new_strg,
             scan_speed: 0,
             category: 0,

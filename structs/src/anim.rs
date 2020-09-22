@@ -3,6 +3,9 @@ use auto_struct_macros::auto_struct;
 use reader_writer::{Readable, Reader, RoArray};
 use reader_writer::generic_array::{GenericArray, typenum:: *};
 
+use crate::ResId;
+use crate::res_id::*;
+
 #[derive(Debug, Clone)]
 pub enum Anim<'r>
 {
@@ -76,7 +79,7 @@ pub struct AnimUncompressed<'r>
     #[auto_struct(init = (translation_key_count as usize, ()))]
     translation_key_array: RoArray<GenericArray<f32, U3>, 'r>,
 
-    evnt: u32,
+    evnt: ResId<EVNT>,
 }
 
 
@@ -85,7 +88,7 @@ pub struct AnimUncompressed<'r>
 pub struct AnimCompressed<'r>
 {
     scratch_size: u32,
-    evnt: u32,
+    evnt: ResId<EVNT>,
 
     #[auto_struct(expect = 0x1)]
     unknown0: u32,

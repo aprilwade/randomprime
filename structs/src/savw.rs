@@ -1,6 +1,9 @@
 use auto_struct_macros::auto_struct;
 use reader_writer::{LazyArray, RoArray};
 
+use crate::ResId;
+use crate::res_id::*;
+
 #[auto_struct(Readable, Writable)]
 #[derive(Clone, Debug)]
 pub struct Savw<'r>
@@ -54,7 +57,7 @@ pub struct LayerToggle
 #[derive(Clone, Debug)]
 pub struct ScannableObject
 {
-    pub scan: u32,
+    pub scan: ResId<SCAN>,
     pub logbook_category: u32,
 }
 

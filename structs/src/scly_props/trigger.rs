@@ -19,11 +19,11 @@ pub struct Trigger<'r>
     pub position: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
     pub damage_info: DamageInfo,
-    pub unknown0: GenericArray<f32, U3>,
-    pub unknown1: u32,
+    pub force: GenericArray<f32, U3>,
+    pub flags: u32,
     pub active: u8,
-    pub unknown2: u8,
-    pub unknown3: u8,
+    pub deactivate_on_enter: u8,
+    pub deactivate_on_exit: u8,
 }
 
 impl<'r> SclyPropertyData for Trigger<'r>

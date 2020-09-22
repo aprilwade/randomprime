@@ -2,6 +2,9 @@ use auto_struct_macros::auto_struct;
 
 use reader_writer::{CStr, FourCC, RoArray};
 
+use crate::ResId;
+use crate::res_id::*;
+
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Font<'r>
@@ -22,7 +25,7 @@ pub struct Font<'r>
     pub font_size: u32,
 
     pub name: CStr<'r>,
-    pub txtr: u32,
+    pub txtr: ResId<TXTR>,
     pub txtr_fmt: u32,
 
     #[auto_struct(derive = glyphs.len() as u32)]

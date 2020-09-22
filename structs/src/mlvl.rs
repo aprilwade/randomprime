@@ -4,6 +4,9 @@ use reader_writer::{CStr, FourCC, IteratorArray, LazyArray, Readable, Reader, Ro
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
+use crate::ResId;
+use crate::res_id::*;
+
 use std::io;
 use std::iter::Peekable;
 
@@ -17,9 +20,9 @@ pub struct Mlvl<'r>
     #[auto_struct(expect = 0x11)]
     version: u32,
 
-    pub world_name_strg: u32,
-    pub world_savw: u32,
-    pub default_skybox_cmdl: u32,
+    pub world_name_strg: ResId<STRG>,
+    pub world_savw: ResId<SAVW>,
+    pub default_skybox_cmdl: ResId<CMDL>,
 
     #[auto_struct(derive = memory_relay_conns.len() as u32)]
     memory_relay_conn_count: u32,
@@ -77,10 +80,10 @@ pub struct MemoryRelayConn
 #[derive(Clone, Debug)]
 pub struct Area<'r>
 {
-    pub area_name_strg: u32,
+    pub area_name_strg: ResId<STRG>,
     pub area_transform: GenericArray<f32, U12>,
     pub area_bounding_box: GenericArray<f32, U6>,
-    pub mrea: u32,
+    pub mrea: ResId<MREA>,
 
     pub internal_id: u32,
 
@@ -240,7 +243,7 @@ pub struct DockConnection
 pub struct AudioGroup
 {
     pub group_id: u32,
-    pub agsc: u32,
+    pub agsc: ResId<AGSC>,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]

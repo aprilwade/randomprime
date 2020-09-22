@@ -3,7 +3,8 @@ use auto_struct_macros::auto_struct;
 use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
-use crate::SclyPropertyData;
+use crate::{ResId, SclyPropertyData};
+use crate::res_id::*;
 use crate::scly_props::structs::{
     ActorParameters, AncsProp, DamageVulnerability, HealthInfo, PlayerActorParams
 };
@@ -30,7 +31,7 @@ pub struct PlayerActor<'r>
     pub health_info: HealthInfo,
     pub damage_vulnerability: DamageVulnerability,
 
-    pub cmdl: u32,
+    pub cmdl: ResId<CMDL>,
     pub ancs: AncsProp,
     pub actor_params: ActorParameters,
 

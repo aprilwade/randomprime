@@ -4,8 +4,9 @@ use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
-use crate::SclyPropertyData;
+use crate::{ResId, SclyPropertyData};
 use crate::scly_props::structs::LightParameters;
+use crate::res_id::*;
 
 
 #[auto_struct(Readable, Writable)]
@@ -21,26 +22,26 @@ pub struct Effect<'r>
     pub rotation: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
 
-    pub part: u32,
-    pub elsc: u32,
+    pub part: ResId<PART>,
+    pub elsc: ResId<ELSC>,
 
-    pub unknown0: u8,
-    pub unknown1: u8,
-    pub unknown2: u8,
-    pub unknown3: u8,
-    pub unknown4: u8,
-    pub unknown5: f32,
-    pub unknown6: f32,
-    pub unknown7: f32,
-    pub unknown8: f32,
-    pub unknown9: u8,
-    pub unknown10: f32,
-    pub unknown11: f32,
-    pub unknown12: f32,
-    pub unknown13: u8,
-    pub unknown14: u8,
-    pub unknown15: u8,
-    pub unknown16: u8,
+    pub hot_in_thermal: u8,
+    pub no_timer_unless_area_occluded: u8,
+    pub rebuild_systems_on_active: u8,
+    pub active: u8,
+    pub use_rate_inverse_cam_dist: u8,
+    pub rate_inverse_cam_dist: f32,
+    pub rate_inverse_cam_dist_rate: f32,
+    pub duration: f32,
+    pub dureation_reset_while_visible: f32,
+    pub use_rate_cam_dist_range: u8,
+    pub rate_cam_dist_range_min: f32,
+    pub rate_cam_dist_range_max: f32,
+    pub rate_cam_dist_range_far_rate: f32,
+    pub combat_visor_visible: u8,
+    pub thermal_visor_visible: u8,
+    pub xray_visor_visible: u8,
+    pub die_when_systems_done: u8,
 
     pub light_params: LightParameters,
 }

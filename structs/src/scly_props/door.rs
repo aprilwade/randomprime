@@ -25,15 +25,12 @@ pub struct Door<'r>
     pub scan_offset: GenericArray<f32, U3>,
     pub collision_size: GenericArray<f32, U3>,
     pub collision_offset: GenericArray<f32, U3>,
-    
+
     pub active: u8,
     pub open: u8,
-    
-    pub unknown0: u8,
-
+    pub projectiles_collide: u8,
     pub open_close_animation_len: f32,
-    
-    pub unk2: u8,
+    pub is_morphball_door: u8,
 }
 
 impl<'r> SclyPropertyData for Door<'r>

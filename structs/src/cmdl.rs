@@ -4,6 +4,9 @@ use reader_writer::{LazyArray, RoArray, RoArrayIter, IteratorArray};
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 
+use crate::ResId;
+use crate::res_id::*;
+
 // We don't need to modify CMDLs, so most of the details are left out.
 // We only actually care about reading out the TXTR file ids.
 #[auto_struct(Readable, Writable)]
@@ -48,7 +51,7 @@ pub struct CmdlMaterialSet<'r>
     #[auto_struct(derive = texture_ids.len() as u32)]
     pub texture_count: u32,
     #[auto_struct(init = (texture_count as usize, ()))]
-    pub texture_ids: LazyArray<'r, u32>,
+    pub texture_ids: LazyArray<'r, ResId<TXTR>>,
 
     #[auto_struct(init = (size as usize - 4 - texture_ids.size(), ()))]
     pub remainder: RoArray<'r, u8>,

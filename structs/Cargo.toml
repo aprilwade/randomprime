@@ -7,5 +7,6 @@ edition = "2018"
 workspace = ".."
 
 [dependencies]
-reader_writer = { path = "../reader_writer" }
 auto_struct_macros = { path = "../auto_struct_macros" }
+generated = { path = "../generated" }
+reader_writer = { path = "../reader_writer" }

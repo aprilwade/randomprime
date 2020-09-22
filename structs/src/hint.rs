@@ -1,6 +1,9 @@
 use auto_struct_macros::auto_struct;
 use reader_writer::{CStr, LazyArray};
 
+use crate::ResId;
+use crate::res_id::*;
+
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
 pub struct Hint<'r>
@@ -36,8 +39,8 @@ pub struct HintDetails<'r>
 #[derive(Debug, Clone)]
 pub struct HintLocation
 {
-    pub mlvl: u32,
-    pub mrea: u32,
+    pub mlvl: ResId<MLVL>,
+    pub mrea: ResId<MREA>,
     pub target_room_index: u32,
-    pub map_text_strg: u32,
+    pub map_text_strg: ResId<STRG>,
 }
