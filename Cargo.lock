@@ -727,6 +727,7 @@ name = "structs"
 version = "0.1.0"
 dependencies = [
  "auto_struct_macros",
+ "generated",
  "reader_writer",
 ]
 
