@@ -6,7 +6,7 @@ use randomprime::custom_assets::custom_asset_ids;
 use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
-use structs::{Ancs, Cmdl, Evnt, Pickup, Scan, Resource};
+use structs::{Ancs, Cmdl, Evnt, Pickup, res_id, ResId, Resource, Scan};
 use generated::{resource_info, ResourceInfo};
 
 use std::{
@@ -64,12 +64,12 @@ impl<'r> ResourceDb<'r>
     fn get_dependencies(&mut self, pickup: &Pickup) -> HashSet<ResourceKey>
     {
         let base_resources = [
-            (ResourceKey::new(pickup.cmdl, b"CMDL".into()), None),
-            (ResourceKey::new(pickup.ancs.file_id, b"ANCS".into()), Some(pickup.ancs.node_index)),
-            (ResourceKey::new(pickup.actor_params.scan_params.scan, b"SCAN".into()), None),
-            (ResourceKey::new(pickup.actor_params.xray_cmdl, b"CMDL".into()), None),
-            (ResourceKey::new(pickup.actor_params.xray_cskr, b"CSKR".into()), None),
-            (ResourceKey::new(pickup.part, b"PART".into()), None),
+            (ResourceKey::from(pickup.cmdl), None),
+            (ResourceKey::from(pickup.ancs.file_id), Some(pickup.ancs.node_index)),
+            (ResourceKey::from(pickup.actor_params.scan_params.scan), None),
+            (ResourceKey::from(pickup.actor_params.xray_cmdl), None),
+            (ResourceKey::from(pickup.actor_params.xray_cskr), None),
+            (ResourceKey::from(pickup.part), None),
         ];
         let mut result = HashSet::new();
         for r in base_resources.iter() {
@@ -94,15 +94,15 @@ impl<'r> ResourceDb<'r>
             record.data.clone()
         };
         {
-            // To avoid line-wrapping, create a "specialized" version of the method.
+            // To avoid line-wrapping, create a "specialized" version of the method.            
             let mut extend_deps = |id, b: &[u8; 4]| {
                 self.extend_set_with_deps(&mut deps, ResourceKey::new(id, b.into()), None);
             };
 
             if key.fourcc == b"SCAN".into() {
                 let scan: Scan = data.data.clone().read(());
-                extend_deps(scan.frme, b"FRME");
-                extend_deps(scan.strg, b"STRG");
+                extend_deps(scan.frme.to_u32(), b"FRME".into());
+                extend_deps(scan.strg.to_u32(), b"STRG".into());
             } else if key.fourcc == b"EVNT".into() {
                 let evnt: Evnt = data.data.clone().read(());
                 for effect in evnt.effect_events.iter() {
@@ -132,7 +132,7 @@ impl<'r> ResourceDb<'r>
                         let kssm : structs::Kssm = Reader::new(&buf[(i + 8)..]).read(());
                         for list in kssm.lists.iter() {
                             for item in list.items.iter() {
-                                extend_deps(item.part, b"PART");
+                                extend_deps(item.part.to_u32(), b"PART".into());
                             }
                         }
                     }
@@ -142,7 +142,7 @@ impl<'r> ResourceDb<'r>
                 let cmdl: Cmdl = Reader::new(&buf).read(());
                 for material in cmdl.material_sets.iter() {
                     for id in material.texture_ids.iter() {
-                        extend_deps(*id, b"TXTR");
+                        extend_deps((*id).to_u32(), b"TXTR".into());
                     }
                 }
             } else if key.fourcc == b"ANCS".into() {
@@ -150,9 +150,9 @@ impl<'r> ResourceDb<'r>
                 let ancs: Ancs = Reader::new(&buf).read(());
                 if let Some(ancs_node) = ancs_node {
                     let char_info = ancs.char_set.char_info.iter().nth(ancs_node as usize).unwrap();
-                    extend_deps(char_info.cmdl, b"CMDL");
-                    extend_deps(char_info.cskr, b"CSKR");
-                    extend_deps(char_info.cinf, b"CINF");
+                    extend_deps(char_info.cmdl.to_u32(), b"CMDL".into());
+                    extend_deps(char_info.cskr.to_u32(), b"CSKR".into());
+                    extend_deps(char_info.cinf.to_u32(), b"CINF".into());
                     // char_info.effects.map(|effects| for effect in effects.iter() {
                     //     for comp in effect.components.iter() {
                     //         extend_deps(ResourceKey::new(comp.file_id, comp.type_));
@@ -161,12 +161,12 @@ impl<'r> ResourceDb<'r>
                     // char_info.overlay_cmdl.map(|cmdl| extend_deps(cmdl, b"CMDL"));
                     // char_info.overlay_cskr.map(|cmdl| extend_deps(cmdl, b"CSKR"));
                     for part in char_info.particles.part_assets.iter() {
-                        extend_deps(*part, b"PART");
+                        extend_deps(*part, b"PART".into());
                     }
                 };
                 ancs.anim_set.animation_resources.map(|i| for anim_resource in i.iter() {
-                    extend_deps(anim_resource.anim, b"ANIM");
-                    extend_deps(anim_resource.evnt, b"EVNT");
+                    extend_deps(anim_resource.anim.to_u32(), b"ANIM".into());
+                    extend_deps(anim_resource.evnt.to_u32(), b"EVNT".into());
                 });
             }
         }
@@ -202,6 +202,14 @@ impl From<ResourceInfo> for ResourceKey
     fn from(res_info: ResourceInfo) -> ResourceKey
     {
         ResourceKey::new(res_info.res_id, res_info.fourcc)
+    }
+}
+
+impl<K: res_id::ResIdKind> From<ResId<K>> for ResourceKey
+{
+    fn from(_res_id: ResId<K>) -> ResourceKey
+    {
+        ResourceKey::new(_res_id.to_u32(), K::FOURCC)
     }
 }
 
@@ -409,7 +417,7 @@ fn extract_pickup_data<'r>(
             .unwrap_or(false)
     );
     let hudmemo_strg = if let Some(hudmemo) = hudmemo {
-        hudmemo.property_data.as_hud_memo().unwrap().strg
+        hudmemo.property_data.as_hud_memo().unwrap().strg.to_u32()
     } else {
         resource_info!("Phazon Suit acquired!.STRG").res_id
     };
@@ -682,16 +690,16 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
     deps.remove(&resource_info!("purple.PART").into());
 
     if pickup_kind == 9 {
-        deps.insert(ResourceKey::new(custom_asset_ids::THERMAL_VISOR_SCAN, b"SCAN".into()));
-        deps.insert(ResourceKey::new(custom_asset_ids::THERMAL_VISOR_STRG, b"STRG".into()));
+        deps.insert(ResourceKey::from(custom_asset_ids::THERMAL_VISOR_SCAN));
+        deps.insert(ResourceKey::from(custom_asset_ids::THERMAL_VISOR_STRG));
     } else if pickup_kind == 19 {
         // Spiderball. I couldn't find any references to this outside of PAK resource
         // indexes and dependency lists.
         deps.insert(resource_info!("spiderball.CSKR").into());
     } else if pickup_kind == 23 {
         // Phazon suit.
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_SCAN, b"SCAN".into()));
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_STRG, b"STRG".into()));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_SCAN));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_STRG));
 
         // Remove the Gravity Suit's CMDL and ANCS
         deps.remove(&resource_info!("Node1_11.CMDL").into());
@@ -700,10 +708,10 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.remove(&ResourceKey::new(0xA95D06BC, b"TXTR".into()));
 
         // Add the custom CMDL and textures
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_CMDL, b"CMDL".into()));
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_ANCS, b"ANCS".into()));
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
-        deps.insert(ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR2, b"TXTR".into()));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_CMDL));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_ANCS));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
+        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR2));
     };
 }
 
@@ -728,18 +736,18 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
                       b"CMDL".into(), b"ANCS".into()].contains(&i.fourcc))
         .cloned()
         .collect();
-    nothing_deps.remove(&ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
+    nothing_deps.remove(&ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
     nothing_deps.extend(&[
-        ResourceKey::new(custom_asset_ids::NOTHING_SCAN_STRG, b"STRG".into()),
-        ResourceKey::new(custom_asset_ids::NOTHING_SCAN, b"SCAN".into()),
-        ResourceKey::new(custom_asset_ids::NOTHING_CMDL, b"CMDL".into()),
-        ResourceKey::new(custom_asset_ids::NOTHING_ANCS, b"ANCS".into()),
-        ResourceKey::new(custom_asset_ids::NOTHING_TXTR, b"TXTR".into()),
+        ResourceKey::from(custom_asset_ids::NOTHING_SCAN_STRG),
+        ResourceKey::from(custom_asset_ids::NOTHING_SCAN),
+        ResourceKey::from(custom_asset_ids::NOTHING_CMDL),
+        ResourceKey::from(custom_asset_ids::NOTHING_ANCS),
+        ResourceKey::from(custom_asset_ids::NOTHING_TXTR),
     ]);
     assert!(pickup_table.insert(PickupType::Nothing, PickupData {
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
+        hudmemo_strg: custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG.to_u32(),
         // TODO replace with something silly or silence?
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
@@ -761,15 +769,15 @@ fn create_scan_visor(pickup_table: &mut HashMap<PickupType, PickupData>)
         .filter(|i| ![b"SCAN".into(), b"STRG".into()].contains(&i.fourcc))
         .cloned()
         .collect();
-    scan_visor_deps.remove(&ResourceKey::new(custom_asset_ids::PHAZON_SUIT_TXTR1, b"TXTR".into()));
+    scan_visor_deps.remove(&ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
     scan_visor_deps.extend(&[
-        ResourceKey::new(custom_asset_ids::SCAN_VISOR_SCAN_STRG, b"STRG".into()),
-        ResourceKey::new(custom_asset_ids::SCAN_VISOR_SCAN, b"SCAN".into()),
+        ResourceKey::from(custom_asset_ids::SCAN_VISOR_SCAN_STRG),
+        ResourceKey::from(custom_asset_ids::SCAN_VISOR_SCAN),
     ]);
     assert!(pickup_table.insert(PickupType::ScanVisor, PickupData {
         bytes: scan_visor_bytes,
         deps: scan_visor_deps,
-        hudmemo_strg: custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
+        hudmemo_strg: custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG.to_u32(),
         attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
     }).is_none());
 }
@@ -794,22 +802,22 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupType, PickupData>)
         .cloned()
         .collect();
     shiny_missile_deps.extend(&[
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_SCAN_STRG, b"STRG".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_SCAN, b"SCAN".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_CMDL, b"CMDL".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_ANCS, b"ANCS".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_EVNT, b"EVNT".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_ANIM, b"ANIM".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_TXTR0, b"TXTR".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_TXTR1, b"TXTR".into()),
-        ResourceKey::new(custom_asset_ids::SHINY_MISSILE_TXTR2, b"TXTR".into()),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_SCAN_STRG),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_SCAN),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_CMDL),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_ANCS),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_EVNT),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_ANIM),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_TXTR0),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_TXTR1),
+        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_TXTR2),
         resource_info!("healthnew.PART").into(),
         resource_info!("AfterPick.PART").into(),
     ]);
     assert!(pickup_table.insert(PickupType::ShinyMissile, PickupData {
         bytes: shiny_missile_bytes,
         deps: shiny_missile_deps,
-        hudmemo_strg: custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
+        hudmemo_strg: custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG.to_u32(),
         attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
     }).is_none());
 }
@@ -921,7 +929,7 @@ fn main()
                     if pickup.cmdl != u32::max_value() {
                         // Add an aabb entry for this pickup's cmdl
                         cmdl_aabbs.entry(pickup.cmdl).or_insert_with(|| {
-                            let cmdl_key = ResourceKey::new(pickup.cmdl, b"CMDL".into());
+                            let cmdl_key = ResourceKey::from(pickup.cmdl);
                             // Cmdls are compressed
                             let res_data = res_db.map[&cmdl_key].data.decompress();
                             let cmdl: Cmdl = Reader::new(&res_data).read(());
@@ -934,8 +942,8 @@ fn main()
             }
 
             if room_locations.len() != 0 {
-                let strg_id = mrea_name_strg_map[&res.file_id];
-                let strg: structs::Strg = res_db.map[&ResourceKey::new(strg_id, b"STRG".into())]
+                let strg_id = mrea_name_strg_map[&ResId::<res_id::MREA>::new(res.file_id)];
+                let strg: structs::Strg = res_db.map[&ResourceKey::from(strg_id)]
                     .data.data.clone().read(());
                 let name = strg
                     .string_tables.iter().next().unwrap()
@@ -955,11 +963,11 @@ fn main()
 
 
     // Special case of Nothing and Phazon Suits' custom CMDLs
-    let suit_aabb = *cmdl_aabbs.get(&resource_info!("Node1_11.CMDL").res_id).unwrap();
+    let suit_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_11.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::PHAZON_SUIT_CMDL, suit_aabb).is_none());
     assert!(cmdl_aabbs.insert(custom_asset_ids::NOTHING_CMDL, suit_aabb).is_none());
 
-    let missile_aabb = *cmdl_aabbs.get(&resource_info!("Node1_36_0.CMDL").res_id).unwrap();
+    let missile_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_36_0.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::SHINY_MISSILE_CMDL, missile_aabb).is_none());
 
     create_nothing(&mut pickup_table);
@@ -1028,7 +1036,7 @@ fn main()
     for (cmdl_id, aabb) in cmdl_aabbs {
         let aabb: [u32; 6] = unsafe { mem::transmute(*aabb) };
         println!("    (0x{:08X}, [0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}, 0x{:08X}]),",
-                    cmdl_id, aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]);
+                    cmdl_id.to_u32(), aabb[0], aabb[1], aabb[2], aabb[3], aabb[4], aabb[5]);
     }
     println!("];");
 
