@@ -1387,6 +1387,18 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
+fn patch_arboretum_invisible_wall(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    layer.objects.as_mut_vec().retain(|obj| obj.instance_id != 0x1302AA);
+
+    Ok(())
+}
+
 fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2675,11 +2687,18 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-    if version != Version::Ntsc0_00 && version != Version::Ntsc0_01 {
+    if version != Version::Ntsc0_00 {
         patcher.add_scly_patch(
-            resource_info!("05_ice_shorelines.MREA").into(),
-            move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
+            resource_info!("08_courtyard.MREA").into(),
+            patch_arboretum_invisible_wall
         );
+        
+        if version != Version::Ntsc0_01 {
+            patcher.add_scly_patch(
+                resource_info!("05_ice_shorelines.MREA").into(),
+                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
+            );
+        }
     }
 
     if spawn_room != SpawnRoom::LandingSite {
