@@ -1508,6 +1508,7 @@ fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mu
 
     let platform_obj_id = 0x1403AE;
     let scan_target_platform_obj_id = 0x1403B4;
+    let actor_blocker_collision_id = 0x1403B5;
 
     let platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == platform_obj_id)
@@ -1520,6 +1521,12 @@ fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mu
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
+    
+    let actor_blocker_collision_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == actor_blocker_collision_id)
+        .and_then(|obj| obj.property_data.as_actor_mut())
+        .unwrap();
+    actor_blocker_collision_obj.active = 0;
 
     Ok(())
 }
@@ -1532,6 +1539,7 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
 
     let platform_obj_id = 0x60372;
     let scan_target_platform_obj_id = 0x60378;
+    let actor_blocker_collision_id = 0x60379;
 
     let platform_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == platform_obj_id)
@@ -1544,6 +1552,12 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
+    
+    let actor_blocker_collision_obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == actor_blocker_collision_id)
+        .and_then(|obj| obj.property_data.as_actor_mut())
+        .unwrap();
+    actor_blocker_collision_obj.active = 0;
 
     Ok(())
 }
