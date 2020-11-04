@@ -1399,6 +1399,7 @@
 0x8027048c "ActivateMorphBallCamera__7CPlayerFR13CStateManager"
 0x80271078 "GetNextBallTransitionAnim__7CPlayerFfRbR13CStateManager"
 0x8027135c "SetIntoBallReadyAnimation__7CPlayerFR13CStateManager"
+0x802719dc "UpdatePlayerHints__7CPlayerFRC13CStateManager"
 0x80271e64 "SetAreaPlayerHint__7CPlayerFRC17CScriptPlayerHintRC13CStateManager"
 0x80272060 "ResetPlayerHintState__7CPlayerFv"
 0x80272104 "GetBallPosition__7CPlayerCFv"
