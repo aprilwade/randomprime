@@ -925,7 +925,7 @@ fn patch_lab_aether_cutscene_trigger(
     version: Version,
 ) -> Result<(), String>
 {
-    let layer_num = if version == Version::NtscTrilogy || version == Version::Pal {
+    let layer_num = if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy || version == Version::Pal {
         4
     } else {
         5
@@ -1504,7 +1504,7 @@ fn patch_ruined_courtyard_thermal_conduits(
             .and_then(|obj| obj.property_data.as_actor_mut())
             .unwrap()
             .active = 1;
-    } else if version == Version::Pal || version == Version::NtscTrilogy {
+    } else if version == Version::Pal || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         let flags = &mut area.layer_flags.flags;
         *flags |= 1 << 6; // Turn on "Thermal Target"
     }
@@ -1892,7 +1892,7 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
-    if version == Version::NtscTrilogy {
+    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         return Ok(())
     }
 
@@ -1905,7 +1905,9 @@ fn patch_dol<'r>(
                     Version::Ntsc0_01    => s.addr_0_01,
                     Version::Ntsc0_02    => s.addr_0_02,
                     Version::Pal         => s.addr_pal,
-                    Version::NtscTrilogy => s.addr_trilogy_ntsc,
+                    Version::NtscUTrilogy => s.addr_trilogy_ntsc_u,
+                    Version::NtscJTrilogy => s.addr_trilogy_ntsc_j,
+                    Version::PalTrilogy => s.addr_trilogy_pal,
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -2077,7 +2079,9 @@ fn patch_dol<'r>(
             let map_str = generated::REL_LOADER_PAL_MAP;
             (loader_bytes, map_str)
         },
-        Version::NtscTrilogy => unreachable!(),
+        Version::NtscUTrilogy => unreachable!(),
+        Version::NtscJTrilogy => unreachable!(),
+        Version::PalTrilogy => unreachable!(),
     };
 
     let mut rel_loader = rel_loader_bytes.to_vec();
@@ -2250,7 +2254,9 @@ enum Version
     Ntsc0_01,
     Ntsc0_02,
     Pal,
-    NtscTrilogy,
+    NtscUTrilogy,
+    NtscJTrilogy,
+    PalTrilogy,
 }
 
 impl fmt::Display for Version
@@ -2262,7 +2268,9 @@ impl fmt::Display for Version
             Version::Ntsc0_01    => write!(f, "1.01"),
             Version::Ntsc0_02    => write!(f, "1.02"),
             Version::Pal         => write!(f, "pal"),
-            Version::NtscTrilogy => write!(f, "trilogy_ntsc"),
+            Version::NtscUTrilogy => write!(f, "trilogy_ntsc_u"),
+            Version::NtscJTrilogy => write!(f, "trilogy_ntsc_j"),
+            Version::PalTrilogy => write!(f, "trilogy_pal"),
         }
     }
 }
@@ -2292,10 +2300,12 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
         (b"GM8E01", 0, 1) => Version::Ntsc0_01,
         (b"GM8E01", 0, 2) => Version::Ntsc0_02,
         (b"GM8P01", 0, 0) => Version::Pal,
-        (b"R3ME01", 0, 0) => Version::NtscTrilogy,
+        (b"R3ME01", 0, 0) => Version::NtscUTrilogy,
+        (b"R3IJ01", 0, 0) => Version::NtscJTrilogy,
+        (b"R3MP01", 0, 0) => Version::PalTrilogy,
         _ => Err(concat!(
                 "The input ISO doesn't appear to be NTSC-US, PAL Metroid Prime, ",
-                "or NTSC-US Metroid Prime Trilogy."
+                "or NTSC-US, NTSC-J, PAL Metroid Prime Trilogy."
             ))?
     };
     if gc_disc.find_file("randomprime.txt").is_some() {
@@ -2312,13 +2322,15 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    if version != Version::Ntsc0_01 && version != Version::Pal && version != Version::NtscTrilogy {
+    if version != Version::Ntsc0_01 && version != Version::Pal && version != Version::NtscUTrilogy && version != Version::NtscJTrilogy && version != Version::PalTrilogy {
         let patches_rel_bytes = match version {
             Version::Ntsc0_00    => generated::PATCHES_100_REL,
             Version::Ntsc0_01    => unreachable!(),
             Version::Ntsc0_02    => generated::PATCHES_102_REL,
             Version::Pal         => generated::PATCHES_PAL_REL,
-            Version::NtscTrilogy => unreachable!(),
+            Version::NtscUTrilogy => unreachable!(),
+            Version::NtscJTrilogy => unreachable!(),
+            Version::PalTrilogy => unreachable!(),
         };
         gc_disc.add_file(
             "patches.rel",
@@ -2646,7 +2658,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patch_main_quarry_barrier
     );
 
-    if version == Version::NtscTrilogy {
+    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         patcher.add_scly_patch(
             resource_info!("04_mines_pillar.MREA").into(),
             patch_ore_processing_destructible_rock_pal

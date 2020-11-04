@@ -53,10 +53,10 @@ macro_rules! build_mp1_pal_symbol {
 }
 macro_file_proxy_item!("src/dol_symbol_table/pal.txt", build_mp1_pal_symbol, ;);
 
-macro_rules! build_mp1_trilogy_ntsc_symbol {
+macro_rules! build_mp1_trilogy_ntsc_u_symbol {
     ($($addr:tt $sym_name:tt;)*) => {
         #[macro_export]
-        macro_rules! mp1_trilogy_ntsc_symbol {
+        macro_rules! mp1_trilogy_ntsc_u_symbol {
             $(
                 ($sym_name) => { Some($addr) };
             )*
@@ -64,7 +64,33 @@ macro_rules! build_mp1_trilogy_ntsc_symbol {
         }
     }
 }
-macro_file_proxy_item!("src/dol_symbol_table/trilogy_ntsc.txt", build_mp1_trilogy_ntsc_symbol, ;);
+macro_file_proxy_item!("src/dol_symbol_table/trilogy_ntsc_u.txt", build_mp1_trilogy_ntsc_u_symbol, ;);
+
+macro_rules! build_mp1_trilogy_ntsc_j_symbol {
+    ($($addr:tt $sym_name:tt;)*) => {
+        #[macro_export]
+        macro_rules! mp1_trilogy_ntsc_j_symbol {
+            $(
+                ($sym_name) => { Some($addr) };
+            )*
+            ($_s:tt) => { None };
+        }
+    }
+}
+macro_file_proxy_item!("src/dol_symbol_table/trilogy_ntsc_j.txt", build_mp1_trilogy_ntsc_j_symbol, ;);
+
+macro_rules! build_mp1_trilogy_pal_symbol {
+    ($($addr:tt $sym_name:tt;)*) => {
+        #[macro_export]
+        macro_rules! mp1_trilogy_pal_symbol {
+            $(
+                ($sym_name) => { Some($addr) };
+            )*
+            ($_s:tt) => { None };
+        }
+    }
+}
+macro_file_proxy_item!("src/dol_symbol_table/trilogy_pal.txt", build_mp1_trilogy_pal_symbol, ;);
 
 pub struct Mp1Symbol
 {
@@ -72,7 +98,9 @@ pub struct Mp1Symbol
     pub addr_0_01: Option<u32>,
     pub addr_0_02: Option<u32>,
     pub addr_pal: Option<u32>,
-    pub addr_trilogy_ntsc: Option<u32>,
+    pub addr_trilogy_ntsc_u: Option<u32>,
+    pub addr_trilogy_ntsc_j: Option<u32>,
+    pub addr_trilogy_pal: Option<u32>,
 }
 
 #[macro_export]
@@ -83,7 +111,9 @@ macro_rules! mp1_symbol {
             addr_0_01: $crate::mp1_101_symbol!($syn_name),
             addr_0_02: $crate::mp1_102_symbol!($syn_name),
             addr_pal: $crate::mp1_pal_symbol!($syn_name),
-            addr_trilogy_ntsc: $crate::mp1_trilogy_ntsc_symbol!($syn_name),
+            addr_trilogy_ntsc_u: $crate::mp1_trilogy_ntsc_u_symbol!($syn_name),
+            addr_trilogy_ntsc_j: $crate::mp1_trilogy_ntsc_j_symbol!($syn_name),
+            addr_trilogy_pal: $crate::mp1_trilogy_pal_symbol!($syn_name),
         }
     }
 }
