@@ -1625,6 +1625,37 @@ fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, ar
     Ok(())
 }
 
+fn patch_heat_damage_per_sec<'a>(patcher: &mut PrimePatcher<'_, 'a>, heat_damage_per_sec: f32)
+{
+    const HEATED_ROOMS: &[generated::ResourceInfo] = &[
+        resource_info!("06_grapplegallery.MREA"),
+        resource_info!("00a_lava_connect.MREA"),
+        resource_info!("11_over_muddywaters_b.MREA"),
+        resource_info!("00b_lava_connect.MREA"),
+        resource_info!("14_over_magdolitepits.MREA"),
+        resource_info!("00c_lava_connect.MREA"),
+        resource_info!("09_over_monitortower.MREA"),
+        resource_info!("00d_lava_connect.MREA"),
+        resource_info!("09_lava_pickup.MREA"),
+        resource_info!("00e_lava_connect.MREA"),
+        resource_info!("12_over_fieryshores.MREA"),
+        resource_info!("00f_lava_connect.MREA"),
+        resource_info!("00g_lava_connect.MREA"),
+    ];
+    
+    for heated_room in HEATED_ROOMS.iter() {
+        patcher.add_scly_patch((*heated_room).into(), move |_ps, area| {
+            let scly = area.mrea().scly_section_mut();
+            let layer = &mut scly.layers.as_mut_vec()[0];
+            layer.objects.iter_mut()
+                .filter_map(|obj| obj.property_data.as_special_function_mut())
+                .filter(|sf| sf.type_ == 18) // Is Area Damage function
+                .for_each(|sf| sf.unknown1 = heat_damage_per_sec);
+            Ok(())
+        });
+    }
+}
+
 fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
 {
     let strings = res.kind.as_strg_mut().unwrap()
@@ -2219,6 +2250,7 @@ pub struct ParsedConfig
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
     pub nonvaria_heat_damage: bool,
+    pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
@@ -2288,6 +2320,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
+    writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
@@ -2608,6 +2641,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
+    
+    patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
 
     patcher.add_scly_patch(
         resource_info!("22_Flaahgra.MREA").into(),

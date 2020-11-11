@@ -101,6 +101,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         .arg(Arg::with_name("nonvaria heat damage")
             .long("nonvaria-heat-damage")
             .help("If the Varia Suit has not been collect, heat damage applies"))
+        .arg(Arg::with_name("heat damage per sec")
+            .long("heat-damage-per-sec")
+            .help("Set the heat damage per seconds spent in a superheated room")
+            .takes_value(true))
         .arg(Arg::with_name("staggered suit damage")
             .long("staggered-suit-damage")
             .help(concat!("The suit damage reduction is determinted by the number of suits ",
@@ -234,6 +238,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         skip_hudmenus: matches.is_present("skip hudmenus"),
         skip_frigate: matches.is_present("skip frigate"),
         nonvaria_heat_damage: matches.is_present("nonvaria heat damage"),
+        heat_damage_per_sec: matches.value_of("heat damage per sec")
+                                    .unwrap_or_default()
+                                    .parse::<f32>()
+                                    .unwrap_or(10.0),
         staggered_suit_damage: matches.is_present("staggered suit damage"),
         keep_fmvs: matches.is_present("keep attract mode"),
         obfuscate_items: matches.is_present("obfuscate items"),
