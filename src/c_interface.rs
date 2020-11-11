@@ -44,6 +44,7 @@ struct Config
     skip_hudmenus: bool,
     #[serde(default)]
     nonvaria_heat_damage: bool,
+    heat_damage_per_sec: Option<f32>,
     #[serde(default)]
     staggered_suit_damage: bool,
     #[serde(default)]
@@ -229,8 +230,6 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     };
 
     let mut config = config;
-    let random_starting_items = config.random_starting_items.map(|i| i.into())
-        .unwrap_or(StartingItems::from_u64(0));
 
     let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
@@ -246,6 +245,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
         nonvaria_heat_damage: config.nonvaria_heat_damage,
+        heat_damage_per_sec: config.heat_damage_per_sec.unwrap_or(10.0),
         staggered_suit_damage: config.staggered_suit_damage,
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
@@ -259,7 +259,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         flaahgra_music_files,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
-        random_starting_items,
+        random_starting_items: config.random_starting_items.map(|i| i.into()).unwrap_or(StartingItems::from_u64(0)),
         comment: config.comment,
         main_menu_message: config.main_menu_message,
 
