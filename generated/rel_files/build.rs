@@ -13,7 +13,7 @@ fn invoke_cargo(ppc_manifest: &Path, package: &str)
 {
     let output = Command::new("rustup")
         .arg("run")
-        .arg("nightly")
+        .arg("stable")
         .arg("cargo")
         .arg("rustc")
         .arg("--manifest-path")
@@ -28,6 +28,8 @@ fn invoke_cargo(ppc_manifest: &Path, package: &str)
         .arg("relocation-model=static")
         .arg("-C")
         .arg("target-cpu=750")
+        .env("RUSTC_BOOTSTRAP", "1")
+        .env("CARGO_TARGET_DIR", "../../target")
         .output()
         .expect("Failed to compile ppc crate");
     if !output.status.success() {
@@ -45,7 +47,11 @@ fn main()
 
     let ppc_dir = root_dir.join("..").join("..").join("compile_to_ppc");
     let ppc_manifest = ppc_dir.join("Cargo.toml");
-    let ppc_target_dir = ppc_dir.join("target/powerpc-unknown-linux-gnu/release");
+    let target_dir = ppc_dir
+        .join("..")
+        .join("target")
+        .join("powerpc-unknown-linux-gnu")
+        .join("release");
 
     let symbol_table_dir = root_dir
         .join("..")
@@ -61,7 +67,7 @@ fn main()
 
         let bin_path = out_dir.join(format!("rel_loader_{}.bin", version));
         let symbols_map = link_obj_files_to_bin(
-            [ppc_target_dir.join("librel_loader.a")].iter(),
+            [target_dir.join("librel_loader.a")].iter(),
             0x80002000,
             &symbol_table,
             &bin_path,
@@ -81,7 +87,7 @@ fn main()
 
         let rel_path = out_dir.join(format!("patches_{}.rel", version));
         link_obj_files_to_rel(
-            [ppc_target_dir.join("librel_patches.a")].iter(),
+            [target_dir.join("librel_patches.a")].iter(),
             &symbol_table,
             &rel_path,
         ).unwrap();
@@ -89,10 +95,12 @@ fn main()
 
     let walkdir = WalkDir::new(ppc_dir)
         .into_iter()
-        .filter_entry(|entry|
-            entry.depth() == 0 && entry.file_name().to_str().unwrap_or("") == "target"
-        );
+        .filter_entry(|entry| {
+            let name = entry.file_name().to_str().unwrap_or("");
+            !name.starts_with(".") && name != "target"
+        });
     for entry in walkdir {
-        println!("cargo:rerun-if-changed={}", entry.unwrap().path().display());
+        let entry = entry.unwrap();
+        println!("cargo:rerun-if-changed={}", entry.path().display());
     }
 }
