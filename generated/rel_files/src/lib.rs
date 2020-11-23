@@ -1,11 +1,3 @@
-#[macro_use]
-mod dol_symbol_table;
-#[macro_use]
-mod resource_info_table;
-
-pub use dol_symbol_table::Mp1Symbol;
-pub use resource_info_table::ResourceInfo;
-
 pub const REL_LOADER_100: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rel_loader_1.00.bin"));
 pub const REL_LOADER_102: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rel_loader_1.02.bin"));
 pub const REL_LOADER_PAL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rel_loader_pal.bin"));

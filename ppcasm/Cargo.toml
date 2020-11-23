@@ -8,7 +8,7 @@ edition = "2018"
 ppcasm_macro = { path = "ppcasm_macro" }
 proc-macro-hack = "0.5"
 byteorder = "1.*"
-generic-array = "0.13"
+generic-array = "0.14"
 
 [[test]]
 name = "test_ppcasm"

@@ -79,10 +79,10 @@ impl<K> Into<u32> for ResId<K>
 #[derive(Debug, Copy, Clone)]
 pub struct WrongFourCCError;
 
-impl<K: ResIdKind> TryFrom<generated::ResourceInfo> for ResId<K>
+impl<K: ResIdKind> TryFrom<resource_info_table::ResourceInfo> for ResId<K>
 {
     type Error = WrongFourCCError;
-    fn try_from(res_info: generated::ResourceInfo) -> Result<Self, Self::Error>
+    fn try_from(res_info: resource_info_table::ResourceInfo) -> Result<Self, Self::Error>
     {
         if K::FOURCC != res_info.fourcc {
             Err(WrongFourCCError)

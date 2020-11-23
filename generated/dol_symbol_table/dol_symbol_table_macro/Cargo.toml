@@ -1,5 +1,5 @@
 [package]
-name = "macro_file_proxy_proc_macro"
+name = "dol_symbol_table_macro"
 version = "0.1.0"
 authors = ["April Wade <wayedt@gmail.com>"]
 edition = "2018"
@@ -10,6 +10,7 @@ proc-macro = true
 [dependencies]
 syn = "1"
 quote = "1"
-proc-macro-hack = "0.5"
-proc-macro2 = "1"
+phf = { version = "0.8", default-features = false }
 
+[build-dependencies]
+phf_codegen = "0.8"

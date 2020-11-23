@@ -1,9 +1,0 @@
-[package]
-name = "macro_file_proxy"
-version = "0.1.0"
-authors = ["April Wade <wayedt@gmail.com>"]
-edition = "2018"
-
-[dependencies]
-macro_file_proxy_proc_macro = { path = "macro_file_proxy_proc_macro" }
-proc-macro-hack = "0.5"

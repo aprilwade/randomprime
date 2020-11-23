@@ -1,4 +1,4 @@
-use generated::resource_info;
+use resource_info_table::resource_info;
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{res_id, ResId, Resource, ResourceKind};
 

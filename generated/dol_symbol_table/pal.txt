@@ -745,7 +745,6 @@
 0x801451dc "Think__8CMetareeFfR13CStateManager"
 0x80145b54 "ShouldAttack__8CMetareeFR13CStateManagerf"
 0x80145c20 "CollidedWith__8CMetareeFRC9TUniqueIdRC18CCollisionInfoListR13CStateManager"
-0x80146714 "ThinkAreaDamage__22CScriptSpecialFunctionFfR13CStateManager"
 0x80146c8c "Render__22CScriptSpecialFunctionCFRC13CStateManager"
 0x80147998 "sub_80151208"
 0x80148714 "SkipCinematic__22CScriptSpecialFunctionFR13CStateManager"

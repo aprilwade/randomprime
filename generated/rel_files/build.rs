@@ -43,16 +43,20 @@ fn main()
     let root_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let root_dir = Path::new(&root_dir);
 
-    let ppc_dir = root_dir.join("..").join("compile_to_ppc");
+    let ppc_dir = root_dir.join("..").join("..").join("compile_to_ppc");
     let ppc_manifest = ppc_dir.join("Cargo.toml");
     let ppc_target_dir = ppc_dir.join("target/powerpc-unknown-linux-gnu/release");
+
+    let symbol_table_dir = root_dir
+        .join("..")
+        .join("dol_symbol_table");
 
     invoke_cargo(&ppc_manifest, "rel_loader");
     invoke_cargo(&ppc_manifest, "rel_patches");
 
     for version in &["1.00", "1.02", "pal"] {
-        let sym_table_path = format!("src/dol_symbol_table/{}.txt", version);
-        eprintln!("{:?}", root_dir.join(&sym_table_path));
+        let sym_table_path = symbol_table_dir.join(format!("{}.txt", version));
+        eprintln!("{:?}", root_dir.join("..").join(&sym_table_path));
         let mut symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();
 
         let bin_path = out_dir.join(format!("rel_loader_{}.bin", version));

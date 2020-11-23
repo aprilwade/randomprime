@@ -27,7 +27,8 @@ use crate::{
     GcDiscLookupExtensions,
 };
 
-use generated::{mp1_symbol, resource_info, ResourceInfo};
+use dol_symbol_table::mp1_symbol;
+use resource_info_table::{resource_info, ResourceInfo};
 use ppcasm::ppcasm;
 
 use reader_writer::{
@@ -1533,7 +1534,7 @@ fn patch_geothermal_core_destructible_rock_pal(_ps: &mut PatcherState, area: &mu
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
-    
+
     let actor_blocker_collision_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == actor_blocker_collision_id)
         .and_then(|obj| obj.property_data.as_actor_mut())
@@ -1564,7 +1565,7 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
         .and_then(|obj| obj.property_data.as_point_of_interest_mut())
         .unwrap();
     scan_target_platform_obj.active = 0;
-    
+
     let actor_blocker_collision_obj = layer.objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == actor_blocker_collision_id)
         .and_then(|obj| obj.property_data.as_actor_mut())
@@ -1627,7 +1628,7 @@ fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, ar
 
 fn patch_heat_damage_per_sec<'a>(patcher: &mut PrimePatcher<'_, 'a>, heat_damage_per_sec: f32)
 {
-    const HEATED_ROOMS: &[generated::ResourceInfo] = &[
+    const HEATED_ROOMS: &[ResourceInfo] = &[
         resource_info!("06_grapplegallery.MREA"),
         resource_info!("00a_lava_connect.MREA"),
         resource_info!("11_over_muddywaters_b.MREA"),
@@ -1642,7 +1643,7 @@ fn patch_heat_damage_per_sec<'a>(patcher: &mut PrimePatcher<'_, 'a>, heat_damage
         resource_info!("00f_lava_connect.MREA"),
         resource_info!("00g_lava_connect.MREA"),
     ];
-    
+
     for heated_room in HEATED_ROOMS.iter() {
         patcher.add_scly_patch((*heated_room).into(), move |_ps, area| {
             let scly = area.mrea().scly_section_mut();
@@ -1810,7 +1811,7 @@ fn patch_starting_pickups<'r>(
 {
     let room_id = area.mlvl_area.internal_id;
     let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
-    
+
     if show_starting_items {
         // Turn on "Randomizer - Starting Items popup Layer"
         area.layer_flags.flags |= 1 << layer_count;
@@ -2095,19 +2096,19 @@ fn patch_dol<'r>(
     }
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::Ntsc0_00 => {
-            let loader_bytes = generated::REL_LOADER_100;
-            let map_str = generated::REL_LOADER_100_MAP;
+            let loader_bytes = rel_files::REL_LOADER_100;
+            let map_str = rel_files::REL_LOADER_100_MAP;
             (loader_bytes, map_str)
         },
         Version::Ntsc0_01 => unreachable!(),
         Version::Ntsc0_02 => {
-            let loader_bytes = generated::REL_LOADER_102;
-            let map_str = generated::REL_LOADER_102_MAP;
+            let loader_bytes = rel_files::REL_LOADER_102;
+            let map_str = rel_files::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
         Version::Pal => {
-            let loader_bytes = generated::REL_LOADER_PAL;
-            let map_str = generated::REL_LOADER_PAL_MAP;
+            let loader_bytes = rel_files::REL_LOADER_PAL;
+            let map_str = rel_files::REL_LOADER_PAL_MAP;
             (loader_bytes, map_str)
         },
         Version::NtscUTrilogy => unreachable!(),
@@ -2357,10 +2358,10 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 
     if version != Version::Ntsc0_01 && version != Version::Pal && version != Version::NtscUTrilogy && version != Version::NtscJTrilogy && version != Version::PalTrilogy {
         let patches_rel_bytes = match version {
-            Version::Ntsc0_00    => generated::PATCHES_100_REL,
+            Version::Ntsc0_00    => rel_files::PATCHES_100_REL,
             Version::Ntsc0_01    => unreachable!(),
-            Version::Ntsc0_02    => generated::PATCHES_102_REL,
-            Version::Pal         => generated::PATCHES_PAL_REL,
+            Version::Ntsc0_02    => rel_files::PATCHES_102_REL,
+            Version::Pal         => rel_files::PATCHES_PAL_REL,
             Version::NtscUTrilogy => unreachable!(),
             Version::NtscJTrilogy => unreachable!(),
             Version::PalTrilogy => unreachable!(),
@@ -2416,7 +2417,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
     let elevator_layout = &elevator_layout;
     let spawn_room = config.starting_location;
-    
+
 
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2624,7 +2625,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
     );
-    
+
     let show_starting_items = !config.random_starting_items.is_empty();
     patcher.add_scly_patch(
         (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
@@ -2641,7 +2642,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
-    
+
     patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
 
     patcher.add_scly_patch(
@@ -2739,7 +2740,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             resource_info!("08_courtyard.MREA").into(),
             patch_arboretum_invisible_wall
         );
-        
+
         if version != Version::Ntsc0_01 {
             patcher.add_scly_patch(
                 resource_info!("05_ice_shorelines.MREA").into(),

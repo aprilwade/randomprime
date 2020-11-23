@@ -1,11 +1,11 @@
 [package]
-name = "reader_writer"
+name = "rel_files"
 version = "0.1.0"
 authors = ["April Wade <wayedt@gmail.com>"]
 edition = "2018"
 
-workspace = ".."
-
 [dependencies]
-byteorder = "1.2"
-generic-array = "0.14"
+
+[build-dependencies]
+walkdir = "2"
+dol_linker = { path = "../../dol_linker" }

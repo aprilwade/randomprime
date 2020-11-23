@@ -168,11 +168,28 @@ version = "0.1.0"
 dependencies = [
  "auto_struct_macros",
  "clap",
- "enum-map 0.5.0",
+ "enum-map",
  "goblin",
  "memmap",
  "reader_writer",
  "snafu",
+]
+
+[[package]]
+name = "dol_symbol_table"
+version = "0.1.0"
+dependencies = [
+ "dol_symbol_table_macro",
+]
+
+[[package]]
+name = "dol_symbol_table_macro"
+version = "0.1.0"
+dependencies = [
+ "phf",
+ "phf_codegen",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -247,16 +264,6 @@ checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "enum-map"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccd9b2d5e0eb5c2ff851791e2af90ab4531b1168cfc239d1c0bf467e60ba3c89"
-dependencies = [
- "enum-map-derive",
- "enum-map-internals",
-]
-
-[[package]]
-name = "enum-map"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70a375f899a53b9848ad9fb459b5bf90e4851ae5d9fea89134b062dc1828b26e"
@@ -278,15 +285,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enum-map-internals"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b0bacf3ea7aba18ce84032efc3f0fa29f5c814048b742ab3e64d07d83ac3e8"
-dependencies = [
- "array-macro",
-]
-
-[[package]]
 name = "flate2"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,22 +297,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "generated"
-version = "0.1.0"
-dependencies = [
- "dol_linker",
- "macro_file_proxy",
- "reader_writer",
- "walkdir",
-]
-
-[[package]]
 name = "generic-array"
-version = "0.13.2"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ed1e761351b56f54eb9dcd0cfaca9fd0daecf93918e1cfc01c8a3d26ee7adcd"
+checksum = "501466ecc8a30d1d3b7fc9229b122b2ce8ed6e9d9223f1138d4babb253e51817"
 dependencies = [
  "typenum",
+ "version_check",
 ]
 
 [[package]]
@@ -382,24 +371,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "macro_file_proxy"
-version = "0.1.0"
-dependencies = [
- "macro_file_proxy_proc_macro",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "macro_file_proxy_proc_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro-hack",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "memchr"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -462,6 +433,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62be47e61d1842b9170f0fdeec8eba98e60e90e5446449a0545e5152acd7096"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "phf"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3dfb61232e34fcb633f43d12c58f83c1df82962dcdfa565a4e866ffc17dafe12"
+dependencies = [
+ "phf_shared",
+]
+
+[[package]]
+name = "phf_codegen"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbffee61585b0411840d3ece935cce9cb6321f01c45477d30066498cd5e1a815"
+dependencies = [
+ "phf_generator",
+ "phf_shared",
+]
+
+[[package]]
+name = "phf_generator"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17367f0cc86f2d25802b2c26ee58a7b23faeccf78a396094c13dced0d0182526"
+dependencies = [
+ "phf_shared",
+ "rand",
+]
+
+[[package]]
+name = "phf_shared"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c00cf8b9eafe68dde5e9eaa2cef8ee84a9336a47d566ec55ca16589633b65af7"
+dependencies = [
+ "siphasher",
 ]
 
 [[package]]
@@ -536,6 +545,7 @@ dependencies = [
  "rand_chacha",
  "rand_core",
  "rand_hc",
+ "rand_pcg",
 ]
 
 [[package]]
@@ -567,6 +577,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_pcg"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16abd0c1b639e9eb4d7c50c0b8100b0d0f849be2349829c740fe8e6eb4816429"
+dependencies = [
+ "rand_core",
+]
+
+[[package]]
 name = "randomprime"
 version = "0.2.3"
 dependencies = [
@@ -574,10 +593,10 @@ dependencies = [
  "auto_struct_macros",
  "clap",
  "dol_linker",
+ "dol_symbol_table",
  "encoding",
- "enum-map 0.6.2",
+ "enum-map",
  "flate2",
- "generated",
  "memmap",
  "nod_wrapper",
  "num-bigint",
@@ -586,6 +605,8 @@ dependencies = [
  "ppcasm",
  "rand",
  "reader_writer",
+ "rel_files",
+ "resource_info_table",
  "serde",
  "serde_json",
  "ssmarshal",
@@ -618,6 +639,32 @@ name = "regex-syntax"
 version = "0.6.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1132f845907680735a84409c3bebc64d1364a5683ffbce899550cd09d5eaefc1"
+
+[[package]]
+name = "rel_files"
+version = "0.1.0"
+dependencies = [
+ "dol_linker",
+ "walkdir",
+]
+
+[[package]]
+name = "resource_info_table"
+version = "0.1.0"
+dependencies = [
+ "reader_writer",
+ "resource_info_table_macro",
+]
+
+[[package]]
+name = "resource_info_table_macro"
+version = "0.1.0"
+dependencies = [
+ "phf",
+ "phf_codegen",
+ "proc-macro2",
+ "syn",
+]
 
 [[package]]
 name = "ryu"
@@ -686,6 +733,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "siphasher"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa8f3741c7372e75519bd9346068370c9cdaabcc1f9599cbcf2a2719352286b7"
+
+[[package]]
 name = "snafu"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -727,8 +780,8 @@ name = "structs"
 version = "0.1.0"
 dependencies = [
  "auto_struct_macros",
- "generated",
  "reader_writer",
+ "resource_info_table",
 ]
 
 [[package]]
@@ -762,9 +815,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.11.2"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
+checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 
 [[package]]
 name = "unicode-width"
@@ -783,6 +836,12 @@ name = "vec_map"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
+
+[[package]]
+name = "version_check"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "walkdir"

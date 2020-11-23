@@ -7,7 +7,7 @@ use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, res_id, ResId, Resource, Scan};
-use generated::{resource_info, ResourceInfo};
+use resource_info_table::{resource_info, ResourceInfo};
 
 use std::{
     mem,
@@ -94,7 +94,7 @@ impl<'r> ResourceDb<'r>
             record.data.clone()
         };
         {
-            // To avoid line-wrapping, create a "specialized" version of the method.            
+            // To avoid line-wrapping, create a "specialized" version of the method.
             let mut extend_deps = |id, b: &[u8; 4]| {
                 self.extend_set_with_deps(&mut deps, ResourceKey::new(id, b.into()), None);
             };

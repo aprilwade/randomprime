@@ -22,10 +22,12 @@ winapi = "0.3"
 
 auto_struct_macros = { path = "auto_struct_macros" }
 dol_linker = { path = "dol_linker" }
-generated = { path = "generated" }
+dol_symbol_table = { path = "generated/dol_symbol_table" }
 nod_wrapper = { path = "nod_wrapper" }
 ppcasm = { path = "ppcasm" }
 reader_writer = { path = "reader_writer" }
+rel_files = { path = "generated/rel_files" }
+resource_info_table = { path = "generated/resource_info_table" }
 structs = { path = "structs" }
 
 [profile.release]
@@ -36,9 +38,11 @@ panic = "unwind"
 members = [
     "auto_struct_macros",
     "dol_linker",
-    "generated",
-        "generated/macro_file_proxy",
-            "generated/macro_file_proxy/macro_file_proxy_proc_macro",
+        "generated/rel_files",
+        "generated/resource_info_table",
+            "generated/resource_info_table/resource_info_table_macro",
+        "generated/dol_symbol_table",
+            "generated/dol_symbol_table/dol_symbol_table_macro",
     "nod_wrapper",
     "ppcasm",
         "ppcasm/ppcasm_macro",
