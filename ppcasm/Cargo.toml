@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 ppcasm_macro = { path = "ppcasm_macro" }
-proc-macro-hack = "0.5"
 byteorder = "1.*"
 generic-array = "0.14"
 

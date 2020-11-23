@@ -1,6 +1,3 @@
-use proc_macro_hack::proc_macro_hack;
-
-#[proc_macro_hack]
 pub use ppcasm_macro::ppcasm;
 
 use std::io;

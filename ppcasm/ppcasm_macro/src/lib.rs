@@ -1,7 +1,5 @@
 extern crate proc_macro;
 
-use proc_macro_hack::proc_macro_hack;
-
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned, TokenStreamExt, ToTokens};
 use syn::{
@@ -93,7 +91,7 @@ impl ToTokens for AsmBlock
                         },
                         AsmOp::AtBranchExpr(e) => {
                             quote_spanned! {e.span()=>
-                                ppcasm::AsmInstrPart::new(#width, ((#e) >> 2))
+                                ppcasm::AsmInstrPart::new(#width, (#e) >> 2)
                             }
                         },
                     }
@@ -208,11 +206,11 @@ fn parse_immediate(input: ParseStream) -> Result<Expr>
     } else {
         let minus = input.parse::<Token![-]>().ok();
         if let Ok(id) = input.parse::<Ident>() {
-            parse_quote_spanned! {id.span()=> (#minus #id) }
+            parse_quote_spanned! {id.span()=> #minus #id }
         } else {
             let lit: LitInt = input.parse()?;
             let v = lit.base10_parse::<i64>()?;
-            parse_quote_spanned! {lit.span()=> (#minus #v) }
+            parse_quote_spanned! {lit.span()=> #minus #v }
         }
     };
     if let Ok(_) = input.parse::<Token![@]>() {
@@ -413,7 +411,7 @@ decl_instrs! {
     subf[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;40) | (?.);
 }
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn ppcasm(tokens: TokenStream) -> TokenStream {
     let block = parse_macro_input!(tokens as AsmBlock);
     block.into_token_stream().into()
