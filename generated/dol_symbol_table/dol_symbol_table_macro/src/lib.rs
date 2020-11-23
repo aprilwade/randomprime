@@ -28,10 +28,10 @@ macro_rules! build_lookup_macros {
 
 build_lookup_macros! {
     (mp1_100_symbol, MP1_100_SYMBOL_TABLE, "NTSC 1.00"),
-    (mp1_101_symbol, MP1_101_SYMBOL_TABLE, "NTSC 1.01"),
+    // (mp1_101_symbol, MP1_101_SYMBOL_TABLE, "NTSC 1.01"),
     (mp1_102_symbol, MP1_102_SYMBOL_TABLE, "NTSC 1.02"),
     (mp1_pal_symbol, MP1_PAL_SYMBOL_TABLE, "PAL"),
-    (mp1_trilogy_ntsc_j_symbol, MP1_TRILOGY_NTSC_J_SYMBOL_TABLE, "Trilogy NTSC-J"),
-    (mp1_trilogy_ntsc_u_symbol, MP1_TRILOGY_NTSC_U_SYMBOL_TABLE, "Trilogy NTSC-U"),
-    (mp1_trilogy_pal_symbol, MP1_TRILOGY_PAL_SYMBOL_TABLE, "Trilogy PAL"),
+    // (mp1_trilogy_ntsc_j_symbol, MP1_TRILOGY_NTSC_J_SYMBOL_TABLE, "Trilogy NTSC-J"),
+    // (mp1_trilogy_ntsc_u_symbol, MP1_TRILOGY_NTSC_U_SYMBOL_TABLE, "Trilogy NTSC-U"),
+    // (mp1_trilogy_pal_symbol, MP1_TRILOGY_PAL_SYMBOL_TABLE, "Trilogy PAL"),
 }

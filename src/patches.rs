@@ -1934,12 +1934,12 @@ fn patch_dol<'r>(
                 let s = mp1_symbol!($sym);
                 match &$version {
                     Version::Ntsc0_00    => s.addr_0_00,
-                    Version::Ntsc0_01    => s.addr_0_01,
+                    Version::Ntsc0_01    => unreachable!(),
                     Version::Ntsc0_02    => s.addr_0_02,
                     Version::Pal         => s.addr_pal,
-                    Version::NtscUTrilogy => s.addr_trilogy_ntsc_u,
-                    Version::NtscJTrilogy => s.addr_trilogy_ntsc_j,
-                    Version::PalTrilogy => s.addr_trilogy_pal,
+                    Version::NtscUTrilogy => unreachable!(),
+                    Version::NtscJTrilogy => unreachable!(),
+                    Version::PalTrilogy => unreachable!(),
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
