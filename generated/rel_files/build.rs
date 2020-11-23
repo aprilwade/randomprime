@@ -29,7 +29,7 @@ fn invoke_cargo(ppc_manifest: &Path, package: &str)
         .arg("-C")
         .arg("target-cpu=750")
         .env("RUSTC_BOOTSTRAP", "1")
-        .env("CARGO_TARGET_DIR", "../../target")
+        .env("CARGO_TARGET_DIR", "../../compile_to_ppc/target")
         .output()
         .expect("Failed to compile ppc crate");
     if !output.status.success() {
@@ -49,6 +49,7 @@ fn main()
     let ppc_manifest = ppc_dir.join("Cargo.toml");
     let target_dir = ppc_dir
         .join("..")
+        .join("compile_to_ppc")
         .join("target")
         .join("powerpc-unknown-linux-gnu")
         .join("release");
