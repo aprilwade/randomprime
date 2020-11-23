@@ -31,7 +31,7 @@ resource_info_table = { path = "generated/resource_info_table" }
 structs = { path = "structs" }
 
 [profile.release]
-lto = true
+lto = "thin"
 panic = "unwind"
 
 [workspace]
