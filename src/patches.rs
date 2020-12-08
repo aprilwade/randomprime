@@ -867,6 +867,63 @@ fn patch_sunchamber_prevent_wild_before_flaahgra(
     Ok(())
 }
 
+fn patch_essence_cinematic_skip_whitescreen(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let timer_furashi_id = 0xB00E9;
+    let camera_filter_key_frame_flash_id = 0xB011B;
+    let timer_flashddd_id = 0xB011D;
+    let special_function_cinematic_skip_id = 0xB01DC;
+    
+    let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
+    let special_function_cinematic_skip_obj = layer.objects.iter_mut()
+        .find(|obj| obj.instance_id == special_function_cinematic_skip_id) // "SpecialFunction Cineamtic Skip"
+        .unwrap();
+    special_function_cinematic_skip_obj.connections.as_mut_vec().extend_from_slice(
+        &[
+            structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::STOP,
+                target_object_id: timer_furashi_id, // "Timer - furashi"
+            },
+            structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::DECREMENT,
+                target_object_id: camera_filter_key_frame_flash_id, // "Camera Filter Keyframe Flash"
+            },
+            structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::STOP,
+                target_object_id: timer_flashddd_id, // "Timer Flashddd"
+            },
+        ]);
+    Ok(())
+}
+
+fn patch_essence_cinematic_skip_nomusic(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let streamed_audio_essence_battle_theme_id = 0xB019E;
+    let special_function_cinematic_skip_id = 0xB01DC;
+    
+    let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
+    layer.objects.iter_mut()
+        .find(|obj| obj.instance_id == special_function_cinematic_skip_id) // "SpecialFunction Cineamtic Skip"
+        .unwrap()
+        .connections
+        .as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::PLAY,
+                target_object_id: streamed_audio_essence_battle_theme_id, // "StreamedAudio Crater Metroid Prime Stage 2 SW"
+            });
+    Ok(())
+}
+
 fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -926,7 +983,7 @@ fn patch_lab_aether_cutscene_trigger(
     version: Version,
 ) -> Result<(), String>
 {
-    let layer_num = if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy || version == Version::Pal {
+    let layer_num = if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy || version == Version::Pal || version == Version::NtscJ {
         4
     } else {
         5
@@ -1499,13 +1556,13 @@ fn patch_ruined_courtyard_thermal_conduits(
         .unwrap()
         .active = 1;
 
-    if version == Version::Ntsc0_02 {
+    if version == Version::NtscU0_02 {
         layer.objects.as_mut_vec().iter_mut()
             .find(|obj| obj.instance_id == thermal_conduit_actor_obj_id)
             .and_then(|obj| obj.property_data.as_actor_mut())
             .unwrap()
             .active = 1;
-    } else if version == Version::Pal || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+    } else if version == Version::NtscJ || version == Version::Pal || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         let flags = &mut area.layer_flags.flags;
         *flags |= 1 << 6; // Turn on "Thermal Target"
     }
@@ -1924,7 +1981,7 @@ fn patch_dol<'r>(
     patch_suit_damage: bool,
 ) -> Result<(), String>
 {
-    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+    if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         return Ok(())
     }
 
@@ -1933,9 +1990,10 @@ fn patch_dol<'r>(
             {
                 let s = mp1_symbol!($sym);
                 match &$version {
-                    Version::Ntsc0_00    => s.addr_0_00,
-                    Version::Ntsc0_01    => unreachable!(),
-                    Version::Ntsc0_02    => s.addr_0_02,
+                    Version::NtscU0_00    => s.addr_0_00,
+                    Version::NtscU0_01    => unreachable!(),
+                    Version::NtscU0_02    => s.addr_0_02,
+                    Version::NtscJ    => unreachable!(),
                     Version::Pal         => s.addr_pal,
                     Version::NtscUTrilogy => unreachable!(),
                     Version::NtscJTrilogy => unreachable!(),
@@ -2088,24 +2146,25 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if version == Version::Ntsc0_02 || version == Version::Pal {
+    if version == Version::NtscU0_02 || version == Version::Pal {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
     let (rel_loader_bytes, rel_loader_map_str) = match version {
-        Version::Ntsc0_00 => {
+        Version::NtscU0_00 => {
             let loader_bytes = rel_files::REL_LOADER_100;
             let map_str = rel_files::REL_LOADER_100_MAP;
             (loader_bytes, map_str)
         },
-        Version::Ntsc0_01 => unreachable!(),
-        Version::Ntsc0_02 => {
+        Version::NtscU0_01 => unreachable!(),
+        Version::NtscU0_02 => {
             let loader_bytes = rel_files::REL_LOADER_102;
             let map_str = rel_files::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
+        Version::NtscJ => unreachable!(),
         Version::Pal => {
             let loader_bytes = rel_files::REL_LOADER_PAL;
             let map_str = rel_files::REL_LOADER_PAL_MAP;
@@ -2283,9 +2342,10 @@ pub struct ParsedConfig
 #[derive(PartialEq, Copy, Clone)]
 enum Version
 {
-    Ntsc0_00,
-    Ntsc0_01,
-    Ntsc0_02,
+    NtscU0_00,
+    NtscU0_01,
+    NtscU0_02,
+    NtscJ,
     Pal,
     NtscUTrilogy,
     NtscJTrilogy,
@@ -2297,9 +2357,10 @@ impl fmt::Display for Version
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
     {
         match self {
-            Version::Ntsc0_00    => write!(f, "1.00"),
-            Version::Ntsc0_01    => write!(f, "1.01"),
-            Version::Ntsc0_02    => write!(f, "1.02"),
+            Version::NtscU0_00    => write!(f, "1.00"),
+            Version::NtscU0_01    => write!(f, "1.01"),
+            Version::NtscU0_02    => write!(f, "1.02"),
+            Version::NtscJ    => write!(f, "jap"),
             Version::Pal         => write!(f, "pal"),
             Version::NtscUTrilogy => write!(f, "trilogy_ntsc_u"),
             Version::NtscJTrilogy => write!(f, "trilogy_ntsc_j"),
@@ -2330,9 +2391,10 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     let mut gc_disc: structs::GcDisc = reader.read(());
 
     let version = match (&gc_disc.header.game_identifier(), gc_disc.header.disc_id, gc_disc.header.version) {
-        (b"GM8E01", 0, 0) => Version::Ntsc0_00,
-        (b"GM8E01", 0, 1) => Version::Ntsc0_01,
-        (b"GM8E01", 0, 2) => Version::Ntsc0_02,
+        (b"GM8E01", 0, 0) => Version::NtscU0_00,
+        (b"GM8E01", 0, 1) => Version::NtscU0_01,
+        (b"GM8E01", 0, 2) => Version::NtscU0_02,
+        (b"GM8J01", 0, 0) => Version::NtscJ,
         (b"GM8P01", 0, 0) => Version::Pal,
         (b"R3ME01", 0, 0) => Version::NtscUTrilogy,
         (b"R3IJ01", 0, 0) => Version::NtscJTrilogy,
@@ -2347,7 +2409,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    if version == Version::Ntsc0_01 || (version == Version::Pal && !config.pal_override) {
+    if version == Version::NtscU0_01 || (version == Version::Pal && !config.pal_override) {
         Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
     }
 
@@ -2356,12 +2418,13 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    if version != Version::Ntsc0_01 && version != Version::Pal && version != Version::NtscUTrilogy && version != Version::NtscJTrilogy && version != Version::PalTrilogy {
+    if version != Version::NtscU0_01 && version != Version::NtscJ && version != Version::Pal && version != Version::NtscUTrilogy && version != Version::NtscJTrilogy && version != Version::PalTrilogy {
         let patches_rel_bytes = match version {
-            Version::Ntsc0_00    => rel_files::PATCHES_100_REL,
-            Version::Ntsc0_01    => unreachable!(),
-            Version::Ntsc0_02    => rel_files::PATCHES_102_REL,
+            Version::NtscU0_00    => rel_files::PATCHES_100_REL,
+            Version::NtscU0_01    => unreachable!(),
+            Version::NtscU0_02    => rel_files::PATCHES_102_REL,
             Version::Pal         => rel_files::PATCHES_PAL_REL,
+            Version::NtscJ    => unreachable!(),
             Version::NtscUTrilogy => unreachable!(),
             Version::NtscJTrilogy => unreachable!(),
             Version::PalTrilogy => unreachable!(),
@@ -2694,18 +2757,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         patch_main_quarry_barrier
     );
 
-    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
-        patcher.add_scly_patch(
-            resource_info!("04_mines_pillar.MREA").into(),
-            patch_ore_processing_destructible_rock_pal
-        );
-        patcher.add_scly_patch(
-            resource_info!("13_over_burningeffigy.MREA").into(),
-            patch_geothermal_core_destructible_rock_pal
-        );
-    }
-
-    if version == Version::Ntsc0_02 {
+    if version == Version::NtscU0_02 {
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
             patch_main_quarry_door_lock_0_02
@@ -2720,7 +2772,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-    if version == Version::Pal {
+    if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         patcher.add_scly_patch(
             resource_info!("04_mines_pillar.MREA").into(),
             patch_ore_processing_destructible_rock_pal
@@ -2729,19 +2781,22 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             resource_info!("13_over_burningeffigy.MREA").into(),
             patch_geothermal_core_destructible_rock_pal
         );
-        patcher.add_scly_patch(
-            resource_info!("01_mines_mainplaza.MREA").into(),
-            patch_main_quarry_door_lock_pal
-        );
+        
+        if version == Version::Pal {        
+            patcher.add_scly_patch(
+                resource_info!("01_mines_mainplaza.MREA").into(),
+                patch_main_quarry_door_lock_pal
+            );
+        }
     }
 
-    if version != Version::Ntsc0_00 {
+    if version != Version::NtscU0_00 {
         patcher.add_scly_patch(
             resource_info!("08_courtyard.MREA").into(),
             patch_arboretum_invisible_wall
         );
 
-        if version != Version::Ntsc0_01 {
+        if version != Version::NtscU0_01 {
             patcher.add_scly_patch(
                 resource_info!("05_ice_shorelines.MREA").into(),
                 move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
@@ -2763,6 +2818,21 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             resource_info!("01_endcinema.MREA").into(),
             patch_ending_scene_straight_to_credits
         );
+    } else {
+        // Patch Essence fight bugs if we're not going to skip Impact Crater
+        if version == Version::NtscU0_00 {
+            patcher.add_scly_patch(
+                resource_info!("03f_crater.MREA").into(),
+                patch_essence_cinematic_skip_whitescreen
+            );
+        }
+        
+        if version != Version::NtscJ || version != Version::NtscUTrilogy || version != Version::NtscJTrilogy || version != Version::PalTrilogy {
+            patcher.add_scly_patch(
+                resource_info!("03f_crater.MREA").into(),
+                patch_essence_cinematic_skip_nomusic
+            );
+        }
     }
 
     if config.enable_vault_ledge_door {
