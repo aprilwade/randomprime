@@ -946,6 +946,62 @@ fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mu
     Ok(())
 }
 
+fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let flags = &mut area.layer_flags.flags;
+        *flags &= !(1 << 4); // Turn off the "Room unveil cinematic"
+
+    let mut next_object_id = 0;
+    let scly = area.mrea().scly_section_mut();
+        
+    for obj in scly.layers.as_mut_vec()[0].objects.iter_mut() {
+        if next_object_id < obj.instance_id {
+            next_object_id = obj.instance_id;
+        }
+    }
+
+    let camera_door_id = 0x2000CF;
+    let memory_relay_id = 0x2006DE;
+    let timer_activate_memory_relay_id = next_object_id + 1;
+    
+    scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: timer_activate_memory_relay_id,
+            property_data: structs::Timer {
+                name: b"Timer - Activate post cutscene memory relay\0".as_cstr(),
+
+                start_time: 0.001,
+                max_random_add: 0f32,
+                reset_to_zero: 0,
+                start_immediately: 1,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: memory_relay_id,
+                },
+            ].into(),
+        }
+    );
+    
+    let memory_relay_obj = scly.layers.as_mut_vec()[0].objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id == memory_relay_id)
+        .unwrap();
+    memory_relay_obj.connections.as_mut_vec().push(structs::Connection {
+            state: structs::ConnectionState::ACTIVE,
+            message: structs::ConnectionMsg::DEACTIVATE,
+            target_object_id: timer_activate_memory_relay_id,
+        });
+    
+    scly.layers.as_mut_vec()[0].objects.as_mut_vec().retain(|obj| obj.instance_id != camera_door_id);
+    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
+    
+    Ok(())
+}
+
 fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
 {
     patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |_ps, area| {
@@ -2723,6 +2779,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     patcher.add_scly_patch(
         resource_info!("01_ice_plaza.MREA").into(),
         patch_ridley_phendrana_shorelines_cinematic
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(),
+        patch_mqa_cinematic
     );
     patcher.add_scly_patch(
         resource_info!("08b_under_intro_ventshaft.MREA").into(),
