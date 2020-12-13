@@ -1727,6 +1727,47 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_research_core_access_soft_lock(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+
+    const DRONE_IDS: &[u32] = &[
+                        0x082C006C,
+                        0x082C0124,
+                    ];
+    const RELAY_ENABLE_LOCK_IDS: &[u32] = &[
+                        0x082C00CF,
+                        0x082C010E,
+                    ];
+    let trigger_alert_drones_id = 0x082C00CD;
+    
+    let trigger_alert_drones_obj = scly.layers.as_mut_vec()[2].objects.iter_mut()
+        .find(|i| i.instance_id == trigger_alert_drones_id).unwrap();
+    trigger_alert_drones_obj.connections.as_mut_vec().retain(|i| i.target_object_id != RELAY_ENABLE_LOCK_IDS[0] && i.target_object_id != RELAY_ENABLE_LOCK_IDS[1]);
+    
+    for drone_id in DRONE_IDS {
+        scly.layers.as_mut_vec()[2].objects.iter_mut()
+            .find(|i| i.instance_id == *drone_id).unwrap()
+            .connections.as_mut_vec().extend_from_slice(
+                &[
+                    structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: RELAY_ENABLE_LOCK_IDS[0],
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: RELAY_ENABLE_LOCK_IDS[1],
+                    },
+                ]
+            );
+    }
+    
+    Ok(())
+}
+
 fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2816,6 +2857,24 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("01_mines_mainplaza.MREA").into(),
         patch_main_quarry_barrier
     );
+    
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("00n_ice_connect.MREA").into(),
+            patch_research_core_access_soft_lock
+        );
+    } else {
+        patcher.add_scly_patch(
+            resource_info!("08_courtyard.MREA").into(),
+            patch_arboretum_invisible_wall
+        );
+        if version != Version::NtscU0_01 {
+            patcher.add_scly_patch(
+                resource_info!("05_ice_shorelines.MREA").into(),
+                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
+            );
+        }
+    }
 
     if version == Version::NtscU0_02 {
         patcher.add_scly_patch(
@@ -2846,20 +2905,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             patcher.add_scly_patch(
                 resource_info!("01_mines_mainplaza.MREA").into(),
                 patch_main_quarry_door_lock_pal
-            );
-        }
-    }
-
-    if version != Version::NtscU0_00 {
-        patcher.add_scly_patch(
-            resource_info!("08_courtyard.MREA").into(),
-            patch_arboretum_invisible_wall
-        );
-
-        if version != Version::NtscU0_01 {
-            patcher.add_scly_patch(
-                resource_info!("05_ice_shorelines.MREA").into(),
-                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
             );
         }
     }
