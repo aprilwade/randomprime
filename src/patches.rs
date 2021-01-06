@@ -1841,7 +1841,6 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
         (Some(ResId::new(0x5d696116)), Some([237, 35].into()))
     };
 
-
     frme.widgets.as_mut_vec().push(structs::FrmeWidget {
         name: b"textpane_identifier\0".as_cstr(),
         parent: b"kGSYS_HeadWidgetID\0".as_cstr(),
@@ -2128,30 +2127,45 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
-    let patch_offset = if version == Version::Pal {
-        0x1dc
+    if version == Version::Pal {
+        let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x1dc, {
+            li      r6, 100;
+            stw     r6, 0x80(r31);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x84(r31);
+        });
+        dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
     } else {
-        0x194
-    };
-    // TODO: This offset needs to be adjusted for PAL, probably (or the patch temporarily disabled)
-    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + patch_offset, {
+        let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {
             li      r6, 100;
             stw     r6, 0xcc(r3);
             lis     r6, 0xF7FF;
             stw     r6, 0xd0(r3);
-    });
-    dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
-    // TODO: This offset needs to be adjusted for PAL, probably (or the patch temporarily disabled)
-    let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
+        });
+        dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
+    };
+
+    if version == Version::Pal {
+        let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x330, {
+            li      r6, 100;
+            stw     r6, 0x80(r28);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x84(r28);
+            mr      r3, r29;
+            li      r4, 2;
+        });
+        dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
+    } else {
+        let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
             li      r6, 100;
             stw     r6, 0xcc(r28);
             lis     r6, 0xF7FF;
             stw     r6, 0xd0(r28);
             mr      r3, r29;
             li      r4, 2;
-    });
-    dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
-
+        });
+        dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
+    };
 
     if version != Version::Pal {
         let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
@@ -2199,16 +2213,27 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
 
-    // TODO: The offset here needs to be higher for PAL. +16 and +28
-    let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 4, {
-            lis         r4, {spawn_room.mlvl}@h;
-    });
-    dol_patcher.ppcasm_patch(&level_select_mlvl_upper_patch)?;
+    if version == Version::Pal {
+        let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x0c, {
+                lis         r3, {spawn_room.mlvl}@h;
+        });
+        dol_patcher.ppcasm_patch(&level_select_mlvl_upper_patch)?;
 
-    let level_select_mlvl_lower_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x10, {
-            addi        r0, r4, {spawn_room.mlvl}@l;
-    });
-    dol_patcher.ppcasm_patch(&level_select_mlvl_lower_patch)?;
+        let level_select_mlvl_lower_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x18, {
+                addi        r0, r3, {spawn_room.mlvl}@l;
+        });
+        dol_patcher.ppcasm_patch(&level_select_mlvl_lower_patch)?;
+    } else {
+        let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x04, {
+                lis         r4, {spawn_room.mlvl}@h;
+        });
+        dol_patcher.ppcasm_patch(&level_select_mlvl_upper_patch)?;
+
+        let level_select_mlvl_lower_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x10, {
+                addi        r0, r4, {spawn_room.mlvl}@l;
+        });
+        dol_patcher.ppcasm_patch(&level_select_mlvl_lower_patch)?;
+    }
 
     let level_select_mrea_idx_patch = ppcasm!(symbol_addr!("__ct__11CWorldStateFUi", version) + 0x10, {
             li          r0, { spawn_room.mrea_idx };
@@ -2231,9 +2256,15 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
     }
 
+
     if patch_suit_damage {
-        // TODO: The jump offset is almost certainly wrong, so double check that
-        let staggered_suit_damage_patch = ppcasm!(symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + 0x128, {
+        let (patch_offset, jump_offset) = if version == Version::Pal {
+            (0x11c, 0x1b8)
+        } else {
+            (0x128, 0x1c4)
+        };
+
+        let staggered_suit_damage_patch = ppcasm!(symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + patch_offset, {
                 lwz     r3, 0x8b8(r25);
                 lwz     r3, 0(r3);
                 lwz     r4, 220(r3);
@@ -2245,7 +2276,7 @@ fn patch_dol<'r>(
                 lis     r6, data@h;
                 addi    r6, r6, data@l;
                 lfsx     f0, r4, r6;
-                b       { symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + 0x1c4 };
+                b       { symbol_addr!("ApplyLocalDamage__13CStateManagerFRC9CVector3fRC9CVector3fR6CActorfRC11CWeaponMode", version) + jump_offset };
             data:
                 .float 0.0;
                 .float 0.1;
@@ -2443,8 +2474,6 @@ pub struct ParsedConfig
     pub bnr_game_name_full: Option<String>,
     pub bnr_developer_full: Option<String>,
     pub bnr_description: Option<String>,
-
-    pub pal_override: bool,
 }
 
 
@@ -2518,8 +2547,8 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    if version == Version::NtscU0_01 || (version == Version::Pal && !config.pal_override) {
-        Err("The NTSC 0-01 and PAL versions of Metroid Prime are not current supported.")?;
+    if version == Version::NtscU0_01 {
+        Err("The NTSC 0-01 version of Metroid Prime is not current supported.")?;
     }
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
@@ -2527,20 +2556,17 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    const REL_SUPPORTED_VERSIONS: &[Version] = &[
-        Version::NtscU0_00, Version::NtscU0_02, Version::Pal,
-    ];
-    if REL_SUPPORTED_VERSIONS.contains(&version) {
-        let patches_rel_bytes = match version {
-            Version::NtscU0_00    => rel_files::PATCHES_100_REL,
-            Version::NtscU0_01    => unreachable!(),
-            Version::NtscU0_02    => rel_files::PATCHES_102_REL,
-            Version::Pal         => rel_files::PATCHES_PAL_REL,
-            Version::NtscJ    => unreachable!(),
-            Version::NtscUTrilogy => unreachable!(),
-            Version::NtscJTrilogy => unreachable!(),
-            Version::PalTrilogy => unreachable!(),
-        };
+    let patches_rel_bytes = match version {
+        Version::NtscU0_00    => Some(rel_files::PATCHES_100_REL),
+        Version::NtscU0_01    => None,
+        Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
+        Version::Pal         => Some(rel_files::PATCHES_PAL_REL),
+        Version::NtscJ    => None,
+        Version::NtscUTrilogy => None,
+        Version::NtscJTrilogy => None,
+        Version::PalTrilogy => None,
+    };
+    if let Some(patches_rel_bytes) = patches_rel_bytes {
         gc_disc.add_file(
             "patches.rel",
             structs::FstEntryFile::Unknown(Reader::new(patches_rel_bytes))
