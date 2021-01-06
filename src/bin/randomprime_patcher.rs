@@ -165,10 +165,6 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                 .long("text-file-comment")
                 .hidden(true)
                 .takes_value(true))
-
-        .arg(Arg::with_name("pal override")
-            .long("pal-override")
-            .hidden(true))
         .get_matches();
 
     let input_iso_path = matches.value_of("input iso path").unwrap();
@@ -271,8 +267,6 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         bnr_game_name_full: None,
         bnr_developer_full: None,
         bnr_description: None,
-
-        pal_override: matches.is_present("pal override"),
     })
 
 }

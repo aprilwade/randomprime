@@ -271,8 +271,6 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         bnr_game_name_full: config.banner.as_mut().and_then(|b| b.game_name_full.take()),
         bnr_developer_full: config.banner.as_mut().and_then(|b| b.developer_full.take()),
         bnr_description: config.banner.as_mut().and_then(|b| b.description.take()),
-
-        pal_override: false,
     };
 
     let pn = ProgressNotifier::new(cb_data, cb);
