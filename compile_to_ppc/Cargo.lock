@@ -78,6 +78,7 @@ name = "primeapi_macros"
 version = "0.1.0"
 dependencies = [
  "md5",
+ "proc-macro2",
  "quote",
  "syn",
 ]

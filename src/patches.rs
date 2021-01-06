@@ -2522,7 +2522,10 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     gc_disc.add_file("randomprime.txt", structs::FstEntryFile::Unknown(Reader::new(&ct)))?;
 
 
-    if version != Version::NtscU0_01 && version != Version::NtscJ && version != Version::Pal && version != Version::NtscUTrilogy && version != Version::NtscJTrilogy && version != Version::PalTrilogy {
+    const REL_SUPPORTED_VERSIONS: &[Version] = &[
+        Version::NtscU0_00, Version::NtscU0_02, Version::Pal,
+    ];
+    if REL_SUPPORTED_VERSIONS.contains(&version) {
         let patches_rel_bytes = match version {
             Version::NtscU0_00    => rel_files::PATCHES_100_REL,
             Version::NtscU0_01    => unreachable!(),

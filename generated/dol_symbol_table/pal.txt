@@ -2737,6 +2737,7 @@
 0x803b46e4 "ReadProc"
 0x803b4aa8 "__GBASyncCallback"
 0x803b4ce0 "__GBASetDelay"
+0x803b6924 "__build_info"
 0x803bf304 "aMetroidprime"
 0x8046ad38 "g_MainStringTable"
 0x8046ad44 "g_GameState"

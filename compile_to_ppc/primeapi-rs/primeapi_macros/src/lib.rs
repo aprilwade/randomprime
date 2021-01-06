@@ -1,10 +1,11 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{
     parenthesized,
     parse_macro_input,
+    parse::Parser,
     punctuated::Punctuated,
     spanned::Spanned,
     Token,
@@ -17,8 +18,7 @@ struct NameExprPair
 {
     ident: syn::Ident,
     _eq_token: Token![=],
-    name: syn::LitStr,
-    offset: Option<syn::LitInt>,
+    tokens: proc_macro2::TokenStream,
 }
 
 impl syn::parse::Parse for NameExprPair
@@ -28,13 +28,8 @@ impl syn::parse::Parse for NameExprPair
         Ok(NameExprPair {
             ident: input.parse()?,
             _eq_token: input.parse()?,
-            name: input.parse()?,
-            offset: if input.peek(Token![+]) {
-                let _plus: Token![+] = input.parse()?;
-                Some(input.parse()?)
-            } else {
-                None
-            }
+            // XXX This is slightly hacky, but I'm not sure how to deal with the commas otherwise.
+            tokens: input.parse::<syn::Expr>()?.into_token_stream(),
         })
     }
 }
@@ -50,6 +45,7 @@ struct Flags
 {
     target: syn::LitStr,
     offset: syn::LitInt,
+    version: syn::Expr,
     kind: PatchKind,
 }
 
@@ -62,28 +58,43 @@ impl syn::parse::Parse for Flags
 
         let mut target_and_offset = None;
         let mut kind = None;
+        let mut version = None;
         for pair in pairs {
             if pair.ident == "target" {
                 if target_and_offset.is_some() {
                     Err(syn::Error::new(pair.ident.span(), "Duplicate `target` flag"))?;
                 }
-                let offset = pair.offset.unwrap_or(syn::parse_quote!(0));
-                target_and_offset = Some((pair.name, offset))
+                let parser = |input: syn::parse::ParseStream| {
+                    let name = input.parse()?;
+                    let offset = if input.peek(Token![+]) {
+                        let _plus: Token![+] = input.parse()?;
+                        Some(input.parse()?)
+                    } else {
+                        None
+                    };
+                    Ok((name, offset))
+                };
+                let (name, offset) = parser.parse2(pair.tokens)?;
+                let offset = offset.unwrap_or(syn::parse_quote!(0));
+                target_and_offset = Some((name, offset))
             } else if pair.ident == "kind" {
                 if kind.is_some() {
                     Err(syn::Error::new(pair.ident.span(), "Duplicate `kind` flag"))?;
                 }
-                if let Some(offset) = &pair.offset {
-                    Err(syn::Error::new(offset.span(), "Not allowed for `kind` flag"))?;
-                }
+                let ident = <syn::Ident as syn::parse::Parse>::parse.parse2(pair.tokens)?;
 
-                kind = if pair.name.value() == "call" {
+                kind = if ident == "call" {
                     Some(PatchKind::Call)
-                } else if pair.name.value() == "return" {
+                } else if ident == "return" {
                     Some(PatchKind::Return)
                 } else {
-                    Err(syn::Error::new(pair.name.span(), "Unknown value for `kind` flag"))?
+                    Err(syn::Error::new_spanned(ident, "Unknown value for `kind` flag"))?
                 }
+            } else if pair.ident == "version" {
+                if version.is_some() {
+                    Err(syn::Error::new(pair.ident.span(), "Duplicate `version` flag"))?;
+                }
+                version = Some(<syn::Expr as syn::parse::Parse>::parse.parse2(pair.tokens)?);
             } else {
                 Err(syn::Error::new(pair.ident.span(), "Unknown flag"))?;
             }
@@ -93,7 +104,8 @@ impl syn::parse::Parse for Flags
             .ok_or_else(|| forked.error("Missing flag `kind`"))?;
         let (target, offset) = target_and_offset
             .ok_or_else(|| forked.error("Missing flag `target`"))?;
-        Ok(Flags { kind, target, offset })
+        let version = version.unwrap_or(syn::parse_quote!(Any));
+        Ok(Flags { kind, target, offset, version })
     }
 }
 
@@ -111,11 +123,19 @@ pub fn patch_fn(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let offset = flags.offset;
     let target_func_name = flags.target;
+    let version = flags.version;
 
     let func_name = &func.sig.ident;
-    let target_hash = md5::compute(target_func_name.value().as_bytes());
 
-    let static_name = format!("PATCHES_{:x}_{}", target_hash, offset.base10_digits());
+    let hash_input = format!(
+        "{:?}::{:?}::{:?}",
+        target_func_name.value(),
+        offset.to_token_stream(),
+        version.to_token_stream(),
+    );
+    let hash = md5::compute(hash_input.as_bytes());
+
+    let static_name = format!("PATCHES_{:x}_{}", hash, offset.base10_digits());
     let static_name = syn::parse_str::<syn::Ident>(&static_name).unwrap();
 
     (quote! {
@@ -126,7 +146,12 @@ pub fn patch_fn(attr: TokenStream, item: TokenStream) -> TokenStream
                 fn target_func();
             }
 
-            primeapi::Patch::#patch_func_name(target_func as *const u8, #offset, #func_name as *const u8)
+            primeapi::Patch::#patch_func_name(
+                target_func as *const u8,
+                #offset,
+                #func_name as *const u8,
+                { use primeapi::GameVersion::*; #version },
+            )
         };
 
         #func

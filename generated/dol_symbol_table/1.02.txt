@@ -6981,6 +6981,7 @@
 0x803cbe48 "TypeAndStatusCallback"
 0x803cbf6c "__GBATransfer"
 0x803cbfe0 "__GBASetDelay"
+0x803cd648 "__build_info"
 0x803d588c "aMetroidprimeA"
 0x803d589b "aMetroidprimeB"
 0x805a9cd4 "g_MainStringTable"

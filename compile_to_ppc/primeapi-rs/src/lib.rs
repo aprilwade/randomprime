@@ -152,12 +152,56 @@ pub enum PatchKind
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum GameVersion
+{
+    Any,
+    Ntsc0_00,
+    Ntsc0_02,
+    Pal,
+}
+
+impl GameVersion
+{
+    pub fn current() -> Self
+    {
+        extern "C" {
+            static __build_info: u8;
+        }
+        static mut CACHED: Option<GameVersion> = None;
+        unsafe {
+            if let Some(v) = CACHED {
+                return v
+            }
+        }
+        let build_info_slice = unsafe { core::slice::from_raw_parts(&__build_info, 34) };
+        // Skip the common prefix "!#$MetroidBuildInfo!#$Build "
+        let v = match &build_info_slice[28..] {
+            b"v1.088" => GameVersion::Ntsc0_00,
+            b"v1.110" => GameVersion::Pal,
+            b"v1.111" => GameVersion::Ntsc0_02,
+            _ => unreachable!(),
+        };
+        unsafe {
+            CACHED = Some(v);
+        }
+        v
+    }
+
+    #[inline(always)]
+    pub fn matches(self, other: Self) -> bool
+    {
+        self == other || self == GameVersion::Any || other == GameVersion::Any
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Patch
 {
     fn_ptr_to_patch: *const u8,
     patch_offset: usize,
     target_fn_ptr: *const u8,
     kind: PatchKind,
+    version: GameVersion,
 }
 
 impl Patch
@@ -165,7 +209,8 @@ impl Patch
     pub const fn call_patch(
         fn_ptr_to_patch: *const u8,
         patch_offset: usize,
-        target_fn_ptr: *const u8
+        target_fn_ptr: *const u8,
+        version: GameVersion,
     ) -> Patch
     {
         Patch {
@@ -173,13 +218,15 @@ impl Patch
             patch_offset,
             target_fn_ptr,
             kind: PatchKind::Call,
+            version,
         }
     }
 
     pub const fn return_patch(
         fn_ptr_to_patch: *const u8,
         patch_offset: usize,
-        target_fn_ptr: *const u8
+        target_fn_ptr: *const u8,
+        version: GameVersion,
     ) -> Patch
     {
         Patch {
@@ -187,6 +234,7 @@ impl Patch
             patch_offset,
             target_fn_ptr,
             kind: PatchKind::Return,
+            version,
         }
     }
 }
@@ -205,7 +253,11 @@ pub static PROLOG_FUNCS: [unsafe extern "C" fn()] = [..];
 unsafe extern "C" fn __rel_prolog()
 {
     printf(b"prolog called\n\0".as_ptr());
+    let version = GameVersion::current();
     for patch in PATCHES.iter() {
+        if !version.matches(patch.version) {
+            continue
+        }
         let instr_ptr = patch.fn_ptr_to_patch.add(patch.patch_offset) as *mut u32;
         let instr = core::ptr::read(instr_ptr);
 
@@ -223,7 +275,7 @@ unsafe extern "C" fn __rel_prolog()
             PatchKind::Call => {
                 let rel_addr = patch.target_fn_ptr as i64 - instr_ptr as i64;
                 let imm = bounds_check_and_mask(24, rel_addr);
-                ((instr & 0xfc000003) | imm)
+                (instr & 0xfc000003) | imm
             },
             PatchKind::Return => {
                 // Assert the instr is actually a return
@@ -231,7 +283,7 @@ unsafe extern "C" fn __rel_prolog()
 
                 let rel_addr = patch.target_fn_ptr as i64 - instr_ptr as i64;
                 let imm = bounds_check_and_mask(24, rel_addr);
-                (0x48000000 | imm) // Uncondtional jump
+                0x48000000 | imm // Uncondtional jump
             },
         };
 

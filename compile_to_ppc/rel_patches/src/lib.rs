@@ -4,7 +4,7 @@ extern crate alloc;
 
 use linkme::distributed_slice;
 
-use primeapi::{patch_fn, prolog_fn};
+use primeapi::{patch_fn, prolog_fn, GameVersion};
 use primeapi::alignment_utils::Aligned32;
 use primeapi::dol_sdk::dvd::DVDFileInfo;
 use primeapi::mp1::{
@@ -44,14 +44,27 @@ unsafe extern "C" fn setup_global_state()
 }
 
 
-#[patch_fn(kind = "call",
-           target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c)]
+#[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
+           version = Ntsc0_00)]
+#[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
+           version = Ntsc0_02)]
+#[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x34,
+           version = Pal)]
 unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *const u8)
     -> *mut CGuiWidget
 {
     let res = CGuiFrame::find_widget(frame, widget_name);
 
-    let raw_string = CStringTable::get_string(CStringTable::main_string_table(), 110);
+    let version = GameVersion::current();
+    let str_idx = if version == GameVersion::Pal {
+        104
+    } else {
+        110
+    };
+    let raw_string = CStringTable::get_string(CStringTable::main_string_table(), str_idx);
     let s = WString::from_ucs2_str(raw_string);
 
     for name in &[b"textpane_identifier\0".as_ptr(), b"textpane_identifierb\0".as_ptr()] {
@@ -65,7 +78,7 @@ unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *
 
 // Based on
 // https://github.com/AxioDL/PWEQuickplayPatch/blob/249ae82cc20031fe99894524aefb1f151430bedf/Source/QuickplayModule.cpp#L150
-#[patch_fn(kind = "call",
+#[patch_fn(kind = call,
            target = "OnMessage__9CMainFlowFRC20CArchitectureMessageR18CArchitectureQueue" + 72)]
 unsafe extern "C" fn quickplay_hook_advance_game_state(
     flow: *mut CMainFlow,
