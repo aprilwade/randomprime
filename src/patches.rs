@@ -2128,8 +2128,13 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
+    let patch_offset = if version == Version::Pal {
+        0x1dc
+    } else {
+        0x194
+    };
     // TODO: This offset needs to be adjusted for PAL, probably (or the patch temporarily disabled)
-    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x194, {
+    let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + patch_offset, {
             li      r6, 100;
             stw     r6, 0xcc(r3);
             lis     r6, 0xF7FF;
