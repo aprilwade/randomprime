@@ -876,7 +876,7 @@ fn patch_essence_cinematic_skip_whitescreen(
     let camera_filter_key_frame_flash_id = 0xB011B;
     let timer_flashddd_id = 0xB011D;
     let special_function_cinematic_skip_id = 0xB01DC;
-    
+
     let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
     let special_function_cinematic_skip_obj = layer.objects.iter_mut()
         .find(|obj| obj.instance_id == special_function_cinematic_skip_id) // "SpecialFunction Cineamtic Skip"
@@ -909,7 +909,7 @@ fn patch_essence_cinematic_skip_nomusic(
 {
     let streamed_audio_essence_battle_theme_id = 0xB019E;
     let special_function_cinematic_skip_id = 0xB01DC;
-    
+
     let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
     layer.objects.iter_mut()
         .find(|obj| obj.instance_id == special_function_cinematic_skip_id) // "SpecialFunction Cineamtic Skip"
@@ -954,7 +954,7 @@ fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
 
     let mut next_object_id = 0;
     let scly = area.mrea().scly_section_mut();
-        
+
     for obj in scly.layers.as_mut_vec()[0].objects.iter_mut() {
         if next_object_id < obj.instance_id {
             next_object_id = obj.instance_id;
@@ -964,7 +964,7 @@ fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
     let camera_door_id = 0x2000CF;
     let memory_relay_id = 0x2006DE;
     let timer_activate_memory_relay_id = next_object_id + 1;
-    
+
     scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(
         structs::SclyObject {
             instance_id: timer_activate_memory_relay_id,
@@ -986,7 +986,7 @@ fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
             ].into(),
         }
     );
-    
+
     let memory_relay_obj = scly.layers.as_mut_vec()[0].objects.as_mut_vec().iter_mut()
         .find(|obj| obj.instance_id == memory_relay_id)
         .unwrap();
@@ -995,10 +995,10 @@ fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea
             message: structs::ConnectionMsg::DEACTIVATE,
             target_object_id: timer_activate_memory_relay_id,
         });
-    
+
     scly.layers.as_mut_vec()[0].objects.as_mut_vec().retain(|obj| obj.instance_id != camera_door_id);
     scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-    
+
     Ok(())
 }
 
@@ -1741,11 +1741,11 @@ fn patch_research_core_access_soft_lock(_ps: &mut PatcherState, area: &mut mlvl_
                         0x082C010E,
                     ];
     let trigger_alert_drones_id = 0x082C00CD;
-    
+
     let trigger_alert_drones_obj = scly.layers.as_mut_vec()[2].objects.iter_mut()
         .find(|i| i.instance_id == trigger_alert_drones_id).unwrap();
     trigger_alert_drones_obj.connections.as_mut_vec().retain(|i| i.target_object_id != RELAY_ENABLE_LOCK_IDS[0] && i.target_object_id != RELAY_ENABLE_LOCK_IDS[1]);
-    
+
     for drone_id in DRONE_IDS {
         scly.layers.as_mut_vec()[2].objects.iter_mut()
             .find(|i| i.instance_id == *drone_id).unwrap()
@@ -1764,7 +1764,7 @@ fn patch_research_core_access_soft_lock(_ps: &mut PatcherState, area: &mut mlvl_
                 ]
             );
     }
-    
+
     Ok(())
 }
 
@@ -1835,6 +1835,13 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
 {
     let frme = res.kind.as_frme_mut().unwrap();
 
+    let (jpn_font, jpn_point_scale) = if frme.version == 0 {
+        (None, None)
+    } else {
+        (Some(ResId::new(0x5d696116)), Some([237, 35].into()))
+    };
+
+
     frme.widgets.as_mut_vec().push(structs::FrmeWidget {
         name: b"textpane_identifier\0".as_cstr(),
         parent: b"kGSYS_HeadWidgetID\0".as_cstr(),
@@ -1861,8 +1868,8 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
                 fill_color: [1.0, 1.0, 1.0, 1.0].into(),
                 outline_color: [0.0, 0.0, 0.0, 1.0].into(),
                 block_extent: [213.0, 38.0].into(),
-                jpn_font: None,
-                jpn_point_scale: None,
+                jpn_font,
+                jpn_point_scale,
             },
         ),
         worker_id: None,
@@ -2857,7 +2864,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         resource_info!("01_mines_mainplaza.MREA").into(),
         patch_main_quarry_barrier
     );
-    
+
     if version == Version::NtscU0_00 {
         patcher.add_scly_patch(
             resource_info!("00n_ice_connect.MREA").into(),
@@ -2900,8 +2907,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
             resource_info!("13_over_burningeffigy.MREA").into(),
             patch_geothermal_core_destructible_rock_pal
         );
-        
-        if version == Version::Pal {        
+
+        if version == Version::Pal {
             patcher.add_scly_patch(
                 resource_info!("01_mines_mainplaza.MREA").into(),
                 patch_main_quarry_door_lock_pal
@@ -2931,7 +2938,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 patch_essence_cinematic_skip_whitescreen
             );
         }
-        
+
         if version != Version::NtscJ || version != Version::NtscUTrilogy || version != Version::NtscJTrilogy || version != Version::PalTrilogy {
             patcher.add_scly_patch(
                 resource_info!("03f_crater.MREA").into(),

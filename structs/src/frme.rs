@@ -15,7 +15,7 @@ use std::io;
 #[derive(Debug, Clone)]
 pub struct Frme<'r>
 {
-    version: u32,
+    pub version: u32,
     pub unknown0: u32,
 
     #[auto_struct(derive = widgets.iter()
