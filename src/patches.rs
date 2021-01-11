@@ -2295,13 +2295,13 @@ fn patch_dol<'r>(
 
     // CPlayerState_PowerUpMaxValues[4]
     let max_obtainable_missiles_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
-        .long { config.max_obtainable_missiles };
+        .long config.max_obtainable_missiles;
     });
     dol_patcher.ppcasm_patch(&max_obtainable_missiles_patch)?;
 
     // CPlayerState_PowerUpMaxValues[7]
     let max_obtainable_power_bombs_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
-        .long { config.max_obtainable_power_bombs };
+        .long config.max_obtainable_power_bombs;
     });
     dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
 
