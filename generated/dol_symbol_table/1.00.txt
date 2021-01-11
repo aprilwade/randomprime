@@ -14324,6 +14324,7 @@
 0x803CB01C "__GBADSPTaskDone"
 0x803CB0C4 "__GBAX02"
 0x803cc588 "__build_info"
+0x803cd6c0 "CPlayerState_PowerUpMaxValues"
 0x803d47cc "aMetroidprimeA"
 0x803d47db "aMetroidprimeB"
 0x805a8c34 "g_MainStringTable"

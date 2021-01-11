@@ -47,6 +47,8 @@ struct Config
     heat_damage_per_sec: Option<f32>,
     #[serde(default)]
     staggered_suit_damage: bool,
+    max_obtainable_missiles: Option<u32>,
+    max_obtainable_power_bombs: Option<u32>,
     #[serde(default)]
     obfuscate_items: bool,
     #[serde(default)]
@@ -247,6 +249,8 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         nonvaria_heat_damage: config.nonvaria_heat_damage,
         heat_damage_per_sec: config.heat_damage_per_sec.unwrap_or(10.0),
         staggered_suit_damage: config.staggered_suit_damage,
+        max_obtainable_missiles: config.max_obtainable_missiles.unwrap_or(250),
+        max_obtainable_power_bombs: config.max_obtainable_power_bombs.unwrap_or(8),
         keep_fmvs: config.keep_fmvs,
         obfuscate_items: config.obfuscate_items,
         auto_enabled_elevators: config.auto_enabled_elevators,

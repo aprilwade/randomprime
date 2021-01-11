@@ -109,6 +109,14 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .long("staggered-suit-damage")
             .help(concat!("The suit damage reduction is determinted by the number of suits ",
                             "collected rather than the most powerful one collected.")))
+        .arg(Arg::with_name("max obtainable missiles")
+            .long("max-obtainable-missiles")
+            .help("Set the max amount of Missiles you can carry")
+            .takes_value(true))
+        .arg(Arg::with_name("max obtainable power bombs")
+            .long("max-obtainable-power-bombs")
+            .help("Set the max amount of Power Bombs you can carry")
+            .takes_value(true))
         .arg(Arg::with_name("auto enabled elevators")
             .long("auto-enabled-elevators")
             .help("Every elevator will be automatically enabled without scaning its terminal"))
@@ -239,6 +247,14 @@ fn get_config() -> Result<patches::ParsedConfig, String>
                                     .parse::<f32>()
                                     .unwrap_or(10.0),
         staggered_suit_damage: matches.is_present("staggered suit damage"),
+        max_obtainable_missiles: matches.value_of("max obtainable missiles")
+                                    .unwrap_or_default()
+                                    .parse::<u32>()
+                                    .unwrap_or(250),
+        max_obtainable_power_bombs: matches.value_of("max obtainable power bombs")
+                                    .unwrap_or_default()
+                                    .parse::<u32>()
+                                    .unwrap_or(8),
         keep_fmvs: matches.is_present("keep attract mode"),
         obfuscate_items: matches.is_present("obfuscate items"),
         auto_enabled_elevators: matches.is_present("auto enabled elevators"),

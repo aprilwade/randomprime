@@ -2080,8 +2080,7 @@ fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
-    patch_heat_damage: bool,
-    patch_suit_damage: bool,
+    config: &ParsedConfig,
 ) -> Result<(), String>
 {
     if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
@@ -2245,7 +2244,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&disable_hints_setting_patch)?;
 
-    if patch_heat_damage {
+    if config.nonvaria_heat_damage {
         let heat_damage_patch = ppcasm!(symbol_addr!("ThinkAreaDamage__22CScriptSpecialFunctionFfR13CStateManager", version) + 0x4c, {
                 lwz     r4, 0xdc(r4);
                 nop;
@@ -2257,7 +2256,7 @@ fn patch_dol<'r>(
     }
 
 
-    if patch_suit_damage {
+    if config.staggered_suit_damage {
         let (patch_offset, jump_offset) = if version == Version::Pal {
             (0x11c, 0x1b8)
         } else {
@@ -2285,6 +2284,26 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
+
+    if config.max_obtainable_missiles > 999 {
+        Err("The max amount of missiles you can carry has exceeded the limit (>999)!".to_string())?;
+    }
+
+    if config.max_obtainable_power_bombs > 9 {
+        Err("The max amount of power bombs you can carry has exceeded the limit (>9)!".to_string())?;
+    }
+
+    // CPlayerState_PowerUpMaxValues[4]
+    let max_obtainable_missiles_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
+        .long { config.max_obtainable_missiles };
+    });
+    dol_patcher.ppcasm_patch(&max_obtainable_missiles_patch)?;
+
+    // CPlayerState_PowerUpMaxValues[7]
+    let max_obtainable_power_bombs_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
+        .long { config.max_obtainable_power_bombs };
+    });
+    dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
 
     if version == Version::NtscU0_02 || version == Version::Pal {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
@@ -2452,6 +2471,8 @@ pub struct ParsedConfig
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,
+    pub max_obtainable_missiles: u32,
+    pub max_obtainable_power_bombs: u32,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
@@ -2742,8 +2763,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 file,
                 spawn_room,
                 version,
-                config.nonvaria_heat_damage,
-                config.staggered_suit_damage,
+                config,
             )
         );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
@@ -2755,8 +2775,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 file,
                 SpawnRoom::FrigateExteriorDockingHangar,
                 version,
-                config.nonvaria_heat_damage,
-                config.staggered_suit_damage,
+                config,
             )
         );
 
