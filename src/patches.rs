@@ -2416,6 +2416,14 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
 
+    // set etank capacity and base health
+    let (etank_capacity, base_health) = (config.etank_capacity, config.etank_capacity - 1.0);
+    let etank_capacity_base_health_patch = ppcasm!(symbol_addr!("g_EtankCapacity", version), {
+        .float etank_capacity;
+        .float base_health;
+    });
+    dol_patcher.ppcasm_patch(&etank_capacity_base_health_patch)?;
+
     if version == Version::NtscU0_02 || version == Version::Pal {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
@@ -2579,6 +2587,7 @@ pub struct ParsedConfig
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
+    pub etank_capacity: f32,
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,

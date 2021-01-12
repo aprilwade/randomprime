@@ -98,6 +98,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         .arg(Arg::with_name("skip hudmenus")
             .long("non-modal-item-messages")
             .help("Display a non-modal message when an item is is acquired"))
+        .arg(Arg::with_name("etank capacity")
+            .long("etank-capacity")
+            .help("Set the etank capacity and base health")
+            .takes_value(true))
         .arg(Arg::with_name("nonvaria heat damage")
             .long("nonvaria-heat-damage")
             .help("If the Varia Suit has not been collect, heat damage applies"))
@@ -241,6 +245,10 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         iso_format,
         skip_hudmenus: matches.is_present("skip hudmenus"),
         skip_frigate: matches.is_present("skip frigate"),
+        etank_capacity: matches.value_of("etank capacity")
+                                    .unwrap_or_default()
+                                    .parse::<f32>()
+                                    .unwrap_or(100.0),
         nonvaria_heat_damage: matches.is_present("nonvaria heat damage"),
         heat_damage_per_sec: matches.value_of("heat damage per sec")
                                     .unwrap_or_default()

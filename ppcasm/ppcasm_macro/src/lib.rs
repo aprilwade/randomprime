@@ -286,10 +286,13 @@ macro_rules! decl_instrs {
 
                 if let Ok(_) = input.parse::<Token![.]>() {
                     let e = if let Ok(_) = input.parse::<kw::float>() {
-                        let lit = input.parse::<LitFloat>()?;
-                        let f = lit.base10_parse::<f32>()?;
-                        parse_quote_spanned! {lit.span()=> #f.to_bits() }
-
+                        if let Ok(lit) = input.parse::<LitFloat>() {
+                            let f = lit.base10_parse::<f32>()?;
+                            parse_quote_spanned! {lit.span()=>#f.to_bits() }
+                        } else {
+                            let expr = input.parse::<Expr>()?;
+                            parse_quote_spanned! {expr.span()=>(#expr).to_bits() }
+                        }
                     } else if let Ok(_) = input.parse::<kw::long>() {
                         input.parse()?
 
