@@ -42,6 +42,7 @@ struct Config
     skip_frigate: bool,
     #[serde(default)]
     skip_hudmenus: bool,
+    etank_capacity: Option<u32>,
     #[serde(default)]
     nonvaria_heat_damage: bool,
     heat_damage_per_sec: Option<f32>,
@@ -246,6 +247,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         iso_format: config.iso_format,
         skip_frigate: config.skip_frigate,
         skip_hudmenus: config.skip_hudmenus,
+        etank_capacity: config.etank_capacity.unwrap_or(100),
         nonvaria_heat_damage: config.nonvaria_heat_damage,
         heat_damage_per_sec: config.heat_damage_per_sec.unwrap_or(10.0),
         staggered_suit_damage: config.staggered_suit_damage,
