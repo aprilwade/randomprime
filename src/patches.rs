@@ -2417,7 +2417,8 @@ fn patch_dol<'r>(
     dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
 
     // set etank capacity and base health
-    let (etank_capacity, base_health) = (config.etank_capacity, config.etank_capacity - 1.0);
+    let etank_capacity = config.etank_capacity as f32;
+    let base_health = etank_capacity - 1.0;
     let etank_capacity_base_health_patch = ppcasm!(symbol_addr!("g_EtankCapacity", version), {
         .float etank_capacity;
         .float base_health;
@@ -2587,7 +2588,7 @@ pub struct ParsedConfig
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
-    pub etank_capacity: f32,
+    pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,

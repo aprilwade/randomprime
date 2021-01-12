@@ -247,8 +247,8 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         skip_frigate: matches.is_present("skip frigate"),
         etank_capacity: matches.value_of("etank capacity")
                                     .unwrap_or_default()
-                                    .parse::<f32>()
-                                    .unwrap_or(100.0),
+                                    .parse::<u32>()
+                                    .unwrap_or(100),
         nonvaria_heat_damage: matches.is_present("nonvaria heat damage"),
         heat_damage_per_sec: matches.value_of("heat damage per sec")
                                     .unwrap_or_default()
