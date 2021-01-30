@@ -1,3 +1,4 @@
+#![feature(default_alloc_error_handler)]
 #![no_std]
 
 extern crate alloc;

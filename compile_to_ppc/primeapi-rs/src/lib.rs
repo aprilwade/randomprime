@@ -1,4 +1,3 @@
-#![feature(alloc_error_handler)]
 #![no_std]
 
 extern crate alloc;
@@ -133,16 +132,6 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 
     halt()
 }
-
-#[alloc_error_handler]
-fn alloc_error(_layout: Layout) -> ! {
-    if cfg!(debug_assertions) {
-        writeln!(Mp1Stdout, "Alloc failed").ok();
-    }
-
-    halt()
-}
-
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PatchKind
