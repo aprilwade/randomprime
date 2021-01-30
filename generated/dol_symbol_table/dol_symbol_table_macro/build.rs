@@ -38,9 +38,8 @@ fn main()
                 } else {
                     assert_eq!(&line[..2], "0x");
                     let addr = &line[2..10];
-                    assert_eq!(&line[10..12], " \"");
-                    assert_eq!(&line[line.len() - 1..], "\"");
-                    let sym_name = &line[12..line.len() - 1];
+                    assert_eq!(&line[10..11], " ");
+                    let sym_name = &line[11..];
                     Some((sym_name.to_string(), u32::from_str_radix(addr, 16).unwrap()))
                 }
             })

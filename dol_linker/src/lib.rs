@@ -1440,7 +1440,6 @@ pub fn parse_symbol_table(
             .with_context(|| SymTableWrongNumberOfComponenets { filename: fname, line_number })?;
         let name = it.next()
             .with_context(|| SymTableWrongNumberOfComponenets { filename: fname, line_number })?;
-        let name = name.trim_matches('"');
 
         ensure!(
             it.next().is_none(),

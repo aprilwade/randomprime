@@ -1,2 +1,2 @@
-0x803b9a50 "CPlayerState_PowerUpMaxValues"
-0x805939f4 "g_EtankCapacity"
+0x803b9a50 CPlayerState_PowerUpMaxValues
+0x805939f4 g_EtankCapacity

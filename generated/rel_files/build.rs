@@ -77,7 +77,7 @@ fn main()
         {
             let mut map_file = File::create(map_path).unwrap();
             for (sym_name, addr) in &symbols_map {
-                writeln!(map_file, "0x{:08x} \"{}\"", addr, sym_name).unwrap();
+                writeln!(map_file, "0x{:08x} {}", addr, sym_name).unwrap();
             }
         }
 

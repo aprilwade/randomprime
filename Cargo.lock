@@ -166,12 +166,11 @@ checksum = "807e5847c39ad6a11eac66de492ed1406f76a260eb8656e8740cad9eabc69c27"
 name = "dol_linker"
 version = "0.1.0"
 dependencies = [
- "auto_struct_macros",
  "clap",
  "enum-map",
  "goblin",
  "memmap",
- "reader_writer",
+ "scroll",
  "snafu",
 ]
 
