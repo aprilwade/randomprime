@@ -5,6 +5,7 @@ use goblin::Object;
 
 use memmap::{Mmap, MmapOptions};
 
+use scroll::{ctx, IOwrite, Cwrite, SizeWith};
 use snafu::{ensure, OptionExt, ResultExt, Snafu};
 
 
@@ -15,8 +16,6 @@ use std::iter;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use auto_struct_macros::auto_struct;
-use reader_writer::Writable;
 
 // XXX This is a throughly awful hack
 static ZEROES: &[u8] = &[0; 4096];
@@ -82,15 +81,12 @@ pub enum Error
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-#[auto_struct(Readable, Writable, FixedSize)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, IOwrite, SizeWith)]
 struct RelHeader
 {
     module_id: u32,
 
-    #[auto_struct(expect = 0)]
     next_module_link: u32,
-    #[auto_struct(expect = 0)]
     prev_module_link: u32,
 
     section_count: u32,
@@ -100,7 +96,6 @@ struct RelHeader
     module_name_offset: u32,
     module_name_size: u32,
 
-    #[auto_struct(expect = 1)]
     version: u32,
 
     bss_size: u32,
@@ -113,7 +108,6 @@ struct RelHeader
     epilog_function_section: u8,
     unresolved_function_section: u8,
 
-    #[auto_struct(expect = 0)]
     padding: u8,
 
     prolog_function_offset: u32,
@@ -121,22 +115,35 @@ struct RelHeader
     unresolved_function_offset: u32,
 }
 
-#[auto_struct(Readable, Writable, FixedSize)]
 #[derive(Debug, Clone, Copy)]
 struct RelSectionInfo
 {
-    #[auto_struct(derive = offset | if *is_executable { 1 } else { 0 })]
-    real_offset: u32,
     size: u32,
-
-    #[auto_struct(literal = real_offset & (1 << 31) != 0)]
     is_executable: bool,
-    #[auto_struct(literal = real_offset & ((1 << 31) - 1))]
     offset: u32,
 }
 
-#[auto_struct(Readable, Writable, FixedSize)]
-#[derive(Debug, Clone, Copy)]
+impl<C> ctx::SizeWith<C> for RelSectionInfo
+{
+    fn size_with(_: &C) -> usize
+    {
+        8
+    }
+}
+
+impl<C: Copy> ctx::IntoCtx<C> for RelSectionInfo
+{
+    fn into_ctx(self, w: &mut [u8], _: C)
+    {
+
+        let real_offset = self.offset | if self.is_executable { 1 } else { 0 };
+        w.cwrite_with(real_offset, 0, scroll::BE);
+        w.cwrite_with(self.size, 4, scroll::BE);
+    }
+}
+
+
+#[derive(Debug, Clone, Copy, IOwrite, SizeWith)]
 struct RelImport
 {
     module_id: u32,
@@ -144,8 +151,7 @@ struct RelImport
 }
 
 
-#[auto_struct(Readable, Writable, FixedSize)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, IOwrite, SizeWith)]
 struct RelRelocation
 {
     offset: u16,
@@ -899,7 +905,7 @@ fn filter_unused_sections<'a>(object_files: &'a [ObjectFile<'a>])
 /// Group elf-sections into rel-sections by name so that elf-sections with identical names are
 /// layed out next to each other in the rel-sections
 ///
-/// Compute the whether nor the merged rel sections must be executable along the way
+/// Compute whether the merged rel sections must be executable along the way
 fn group_elf_sections<'a>(
     sections: Vec<(usize, usize, &'a Section<'a>)>,
     convert_bss_to_data: bool,
@@ -1122,6 +1128,8 @@ pub fn link_obj_files_to_rel<'a>(
     let object_files = object_files_from_mmaps(&mmaps)?;
 
     let sections_to_keep = filter_unused_sections(&object_files);
+    // TODO: Print the names of the sections we're keeping, for the sake of debugging the resulting
+    //       binary's size
 
     let grouped_sections = group_elf_sections(sections_to_keep, false);
     let rel_sections = build_rel_sections(&object_files, grouped_sections);
@@ -1226,11 +1234,16 @@ pub fn link_obj_files_to_rel<'a>(
     let rel_header = RelHeader {
         module_id: self_module_id,
 
+        next_module_link: 0,
+        prev_module_link: 0,
+
         section_count,
         section_table_offset: 0x40,
 
         module_name_offset: 0,
         module_name_size: 0,
+
+        version: 1,
 
         bss_size: rel_sections[RelSectionType::Bss].size,
 
@@ -1250,6 +1263,8 @@ pub fn link_obj_files_to_rel<'a>(
             .get("__rel_unresloved")
             .and_then(|(sec_type, _)| rel_sections[*sec_type].rel_section_index)
             .unwrap_or(0),
+
+        padding: 0,
 
         prolog_function_offset: local_sym_table
             .get("__rel_prolog")
@@ -1295,14 +1310,20 @@ pub fn link_obj_files_to_rel<'a>(
     let output_file_name = output_file_name.as_ref();
     let mut output_file = File::create(output_file_name)
         .with_context(|| WriteFile { filename: output_file_name })?;
-    rel_header.write_to(&mut output_file)
+    output_file.iowrite_with(rel_header, scroll::BE)
         .with_context(|| WriteFile { filename: output_file_name })?;
-    sections_table.write_to(&mut output_file)
-        .with_context(|| WriteFile { filename: output_file_name })?;
-    imports_table.write_to(&mut output_file)
-        .with_context(|| WriteFile { filename: output_file_name })?;
-    relocs_table.write_to(&mut output_file)
-        .with_context(|| WriteFile { filename: output_file_name })?;
+    for section in sections_table {
+        output_file.iowrite_with(section, scroll::BE)
+            .with_context(|| WriteFile { filename: output_file_name })?;
+    }
+    for import in imports_table {
+        output_file.iowrite_with(import, scroll::BE)
+            .with_context(|| WriteFile { filename: output_file_name })?;
+    }
+    for reloc in relocs_table {
+        output_file.iowrite_with(reloc, scroll::BE)
+            .with_context(|| WriteFile { filename: output_file_name })?;
+    }
 
 
     let pos = output_file.seek(SeekFrom::Current(0)).unwrap() as u32;
