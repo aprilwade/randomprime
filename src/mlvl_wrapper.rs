@@ -1,8 +1,8 @@
 use structs::{
     Area, AreaLayerFlags, Dependency, MemoryRelayConn, Mlvl, Mrea, SclyLayer, Resource,
-    ResourceSource
+    ResourceListCursor
 };
-use reader_writer::{CStr, DiffListCursor, FourCC, LazyArray};
+use reader_writer::{CStr, FourCC, LazyArray};
 
 
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ pub struct MlvlEditor<'r>
 
 pub struct MlvlArea<'r, 'mlvl, 'cursor, 'list>
 {
-    pub mrea_cursor: &'cursor mut DiffListCursor<'list, ResourceSource<'r>>,
+    pub mrea_cursor: &'cursor mut ResourceListCursor<'r, 'list>,
     pub mlvl_area: &'mlvl mut Area<'r>,
     pub layer_flags: &'mlvl mut AreaLayerFlags,
     pub layer_names: &'mlvl mut Vec<CStr<'r>>,
@@ -30,7 +30,7 @@ impl<'r> MlvlEditor<'r>
 
     pub fn get_area<'s, 'cursor, 'list: 'cursor>(
         &'s mut self,
-        mrea_cursor: &'cursor mut DiffListCursor<'list, ResourceSource<'r>>
+        mrea_cursor: &'cursor mut ResourceListCursor<'r, 'list>
     )
         -> MlvlArea<'r, 's, 'cursor, 'list>
     {

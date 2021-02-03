@@ -1,11 +1,14 @@
 use auto_struct_macros::auto_struct;
-use reader_writer::{DiffList, DiffListSourceCursor, AsDiffListSourceCursor, FourCC, Readable,
-                    Reader, RoArray, Writable,
-                    align_byte_count};
+use reader_writer::{
+    FourCC, LCow, Readable, Reader, RoArray, Writable, align_byte_count,
+};
 
 
-use std::io;
 use std::borrow::Cow;
+use std::fmt;
+use std::io;
+use std::iter;
+use std::ops;
 
 use crate::{
     evnt::Evnt,
@@ -53,8 +56,8 @@ pub struct Pak<'r>
     #[auto_struct(pad_align = 32)]
     _pad: (),
 
-    #[auto_struct(init = ResourceSource(start.clone(), resource_info.clone()))]
-    pub resources: DiffList<ResourceSource<'r>>,
+    #[auto_struct(init = (start.clone(), resource_info))]
+    pub resources: ResourceList<'r>,
 
 
     #[auto_struct(pad_align = 32)]
@@ -85,87 +88,390 @@ pub struct ResourceInfo
     pub offset: u32,
 }
 
-
-#[derive(Debug, Clone)]
-pub struct ResourceSource<'r>(Reader<'r>, RoArray<'r, ResourceInfo>);
-#[derive(Debug, Clone)]
-pub struct ResourceSourceCursor<'r>
+impl ResourceInfo
 {
-    pak_start: Reader<'r>,
-    info_array: RoArray<'r, ResourceInfo>,
-    index: usize,
+    fn get_resource<'r>(&self, pak_start: Reader<'r>) -> Resource<'r>
+    {
+        pak_start.offset(self.offset as usize).read(*self)
+    }
 }
 
-impl<'r> AsDiffListSourceCursor for ResourceSource<'r>
+#[derive(Clone, Debug)]
+enum ResourceListElem<'r>
 {
-    type Cursor = ResourceSourceCursor<'r>;
-    fn as_cursor(&self) -> Self::Cursor
+    Array(RoArray<'r, ResourceInfo>),
+    Inst(Resource<'r>),
+}
+
+impl<'r> ResourceListElem<'r>
+{
+    fn len(&self) -> usize
     {
-        ResourceSourceCursor {
-            pak_start: self.0.clone(),
-            info_array: self.1.clone(),
-            index: 0,
+        match *self {
+            ResourceListElem::Array(ref array) => array.len(),
+            ResourceListElem::Inst(_) => 1,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ResourceList<'r>
+{
+    pak_start: Option<Reader<'r>>,
+    list: Vec<ResourceListElem<'r>>,
+}
+
+impl<'r> ResourceList<'r>
+{
+    pub fn cursor<'s>(&'s mut self) -> ResourceListCursor<'r, 's>
+    {
+        let inner_cursor = match self.list.get(0) {
+                Some(ResourceListElem::Array(a)) => Some(InnerCursor {
+                    info_array: a.clone(),
+                    idx: 0
+                }),
+                _ => None,
+            };
+        ResourceListCursor {
+            list: self,
+            idx: 0,
+            inner_cursor,
+        }
+
+    }
+
+    pub fn iter<'s>(&'s self) -> ResourceListIter<'r, 's>
+    {
+        ResourceListIter {
+            pak_start: self.pak_start.as_ref(),
+            list_iter: self.list.iter(),
+            inner_cursor: None,
         }
     }
 
-    fn len(&self) -> usize
+    pub fn len(&self) -> usize
     {
-        self.1.len()
+        // TODO: It might make sense to cache this...
+        self.list.iter().map(|elem| elem.len()).sum()
+    }
+
+    pub fn clear(&mut self)
+    {
+        self.list.clear()
     }
 }
 
-impl<'r> DiffListSourceCursor for ResourceSourceCursor<'r>
+impl<'r> Readable<'r> for ResourceList<'r>
 {
-    type Item = Resource<'r>;
-    type Source = ResourceSource<'r>;
+    type Args = (Reader<'r>, RoArray<'r, ResourceInfo>);
+    fn read_from(reader: &mut Reader<'r>, (pak_start, info_array): Self::Args) -> Self
+    {
+        let res = ResourceList {
+            pak_start: Some(pak_start),
+            list: vec![ResourceListElem::Array(info_array)],
+        };
+        reader.advance(res.size());
+        res
+    }
+
+    fn size(&self) -> usize
+    {
+        self.iter().fold(0, |s, i| s + i.size())
+    }
+}
+
+impl<'r> Writable for ResourceList<'r>
+{
+    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    {
+        let mut s = 0;
+        for i in self.iter() {
+            s += i.write_to(writer)?
+        }
+        Ok(s)
+    }
+}
+
+impl<'r> fmt::Debug for ResourceList<'r>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error>
+    {
+        write!(f, "ResourceList {{ list: {:?} }}", self.list)
+    }
+}
+
+impl<'r> iter::FromIterator<Resource<'r>> for ResourceList<'r>
+{
+    fn from_iter<I>(i: I) -> Self
+        where I: IntoIterator<Item = Resource<'r>>
+    {
+        ResourceList {
+            pak_start: None,
+            list: i.into_iter().map(|x| ResourceListElem::Inst(x)).collect(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct InnerCursor<'r>
+{
+    info_array: RoArray<'r, ResourceInfo>,
+    idx: usize,
+}
+
+
+impl<'r> InnerCursor<'r>
+{
     fn next(&mut self) -> bool
     {
-        if self.index == self.info_array.len() - 1 {
+        if self.idx == self.info_array.len() - 1 {
             false
         } else {
-            self.index += 1;
+            self.idx += 1;
             true
         }
     }
 
-    fn get(&self) -> Self::Item
+    fn get(&self) -> ResourceInfo
     {
-        let info = self.info_array.get(self.index).unwrap();
-        self.pak_start.offset(info.offset as usize).read(info.clone())
+        self.info_array.get(self.idx).unwrap()
     }
 
-    fn split(mut self) -> (Option<Self::Source>, Self::Source)
+    fn split(mut self) -> (Option<RoArray<'r, ResourceInfo>>, RoArray<'r, ResourceInfo>)
     {
-        let pak_start = self.pak_start;
-        let f = |a| ResourceSource(pak_start.clone(), a);
-        if self.index == 0 {
-            (None, f(self.info_array))
+        if self.idx == 0 {
+            (None, self.info_array)
         } else {
-            let left = self.info_array.split_off(self.index);
-            (Some(f(left)), f(self.info_array))
+            let left = self.info_array.split_off(self.idx);
+            (Some(left), self.info_array)
         }
    }
 
-    fn split_around(mut self) -> (Option<Self::Source>, Self::Item, Option<Self::Source>)
+   fn split_around(mut self)
+        -> (Option<RoArray<'r, ResourceInfo>>, ResourceInfo, Option<RoArray<'r, ResourceInfo>>)
     {
         let item = self.get();
-        let pak_start = self.pak_start;
-        let f = |a| Some(ResourceSource(pak_start.clone(), a));
         if self.info_array.len() == 1 {
             (None, item, None)
-        } else if self.index == 0 {
+        } else if self.idx == 0 {
             let right = self.info_array.split_off(1);
-            (None, item, f(right))
-        } else if self.index == self.info_array.len() - 1 {
-            let _ = self.info_array.split_off(self.index);
-            (f(self.info_array), item, None)
+            (None, item, Some(right))
+        } else if self.idx == self.info_array.len() - 1 {
+            let _ = self.info_array.split_off(self.idx);
+            (Some(self.info_array), item, None)
         } else {
-            let mut right = self.info_array.split_off(self.index);
+            let mut right = self.info_array.split_off(self.idx);
             let right = right.split_off(1);
-            (f(self.info_array), item, f(right))
+            (Some(self.info_array), item, Some(right))
         }
     }
 }
+
+pub struct ResourceListCursor<'r, 'list>
+{
+    list: &'list mut ResourceList<'r>,
+    idx: usize,
+    inner_cursor: Option<InnerCursor<'r>>,
+}
+
+impl<'r, 'list> ResourceListCursor<'r, 'list>
+{
+    // TODO: Return value?
+    pub fn next(&mut self)
+    {
+        let advance_cursor = self.inner_cursor.as_mut().map(|ic| !ic.next()).unwrap_or(true);
+        if advance_cursor && !self.list.list.get(self.idx).is_none() {
+            self.inner_cursor = None;
+            self.idx += 1;
+            match self.list.list.get(self.idx) {
+                None => (),
+                Some(ResourceListElem::Inst(_)) => (),
+                Some(ResourceListElem::Array(a)) => {
+                    self.inner_cursor = Some(InnerCursor {
+                        info_array: a.clone(),
+                        idx: 0,
+                    });
+                },
+            };
+        };
+    }
+
+    // TODO: prev?
+
+    /// Inserts the items yielded by `iter` into the list. The cursor will be
+    /// positioned at the first inserted item.
+    pub fn insert_before<I>(&mut self, iter: I)
+        where I: Iterator<Item = Resource<'r>>
+    {
+        let mut iter = iter.peekable();
+        if iter.peek().is_none() {
+            return;
+        };
+
+        // XXX This could probably be made more efficent by combining the insert with the splice,
+        //     but it'd probably be even harder to understand...
+        if let Some(ic) = self.inner_cursor.take() {
+            let (left, right) = ic.split();
+            if let Some(left) = left {
+                self.list.list.insert(self.idx, ResourceListElem::Array(left));
+                self.idx += 1
+            };
+            self.list.list[self.idx] = ResourceListElem::Array(right);
+        };
+        self.list.list.splice(self.idx..self.idx, iter.map(ResourceListElem::Inst));
+        // We shouldn't need to set self.inner_cursor here. We've inserted at
+        // least one element, so self.cursor should be pointing to an Inst.
+    }
+
+    /// Inserts the items yielded by `iter` into the list. The cursor will be positioned after the
+    /// last inserted item (the same item it was originally pointed to).
+    pub fn insert_after<I>(&mut self, iter: I)
+        where I: Iterator<Item = Resource<'r>>
+    {
+        let mut iter = iter.peekable();
+        if iter.peek().is_none() {
+            return;
+        };
+
+        // XXX This could probably be made more efficent by combining the insert with the splice,
+        //     but it'd probably be even harder to understand...
+        let pre_len = self.list.list.len();
+        if let Some(ic) = self.inner_cursor.take() {
+            let (left, right) = ic.split();
+            if let Some(left) = left {
+                self.list.list.insert(self.idx, ResourceListElem::Array(left));
+                self.idx += 1
+            };
+            self.list.list[self.idx] = ResourceListElem::Array(right);
+        };
+        self.list.list.splice(self.idx..self.idx, iter.map(ResourceListElem::Inst));
+        self.idx += self.list.list.len() - pre_len
+        // We shouldn't need to set self.inner_cursor here. We've inserted at
+        // least one element, so self.cursor should be pointing to an Inst.
+    }
+
+    pub fn peek(&mut self) -> Option<LCow<Resource<'r>>>
+    {
+        if let Some(ref ic) = self.inner_cursor {
+            Some(LCow::Owned(ic.get().get_resource(self.list.pak_start.as_ref().unwrap().clone())))
+        } else {
+            match self.list.list.get(self.idx) {
+                None => None,
+                Some(ResourceListElem::Array(_)) => unreachable!(),
+                Some(ResourceListElem::Inst(res)) => Some(LCow::Borrowed(res)),
+            }
+        }
+    }
+
+    pub fn value(&mut self) -> Option<&mut Resource<'r>>
+    {
+        if let Some(ic) = self.inner_cursor.take() {
+            let (left, info, right) = ic.split_around();
+            let elem = info.get_resource(self.list.pak_start.as_ref().unwrap().clone());
+            if let Some(right) = right {
+                // There are elements to the right
+                self.list.list[self.idx] = ResourceListElem::Array(right);
+                self.list.list.insert(self.idx, ResourceListElem::Inst(elem));
+            } else {
+                // This was the last element.
+                self.list.list[self.idx] = ResourceListElem::Inst(elem);
+            };
+            // self.cursor now points to the correct Inst
+            if let Some(left) = left {
+                // There are elements to the left.
+                self.list.list.insert(self.idx, ResourceListElem::Array(left));
+                self.idx += 1
+            };
+        };
+        match self.list.list.get_mut(self.idx) {
+            Some(&mut ResourceListElem::Inst(ref mut inst)) => Some(inst),
+            Some(&mut ResourceListElem::Array(_)) => unreachable!(),
+            None => None,
+        }
+    }
+
+    pub fn into_value(mut self) -> Option<&'list mut Resource<'r>>
+    {
+        self.value();
+        match self.list.list.get_mut(self.idx) {
+            Some(&mut ResourceListElem::Inst(ref mut inst)) => Some(inst),
+            Some(&mut ResourceListElem::Array(_)) => unreachable!(),
+            None => None,
+        }
+    }
+
+    pub fn cursor_advancer<'s>(&'s mut self) -> ResourceListCursorAdvancer<'r, 'list, 's>
+    {
+        ResourceListCursorAdvancer { cursor: self }
+    }
+}
+
+
+/// Wraps a ResourceListCursor and automatically advances it when it is dropped.
+pub struct ResourceListCursorAdvancer<'r, 'list, 'cursor>
+{
+    cursor: &'cursor mut ResourceListCursor<'r, 'list>,
+}
+
+impl<'r, 'list, 'cursor> Drop for ResourceListCursorAdvancer<'r, 'list, 'cursor>
+{
+    fn drop(&mut self)
+    {
+        self.cursor.next()
+    }
+}
+
+impl<'r, 'list, 'cursor> ops::Deref for ResourceListCursorAdvancer<'r, 'list, 'cursor>
+{
+    type Target = ResourceListCursor<'r, 'list>;
+    fn deref(&self) -> &Self::Target
+    {
+        &*self.cursor
+    }
+}
+
+impl<'r, 'list, 'cursor> ops::DerefMut for ResourceListCursorAdvancer<'r, 'list, 'cursor>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target
+    {
+        &mut *self.cursor
+    }
+}
+
+#[derive(Clone)]
+pub struct ResourceListIter<'r, 'list>
+{
+    pak_start: Option<&'list Reader<'r>>,
+    list_iter: std::slice::Iter<'list, ResourceListElem<'r>>,
+    inner_cursor: Option<InnerCursor<'r>>,
+}
+
+impl<'r, 'list> Iterator for ResourceListIter<'r, 'list>
+{
+    type Item = LCow<'list, Resource<'r>>;
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        if let Some(cursor) = &mut self.inner_cursor {
+            if cursor.next() {
+                return Some(LCow::Owned(cursor.get().get_resource(self.pak_start.unwrap().clone())))
+            }
+        }
+        match self.list_iter.next() {
+            Some(ResourceListElem::Array(info_array)) => {
+                let cursor = InnerCursor {
+                    info_array: info_array.clone(),
+                    idx: 0,
+                };
+                let res = cursor.get().get_resource(self.pak_start.unwrap().clone());
+                self.inner_cursor = Some(cursor);
+                Some(LCow::Owned(res))
+            },
+            Some(ResourceListElem::Inst(inst)) => Some(LCow::Borrowed(inst)),
+            None => None,
+        }
+    }
+}
+
 
 
 #[derive(Debug, Clone)]
@@ -187,7 +493,7 @@ impl<'r> Resource<'r>
             fourcc: self.fourcc(),
             file_id: self.file_id,
             size: self.size() as u32,
-            offset: offset,
+            offset,
         }
     }
 
@@ -265,8 +571,8 @@ macro_rules! build_resource_data {
 
             pub fn guess_kind(&mut self)
             {
-                let (mut reader, fourcc) = match *self {
-                    ResourceKind::Unknown(ref reader, fourcc) => (reader.clone(), fourcc),
+                let (mut reader, fourcc) = match self {
+                    ResourceKind::Unknown(reader, fourcc) => (reader.clone(), *fourcc),
                     _ => return,
                 };
 
@@ -279,10 +585,10 @@ macro_rules! build_resource_data {
             $(
                 pub fn $accessor(&self) -> Option<Cow<$name<'r>>>
                 {
-                    match *self {
-                        ResourceKind::$name(ref inst) => Some(Cow::Borrowed(inst)),
-                        ResourceKind::Unknown(ref reader, fourcc) => {
-                            if fourcc == $fourcc.into() {
+                    match self {
+                        ResourceKind::$name(inst) => Some(Cow::Borrowed(inst)),
+                        ResourceKind::Unknown(reader, fourcc) => {
+                            if *fourcc == $fourcc.into() {
                                 Some(Cow::Owned(reader.clone().read(())))
                             } else {
                                 None

@@ -10,7 +10,6 @@ pub mod fixed_array;
 pub mod array;
 pub mod read_only_array;
 pub mod iterator_array;
-pub mod diff_list;
 
 pub mod lcow;
 pub mod derivable_array_proxy;
@@ -42,6 +41,5 @@ pub use crate::{
     // XXX There are > 5 items in these modules. Do I want to use * imports everywhere for
     //     consistency?
     padding::*,
-    diff_list::*,
     utf16_string:: *,
 };
