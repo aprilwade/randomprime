@@ -1,12 +1,12 @@
 use std::{
     marker::PhantomData,
-    io,
     borrow::Borrow,
+    convert::Infallible,
 };
 
 use crate::{
     reader::{Reader, Readable},
-    writer::Writable,
+    writer::{Writable, Writer},
 };
 
 /// Derivable Array Proxy - wraps an iterator for derived array.
@@ -29,29 +29,31 @@ impl<I, T> Dap<I, T>
     }
 }
 
-impl<'r, I, T> Readable<'r> for Dap<I, T>
+impl<R, I, T> Readable<R> for Dap<I, T>
     where I: Iterator + Clone,
           I::Item: Borrow<T>,
-          T: Readable<'r>,
+          R: Reader,
+          T: Readable<R>,
 {
-    type Args = ();
-    fn read_from(_: &mut Reader<'r>, (): ()) -> Self
+    type Args = Infallible;
+    fn read_from(_: &mut R, never: Infallible) -> Result<Self, R::Error>
     {
-        panic!("Dap should not ever be read.")
+        match never { }
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
         self.0.clone().map(|t| t.borrow().size()).sum()
     }
 }
 
-impl<I, T> Writable for Dap<I, T>
+impl<W, I, T> Writable<W> for Dap<I, T>
     where I: Iterator + Clone,
           I::Item: Borrow<T>,
-          T: Writable
+          W: Writer,
+          T: Writable<W>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         let mut s = 0;
         for e in self.0.clone() {

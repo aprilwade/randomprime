@@ -1,9 +1,8 @@
 //! Utilities for padding for alignment
-use std::io;
 use crate::{
     read_only_array::RoArray,
-    reader::{Readable, Reader},
-    writer::Writable,
+    reader::{Readable, Reader, ReaderEx},
+    writer::{Writable, Writer},
 };
 
 
@@ -23,39 +22,43 @@ static BYTES_00: [u8; 32] = [0; 32];
 static BYTES_FF: [u8; 32] = [0; 32];
 
 
-pub fn pad_bytes<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
+pub fn pad_bytes<R>(align_to: usize, n: usize) -> RoArray<R, u8>
+    where R: Reader + From<&'static [u8]>,
 {
-    Reader::new(&BYTES_00).read((pad_bytes_count(align_to, n), ()))
+    R::from(&BYTES_00).read((pad_bytes_count(align_to, n), ()))
+        .unwrap_or_else(|_| unreachable!())
 }
 
-pub fn pad_bytes_ff<'r>(align_to: usize, n: usize) -> RoArray<'r, u8>
+pub fn pad_bytes_ff<R>(align_to: usize, n: usize) -> RoArray<R, u8>
+    where R: Reader + From<&'static [u8]>,
 {
-    Reader::new(&BYTES_FF).read((pad_bytes_count(align_to, n), ()))
+    R::from(&BYTES_FF).read((pad_bytes_count(align_to, n), ()))
+        .unwrap_or_else(|_| unreachable!())
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PaddingBlackhole(pub usize);
 
-impl<'r> Readable<'r> for PaddingBlackhole
+impl<R: Reader> Readable<R> for PaddingBlackhole
 {
     type Args = usize;
-    fn read_from(reader: &mut Reader<'r>, i: Self::Args) -> Self
+    fn read_from(reader: &mut R, i: Self::Args) -> Result<Self, R::Error>
     {
-        reader.advance(i);
-        PaddingBlackhole(i)
+        reader.advance(i)?;
+        Ok(PaddingBlackhole(i))
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        self.0
+        Ok(self.0)
     }
 }
 
-impl Writable for PaddingBlackhole
+impl<W: Writer> Writable<W> for PaddingBlackhole
 {
-    fn write_to<W: io::Write>(&self, w: &mut W) -> io::Result<u64>
+    fn write_to(&self, w: &mut W) -> Result<u64, W::Error>
     {
-        w.write_all(&BYTES_00[..self.0])?;
+        w.write_bytes(&BYTES_00[..self.0])?;
         Ok(self.0 as u64)
     }
 }

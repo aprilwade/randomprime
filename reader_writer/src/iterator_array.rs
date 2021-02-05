@@ -1,28 +1,30 @@
 use std::{
     fmt,
-    io,
     slice::Iter as SliceIter,
 };
 
 use crate::{
     lcow::LCow,
-    reader::{Reader, Readable},
-    writer::Writable,
+    reader::{Reader, Readable, ReaderEx},
+    writer::{Writable, Writer},
 };
 
 
+/// A lazy array with one element for each element in an iterator (often another array).
 #[derive(Clone)]
-pub enum IteratorArray<'r, T, I>
-    where T: Readable<'r>,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+pub enum IteratorArray<R, T, I>
+    where R: Reader,
+          T: Readable<R>,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
-    Borrowed(Reader<'r>, I),
+    Borrowed(R, I),
     Owned(Vec<T>),
 }
 
-impl<'r, T, I> IteratorArray<'r, T, I>
-    where T: Readable<'r>,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<R, T, I> IteratorArray<R, T, I>
+    where R: Reader,
+          T: Readable<R>,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
     pub fn len(&self) -> usize
     {
@@ -32,7 +34,7 @@ impl<'r, T, I> IteratorArray<'r, T, I>
         }
     }
 
-    pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, 'r, T, I>
+    pub fn iter<'s>(&'s self) -> IteratorArrayIterator<'s, R, T, I>
     {
         match *self {
             IteratorArray::Borrowed(ref reader, ref i)
@@ -41,73 +43,76 @@ impl<'r, T, I> IteratorArray<'r, T, I>
         }
     }
 
-    pub fn as_mut_vec(&mut self) -> &mut Vec<T>
+    pub fn as_mut_vec(&mut self) -> Result<&mut Vec<T>, R::Error>
     {
-        *self = match *self {
-            IteratorArray::Borrowed(ref mut reader, ref mut iter) => {
-                let mut vec = Vec::with_capacity(iter.len());
-                while let Some(arg) = iter.next() {
-                    vec.push(reader.read(arg));
-                };
-                IteratorArray::Owned(vec)
+        *self = match self {
+            IteratorArray::Borrowed(reader, iter) => {
+                let res: Result<_, _> = iter
+                    .map(|a| a.and_then(|arg| reader.read(arg)))
+                    .collect();
+                IteratorArray::Owned(res?)
             },
-            IteratorArray::Owned(ref mut vec) => return vec,
+            IteratorArray::Owned(vec) => return Ok(vec),
         };
-        match *self {
-            IteratorArray::Owned(ref mut vec) => vec,
+        match self {
+            IteratorArray::Owned(vec) => Ok(vec),
             IteratorArray::Borrowed(_, _) => unreachable!(),
         }
     }
 }
 
-impl<'r, T, I> Readable<'r> for IteratorArray<'r, T, I>
-    where T: Readable<'r>,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<R, T, I> Readable<R> for IteratorArray<R, T, I>
+    where R: Reader,
+          T: Readable<R>,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
     type Args = I;
-    fn read_from(reader: &mut Reader<'r>, i: I) -> Self
+    fn read_from(reader: &mut R, i: I) -> Result<Self, R::Error>
     {
         let res = IteratorArray::Borrowed(reader.clone(), i);
-        reader.advance(res.size());
-        res
+        reader.advance(res.size()?)?;
+        Ok(res)
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
         if let Some(i) = T::fixed_size() {
-            i * self.len()
+            Ok(i * self.len())
         } else {
-            self.iter().map(|i| i.size()).sum()
+            self.iter().try_fold(0, |s, i| Ok(s + i?.size()?))
         }
     }
 }
 
 #[derive(Clone)]
-pub enum IteratorArrayIterator<'s, 'r: 's, T, I>
-    where T: Readable<'r> + 's,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+pub enum IteratorArrayIterator<'s, R: 's, T, I>
+    where R: Reader,
+          T: Readable<R> + 's,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
-    Borrowed(Reader<'r>, I),
+    Borrowed(R, I),
     Owned(SliceIter<'s, T>),
 }
 
-impl<'s, 'r: 's, T, I> Iterator for IteratorArrayIterator<'s, 'r, T, I>
-    where T: Readable<'r> + 's,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<'s, R: 's, T, I> Iterator for IteratorArrayIterator<'s, R, T, I>
+    where R: Reader,
+          T: Readable<R> + 's,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
-    type Item = LCow<'s, T>;
+    type Item = Result<LCow<'s, T>, R::Error>;
     fn next(&mut self) -> Option<Self::Item>
     {
         match *self {
             IteratorArrayIterator::Borrowed(ref mut reader, ref mut args_iter) => {
                 if let Some(args) = args_iter.next() {
-                    let res = reader.read::<T>(args);
-                    Some(LCow::Owned(res))
+                    // XXX Ideal place for a try-block. Sigh...
+                    let res = args.and_then(|args| reader.read::<T>(args));
+                    Some(res.map(LCow::Owned))
                 } else {
                     None
                 }
             },
-            IteratorArrayIterator::Owned(ref mut iter) => iter.next().map(LCow::Borrowed),
+            IteratorArrayIterator::Owned(ref mut iter) => iter.next().map(|i| Ok(LCow::Borrowed(i))),
         }
     }
 
@@ -120,9 +125,10 @@ impl<'s, 'r: 's, T, I> Iterator for IteratorArrayIterator<'s, 'r, T, I>
     }
 }
 
-impl<'s, 'r: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, 'r, T, I>
-    where T: Readable<'r> + 's,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<'s, R: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, R, T, I>
+    where R: Reader,
+          T: Readable<R> + 's,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
     fn len(&self) -> usize
     {
@@ -133,35 +139,49 @@ impl<'s, 'r: 's, T, I> ExactSizeIterator for IteratorArrayIterator<'s, 'r, T, I>
     }
 }
 
-impl<'r, T, I> Writable for IteratorArray<'r, T, I>
-    where T: Readable<'r> + Writable,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<R, W, T, I> Writable<W> for IteratorArray<R, T, I>
+    where R: Reader,
+          W: Writer,
+          T: Readable<R> + Writable<W>,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone,
+          W::Error: From<R::Error>,
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         let mut s = 0;
         for i in self.iter() {
-            s += i.write_to(writer)?
+            s += i?.write_to(writer)?
         }
         Ok(s)
     }
 }
 
-impl<'r, T, I> fmt::Debug for IteratorArray<'r, T, I>
-    where T: Readable<'r> + fmt::Debug,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<R, T, I> fmt::Debug for IteratorArray<R, T, I>
+    where R: Reader,
+          T: Readable<R> + fmt::Debug,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        fmt::Debug::fmt(&self.iter().collect::<Vec<_>>(), f)
+        match self {
+            IteratorArray::Borrowed(_, _) => {
+                let res: Result<Vec<_>, _> = self.iter().collect();
+                fmt::Debug::fmt(
+                    &res.unwrap_or_else(|_| panic!("Error while fmting a IteratorArray")),
+                    f
+                )
+            }
+            IteratorArray::Owned(vec) => fmt::Debug::fmt(vec, f),
+        }
     }
 }
 
-impl<'r, T, I> From<Vec<T>> for IteratorArray<'r, T, I>
-    where T: Readable<'r>,
-          I: Iterator<Item=T::Args> + ExactSizeIterator + Clone
+impl<R, T, I> From<Vec<T>> for IteratorArray<R, T, I>
+    where R: Reader,
+          T: Readable<R>,
+          I: Iterator<Item=Result<T::Args, R::Error>> + ExactSizeIterator + Clone
 {
-    fn from(vec: Vec<T>) -> IteratorArray<'r, T, I>
+    fn from(vec: Vec<T>) -> IteratorArray<R, T, I>
     {
         IteratorArray::Owned(vec)
     }

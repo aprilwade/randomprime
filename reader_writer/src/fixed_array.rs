@@ -1,35 +1,34 @@
-use std::io;
-
 use crate::{
     derivable_array_proxy::DerivableFromIterator,
     generic_array::{GenericArray, ArrayLength},
-    reader::{Reader, Readable},
-    writer::Writable,
+    reader::{Readable, Reader, ReaderEx},
+    writer::{Writable, Writer},
 };
 
 pub type FixedArray<T, N> = GenericArray<T, N>;
 
-impl<'r, T, N> Readable<'r> for FixedArray<T, N>
+impl<R, T, N> Readable<R> for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'r>,
+          R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Args = T::Args;
-
-
-    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self
+    fn read_from(reader: &mut R, args: Self::Args) -> Result<Self, R::Error>
     {
-        let array = {
-            let iter = (0..N::to_usize()).map(|_| reader.read(args.clone()));
-            GenericArray::from_exact_iter(iter).unwrap()
-        };
-        array
+        (0..N::to_usize())
+            .map(|_| reader.read(args.clone()))
+            .collect()
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        <Self as Readable>::fixed_size()
-            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()))
+        if let Some(fs) = <Self as Readable<R>>::fixed_size() {
+            Ok(fs)
+        } else {
+            self.iter()
+                .try_fold(0, |s, i| Ok(s + i.size()?))
+        }
     }
 
 
@@ -39,12 +38,12 @@ impl<'r, T, N> Readable<'r> for FixedArray<T, N>
     }
 }
 
-impl<'r, T, N> Writable for FixedArray<T, N>
+impl<W, T, N> Writable<W> for FixedArray<T, N>
     where N: ArrayLength<T>,
-          T: Readable<'r> + Writable,
-          T::Args: Clone,
+          W: Writer,
+          T: Writable<W>,
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         let mut s = 0;
         for elem in self.iter() {

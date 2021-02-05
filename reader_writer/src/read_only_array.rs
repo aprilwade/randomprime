@@ -1,37 +1,47 @@
 
-use std::{
-    fmt,
-    io,
-};
+use std::fmt;
 
 use crate::{
-    reader::{Reader, Readable},
-    writer::Writable,
+    reader::{Reader, Readable, ReaderEx, copy},
+    writer::{Writable, Writer},
     derivable_array_proxy::DerivableFromIterator,
 };
 
 /// Read only array
-#[derive(Clone)]
-pub struct RoArray<'r, T>
-    where T: Readable<'r>,
-          T::Args: Clone,
+pub struct RoArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
 {
     t_args: T::Args,
     length: usize,
-    data_start: Reader<'r>,
+    data_start: R,
 }
 
-
-impl<'r, T> RoArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Clone for RoArray<R, T>
+    where R: Reader + Clone,
+          T: Readable<R>,
           T::Args: Clone,
+{
+    fn clone(&self) -> Self {
+        RoArray {
+            t_args: self.t_args.clone(),
+            length: self.length,
+            data_start: self.data_start.clone(),
+        }
+    }
+}
+
+impl<R, T> RoArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
 {
     pub fn len(&self) -> usize
     {
         self.length
     }
 
-    pub fn iter(&self) -> RoArrayIter<'r, T>
+    pub fn iter(&self) -> RoArrayIter<R, T>
+        where T::Args: Clone,
     {
         RoArrayIter {
             t_args: self.t_args.clone(),
@@ -40,7 +50,8 @@ impl<'r, T> RoArray<'r, T>
         }
     }
 
-    pub fn split_off(&mut self, at: usize) -> RoArray<'r, T>
+    pub fn split_off(&mut self, at: usize) -> Result<RoArray<R, T>, R::Error>
+        where T::Args: Clone
     {
         if at > self.length {
             panic!("`at` ({}) cannot be > the array's length ({}).", at, self.length)
@@ -50,95 +61,101 @@ impl<'r, T> RoArray<'r, T>
         self.length = at;
         // self is now the new length, so calculate its new size
         let new_size = T::fixed_size()
-            .map(|i| i * self.length)
-            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()));
+            .map(|i| Ok(i * self.length))
+            .unwrap_or_else(|| self.iter().try_fold(0, |s, i| Ok(s + i?.size()?)))?;
 
         let res = RoArray {
             t_args: self.t_args.clone(),
             length: right_len,
-            data_start: self.data_start.offset(new_size),
+            data_start: self.data_start.advance_clone(new_size)?,
         };
-        self.data_start.truncate(new_size);
-        res
+        self.data_start.truncate_to(new_size)?;
+        Ok(res)
     }
 
-    pub fn get(&self, at: usize) -> Option<T>
+    pub fn get(&self, at: usize) -> Result<Option<T>, R::Error>
+        where T::Args: Clone
     {
         let fixed_size = T::fixed_size().expect(
                 "Array::get should only be called for Ts that are fixed size.");
         if at >= self.length {
-            None
+            Ok(None)
         } else {
-            Some(self.data_start.offset(at * fixed_size).read(self.t_args.clone()))
+            Ok(Some(self.data_start.advance_clone(at * fixed_size)?.read(self.t_args.clone())?))
         }
     }
 
-    pub fn data_start(&self) -> Reader<'r>
+    pub fn data_start(&self) -> &R
     {
-        self.data_start.clone()
+        &self.data_start
     }
 }
 
-impl<'r, T> Readable<'r> for RoArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Readable<R> for RoArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Args = (usize, T::Args);
 
     // TODO: It would be cool to cache the size in the reader's length field.
-    fn read_from(reader: &mut Reader<'r>, (length, args): Self::Args) -> Self
+    fn read_from(reader: &mut R, (length, args): Self::Args) -> Result<Self, R::Error>
     {
-        let size = T::fixed_size()
-            .map(|i| i * length)
-            .unwrap_or_else(|| {
-                let iter = RoArrayIter::<T> {
-                    t_args: args.clone(),
-                    length: length,
-                    data_start: reader.clone(),
-                };
-                iter.fold(0, |s, i| s + i.size())
-            });
+        let size = if let Some(fs) = T::fixed_size() {
+            fs * length
+        } else {
+            let mut iter = RoArrayIter::<R, T> {
+                t_args: args.clone(),
+                length,
+                data_start: reader.clone(),
+            };
+            iter.try_fold(0, |s, i| Ok(s + i?.size()?))?
+        };
         let array = RoArray {
             t_args: args,
-            length: length,
-            data_start: reader.truncated(size),
+            length,
+            data_start: reader.truncate_clone_to(size)?,
         };
-        reader.advance(size);
-        array
+        reader.advance(size)?;
+        Ok(array)
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        self.data_start.len()
+        Ok(self.data_start.len())
     }
 }
 
-impl<'r, T> fmt::Debug for RoArray<'r, T>
-    where T: Readable<'r> + fmt::Debug,
+impl<R, T> fmt::Debug for RoArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
+          T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        fmt::Debug::fmt(&self.iter().collect::<Vec<_>>(), f)
+        let res: Result<Vec<_>, _> = self.iter().collect();
+        fmt::Debug::fmt(&res.unwrap_or_else(|_| panic!("Error while fmting a RoArray")), f)
     }
 }
 
 
 #[derive(Clone, Debug)]
-pub struct RoArrayIter<'r, T>
-    where T: Readable<'r>,
-          T::Args: Clone,
+pub struct RoArrayIter<R, T>
+    where R: Reader,
+          T: Readable<R>,
 {
-    data_start: Reader<'r>,
+    data_start: R,
     length: usize,
     t_args: T::Args,
 }
 
-impl<'r, T> Iterator for RoArrayIter<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Iterator for RoArrayIter<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
-    type Item = T;
+    type Item = Result<T, R::Error>;
     fn next(&mut self) -> Option<Self::Item>
     {
         if self.length == 0 {
@@ -155,8 +172,9 @@ impl<'r, T> Iterator for RoArrayIter<'r, T>
     }
 }
 
-impl<'r, T> ExactSizeIterator for RoArrayIter<'r, T>
-    where T: Readable<'r>,
+impl<R, T> ExactSizeIterator for RoArrayIter<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     fn len(&self) -> usize
@@ -166,22 +184,22 @@ impl<'r, T> ExactSizeIterator for RoArrayIter<'r, T>
 }
 
 
-impl<'r, T> Writable for RoArray<'r, T>
-    where T: Readable<'r> + Writable,
+impl<R, W, T> Writable<W> for RoArray<R, T>
+    where R: Reader,
+          W: Writer,
+          T: Readable<R>,
           T::Args: Clone,
+          W::Error: From<R::Error>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
-        // TODO: Could this be done more efficently by using the length component of
-        //       the reader?
-        let len = self.size();
-        writer.write_all(&(*self.data_start)[0..len])?;
-        Ok(len as u64)
+        copy(&mut self.data_start.clone(), writer)
     }
 }
 
-impl<'r, T> DerivableFromIterator for RoArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> DerivableFromIterator for RoArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
         type Item = T;
@@ -190,15 +208,16 @@ impl<'r, T> DerivableFromIterator for RoArray<'r, T>
 #[cfg(test)]
 mod tests
 {
-    use crate::{Reader, RoArray};
+    use crate::reader::{ReaderEx, SliceReader};
+    use super::RoArray;
     #[test]
     fn test_split_off()
     {
         let data = [1, 2, 3, 4, 5];
-        let mut reader = Reader::new(&data);
-        let mut array: RoArray<u8> = reader.read((5, ()));
-        let right = array.split_off(2);
-        assert_eq!(array.iter().collect::<Vec<_>>(), [1, 2]);
-        assert_eq!(right.iter().collect::<Vec<_>>(), [3, 4, 5]);
+        let mut reader = SliceReader::<byteorder::LittleEndian>::new(&data);
+        let mut array: RoArray<_, u8> = reader.read((5, ())).unwrap();
+        let right = array.split_off(2).unwrap();
+        assert_eq!(array.iter().collect::<Result<Vec<_>, _>>().unwrap(), [1, 2]);
+        assert_eq!(right.iter().collect::<Result<Vec<_>, _>>().unwrap(), [3, 4, 5]);
     }
 }

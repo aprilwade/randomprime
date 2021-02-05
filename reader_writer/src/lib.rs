@@ -24,8 +24,8 @@ pub mod utf16_string;
 pub use crate::{
     generic_array::typenum,
 
-    reader::{Reader, Readable},
-    writer::Writable,
+    reader::{Readable, Reader, ReaderEx},
+    writer::{Writable, Writer},
 
     primitive_types::{FourCC, CStr, CStrConversionExtension},
     array::{LazyArray, LazyArrayIter},

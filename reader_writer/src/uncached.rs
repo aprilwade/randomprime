@@ -1,84 +1,89 @@
-use std::{
-    io,
-    fmt::{Debug, Formatter, Error},
-};
+use std::fmt::{Debug, Formatter, Error};
 
 use crate::{
     lcow::LCow,
-    reader::{Reader, Readable},
-    writer::Writable,
+    reader::{copy, Reader, Readable, ReaderEx},
+    writer::{Writable, Writer},
 };
 
-pub enum Uncached<'r, T>
-    where T: Readable<'r>
+pub enum Uncached<R, T>
+    where R: Reader,
+          T: Readable<R>
 {
-    Borrowed(Reader<'r>, T::Args),
+    Borrowed(R, T::Args),
     Owned(Box<T>),
 }
 
-impl<'r, T> Uncached<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Uncached<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
-    pub fn get(&self) -> LCow<T>
+    pub fn get(&self) -> Result<LCow<T>, R::Error>
     {
         match self {
-            Self::Borrowed(reader, args) => LCow::Owned(reader.clone().read(args.clone())),
-            Self::Owned(t) => LCow::Borrowed(t),
+            Self::Borrowed(reader, args) => Ok(LCow::Owned(reader.clone().read(args.clone())?)),
+            Self::Owned(t) => Ok(LCow::Borrowed(t)),
         }
     }
 
-    pub fn get_mut(&mut self) -> &mut T
+    pub fn get_mut(&mut self) -> Result<&mut T, R::Error>
     {
         match self {
             Self::Borrowed(reader, args) => {
-                *self = Uncached::Owned(Box::new(reader.clone().read(args.clone())));
+                *self = Uncached::Owned(Box::new(reader.read(args.clone())?));
                 self.get_mut()
             }
-            Self::Owned(t) => t,
+            Self::Owned(ref mut t) => Ok(t),
         }
     }
 }
 
-impl<'r, T> Readable<'r> for Uncached<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Readable<R> for Uncached<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Args = T::Args;
-    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self
+    fn read_from(reader: &mut R, args: Self::Args) -> Result<Self, R::Error>
     {
-        let start_reader = reader.clone();
-        let _ = <T as Readable>::read_from(reader, args.clone());
+        let mut start_reader = reader.clone();
+        let _ = <T as Readable<R>>::read_from(reader, args.clone())?;
         let size = start_reader.len() - reader.len();
 
-        Uncached::Borrowed(start_reader.truncated(size), args)
+        start_reader.truncate_to(size)?;
+        Ok(Uncached::Borrowed(start_reader, args))
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
         match self {
-            Self::Borrowed(reader, _) => reader.len(),
+            Self::Borrowed(reader, _) => Ok(reader.len()),
             Self::Owned(t) => t.size(),
         }
     }
 }
 
-impl<'r, T> Debug for Uncached<'r, T>
-    where T: Readable<'r> + Debug,
+impl<R, T> Debug for Uncached<R, T>
+    where R: Reader,
+          T: Readable<R> + Debug,
           T::Args: Clone,
 {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error>
     {
-        Debug::fmt(&self.get(), formatter)
+        Debug::fmt(
+            &self.get().unwrap_or_else(|_| panic!("Error while formatting Uncached")),
+            formatter
+        )
     }
 }
 
-impl<'r, T> Clone for Uncached<'r, T>
-    where T: Readable<'r> + Clone,
+impl<R, T> Clone for Uncached<R, T>
+    where R: Reader,
+          T: Readable<R> + Clone,
           T::Args: Clone,
 {
-    fn clone(&self) -> Self
-    {
+    fn clone(&self) -> Self {
         match self {
             Uncached::Borrowed(reader, args) => Uncached::Borrowed(reader.clone(), args.clone()),
             Uncached::Owned(t) => Uncached::Owned(t.clone()),
@@ -86,15 +91,18 @@ impl<'r, T> Clone for Uncached<'r, T>
     }
 }
 
-impl<'r, T> Writable for Uncached<'r, T>
-    where T: Readable<'r> + Writable,
+impl<R, W, T> Writable<W> for Uncached<R, T>
+    where R: Reader,
+          W: Writer,
+          W::Error: From<R::Error>,
+          T: Readable<R> + Writable<W>,
           T::Args: Clone,
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         match self {
             Uncached::Borrowed(reader, _) => {
-                writer.write_all(&reader)?;
+                copy(&mut reader.clone(), writer)?;
                 Ok(reader.len() as u64)
             },
             Uncached::Owned(t) => t.write_to(writer),

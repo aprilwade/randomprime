@@ -1,40 +1,36 @@
 use std::fmt;
-use std::io;
 use std::slice::Iter as SliceIter;
 use std::slice::IterMut as SliceIterMut;
 
 use crate::lcow::LCow;
-use crate::reader::{Reader, Readable};
-use crate::writer::Writable;
+use crate::reader::{Reader, Readable, ReaderEx};
+use crate::writer::{Writable, Writer};
 use crate::read_only_array::{RoArray, RoArrayIter};
 use crate::derivable_array_proxy::DerivableFromIterator;
 
-impl<'r, T> Readable<'r> for Vec<T>
-    where T: Readable<'r>,
+impl<R, T> Readable<R> for Vec<T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Args = (usize, T::Args);
-    fn read_from(reader: &mut Reader<'r>, (len, args): Self::Args) -> Self
+    fn read_from(reader: &mut R, (len, args): Self::Args) -> Result<Self, R::Error>
     {
-        let mut res = Vec::with_capacity(len);
-        for _ in 0..len {
-            res.push(reader.read(args.clone()));
-        };
-        res
+        (0..len).into_iter().map(|_| reader.read(args.clone())).collect()
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
         T::fixed_size()
-            .map(|i| i * self.len())
-            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()))
+            .map(|i| Ok(i * self.len()))
+            .unwrap_or_else(|| self.iter().try_fold(0, |s, i| Ok(s + i.size()?)))
     }
 }
 
-impl<'r, T> Writable for Vec<T>
-    where T: Writable,
+impl<W: Writer, T> Writable<W>for Vec<T>
+    where T: Writable<W>,
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         let mut s = 0;
         for i in self {
@@ -49,19 +45,31 @@ impl<T> DerivableFromIterator for Vec<T>
     type Item = T;
 }
 
-#[derive(Clone)]
-pub enum LazyArray<'r, T>
-    where T: Readable<'r>,
-          T::Args: Clone,
+pub enum LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
 {
-    Borrowed(RoArray<'r, T>),
+    Borrowed(RoArray<R, T>),
     Owned(Vec<T>),
 }
 
-
-impl<'r, T> LazyArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Clone for LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R> + Clone,
           T::Args: Clone,
+{
+    fn clone(&self) -> Self
+    {
+        match self {
+            LazyArray::Borrowed(array) => LazyArray::Borrowed(array.clone()),
+            LazyArray::Owned(vec) => LazyArray::Owned(vec.clone()),
+        }
+    }
+}
+
+impl<R, T> LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
 {
     pub fn len(&self) -> usize
     {
@@ -71,40 +79,47 @@ impl<'r, T> LazyArray<'r, T>
         }
     }
 
-    pub fn iter<'s>(&'s self) -> LazyArrayIter<'s, 'r, T>
+    pub fn iter<'s>(&'s self) -> LazyArrayIter<'s, R, T>
+          where T::Args: Clone,
     {
         self.into_iter()
     }
 
-    pub fn iter_mut<'s>(&'s mut self) -> SliceIterMut<'s, T>
+    pub fn iter_mut<'s>(&'s mut self) -> Result<SliceIterMut<'s, T>, R::Error>
+          where T::Args: Clone,
     {
-        self.as_mut_vec().iter_mut()
+        Ok(self.as_mut_vec()?.iter_mut())
     }
 
-    pub fn get(&self, index: usize) -> Option<LCow<T>>
+    pub fn get(&self, index: usize) -> Result<Option<LCow<T>>, R::Error>
+          where T::Args: Clone,
     {
         match *self {
-            LazyArray::Borrowed(ref array) => array.get(index).map(LCow::Owned),
-            LazyArray::Owned(ref vec) => vec.get(index).map(LCow::Borrowed),
+            LazyArray::Borrowed(ref array) => Ok(array.get(index)?.map(LCow::Owned)),
+            LazyArray::Owned(ref vec) => Ok(vec.get(index).map(LCow::Borrowed)),
         }
     }
 
-    pub fn split_off(&mut self, at: usize) -> LazyArray<'r, T>
+    pub fn split_off(&mut self, at: usize) -> Result<LazyArray<R, T>, R::Error>
+          where T::Args: Clone,
     {
         match *self {
-            LazyArray::Borrowed(ref mut array) => LazyArray::Borrowed(array.split_off(at)),
-            LazyArray::Owned(ref mut vec) => LazyArray::Owned(vec.split_off(at)),
+            LazyArray::Borrowed(ref mut array) => Ok(LazyArray::Borrowed(array.split_off(at)?)),
+            LazyArray::Owned(ref mut vec) => Ok(LazyArray::Owned(vec.split_off(at))),
         }
     }
 
-    pub fn as_mut_vec(&mut self) -> &mut Vec<T>
+    pub fn as_mut_vec(&mut self) -> Result<&mut Vec<T>, R::Error>
+          where T::Args: Clone,
     {
-        *self = match *self {
-            LazyArray::Borrowed(ref array) => LazyArray::Owned(array.iter().collect()),
-            LazyArray::Owned(ref mut vec) => return vec,
+        *self = match self {
+            LazyArray::Borrowed(array) => {
+                LazyArray::Owned(array.iter().collect::<Result<_, _>>()?)
+            },
+            LazyArray::Owned(vec) => return Ok(vec),
         };
-        match *self {
-            LazyArray::Owned(ref mut vec) => vec,
+        match self {
+            LazyArray::Owned(vec) => Ok(vec),
             LazyArray::Borrowed(_) => unreachable!(),
         }
     }
@@ -118,63 +133,71 @@ impl<'r, T> LazyArray<'r, T>
     }
 }
 
-impl<'r, T> Readable<'r> for LazyArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> Readable<R> for LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Args = (usize, T::Args);
 
-    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Self
+    fn read_from(reader: &mut R, args: Self::Args) -> Result<Self, R::Error>
     {
-        let array = RoArray::read_from(reader, args);
-        LazyArray::Borrowed(array)
+        let array = RoArray::read_from(reader, args)?;
+        Ok(LazyArray::Borrowed(array))
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
         T::fixed_size()
-            .map(|i| i * self.len())
-            .unwrap_or_else(|| self.iter().fold(0, |s, i| s + i.size()))
+            .map(|i| Ok(i * self.len()))
+            .unwrap_or_else(|| self.iter().try_fold(0, |s, i| Ok(s + i?.size()?)))
     }
 }
 
-impl<'r, T> DerivableFromIterator for LazyArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> DerivableFromIterator for LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     type Item = T;
 }
 
-impl<'r, T> fmt::Debug for LazyArray<'r, T>
-    where T: Readable<'r> + fmt::Debug,
+impl<R, T> fmt::Debug for LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R> + fmt::Debug,
           T::Args: Clone,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        fmt::Debug::fmt(&self.iter().collect::<Vec<_>>(), f)
+        match self {
+            LazyArray::Borrowed(array) => fmt::Debug::fmt(array, f),
+            LazyArray::Owned(vec) => fmt::Debug::fmt(vec, f),
+        }
     }
 }
 
 
 #[derive(Clone)]
-pub enum LazyArrayIter<'s, 'r, T>
-    where T: Readable<'r> + 's,
+pub enum LazyArrayIter<'s, R, T>
+    where R: Reader,
+          T: Readable<R> + 's,
           T::Args: Clone,
 {
-    Borrowed(RoArrayIter<'r, T>),
+    Borrowed(RoArrayIter<R, T>),
     Owned(SliceIter<'s, T>),
 }
 
-impl<'s, 'r, T> Iterator for LazyArrayIter<'s, 'r, T>
-    where T: Readable<'r>,
+impl<'s, R, T> Iterator for LazyArrayIter<'s, R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
-    type Item = LCow<'s, T>;
+    type Item = Result<LCow<'s, T>, R::Error>;
     fn next(&mut self) -> Option<Self::Item>
     {
         match *self {
-            LazyArrayIter::Borrowed(ref mut iter) => iter.next().map(LCow::Owned),
-            LazyArrayIter::Owned(ref mut iter) => iter.next().map(LCow::Borrowed),
+            LazyArrayIter::Borrowed(ref mut iter) => iter.next().map(|i| i.map(LCow::Owned)),
+            LazyArrayIter::Owned(ref mut iter) => iter.next().map(|i| Ok(LCow::Borrowed(i))),
         }
     }
 
@@ -187,8 +210,9 @@ impl<'s, 'r, T> Iterator for LazyArrayIter<'s, 'r, T>
     }
 }
 
-impl<'s, 'r, T> ExactSizeIterator for LazyArrayIter<'s, 'r, T>
-    where T: Readable<'r>,
+impl<'s, R, T> ExactSizeIterator for LazyArrayIter<'s, R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
     fn len(&self) -> usize
@@ -200,12 +224,13 @@ impl<'s, 'r, T> ExactSizeIterator for LazyArrayIter<'s, 'r, T>
     }
 }
 
-impl<'s, 'r, T: 's> IntoIterator for &'s LazyArray<'r, T>
-    where T: Readable<'r>,
+impl<'s, R, T: 's> IntoIterator for &'s LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
-    type Item = LCow<'s, T>;
-    type IntoIter = LazyArrayIter<'s, 'r, T>;
+    type Item = Result<LCow<'s, T>, R::Error>;
+    type IntoIter = LazyArrayIter<'s, R, T>;
     fn into_iter(self) -> Self::IntoIter
     {
         match *self {
@@ -216,24 +241,28 @@ impl<'s, 'r, T: 's> IntoIterator for &'s LazyArray<'r, T>
 }
 
 
-impl<'r, T> Writable for LazyArray<'r, T>
-    where T: Readable<'r> + Writable,
+impl<R, W, T> Writable<W>for LazyArray<R, T>
+    where R: Reader,
+          W: Writer,
+          T: Readable<R> + Writable<W>,
           T::Args: Clone,
+          W::Error: From<R::Error>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         match *self {
             LazyArray::Borrowed(ref array) => array.write_to(writer),
-            LazyArray::Owned(ref vec) => <Vec<T> as Writable>::write_to(&vec, writer),
+            LazyArray::Owned(ref vec) => <Vec<T> as Writable<W>>::write_to(&vec, writer),
         }
     }
 }
 
-impl<'r, T> From<Vec<T>> for LazyArray<'r, T>
-    where T: Readable<'r>,
+impl<R, T> From<Vec<T>> for LazyArray<R, T>
+    where R: Reader,
+          T: Readable<R>,
           T::Args: Clone,
 {
-    fn from(vec: Vec<T>) -> LazyArray<'r, T>
+    fn from(vec: Vec<T>) -> LazyArray<R, T>
     {
         LazyArray::Owned(vec)
     }

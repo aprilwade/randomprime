@@ -1,27 +1,21 @@
-
-
 use std::ffi;
 use std::fmt;
-use std::io;
 use std::mem;
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
-
-use crate::reader::{Readable, Reader};
-use crate::writer::Writable;
+use crate::reader::{Readable, Reader, ReaderEx};
+use crate::writer::{Writable, Writer};
 
 macro_rules! define_arith_readable {
     ( $(($T: ty, $rf: ident, $wf: ident)),* ) => {
         $(
-            impl<'r> Readable<'r> for $T
+            impl<R: Reader> Readable<R> for $T
             {
                 type Args = ();
-                fn read_from(reader: &mut Reader<'r>, (): ()) -> $T
+                fn read_from(reader: &mut R, (): ()) -> Result<$T, R::Error>
                 {
-                    let res = reader.$rf::<BigEndian>();
-                    res.unwrap()
+                    reader.$rf()
                 }
 
                 fn fixed_size() -> Option<usize>
@@ -29,11 +23,11 @@ macro_rules! define_arith_readable {
                     Some(mem::size_of::<$T>())
                 }
             }
-            impl<'r> Writable for $T
+            impl<W: Writer> Writable<W> for $T
             {
-                fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+                fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
                 {
-                    writer.$wf::<BigEndian>(*self)?;
+                    writer.$wf(*self)?;
                     Ok(mem::size_of::<$T>() as u64)
                 }
             }
@@ -44,13 +38,12 @@ macro_rules! define_arith_readable {
 macro_rules! define_byte_readable {
     ( $(($T: ty, $rf: ident, $wf: ident)),* ) => {
         $(
-            impl<'r> Readable<'r> for $T
+            impl<R: Reader> Readable<R> for $T
             {
                 type Args = ();
-                fn read_from(reader: &mut Reader<'r>, (): ()) -> $T
+                fn read_from(reader: &mut R, (): ()) -> Result<$T, R::Error>
                 {
-                    let res = reader.$rf();
-                    res.unwrap()
+                    reader.$rf()
                 }
 
                 fn fixed_size() -> Option<usize>
@@ -58,9 +51,9 @@ macro_rules! define_byte_readable {
                     Some(mem::size_of::<$T>())
                 }
             }
-            impl<'r> Writable for $T
+            impl<W: Writer> Writable<W>for $T
             {
-                fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+                fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
                 {
                     writer.$wf(*self)?;
                     Ok(mem::size_of::<$T>() as u64)
@@ -86,9 +79,7 @@ impl FourCC
 {
     pub fn new(val: u32) -> FourCC
     {
-        let mut data = [0u8; 4];
-        (&mut data as &mut [u8]).write_u32::<BigEndian>(val).unwrap();
-        FourCC(data)
+        FourCC(val.to_be_bytes())
     }
 
     pub const fn from_bytes(bytes: &[u8; 4]) -> FourCC
@@ -103,19 +94,21 @@ impl FourCC
 
     pub fn to_u32(&self) -> u32
     {
-        (&self.0 as &[u8]).read_u32::<BigEndian>().unwrap()
+        u32::from_be_bytes(self.0)
     }
 }
 
-impl<'r> Readable<'r> for FourCC
+impl<R: Reader> Readable<R> for FourCC
 {
     type Args = ();
-    fn read_from(reader: &mut Reader<'r>, (): ()) -> FourCC
+    fn read_from(reader: &mut R, (): ()) -> Result<FourCC, R::Error>
     {
         // TODO: Verify ordering
-        let res = [reader.read(()), reader.read(()),
-                   reader.read(()), reader.read(())];
-        FourCC::from_bytes(&res)
+        let bytes = [
+            reader.read_u8()?, reader.read_u8()?,
+            reader.read_u8()?, reader.read_u8()?,
+        ];
+        Ok(FourCC(bytes))
     }
 
     fn fixed_size() -> Option<usize>
@@ -124,11 +117,11 @@ impl<'r> Readable<'r> for FourCC
     }
 }
 
-impl Writable for FourCC
+impl<W: Writer> Writable<W> for FourCC
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
-        writer.write_all(&self.0)?;
+        writer.write_bytes(&self.0)?;
         Ok(4)
     }
 }
@@ -160,30 +153,32 @@ impl<'r> From<&'r [u8; 4]> for FourCC
 }
 
 
-impl<'r, T> Readable<'r> for Option<T>
-    where T: Readable<'r>
+impl<R, T> Readable<R> for Option<T>
+    where R: Reader,
+          T: Readable<R>
 {
     type Args = Option<T::Args>;
-    fn read_from(reader: &mut Reader<'r>, args: Self::Args) -> Option<T>
+    fn read_from(reader: &mut R, args: Self::Args) -> Result<Option<T>, R::Error>
     {
         if let Some(args) = args {
-            let res = reader.read(args);
-            Some(res)
+            let res = reader.read(args)?;
+            Ok(Some(res))
         } else {
-            None
+            Ok(None)
         }
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        self.as_ref().map(|i| i.size()).unwrap_or(0)
+        self.as_ref().map(|i| i.size()).unwrap_or(Ok(0))
     }
 }
 
-impl<T> Writable for Option<T>
-    where T: Writable
+impl<W, T> Writable<W> for Option<T>
+    where W: Writer,
+          T: Writable<W>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         if let Some(ref i) = *self {
             i.write_to(writer)
@@ -193,18 +188,19 @@ impl<T> Writable for Option<T>
     }
 }
 
-impl<'r, T> Readable<'r> for Box<T>
-    where T: Readable<'r>
+impl<R, T> Readable<R> for Box<T>
+    where R: Reader,
+          T: Readable<R>
 {
     type Args = T::Args;
-    fn read_from(reader: &mut Reader<'r>, args: T::Args) -> Box<T>
+    fn read_from(reader: &mut R, args: T::Args) -> Result<Box<T>, R::Error>
     {
-        Box::new(reader.read(args))
+        Ok(Box::new(reader.read(args)?))
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        <T as Readable>::size(&self)
+        <T as Readable<R>>::size(&self)
     }
 
     fn fixed_size() -> Option<usize>
@@ -213,22 +209,23 @@ impl<'r, T> Readable<'r> for Box<T>
     }
 }
 
-impl<T> Writable for Box<T>
-    where T: Writable
+impl<W, T> Writable<W> for Box<T>
+    where W: Writer,
+          T: Writable<W>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         (**self).write_to(writer)
     }
 }
 
 
-impl<'r, T> Readable<'r> for PhantomData<T>
+impl<R: Reader, T> Readable<R> for PhantomData<T>
 {
     type Args = ();
-    fn read_from(_reader: &mut Reader<'r>, (): ()) -> Self
+    fn read_from(_reader: &mut R, (): ()) -> Result<Self, R::Error>
     {
-        PhantomData
+        Ok(PhantomData)
     }
 
     fn fixed_size() -> Option<usize>
@@ -237,52 +234,62 @@ impl<'r, T> Readable<'r> for PhantomData<T>
     }
 }
 
-impl<T> Writable for PhantomData<T>
+impl<W: Writer, T> Writable<W> for PhantomData<T>
 {
-    fn write_to<W: io::Write>(&self, _: &mut W) -> io::Result<u64>
+    fn write_to(&self, _: &mut W) -> Result<u64, W::Error>
     {
         Ok(0)
     }
 }
 
+/// Convience alias for a Cow CStr
+///
+/// It's worth noting that the `Readable` impl for this type _does_ allocate heap memory.
+// TODO: It might be worth while to make this not based on ffi::CStr and instead hold a Reader
+//       instance. Might be worth profiling both ways later (especially the memory impact)
 pub type CStr<'r> = Cow<'r, ffi::CStr>;
-impl<'r> Readable<'r> for CStr<'r>
+impl<'a, R: Reader> Readable<R> for CStr<'a>
 {
     type Args = ();
-    fn read_from(reader: &mut Reader<'r>, (): ()) -> CStr<'r>
+    fn read_from(reader: &mut R, (): ()) -> Result<CStr<'a>, R::Error>
     {
+        let mut vec = vec![];
         // XXX A possible optimization would be to use from_bytes_with_nul_unchecked here
-        let buf = &(*reader)[0..(reader.iter().position(|&i| i == b'\0').unwrap() + 1)];
-        let cstr = Cow::Borrowed(ffi::CStr::from_bytes_with_nul(buf).unwrap());
-        let len = cstr.size();
-        reader.advance(len);
-        cstr
+        loop {
+            let b = reader.read_u8()?;
+            if b == 0 {
+                break;
+            }
+            vec.push(b);
+        }
+
+        Ok(Cow::Owned(unsafe { ffi::CString::from_vec_unchecked(vec) }))
     }
 
-    fn size(&self) -> usize
+    fn size(&self) -> Result<usize, R::Error>
     {
-        self.to_bytes_with_nul().len()
+        Ok(self.to_bytes_with_nul().len())
     }
 }
 
-impl<'r> Writable for CStr<'r>
+impl<'a, W: Writer> Writable<W> for CStr<'a>
 {
-    fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
+    fn write_to(&self, writer: &mut W) -> Result<u64, W::Error>
     {
         let slice = self.to_bytes_with_nul();
-        writer.write_all(slice)?;
+        writer.write_bytes(slice)?;
         Ok(slice.len() as u64)
     }
 }
 
 pub trait CStrConversionExtension
 {
-    fn as_cstr<'r>(&'r self) -> CStr<'r>;
+    fn as_cstr<'a>(&'a self) -> CStr<'a>;
 }
 
 impl CStrConversionExtension for [u8]
 {
-    fn as_cstr<'r>(&'r self) -> CStr<'r>
+    fn as_cstr<'a>(&'a self) -> CStr<'a>
     {
         Cow::Borrowed(ffi::CStr::from_bytes_with_nul(self).unwrap())
     }
