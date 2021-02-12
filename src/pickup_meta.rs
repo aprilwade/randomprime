@@ -8,6 +8,7 @@ use structs::{Connection, ConnectionMsg, ConnectionState, Pickup, ResId, res_id}
 use crate::custom_assets::custom_asset_ids;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum PickupType
 {
     Missile,

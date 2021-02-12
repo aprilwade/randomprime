@@ -1,14 +1,17 @@
 
 
-use enum_map::EnumMap;
 use serde::{Serialize, Deserialize};
 
+use enum_map::EnumMap;
+use crate::Layout;
 use crate::elevators::{Elevator, SpawnRoom};
 use crate::patches;
+use crate::pickup_meta::PickupType;
 use crate::starting_items::StartingItems;
 
 use std::{
     cell::Cell,
+    convert::TryInto,
     ffi::{CStr, CString},
     fs::{File, OpenOptions},
     panic,
@@ -19,10 +22,13 @@ use std::{
 #[derive(Deserialize)]
 struct ConfigBanner
 {
+    #[serde(alias = "gameName")]
     game_name: Option<String>,
     developer: Option<String>,
 
+    #[serde(alias = "gameNameFull")]
     game_name_full: Option<String>,
+    #[serde(alias = "developerFull")]
     developer_full: Option<String>,
     description: Option<String>,
 }
@@ -30,52 +36,112 @@ struct ConfigBanner
 #[derive(Deserialize)]
 struct Config
 {
+    #[serde(alias = "inputIso")]
     input_iso: String,
+    #[serde(alias = "outputIso")]
     output_iso: String,
-    #[serde(alias = "layout")]
-    layout_string: String,
+    #[serde(alias = "layoutString")]
+    #[serde(alias = "layout_string")]
+    layout: LayoutWrapper,
 
     #[serde(default)]
+    #[serde(alias = "isoFormat")]
     iso_format: patches::IsoFormat,
 
     #[serde(default)]
+    #[serde(alias = "skipFrigate")]
     skip_frigate: bool,
     #[serde(default)]
+    #[serde(alias = "skipHudmemos")]
+    #[serde(alias = "skip_hudmemos")]
     skip_hudmenus: bool,
+    #[serde(alias = "etankCapacity")]
     etank_capacity: Option<u32>,
     #[serde(default)]
+    #[serde(alias = "nonvariaHeatDamage")]
     nonvaria_heat_damage: bool,
+    #[serde(alias = "heatDamagePerSec")]
     heat_damage_per_sec: Option<f32>,
     #[serde(default)]
+    #[serde(alias = "staggeredSuitDamage")]
     staggered_suit_damage: bool,
+    #[serde(alias = "maxObtainableMissiles")]
     max_obtainable_missiles: Option<u32>,
+    #[serde(alias = "maxObtainablePowerBombs")]
     max_obtainable_power_bombs: Option<u32>,
     #[serde(default)]
+    #[serde(alias = "obfuscateItems")]
     obfuscate_items: bool,
     #[serde(default)]
+    #[serde(alias = "autoEnabledElevators")]
     auto_enabled_elevators: bool,
 
+    // XXX Please don't use this. Instead just set an elevator to go straight to EndingCinematic
     #[serde(default)]
+    #[serde(alias = "skipImpactCrater")]
     skip_impact_crater: bool,
     #[serde(default)]
+    #[serde(alias = "enableVaultLedgeDoor")]
     enable_vault_ledge_door: bool,
     #[serde(default)]
+    #[serde(alias = "artifactHintBehavior")]
     artifact_hint_behavior: patches::ArtifactHintBehavior,
 
     #[serde(default)]
+    #[serde(alias = "trilogyDiscPath")]
     trilogy_disc_path: Option<String>,
 
     #[serde(default)]
+    #[serde(alias = "keepFmvs")]
     keep_fmvs: bool,
 
+    #[serde(alias = "startingItems")]
     starting_items: Option<StartingItemsWrapper>,
+    #[serde(alias = "randomStartingItems")]
     random_starting_items: Option<StartingItemsWrapper>,
     #[serde(default)]
     comment: String,
     #[serde(default)]
+    #[serde(alias = "mainMenuMessage")]
     main_menu_message: String,
 
     banner: Option<ConfigBanner>,
+}
+
+
+fn default_starting_location() -> SpawnRoom
+{
+    SpawnRoom::LandingSite
+}
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum LayoutWrapper
+{
+    String(String),
+    Struct {
+        pickups: Vec<PickupType>,
+        #[serde(default = "default_starting_location")]
+        starting_location: SpawnRoom,
+        #[serde(default = "Elevator::default_layout")]
+        elevators: EnumMap<Elevator, SpawnRoom>,
+    },
+}
+
+impl TryInto<Layout> for LayoutWrapper
+{
+    type Error = String;
+    fn try_into(self) -> Result<Layout, Self::Error>
+    {
+        match self {
+            LayoutWrapper::String(s) => s.parse(),
+            LayoutWrapper::Struct { pickups, starting_location, elevators } => Ok(Layout {
+                pickups,
+                starting_location,
+                elevators,
+                seed: 0,
+            }),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -99,7 +165,7 @@ impl Into<StartingItems> for StartingItemsWrapper
 
 #[derive(Serialize)]
 #[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 enum CbMessage<'a>
 {
     Success,
@@ -202,7 +268,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     let config_json = unsafe { CStr::from_ptr(config_json) }.to_str()
         .map_err(|e| format!("JSON parse failed: {}", e))?;
 
-    let config: Config = serde_json::from_str(&config_json)
+    let mut config: Config = serde_json::from_str(&config_json)
         .map_err(|e| format!("JSON parse failed: {}", e))?;
 
     let input_iso_file = File::open(config.input_iso.trim())
@@ -217,14 +283,15 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         .open(&config.output_iso)
         .map_err(|e| format!("Failed to open {}: {}", config.output_iso, e))?;
 
-    let (pickup_layout, elevator_nums, seed) = crate::parse_layout(&config.layout_string)?;
-
-    let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32).unwrap();
-    let mut elevator_layout = EnumMap::<Elevator, SpawnRoom>::new();
-    elevator_layout.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
-        .zip(Elevator::iter())
-        .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
-    );
+    let mut layout: Layout = config.layout.try_into()?;
+    // XXX Legacy compat :(
+    if config.skip_impact_crater {
+        for spawn_room in layout.elevators.values_mut() {
+            if *spawn_room == Elevator::CraterEntryPoint {
+                *spawn_room = SpawnRoom::EndingCinematic;
+            }
+        }
+    }
 
     let flaahgra_music_files = if let Some(path) = &config.trilogy_disc_path {
         Some(crate::extract_flaahgra_music_files(&path)?)
@@ -232,17 +299,10 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         None
     };
 
-    let mut config = config;
-
     let parsed_config = patches::ParsedConfig {
         input_iso, output_iso,
 
-        pickup_layout,
-        elevator_layout,
-        starting_location,
-        seed,
-
-        layout_string: config.layout_string,
+        layout,
 
         iso_format: config.iso_format,
         skip_frigate: config.skip_frigate,
@@ -258,7 +318,6 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         auto_enabled_elevators: config.auto_enabled_elevators,
         quiet: false,
 
-        skip_impact_crater: config.skip_impact_crater,
         enable_vault_ledge_door: config.enable_vault_ledge_door,
         artifact_hint_behavior: config.artifact_hint_behavior,
 

@@ -10,6 +10,7 @@ use reader_writer::{
 };
 
 
+use enum_map::EnumMap;
 use flate2::{Decompress, FlushDecompress};
 use num_bigint::BigUint;
 use num_integer::Integer;
@@ -34,6 +35,9 @@ pub mod patcher;
 pub mod patches;
 pub mod pickup_meta;
 pub mod starting_items;
+
+use crate::pickup_meta::PickupType;
+use crate::elevators::{Elevator, SpawnRoom};
 
 pub trait GcDiscLookupExtensions<'a>
 {
@@ -240,54 +244,82 @@ pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, chec
 }
 
 
-pub fn parse_layout(text: &str) -> Result<(Vec<u8>, Vec<u8>, u64), String>
+#[derive(Clone, Debug)]
+pub struct Layout
 {
-    if !text.is_ascii() {
-        return Err("Layout string contains non-ascii characters.".to_string());
+    pickups: Vec<PickupType>,
+    starting_location: SpawnRoom,
+    elevators: EnumMap<Elevator, SpawnRoom>,
+    seed: u64,
+}
+
+impl std::str::FromStr for Layout {
+    type Err = String;
+    fn from_str(text: &str) -> Result<Layout, String>
+    {
+        if !text.is_ascii() {
+            return Err("Layout string contains non-ascii characters.".to_string());
+        }
+        let text = text.as_bytes();
+
+        let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
+            (&text[..n], &text[(n + 1)..])
+        } else {
+            (b"qzoCAr2fwehJmRjM" as &[u8], text)
+        };
+
+        if elevator_bytes.len() != 16 {
+            let msg = "The section of the layout string before the '.' should be 16 characters";
+            return Err(msg.to_string());
+        }
+
+        let (pickup_bytes, has_scan_visor) = if pickup_bytes.starts_with(b"!") {
+            (&pickup_bytes[1..], true)
+        } else {
+            (pickup_bytes, false)
+        };
+        if pickup_bytes.len() != 87 {
+            return Err("Layout string should be exactly 87 characters".to_string());
+        }
+
+        // XXX The distribution on this hash probably isn't very good, but we don't use it for anything
+        //     particularly important anyway...
+        let mut hasher = DefaultHasher::new();
+        hasher.write(elevator_bytes);
+        hasher.write(pickup_bytes);
+        let seed = hasher.finish();
+
+        let pickup_layout = parse_layout_chars_to_ints(
+                pickup_bytes,
+                if has_scan_visor { 521 } else { 517 },
+                if has_scan_visor { 1 } else { 5 },
+                iter::repeat(if has_scan_visor { 37u8 } else { 36u8 }).take(100)
+            ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
+        let pickups = pickup_layout.iter()
+            .map(|i| PickupType::from_idx(*i as usize).unwrap())
+            .collect();
+
+        let elevator_nums = parse_layout_chars_to_ints(
+                elevator_bytes,
+                91, 5,
+                iter::once(21u8).chain(iter::repeat(20u8).take(20))
+            ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
+
+        let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32)
+            .unwrap();
+        let mut elevators = EnumMap::<Elevator, SpawnRoom>::new();
+        elevators.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
+            .zip(Elevator::iter())
+            .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
+        );
+
+        Ok(Layout {
+            pickups,
+            starting_location,
+            elevators,
+            seed,
+        })
     }
-    let text = text.as_bytes();
-
-    let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
-        (&text[..n], &text[(n + 1)..])
-    } else {
-        (b"qzoCAr2fwehJmRjM" as &[u8], text)
-    };
-
-    if elevator_bytes.len() != 16 {
-        let msg = "The section of the layout string before the '.' should be 16 characters";
-        return Err(msg.to_string());
-    }
-
-    let (pickup_bytes, has_scan_visor) = if pickup_bytes.starts_with(b"!") {
-        (&pickup_bytes[1..], true)
-    } else {
-        (pickup_bytes, false)
-    };
-    if pickup_bytes.len() != 87 {
-        return Err("Layout string should be exactly 87 characters".to_string());
-    }
-
-    // XXX The distribution on this hash probably isn't very good, but we don't use it for anything
-    //     particularly important anyway...
-    let mut hasher = DefaultHasher::new();
-    hasher.write(elevator_bytes);
-    hasher.write(pickup_bytes);
-    let seed = hasher.finish();
-
-    let pickup_layout = parse_layout_chars_to_ints(
-            pickup_bytes,
-            if has_scan_visor { 521 } else { 517 },
-            if has_scan_visor { 1 } else { 5 },
-            iter::repeat(if has_scan_visor { 37u8 } else { 36u8 }).take(100)
-        ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
-
-    let elevator_layout = parse_layout_chars_to_ints(
-            elevator_bytes,
-            91, 5,
-            iter::once(21u8).chain(iter::repeat(20u8).take(20))
-        ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
-
-    Ok((pickup_layout, elevator_layout, seed))
 }
 
 

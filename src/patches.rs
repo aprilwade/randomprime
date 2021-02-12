@@ -2591,12 +2591,9 @@ pub struct ParsedConfig
 {
     pub input_iso: memmap::Mmap,
     pub output_iso: File,
-    pub layout_string: String,
+    // pub layout_string: String,
 
-    pub pickup_layout: Vec<u8>,
-    pub elevator_layout: EnumMap<Elevator, SpawnRoom>,
-    pub starting_location: SpawnRoom,
-    pub seed: u64,
+    pub layout: crate::Layout,
 
     pub iso_format: IsoFormat,
     pub skip_frigate: bool,
@@ -2612,7 +2609,6 @@ pub struct ParsedConfig
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
-    pub skip_impact_crater: bool,
     pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
@@ -2671,7 +2667,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION")).unwrap();
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
-    writeln!(ct, "configuration string: {}", config.layout_string).unwrap();
+    writeln!(ct, "layout: {:#?}", config.layout).unwrap();
     writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
@@ -2760,24 +2756,11 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, version: Version)
     -> Result<(), String>
 {
-    let pickup_layout: Vec<_> = config.pickup_layout.iter()
-        .map(|i| PickupType::from_idx(*i as usize).unwrap())
-        .collect();
-    let pickup_layout = &pickup_layout[..];
+    let pickup_layout = &config.layout.pickups[..];
+    let elevator_layout = &config.layout.elevators;
+    let spawn_room = config.layout.starting_location;
 
-    let mut elevator_layout = config.elevator_layout.clone();
-    if config.skip_impact_crater {
-        for spawn_room in elevator_layout.values_mut() {
-            if *spawn_room == Elevator::CraterEntryPoint {
-                *spawn_room = SpawnRoom::EndingCinematic;
-            }
-        }
-    }
-    let elevator_layout = &elevator_layout;
-    let spawn_room = config.starting_location;
-
-
-    let mut rng = StdRng::seed_from_u64(config.seed);
+    let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
@@ -3118,26 +3101,27 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
-    if config.skip_impact_crater {
+    // If any of the elevators go straight to the ending, patch out the pre-credits cutscene.
+    let skip_ending_cinematic = elevator_layout.values()
+        .any(|sr| sr == &SpawnRoom::EndingCinematic);
+    if skip_ending_cinematic {
         patcher.add_scly_patch(
             resource_info!("01_endcinema.MREA").into(),
             patch_ending_scene_straight_to_credits
         );
-    } else {
-        // Patch Essence fight bugs if we're not going to skip Impact Crater
-        if version == Version::NtscU0_00 {
-            patcher.add_scly_patch(
-                resource_info!("03f_crater.MREA").into(),
-                patch_essence_cinematic_skip_whitescreen
-            );
-        }
+    }
 
-        if version != Version::NtscJ || version != Version::NtscUTrilogy || version != Version::NtscJTrilogy || version != Version::PalTrilogy {
-            patcher.add_scly_patch(
-                resource_info!("03f_crater.MREA").into(),
-                patch_essence_cinematic_skip_nomusic
-            );
-        }
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_whitescreen
+        );
+    }
+    if [Version::NtscU0_00, Version::NtscU0_02, Version::Pal].contains(&version) {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_nomusic
+        );
     }
 
     if config.enable_vault_ledge_door {

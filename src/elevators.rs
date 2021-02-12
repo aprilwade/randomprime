@@ -1,12 +1,13 @@
 #![allow(unused)]
 
 use serde::Deserialize;
-use enum_map::Enum;
+use enum_map::{Enum, EnumMap};
 
 macro_rules! decl_elevators {
     ($($name:ident => { $($contents:tt)* },)*) => {
 
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Enum)]
+        #[serde(rename_all = "camelCase")]
         pub enum Elevator
         {
             $($name,)*
@@ -68,6 +69,14 @@ macro_rules! decl_elevators {
             };
         }
     };
+}
+
+impl Elevator
+{
+    pub fn default_layout() -> EnumMap<Elevator, SpawnRoom>
+    {
+        EnumMap::from(|elv: Elevator| SpawnRoom::Elevator(elv.default_dest))
+    }
 }
 
 impl std::ops::Deref for Elevator
@@ -412,6 +421,7 @@ macro_rules! decl_spawn_rooms {
     ) => {
 
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+        #[serde(rename_all = "camelCase")]
         pub enum SpawnRoom
         {
             Elevator(Elevator),
