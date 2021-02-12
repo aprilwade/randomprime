@@ -6,7 +6,7 @@ use enum_map::{Enum, EnumMap};
 macro_rules! decl_elevators {
     ($($name:ident => { $($contents:tt)* },)*) => {
 
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Enum)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Enum)]
         #[serde(rename_all = "camelCase")]
         pub enum Elevator
         {
@@ -420,7 +420,7 @@ macro_rules! decl_spawn_rooms {
         $($un_name:ident => { $($un_contents:tt)* },)*
     ) => {
 
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
         #[serde(rename_all = "camelCase")]
         pub enum SpawnRoom
         {

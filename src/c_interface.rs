@@ -11,9 +11,11 @@ use crate::starting_items::StartingItems;
 
 use std::{
     cell::Cell,
+    collections::hash_map::DefaultHasher,
     convert::TryInto,
     ffi::{CStr, CString},
     fs::{File, OpenOptions},
+    hash::{Hash, Hasher},
     panic,
     path::Path,
     os::raw::c_char,
@@ -134,12 +136,18 @@ impl TryInto<Layout> for LayoutWrapper
     {
         match self {
             LayoutWrapper::String(s) => s.parse(),
-            LayoutWrapper::Struct { pickups, starting_location, elevators } => Ok(Layout {
-                pickups,
-                starting_location,
-                elevators,
-                seed: 0,
-            }),
+            LayoutWrapper::Struct { pickups, starting_location, elevators } => {
+                let mut hasher = DefaultHasher::new();
+                pickups.hash(&mut hasher);
+                starting_location.hash(&mut hasher);
+                elevators.hash(&mut hasher);
+                Ok(Layout {
+                    pickups,
+                    starting_location,
+                    elevators,
+                    seed: hasher.finish(),
+                })
+            },
         }
     }
 }
