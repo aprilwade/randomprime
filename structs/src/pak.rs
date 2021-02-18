@@ -350,6 +350,31 @@ impl<'r, 'list> ResourceListCursor<'r, 'list>
         // least one element, so self.cursor should be pointing to an Inst.
     }
 
+    pub fn remove(&mut self)
+    {
+        if let Some(ic) = self.inner_cursor.take() {
+            let (left, _, right) = ic.split_around();
+            if let Some(right) = right {
+                // There are elements to the right
+                self.list.list[self.idx] = ResourceListElem::Array(right);
+            }
+            if let ResourceListElem::Array(a) = &self.list.list[self.idx] {
+                self.inner_cursor = Some(InnerCursor {
+                    info_array: a.clone(),
+                    idx: 0,
+                });
+            }
+            // self.cursor now points to the correct Inst
+            if let Some(left) = left {
+                // There are elements to the left.
+                self.list.list.insert(self.idx, ResourceListElem::Array(left));
+                self.idx += 1
+            };
+        } else {
+            self.list.list.remove(self.idx);
+        };
+    }
+
     pub fn peek(&mut self) -> Option<LCow<Resource<'r>>>
     {
         if let Some(ref ic) = self.inner_cursor {

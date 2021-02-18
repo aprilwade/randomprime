@@ -148,6 +148,13 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .takes_value(true)
             .validator(|s| s.parse::<i32>().map(|_| ())
                                         .map_err(|_| "Expected an integer".to_string())))
+        .arg(Arg::with_name("deduplicate resources")
+            .long("deduplicate-resources")
+            .help(concat!(
+                    "Remove duplicate resources from paks. This shrinks a CISO by about 140 MB, ",
+                    "but will severly impare load times on Dolphin. Thus, this option is only ",
+                    "practical when using Nintedont."
+                )))
         .arg(Arg::with_name("keep attract mode")
             .long("keep-attract-mode")
             .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -262,6 +269,7 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         flaahgra_music_files,
         suit_hue_rotate_angle: matches.value_of("suit hue rotate angle")
                 .map(|s| s.parse::<i32>().unwrap()),
+        deduplicate_resources: matches.value_of("deduplicate resources"),
 
         // XXX We can unwrap safely because we verified the parse earlier
         starting_items: matches.value_of("change starting items")

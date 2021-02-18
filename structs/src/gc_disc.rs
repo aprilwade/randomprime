@@ -528,7 +528,7 @@ impl<'a, 'r> Iterator for DirFilesIterMut<'a, 'r>
 
 impl<'r> FstEntryFile<'r>
 {
-    fn size(&self) -> usize
+    pub fn size(&self) -> usize
     {
         match *self {
             FstEntryFile::Pak(ref pak) => pak.size(),

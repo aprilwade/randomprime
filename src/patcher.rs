@@ -30,6 +30,8 @@ pub struct PrimePatcher<'r, 's>
     // TODO: Come up with a better data structure for this. A per PAK list of patches, for example.
     resource_patches: Vec<(ResourceKey<'s>, Box<dyn FnMut(&mut Resource<'r>) -> Result<(), String> + 's>)>,
     scly_patches: Vec<(MreaKey<'s>, Vec<Box<SclyPatch<'r, 's>>>)>,
+
+    remove_duplicates: bool,
 }
 
 pub struct PatcherState
@@ -45,7 +47,13 @@ impl<'r, 's> PrimePatcher<'r, 's>
             file_patches: HashMap::new(),
             resource_patches: Vec::new(),
             scly_patches: Vec::new(),
+            remove_duplicates: false,
         }
+    }
+
+    pub fn deduplicate_resources(&mut self)
+    {
+        self.remove_duplicates = true;
     }
 
     pub fn add_file_patch<F>(&mut self, name: &'s [u8], f: F)
@@ -125,23 +133,34 @@ impl<'r, 's> PrimePatcher<'r, 's>
             let scly_patch_exists = self.scly_patches.iter().any(|p| p.0.pak_name == &name[..]);
             let mut mlvl_editor = if scly_patch_exists {
                 let mlvl = pak.resources.iter()
-                    .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"))
-                    .unwrap()
-                    .kind.as_mlvl().unwrap().into_owned();
-                Some(MlvlEditor::new(mlvl))
+                    .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"));
+                mlvl.map(|mlvl| MlvlEditor::new(mlvl.kind.as_mlvl().unwrap().into_owned()))
             } else {
                 None
             };
 
+            let mut seen_resources = if self.remove_duplicates {
+                Some(std::collections::HashSet::<ResourceKey>::new())
+            } else {
+                None
+            };
             let mut cursor = pak.resources.cursor();
             while cursor.peek().is_some() {
-                let mut cursor = cursor.cursor_advancer();
                 let res_key = ResourceKey {
                     pak_name: &name[..],
                     kind: cursor.peek().unwrap().fourcc(),
                     id: cursor.peek().unwrap().file_id,
                 };
 
+                if let Some(seen_resources) = &mut seen_resources {
+                    if !seen_resources.insert(res_key) {
+                        // We've already inserted this resource, so delete it
+                        cursor.remove();
+                        continue;
+                    }
+                }
+
+                let mut cursor = cursor.cursor_advancer();
                 if let Some((_, patch)) = self.resource_patches.iter_mut().find(|p| p.0 == res_key) {
                     patch(cursor.value().unwrap())?;
                 }

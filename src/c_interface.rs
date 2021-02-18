@@ -92,6 +92,9 @@ struct Config
     #[serde(default)]
     #[serde(alias = "trilogyDiscPath")]
     trilogy_disc_path: Option<String>,
+    #[serde(default)]
+    #[serde(alias = "deduplicateResources")]
+    deduplicate_resources: bool,
 
     #[serde(default)]
     #[serde(alias = "keepFmvs")]
@@ -331,6 +334,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
 
         flaahgra_music_files,
         suit_hue_rotate_angle: None,
+        deduplicate_resources: config.deduplicate_resources,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
         random_starting_items: config.random_starting_items.map(|i| i.into()).unwrap_or(StartingItems::from_u64(0)),

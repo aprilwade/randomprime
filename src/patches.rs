@@ -2613,6 +2613,7 @@ pub struct ParsedConfig
 
     pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
+    pub deduplicate_resources: bool,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
@@ -2780,6 +2781,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
+
+    if config.deduplicate_resources {
+        patcher.deduplicate_resources()
+    }
+
     patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
     if !config.keep_fmvs {
         // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
