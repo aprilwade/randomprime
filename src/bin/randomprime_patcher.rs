@@ -143,6 +143,11 @@ fn get_config() -> Result<patches::ParsedConfig, String>
             .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
                             "Flaahgra fight music will be used to replace the original"))
             .takes_value(true))
+        .arg(Arg::with_name("suit hue rotate angle")
+            .long("suit-hue-rotate-angle")
+            .takes_value(true)
+            .validator(|s| s.parse::<i32>().map(|_| ())
+                                        .map_err(|_| "Expected an integer".to_string())))
         .arg(Arg::with_name("keep attract mode")
             .long("keep-attract-mode")
             .help("Keeps the attract mode FMVs, which are removed by default"))
@@ -255,6 +260,8 @@ fn get_config() -> Result<patches::ParsedConfig, String>
         artifact_hint_behavior,
 
         flaahgra_music_files,
+        suit_hue_rotate_angle: matches.value_of("suit hue rotate angle")
+                .map(|s| s.parse::<i32>().unwrap()),
 
         // XXX We can unwrap safely because we verified the parse earlier
         starting_items: matches.value_of("change starting items")

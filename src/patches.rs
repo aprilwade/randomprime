@@ -24,6 +24,7 @@ use crate::{
     pickup_meta::{self, PickupType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
+    txtr_conversions::{cmpr_compress, cmpr_decompress, huerotate_in_place, VARIA_SUIT_TEXTURES},
     GcDiscLookupExtensions,
 };
 
@@ -38,6 +39,7 @@ use reader_writer::{
     FourCC,
     LCow,
     Reader,
+    Writable,
 };
 use structs::{res_id, ResId};
 
@@ -2614,6 +2616,8 @@ pub struct ParsedConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
+    pub suit_hue_rotate_angle: Option<i32>,
+
     pub starting_items: StartingItems,
     pub random_starting_items: StartingItems,
     pub comment: String,
@@ -3131,6 +3135,35 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
         );
     }
 
+    if let Some(angle) = config.suit_hue_rotate_angle {
+        for varia_texture in VARIA_SUIT_TEXTURES {
+            patcher.add_resource_patch((*varia_texture).into(), move |res| {
+                let res_data = crate::ResourceData::new(res);
+                let data = res_data.decompress();
+                let mut reader = Reader::new(&data[..]);
+                let mut txtr: structs::Txtr = reader.read(());
+
+                let mut w = txtr.width as usize;
+                let mut h = txtr.height as usize;
+                for mipmap in txtr.pixel_data.as_mut_vec() {
+                    let mut decompressed_bytes = vec![0u8; w * h * 4];
+                    cmpr_decompress(&mipmap.as_mut_vec()[..], h, w, &mut decompressed_bytes[..]);
+                    huerotate_in_place(&mut decompressed_bytes[..], w, h, angle);
+                    cmpr_compress(&decompressed_bytes[..], w, h, &mut mipmap.as_mut_vec()[..]);
+                    w /= 2;
+                    h /= 2;
+                }
+                let mut bytes = vec![];
+                txtr.write_to(&mut bytes).unwrap();
+                reader_writer::padding::pad_bytes(32, bytes.len()).write_to(&mut bytes).unwrap();
+                res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
+                res.compressed = false;
+                Ok(())
+            })
+        }
+    }
+
     patcher.run(gc_disc)?;
     Ok(())
 }
+

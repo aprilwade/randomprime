@@ -330,6 +330,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
         artifact_hint_behavior: config.artifact_hint_behavior,
 
         flaahgra_music_files,
+        suit_hue_rotate_angle: None,
 
         starting_items: config.starting_items.map(|i| i.into()).unwrap_or_default(),
         random_starting_items: config.random_starting_items.map(|i| i.into()).unwrap_or(StartingItems::from_u64(0)),

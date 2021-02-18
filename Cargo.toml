@@ -20,9 +20,11 @@ ssmarshal = "1"
 rand = "0.7"
 winapi = "0.3"
 
+
 auto_struct_macros = { path = "auto_struct_macros" }
 dol_linker = { path = "dol_linker" }
 dol_symbol_table = { path = "generated/dol_symbol_table" }
+libsquish_wrapper = { path = "libsquish_wrapper" }
 nod_wrapper = { path = "nod_wrapper" }
 ppcasm = { path = "ppcasm" }
 reader_writer = { path = "reader_writer" }
@@ -43,6 +45,7 @@ members = [
             "generated/resource_info_table/resource_info_table_macro",
         "generated/dol_symbol_table",
             "generated/dol_symbol_table/dol_symbol_table_macro",
+    "libsquish_wrapper",
     "nod_wrapper",
     "ppcasm",
         "ppcasm/ppcasm_macro",

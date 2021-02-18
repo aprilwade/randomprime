@@ -35,6 +35,7 @@ pub mod patcher;
 pub mod patches;
 pub mod pickup_meta;
 pub mod starting_items;
+pub mod txtr_conversions;
 
 use crate::pickup_meta::PickupType;
 use crate::elevators::{Elevator, SpawnRoom};

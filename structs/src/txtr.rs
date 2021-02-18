@@ -1,6 +1,52 @@
 use auto_struct_macros::auto_struct;
 
-use reader_writer::{/* IteratorArray,*/ LazyArray};
+use reader_writer::{IteratorArray, LazyArray};
+
+#[derive(Debug, Clone)]
+pub struct MipmapSizeIter {
+    width: usize,
+    height: usize,
+    format: u32,
+    count: u32
+}
+
+impl MipmapSizeIter
+{
+    fn new(width: u16, height: u16, format: u32, count: u32) -> Self
+    {
+        MipmapSizeIter {
+            width: width as usize,
+            height: height as usize,
+            format,
+            count,
+        }
+    }
+}
+
+impl Iterator for MipmapSizeIter
+{
+    type Item = (usize, ());
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        if self.count == 0 {
+            None
+        } else {
+            let ret = format_pixel_bytes(self.format, self.height * self.width);
+            self.count -= 1;
+            self.width /= 2;
+            self.height /= 2;
+            Some((ret, ()))
+        }
+    }
+}
+
+impl ExactSizeIterator for MipmapSizeIter
+{
+    fn len(&self) -> usize
+    {
+        self.count as usize
+    }
+}
 
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
@@ -15,10 +61,11 @@ pub struct Txtr<'r>
 
     // TODO Palettes...
 
-    #[auto_struct(init = (format_pixel_bytes(format, (height * width) as usize), ()))]
-    pub pixel_data: LazyArray<'r, u8>,
-    // TODO: Mipmaps
+    #[auto_struct(init = MipmapSizeIter::new(width, height, format, mipmap_count))]
+    pub pixel_data: IteratorArray<'r, LazyArray<'r, u8>, MipmapSizeIter>,
 
+    // #[auto_struct(pad_align = 32)]
+    // _pad: (),
 }
 
 fn format_pixel_bytes(format: u32, pixels: usize) -> usize
