@@ -5,7 +5,7 @@ use image::{ColorType, ImageDecoder};
 use image::codecs::png::{PngDecoder, PngEncoder};
 
 use libsquish_wrapper::{compress_dxt1gcn_block, decompress_dxt1gcn_block};
-use reader_writer::{Reader, Writable};
+use reader_writer::{Readable, Reader, Writable};
 
 use std::convert::{TryFrom, TryInto};
 use std::fs::File;
@@ -154,6 +154,8 @@ fn png2txtr(input: &Path, output: &Path, format: Format) -> Result<(), String> {
 
     txtr.write_to(&mut &output_file)
         .map_err(|e| format!("Error writing TXTR: {}", e))?;
+    reader_writer::padding::pad_bytes(32, txtr.size()).write_to(&mut &output_file)
+        .map_err(|e| format!("Error writing padding: {}", e))?;
 
     Ok(())
 }
