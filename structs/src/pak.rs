@@ -1,6 +1,6 @@
 use auto_struct_macros::auto_struct;
 use reader_writer::{
-    FourCC, LCow, Readable, Reader, RoArray, Writable, align_byte_count,
+    FourCC, LCow, Readable, Reader, RoArray, Writable, align_byte_count, pad_bytes,
 };
 
 
@@ -535,7 +535,7 @@ impl<'r> Readable<'r> for Resource<'r>
 
     fn size(&self) -> usize
     {
-        self.kind.size()
+        align_byte_count(32, self.kind.size())
     }
 }
 
@@ -543,7 +543,9 @@ impl<'r> Writable for Resource<'r>
 {
     fn write_to<W: io::Write>(&self, writer: &mut W) -> io::Result<u64>
     {
-        self.kind.write_to(writer)
+        let bytes_written = self.kind.write_to(writer)?;
+        let padding_written = pad_bytes(32, bytes_written as usize).write_to(writer)?;
+        Ok(bytes_written + padding_written)
     }
 }
 

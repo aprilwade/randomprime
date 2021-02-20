@@ -331,10 +331,6 @@ fn create_suit_icon_cmdl_and_ancs<'r>(
         let mut new_cmdl_bytes = vec![];
         cmdl.write_to(&mut new_cmdl_bytes).unwrap();
 
-        // Ensure the length is a multiple of 32
-        let len = new_cmdl_bytes.len();
-        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
         build_resource(
             new_cmdl_id,
             structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
@@ -351,10 +347,6 @@ fn create_suit_icon_cmdl_and_ancs<'r>(
 
         let mut new_ancs_bytes = vec![];
         ancs.write_to(&mut new_ancs_bytes).unwrap();
-
-        // Ensure the length is a multiple of 32
-        let len = new_ancs_bytes.len();
-        new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         build_resource(
             new_ancs_id,
@@ -384,10 +376,6 @@ fn create_shiny_missile_assets<'r>(
 
         let mut new_cmdl_bytes = vec![];
         cmdl.write_to(&mut new_cmdl_bytes).unwrap();
-
-        // Ensure the length is a multiple of 32
-        let len = new_cmdl_bytes.len();
-        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
 
         build_resource(
             custom_asset_ids::SHINY_MISSILE_CMDL,
@@ -420,10 +408,6 @@ fn create_shiny_missile_assets<'r>(
         let mut new_ancs_bytes = vec![];
         ancs.write_to(&mut new_ancs_bytes).unwrap();
 
-        // Ensure the length is a multiple of 32
-        let len = new_ancs_bytes.len();
-        new_ancs_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
         build_resource(
             custom_asset_ids::SHINY_MISSILE_ANCS,
             structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
@@ -449,8 +433,6 @@ fn create_shiny_missile_assets<'r>(
         );
         let mut anim_bytes = shiny_missile_anim.decompress().into_owned();
         custom_asset_ids::SHINY_MISSILE_EVNT.write_to(&mut std::io::Cursor::new(&mut anim_bytes[8..])).unwrap();
-        let len = anim_bytes.len();
-        anim_bytes.extend(reader_writer::pad_bytes(32, len).iter());
         build_resource(
             custom_asset_ids::SHINY_MISSILE_ANIM,
             structs::ResourceKind::External(anim_bytes, b"ANIM".into())

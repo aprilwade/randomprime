@@ -3155,7 +3155,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                 }
                 let mut bytes = vec![];
                 txtr.write_to(&mut bytes).unwrap();
-                reader_writer::padding::pad_bytes(32, bytes.len()).write_to(&mut bytes).unwrap();
                 res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
                 res.compressed = false;
                 Ok(())
