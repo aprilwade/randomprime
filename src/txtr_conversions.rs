@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use libsquish_wrapper::{compress_dxt1gcn_block, decompress_dxt1gcn_block};
 use resource_info_table::{resource_info, ResourceInfo};
 
+// TODO: Recolor the morph ball particle effects requires dol patches :(
 
 pub const VARIA_SUIT_TEXTURES: &[ResourceInfo] = &[
     resource_info!("gravity_head_chest.TXTR"),
@@ -15,6 +16,38 @@ pub const VARIA_SUIT_TEXTURES: &[ResourceInfo] = &[
 
     resource_info!("gravity_arms.TXTR"),
     resource_info!("gravity_arms_incan.TXTR"),
+
+    // Spider ball
+
+    resource_info!("9024CB39.TXTR"),
+    resource_info!("7A755049.TXTR"),
+    resource_info!("2EE6F56F.TXTR"),
+    resource_info!("AD3748D3.TXTR"),
+
+    //
+];
+
+pub const PHAZON_SUIT_TEXTURES: &[ResourceInfo] = &[
+    resource_info!("phason_arm_black.TXTR"),
+    resource_info!("phason_arm_incandescence.TXTR"),
+    resource_info!("phason_head_black.TXTR"),
+    resource_info!("phason_head_incandescence.TXTR"),
+    resource_info!("phason_legs_black.TXTR"),
+    resource_info!("phason_legs_incandescence.TXTR"),
+    resource_info!("phason_torso_black.TXTR"),
+    resource_info!("phason_torso_specialincandescence.TXTR"),
+    resource_info!("phasonred_rampincandes.TXTR"),
+    resource_info!("Characters/common_textures/glow10.TXTR"),
+
+    // Left hand
+    resource_info!("C94DD270.TXTR"),
+    resource_info!("1A9153A8.TXTR"),
+    resource_info!("1A9153A8.TXTR"),
+
+    // Morph ball
+    resource_info!("D3889172.TXTR"),
+    // resource_info!("Uncategorized/596C7FFF.TXTR"),
+
 ];
 
 

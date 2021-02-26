@@ -24,7 +24,10 @@ use crate::{
     pickup_meta::{self, PickupType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
-    txtr_conversions::{cmpr_compress, cmpr_decompress, huerotate_in_place, VARIA_SUIT_TEXTURES},
+    txtr_conversions::{
+        cmpr_compress, cmpr_decompress, huerotate_in_place, VARIA_SUIT_TEXTURES,
+        PHAZON_SUIT_TEXTURES,
+    },
     GcDiscLookupExtensions,
 };
 
@@ -3136,7 +3139,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
-        for varia_texture in VARIA_SUIT_TEXTURES {
+        for varia_texture in VARIA_SUIT_TEXTURES.iter().chain(PHAZON_SUIT_TEXTURES.iter()) {
             patcher.add_resource_patch((*varia_texture).into(), move |res| {
                 let res_data = crate::ResourceData::new(res);
                 let data = res_data.decompress();
