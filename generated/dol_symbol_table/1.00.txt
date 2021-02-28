@@ -14325,6 +14325,13 @@
 0x803CB0C4 __GBAX02
 0x803cc588 __build_info
 0x803cd6c0 CPlayerState_PowerUpMaxValues
+0x803cead0 BallGlowColors
+0x803ceaec BallTransFlashColors
+0x803ceb08 BallAuxGlowColors
+0x803ceb24 BallSwooshColors
+0x803ceb40 BallSwooshColorsCharged
+0x803ceb5c BallSwooshColorsJaggy
+0x803ceb78 skBallInnerGlowColors
 0x803d47cc aMetroidprimeA
 0x803d47db aMetroidprimeB
 0x805a8c34 g_MainStringTable

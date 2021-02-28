@@ -5,7 +5,39 @@ use resource_info_table::{resource_info, ResourceInfo};
 
 // TODO: Recolor the morph ball particle effects requires dol patches :(
 
+// 0 - Power
+// 1 - Gravity
+// 2 - Varia
+// 3 - Phazon
+
+pub const POWER_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/powersuit_high_rez_bound.CMDL
+    resource_info!("power_head_chest.TXTR"),
+    resource_info!("power_head_chest_incan.TXTR"),
+    resource_info!("power_arms.TXTR"),
+    resource_info!("power_arms_incan.TXTR"),
+    resource_info!("power_torso.TXTR"),
+    resource_info!("power_legs.TXTR"),
+
+    // Low poly TestAnim/PowerSuit.CMDL
+    resource_info!("5C02CF66.TXTR"),
+    resource_info!("6FC1D36D.TXTR"),
+
+    // Left arm SamusGun/LeftArm.CMDL
+    resource_info!("B2F8703C.TXTR"),
+    resource_info!("1AE46C50.TXTR"),
+
+    // Morph ball - TestAnim/SamusBallNew.CMDL MS 0
+    resource_info!("C01FFF01.TXTR"),
+
+    // MB Low poly - TestAnim/SamusBallLowPolyCMDL.CMDL MS 0
+    // resource_info!("C01FFF01.TXTR"),
+
+    // No spider ball... yet
+];
+
 pub const VARIA_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/variasuit_high_rez_bound.CMDL
     resource_info!("gravity_head_chest.TXTR"),
     resource_info!("power_head_chest_incan.TXTR"),
 
@@ -17,17 +49,68 @@ pub const VARIA_SUIT_TEXTURES: &[ResourceInfo] = &[
     resource_info!("gravity_arms.TXTR"),
     resource_info!("gravity_arms_incan.TXTR"),
 
-    // Spider ball
+    // Low res? TestAnim/VariaSuit.CMDL
+    resource_info!("D2149656.TXTR"),
+    resource_info!("C06147B3.TXTR"),
 
-    resource_info!("9024CB39.TXTR"),
-    resource_info!("7A755049.TXTR"),
+    // Left hand - SamusGun/Varia.CMDL
+    resource_info!("309AA3D4.TXTR"),
+    resource_info!("5D380050.TXTR"),
+
+    // Morph ball - TestAnim/SamusBallNew.CMDL MS 1
+    resource_info!("49A1D81D.TXTR"),
+
+    // MB Low poly - TestAnim/SamusBallLowPolyCMDL.CMDL MS 1
+    // resource_info!("49A1D81D.TXTR"),
+
+    // Spider ball - Uncategorized/spiderball_gravity.CMDL MS 1
     resource_info!("2EE6F56F.TXTR"),
     resource_info!("AD3748D3.TXTR"),
 
-    //
+    // Spider ball glass - TestAnim/SamusSpiderBallGlassCMDL.CMDL - MS 1
+    resource_info!("9024CB39.TXTR"),
+    resource_info!("7A755049.TXTR"),
+
+    // SB Low poly - TestAnim/SamusSpiderBallLowPolyCMDL.CMDL MS 1
+    resource_info!("07675658.TXTR"),
+];
+
+pub const GRAVITY_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/gravitysuit_high_rez_bound.CMDL
+    resource_info!("f_varia_legs.TXTR"),
+    resource_info!("f_varia_legs_incan.TXTR"),
+    resource_info!("spider_glass.TXTR"),
+    resource_info!("f_varia_torso.TXTR"),
+    resource_info!("f_varia_head_chest.TXTR"),
+    resource_info!("f_varia_head_incan.TXTR"),
+    resource_info!("f_varia_arms.TXTR"),
+    resource_info!("f_varia_arms_incan.TXTR"),
+    // Low poly TestAnim/GravitySuit.CMDL
+    resource_info!("349AD971.TXTR"),
+    resource_info!("A082D0BF.TXTR"),
+    resource_info!("648AF351.TXTR"),
+    resource_info!("5B05039F.TXTR"),
+    resource_info!("1C38E5E2.TXTR"),
+
+    // Left arm SamusGun/Gravity.CMDL
+    resource_info!("985C0EAA.TXTR"),
+    resource_info!("60EA8AC4.TXTR"),
+
+    // Doesn't have a morph-ball model
+
+    // Spider ball - TestAnim/Node1_1.CMDL MS 0
+    resource_info!("50A70472.TXTR"),
+    resource_info!("1AEC5A79.TXTR"),
+
+    // Spider ball glass - TestAnim/SamusSpiderBallGlassCMDL.CMDL - MS 0
+    resource_info!("27FFD993.TXTR"),
+
+    // SB Low poly - TestAnim/SamusSpiderBallLowPolyCMDL.CMDL MS 0
+    resource_info!("BA7DF5D6.TXTR"),
 ];
 
 pub const PHAZON_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // high res Characters/Samus/cooked/phazon_suit_high_rez_bound.CMDL
     resource_info!("phason_arm_black.TXTR"),
     resource_info!("phason_arm_incandescence.TXTR"),
     resource_info!("phason_head_black.TXTR"),
@@ -39,15 +122,56 @@ pub const PHAZON_SUIT_TEXTURES: &[ResourceInfo] = &[
     resource_info!("phasonred_rampincandes.TXTR"),
     resource_info!("Characters/common_textures/glow10.TXTR"),
 
-    // Left hand
+    // Low poly TestAnim/PhazonSuit.CMDL
+    resource_info!("08FA7447.TXTR"),
+    resource_info!("EC4184DF.TXTR"),
+
+    // Left hand SamusGun/Phazon.CMDL
     resource_info!("C94DD270.TXTR"),
     resource_info!("1A9153A8.TXTR"),
-    resource_info!("1A9153A8.TXTR"),
+    // resource_info!("1A9153A8.TXTR"),
 
-    // Morph ball
+    // Spider ball TestAnim/Node1_0.CMDL
+    resource_info!("8B105F2E.TXTR"),
+    resource_info!("2F1AC0DD.TXTR"),
+    // resource_info!("Uncategorized/8B105F2E.TXTR"),
+    resource_info!("8BF681E5.TXTR"),
+    resource_info!("51F20A44.TXTR"),
+
+    //
+    // Glass ball TestAnim/SamusPhazonBallGlassCMDL.CMDL
     resource_info!("D3889172.TXTR"),
+    resource_info!("0B3DBDB4.TXTR"),
     // resource_info!("Uncategorized/596C7FFF.TXTR"),
 
+    // Spider ball Low poly - TestAnim/SamusSpiderBallLowPolyCMDL.CMDL MS 2
+    resource_info!("06CE2C16.TXTR"),
+
+];
+
+// Fusion morph ball ANCS TestAnim/Fusion_Ball.ANCS
+pub const FUSION_POWER_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/fusion_suit_high_rez_bound.CMDL
+    // Low poly TestAnim/FusionSuit.CMDL
+    // Left arm SamusGun/Fusion.CMDL
+];
+
+pub const FUSION_VARIA_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/fusion_varia_high_rez_bound.CMDL
+    // Low poly TestAnim/Fusion_Varia.CMDL
+    // Left arm SamusGun/FusionV.CMDL
+];
+
+pub const FUSION_GRAVITY_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/fusion_gravity_high_rez_bound.CMDL
+    // Low poly TestAnim/Fusion_Gravity.CMDL
+    // Left arm SamusGun/FusionG.CMDL
+];
+
+pub const FUSION_PHAZON_SUIT_TEXTURES: &[ResourceInfo] = &[
+    // High res Characters/Samus/cooked/fusion_phazon_high_rez_bound.CMDL
+    // Low poly TestAnim/Fusion_Phazon.CMDL
+    // Left arm SamusGun/FusionP.CMDL
 ];
 
 

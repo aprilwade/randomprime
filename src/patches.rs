@@ -2251,6 +2251,35 @@ fn patch_dol<'r>(
             .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
     }
 
+    // let ball_color_patch = ppcasm!(symbol_addr!("skBallInnerGlowColors", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallAuxGlowColors", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallTransFlashColors", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColors", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsJaggy", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsCharged", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // let ball_color_patch = ppcasm!(symbol_addr!("BallGlowColors", version), {
+    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    // });
+    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+
     let cinematic_skip_patch = ppcasm!(symbol_addr!("ShouldSkipCinematic__22CScriptSpecialFunctionFR13CStateManager", version), {
             li      r3, 0x1;
             blr;
@@ -3139,7 +3168,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
-        for varia_texture in VARIA_SUIT_TEXTURES.iter().chain(PHAZON_SUIT_TEXTURES.iter()) {
+        let iter = VARIA_SUIT_TEXTURES.iter()
+            .chain(PHAZON_SUIT_TEXTURES.iter())
+            .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
+            .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
+        for varia_texture in iter {
             patcher.add_resource_patch((*varia_texture).into(), move |res| {
                 let res_data = crate::ResourceData::new(res);
                 let data = res_data.decompress();
