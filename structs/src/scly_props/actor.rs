@@ -20,7 +20,7 @@ pub struct Actor<'r>
     pub position: GenericArray<f32, U3>,
     pub rotation: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
-    pub unknown0: GenericArray<f32, U3>,// hitbox?
+    pub hitbox: GenericArray<f32, U3>,
     pub scan_offset: GenericArray<f32, U3>,
 
     pub unknown1: f32,

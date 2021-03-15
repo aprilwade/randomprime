@@ -1418,7 +1418,7 @@ fn make_main_plaza_locked_door_two_ways(_ps: &mut PatcherState, area: &mut mlvl_
                 position: [151.951187, 86.412575, 24.403177].into(),
                 rotation: [0.0, 0.0, 0.0].into(),
                 scale: [1.0, 1.0, 1.0].into(),
-                unknown0: [0.0, 0.0, 0.0].into(),
+                hitbox: [0.0, 0.0, 0.0].into(),
                 scan_offset: [0.0, 0.0, 0.0].into(),
                 unknown1: 1.0,
                 unknown2: 0.0,

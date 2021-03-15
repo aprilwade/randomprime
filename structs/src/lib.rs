@@ -45,6 +45,7 @@ pub mod scly_props
     pub mod streamed_audio;
     pub mod timer;
     pub mod trigger;
+    pub mod water;
     pub mod world_transporter;
 
     pub mod structs;
@@ -68,6 +69,7 @@ pub mod scly_props
     pub use self::streamed_audio::*;
     pub use self::timer::*;
     pub use self::trigger::*;
+    pub use self::water::*;
     pub use self::world_transporter::*;
 }
 
