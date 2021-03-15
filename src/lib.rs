@@ -34,6 +34,7 @@ pub mod mlvl_wrapper;
 pub mod patcher;
 pub mod patches;
 pub mod pickup_meta;
+pub mod door_meta;
 pub mod starting_items;
 pub mod txtr_conversions;
 
