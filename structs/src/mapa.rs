@@ -41,7 +41,8 @@ pub struct Mapa<'r>
 }
 
 #[derive(Debug, Clone)]
-pub enum MapaObjectType {
+pub enum MapaObjectType
+{
     DoorNormal         = 0,
     DoorShield         = 1,
     DoorIce            = 2,
@@ -74,10 +75,13 @@ pub struct MapaObject
 
 impl MapaObject
 {
-    pub fn is_door(&self) -> bool {
+    pub fn is_door(&self) -> bool
+    {
         self.type_ < 16 && self.type_ > 0
     }
-    pub fn is_vertical(&self) -> bool {
+
+    pub fn is_vertical(&self) -> bool
+    {
         self.type_ < 16 && self.type_ > 6
     }
 }

@@ -30,7 +30,8 @@ pub struct PickupLocation
 }
 
 #[derive(Clone, Debug)]
-pub struct DoorLocation {
+pub struct DoorLocation
+{
     door_location: ScriptObjectLocation,
     door_force_location: ScriptObjectLocation,
     door_shield_location: Option<ScriptObjectLocation>,
@@ -445,7 +446,8 @@ fn extract_door_location<'r>(
     scly: &structs::Scly<'r>,
     obj: &structs::SclyObject<'r>,
     obj_location: ScriptObjectLocation
-) -> (Option<DoorLocation>,Option<DoorLocation>) {
+) -> (Option<DoorLocation>,Option<DoorLocation>)
+{
 
     let scly_db = build_scly_db(scly);
 
@@ -1101,7 +1103,7 @@ fn main()
                     .string_tables.iter().next().unwrap()
                     .strings.iter().next().unwrap()
                     .into_owned().into_string();
-                
+
                 pak_locations.push(RoomInfo {
                     room_id: res.file_id,
                     name,

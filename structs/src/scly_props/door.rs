@@ -8,7 +8,8 @@ use crate::scly_props::structs::{ActorParameters, AncsProp};
 
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
-pub struct Door<'r> {
+pub struct Door<'r>
+{
     #[auto_struct(expect = 14)]
     pub prop_count: u32,
 
