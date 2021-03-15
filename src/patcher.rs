@@ -124,6 +124,13 @@ impl<'r, 's> PrimePatcher<'r, 's>
             // PAK.
             let scly_patch_exists = self.scly_patches.iter().any(|p| p.0.pak_name == &name[..]);
             let mut mlvl_editor = if scly_patch_exists {
+
+                // If the pak has few or no resources in it, assume it's been gutted (e.g. frigate skip) //
+                // and don't bother looking for a mlvl resource inside //
+                if pak.resources.len() as u32 <= 1 {
+                    continue;
+                }
+
                 let mlvl = pak.resources.iter()
                     .find(|i| i.fourcc() == reader_writer::FourCC::from_bytes(b"MLVL"))
                     .unwrap()
@@ -142,8 +149,10 @@ impl<'r, 's> PrimePatcher<'r, 's>
                     id: cursor.peek().unwrap().file_id,
                 };
 
-                if let Some((_, patch)) = self.resource_patches.iter_mut().find(|p| p.0 == res_key) {
-                    patch(cursor.value().unwrap())?;
+                for (patch_key, patch_func) in self.resource_patches.iter_mut() {
+                    if *patch_key == res_key {
+                        patch_func(cursor.value().unwrap())?;
+                    }
                 }
 
                 let mrea_key = MreaKey {
