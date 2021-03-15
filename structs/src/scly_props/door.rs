@@ -4,13 +4,11 @@ use reader_writer::CStr;
 use reader_writer::typenum::*;
 use reader_writer::generic_array::GenericArray;
 use crate::SclyPropertyData;
-use crate::scly_props::structs::{AncsProp, ActorParameters};
-
+use crate::scly_props::structs::{ActorParameters, AncsProp};
 
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
-pub struct Door<'r>
-{
+pub struct Door<'r> {
     #[auto_struct(expect = 14)]
     pub prop_count: u32,
 
@@ -19,6 +17,7 @@ pub struct Door<'r>
     pub position: GenericArray<f32, U3>,
     pub rotation: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
+
     pub ancs: AncsProp,
     pub actor_params: ActorParameters,
 

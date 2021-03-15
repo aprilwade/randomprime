@@ -260,6 +260,18 @@ impl PickupType
             PickupType::ShinyMissile,
         ].iter().map(|i| *i)
     }
+
+    pub fn from_string(string: String) -> Self {
+        for i in PickupType::iter() {
+            if i.name().to_string().to_lowercase() == string.to_lowercase() {
+                return i;
+            }
+        }
+
+        println!("Unknown Item Type - {}", string);
+        assert!(false);
+        PickupType::Nothing
+    }
 }
 
 struct PickupTable(Vec<structs::Pickup<'static>>);
@@ -317,6 +329,14 @@ pub struct PickupLocation
     pub post_pickup_relay_connections: &'static [Connection]
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct DoorLocation {
+    pub door_location: ScriptObjectLocation,
+    pub door_force_location: ScriptObjectLocation,
+    pub door_shield_location: Option<ScriptObjectLocation>,
+    pub dock_number: Option<u32>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct ScriptObjectLocation
 {
@@ -329,7 +349,10 @@ pub struct RoomInfo
 {
     pub room_id: u32,
     pub name: &'static str,
+    pub name_id: u32,
+    pub mapa_id: u32,
     pub pickup_locations: &'static [PickupLocation],
+    pub door_locations: &'static [DoorLocation],
     pub objects_to_remove: &'static [ObjectsToRemove],
 }
 

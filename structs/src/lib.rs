@@ -1,4 +1,3 @@
-
 pub mod res_id;
 
 mod ancs;
@@ -11,6 +10,8 @@ mod font;
 mod frme;
 mod gc_disc;
 mod hint;
+mod mapa;
+mod mapw;
 mod mlvl;
 mod mrea;
 mod pak;
@@ -22,8 +23,7 @@ mod strg;
 mod thp;
 mod txtr;
 
-
-mod scly_props
+pub mod scly_props
 {
     // http://www.metroid2002.com/retromodding/wiki/User:Parax0/Sandbox
     pub mod actor;
@@ -70,6 +70,7 @@ mod scly_props
     pub use self::trigger::*;
     pub use self::world_transporter::*;
 }
+
 pub use scly_props::structs as scly_structs;
 pub use scly_props::actor::*;
 pub use scly_props::damageable_trigger::*;
@@ -104,6 +105,8 @@ pub use font::*;
 pub use frme::*;
 pub use gc_disc::*;
 pub use hint::*;
+pub use mapa::*;
+pub use mapw::*;
 pub use mlvl::*;
 pub use mrea::*;
 pub use pak::*;
