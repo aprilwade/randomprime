@@ -346,10 +346,10 @@ pub struct ScriptObjectLocation
 #[derive(Clone, Copy, Debug)]
 pub struct RoomInfo
 {
-    pub room_id: u32,
+    pub room_id: ResId<res_id::MREA>,
     pub name: &'static str,
-    pub name_id: u32,
-    pub mapa_id: u32,
+    pub name_id: ResId<res_id::STRG>,
+    pub mapa_id: ResId<res_id::MAPA>,
     pub pickup_locations: &'static [PickupLocation],
     pub door_locations: &'static [DoorLocation],
     pub objects_to_remove: &'static [ObjectsToRemove],
