@@ -1029,7 +1029,7 @@ fn main()
 
                     // Skip all doors that aren't openable //
                     if !OPENABLE_DOOR_ANCS.contains(&door.ancs.file_id.to_u32()) {continue;}
-FAFB5784
+
                     // Skip all problematic doors (all in frigate intro level) //
                     if PROBLEMATIC_DOORS.contains(&obj.instance_id) { continue; }
 
