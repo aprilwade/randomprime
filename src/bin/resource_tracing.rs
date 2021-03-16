@@ -937,6 +937,14 @@ const PROBLEMATIC_DOORS: [u32; 10] = [
     0x160007,
 ];
 
+// animations of doors openable by player-weapons
+// used to idenify which doors are patchable from those which are not
+const OPENABLE_DOOR_ANCS: [u32; 3] = [
+    0x26886945, // normal door
+    0xF57DD484, // vertical door
+    0xFAFB5784, // frigate door
+];
+
 fn main()
 {
     let file = File::open(args().nth(1).unwrap()).unwrap();
@@ -1020,11 +1028,11 @@ fn main()
                     };
 
                     // Skip all doors that aren't openable //
-                    if door.ancs.file_id != 0x26886945 && door.ancs.file_id != 0xFAFB5784 { continue; };
-
+                    if !OPENABLE_DOOR_ANCS.contains(&door.ancs.file_id.to_u32()) {continue;}
+FAFB5784
                     // Skip all problematic doors (all in frigate intro level) //
                     if PROBLEMATIC_DOORS.contains(&obj.instance_id) { continue; }
-                    
+
                     let obj_loc = ScriptObjectLocation {
                         instance_id: obj.instance_id,
                         layer: layer_num as u32,

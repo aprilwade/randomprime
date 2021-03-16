@@ -17,6 +17,18 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
                     door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 290 }),
                     dock_number: Some(0),
                 },
+                DoorLocation {
+                    door_location: ScriptObjectLocation { layer: 0, instance_id: 865 },
+                    door_force_location: ScriptObjectLocation { layer: 0, instance_id: 872 },
+                    door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 869 }),
+                    dock_number: None,
+                },
+                DoorLocation {
+                    door_location: ScriptObjectLocation { layer: 0, instance_id: 866 },
+                    door_force_location: ScriptObjectLocation { layer: 0, instance_id: 867 },
+                    door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 873 }),
+                    dock_number: None,
+                },
             ],
             objects_to_remove: &[],
         },
@@ -518,6 +530,18 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             pickup_locations: &[
             ],
             door_locations: &[
+                DoorLocation {
+                    door_location: ScriptObjectLocation { layer: 0, instance_id: 1769500 },
+                    door_force_location: ScriptObjectLocation { layer: 0, instance_id: 1769501 },
+                    door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 1769493 }),
+                    dock_number: None,
+                },
+                DoorLocation {
+                    door_location: ScriptObjectLocation { layer: 0, instance_id: 1769480 },
+                    door_force_location: ScriptObjectLocation { layer: 0, instance_id: 1769482 },
+                    door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 1769503 }),
+                    dock_number: None,
+                },
             ],
             objects_to_remove: &[],
         },
@@ -1256,7 +1280,13 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
                     door_force_location: ScriptObjectLocation { layer: 0, instance_id: 1376728 },
                     door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 1376729 }),
                     dock_number: Some(1),
-                }
+                },
+                DoorLocation {
+                    door_location: ScriptObjectLocation { layer: 0, instance_id: 1376546 },
+                    door_force_location: ScriptObjectLocation { layer: 0, instance_id: 1376542 },
+                    door_shield_location: Some(ScriptObjectLocation { layer: 0, instance_id: 1376543 }),
+                    dock_number: Some(0),
+                },
             ],
             objects_to_remove: &[
                 ObjectsToRemove {
