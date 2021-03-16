@@ -36,6 +36,7 @@ decl_res_id_kind! {
     EVNT b"EVNT",
     FONT b"FONT",
     FRME b"FRME",
+    MAPA b"MAPA",
     MREA b"MREA",
     MLVL b"MLVL",
     PART b"PART",

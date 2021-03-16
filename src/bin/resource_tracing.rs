@@ -344,10 +344,10 @@ struct PickupData
 #[derive(Debug)]
 struct RoomInfo
 {
-    room_id: u32,
+    room_id: ResId<res_id::MREA>,
     name: String,
-    name_id: u32,
-    mapa_id: u32,
+    name_id: ResId<res_id::STRG>,
+    mapa_id: ResId<res_id::MAPA>,
     pickups: Vec<PickupLocation>,
     doors: Vec<DoorLocation>,
     objects_to_remove: HashMap<u32, Vec<u32>>,
@@ -512,7 +512,7 @@ fn extract_door_location<'r>(
         None => None,
     };
 
-    let key_door_location:Option<DoorLocation> = if !key_shield_loc.is_none() && !key_force_loc.is_none() {
+    let key_door_location = if !key_shield_loc.is_none() && !key_force_loc.is_none() {
         Some(DoorLocation {
             door_location: obj_location,
             door_force_location: key_force_loc.unwrap(),
@@ -1006,7 +1006,7 @@ fn main()
             let target_mapa = resources.iter()
                 .find(|res| res.fourcc() == b"MAPA".into() && res.file_id == target_mapa_id)
                 .unwrap().into_owned();
-            let mapa_id = target_mapa.file_id;
+            let mapa_id = &ResId::<res_id::MAPA>::new(target_mapa.file_id);
 
             for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
 
@@ -1111,10 +1111,10 @@ fn main()
                     .into_owned().into_string();
 
                 pak_locations.push(RoomInfo {
-                    room_id: res.file_id,
+                    room_id: ResId::<res_id::MREA>::new(res.file_id),
                     name,
-                    name_id: strg_id.to_u32(),
-                    mapa_id,
+                    name_id: strg_id,
+                    mapa_id: *mapa_id,
                     pickups: room_locations,
                     doors: door_locations,
                     objects_to_remove: room_removals,
@@ -1147,10 +1147,10 @@ fn main()
         println!("    ({:?}, &[", fname);
         for room_info in locations {
             println!("        RoomInfo {{");
-            println!("            room_id: 0x{:08X},", room_info.room_id);
+            println!("            room_id: ResId::<res_id::STRG>::new(0x{:08X}),", room_info.room_id.to_u32());
             println!("            name: {:?},", &room_info.name[..(room_info.name.len() - 1)]);
-            println!("            name_id: 0x{:08X},", room_info.name_id);
-            println!("            mapa_id: 0x{:08X},", room_info.mapa_id);
+            println!("            name_id: ResId::<res_id::STRG>::new(0x{:08X}),", room_info.name_id.to_u32());
+            println!("            mapa_id: ResId::<res_id::MAPA>::new(0x{:08X}),", room_info.mapa_id.to_u32());
             println!("            pickup_locations: &[");
             for location in room_info.pickups {
                 println!("                PickupLocation {{");
