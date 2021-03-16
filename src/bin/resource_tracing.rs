@@ -1135,7 +1135,7 @@ fn main()
     println!("");
     println!("");
 
-    println!("pub const PICKUP_LOCATIONS: &[(&str, &[RoomInfo]); 5] = &[");
+    println!("pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         // println!("    // {}", fname);
         println!("    ({:?}, &[", fname);

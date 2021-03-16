@@ -76,7 +76,7 @@ fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>, starting_items: &
 
     let mut found = HashMap::with_capacity(looking_for.len());
 
-    for pak_name in pickup_meta::PICKUP_LOCATIONS.iter().map(|(name, _)| name) {
+    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) {
         let file_entry = gc_disc.find_file(pak_name).unwrap();
         let pak = match *file_entry.file().unwrap() {
             structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
@@ -177,7 +177,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         String::new(), String::new(), String::new(), String::new(),
     ];
 
-    let names_iter = pickup_meta::PICKUP_LOCATIONS.iter()
+    let names_iter = pickup_meta::ROOM_INFO.iter()
         .flat_map(|i| i.1.iter()) // Flatten out the rooms of the paks
         .flat_map(|l| iter::repeat((l.room_id, l.name)).take(l.pickup_locations.len()));
     let iter = pickup_layout.iter()
@@ -2072,7 +2072,7 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
         } else {
             continue
         };
-        let room_name = pickup_meta::PICKUP_LOCATIONS.iter()
+        let room_name = pickup_meta::ROOM_INFO.iter()
             .flat_map(|pak_locs| pak_locs.1.iter())
             .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
             .nth(room_idx)
@@ -2874,7 +2874,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
 
     // Patch pickups
     let mut layout_iterator = pickup_layout.iter();
-    for (name, rooms) in pickup_meta::PICKUP_LOCATIONS.iter() {
+    for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
         for room_info in rooms.iter() {
              patcher.add_scly_patch((name.as_bytes(), room_info.room_id), move |_, area| {
                 // Remove objects
