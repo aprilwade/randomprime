@@ -1101,7 +1101,7 @@ fn main()
                 }
             }
 
-            if room_locations.len() != 0 {
+            {
                 let strg_id = mrea_name_strg_map[&ResId::<res_id::MREA>::new(res.file_id)];
                 let strg: structs::Strg = res_db.map[&ResourceKey::from(strg_id)]
                     .data.data.clone().read(());
