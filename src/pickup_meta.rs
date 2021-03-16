@@ -263,14 +263,12 @@ impl PickupType
 
     pub fn from_string(string: String) -> Self {
         for i in PickupType::iter() {
-            if i.name().to_string().to_lowercase() == string.to_lowercase() {
+            if i.name().to_string().to_lowercase().trim() == string.to_lowercase().trim() {
                 return i;
             }
         }
 
-        println!("Unknown Item Type - {}", string);
-        assert!(false);
-        PickupType::Nothing
+        panic!("Unknown Item Type - {}", string);
     }
 }
 

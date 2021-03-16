@@ -504,11 +504,12 @@ fn extract_door_location<'r>(
     let dock = search_for_scly_object(&obj.connections, &scly_db,
         |obj| obj.property_data.is_dock());
 
+    // Handle dock_number exception (Main Ventillation Shaft B) //
     let dock_number = match dock {
         Some(dock) => Some(dock.property_data.as_dock().unwrap().dock_number),
-        // Handle the doors in Main Ventilation Shaft B
-        None => if      obj_location.instance_id == 0x150062 { Some(3) }
-                else if obj_location.instance_id == 0x150066 { Some(2) } else { None }
+        None if obj_location.instance_id == 0x150062 => Some(3),
+        None if obj_location.instance_id == 0x150066 => Some(2),
+        None => None,
     };
 
     let key_door_location:Option<DoorLocation> = if !key_shield_loc.is_none() && !key_force_loc.is_none() {
@@ -922,6 +923,20 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupType, PickupData>)
     }).is_none());
 }
 
+// doors that throw off the patcher, these are all in frigate (intro) //
+const PROBLEMATIC_DOORS: [u32; 10] = [
+    0x070009,
+    0x090004,
+    0x0B0004,
+    0x0D0004,
+    0x0E0110,
+    0x0F0004,
+    0x110058,
+    0x130011,
+    0x1500F6,
+    0x160007,
+];
+
 fn main()
 {
     let file = File::open(args().nth(1).unwrap()).unwrap();
@@ -1003,21 +1018,12 @@ fn main()
                     } else {
                         continue
                     };
-                    // Skip all doors that aren't openable.
+
+                    // Skip all doors that aren't openable //
                     if door.ancs.file_id != 0x26886945 && door.ancs.file_id != 0xFAFB5784 { continue; };
 
                     // Skip all problematic doors (all in frigate intro level) //
-                    if  obj.instance_id == 0x70009 ||
-                        obj.instance_id == 0x90004 ||
-                        obj.instance_id == 0xB0004 ||
-                        obj.instance_id == 0xD0004 ||
-                        obj.instance_id == 0xE0110 ||
-                        obj.instance_id == 0xF0004 ||
-                        obj.instance_id == 0x110058 ||
-                        obj.instance_id == 0x130011 ||
-                        obj.instance_id == 0x1500F6 ||
-                        obj.instance_id == 0x160007
-                        {continue;} 
+                    if PROBLEMATIC_DOORS.contains(&obj.instance_id) { continue; }
                     
                     let obj_loc = ScriptObjectLocation {
                         instance_id: obj.instance_id,
