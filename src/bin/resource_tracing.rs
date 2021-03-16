@@ -1147,7 +1147,7 @@ fn main()
         println!("    ({:?}, &[", fname);
         for room_info in locations {
             println!("        RoomInfo {{");
-            println!("            room_id: ResId::<res_id::STRG>::new(0x{:08X}),", room_info.room_id.to_u32());
+            println!("            room_id: ResId::<res_id::MREA>::new(0x{:08X}),", room_info.room_id.to_u32());
             println!("            name: {:?},", &room_info.name[..(room_info.name.len() - 1)]);
             println!("            name_id: ResId::<res_id::STRG>::new(0x{:08X}),", room_info.name_id.to_u32());
             println!("            mapa_id: ResId::<res_id::MAPA>::new(0x{:08X}),", room_info.mapa_id.to_u32());

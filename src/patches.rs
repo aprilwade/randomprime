@@ -197,7 +197,7 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         // If there are specific messages for this room, choose one, other wise choose a generic
         // message.
         let template = specific_room_templates.iter_mut()
-            .find(|row| row.0 == room_id)
+            .find(|row| row.0 == room_id.to_u32())
             .and_then(|row| row.1.pop())
             .unwrap_or_else(|| generic_templates_iter.next().unwrap());
         let pickup_name = pt.name();
@@ -2876,7 +2876,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let mut layout_iterator = pickup_layout.iter();
     for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
         for room_info in rooms.iter() {
-             patcher.add_scly_patch((name.as_bytes(), room_info.room_id), move |_, area| {
+             patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
                 // Remove objects
                 let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
                 for otr in room_info.objects_to_remove {
@@ -2896,7 +2896,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
                     pickup_type
                 };
                 patcher.add_scly_patch(
-                    (name.as_bytes(), room_info.room_id),
+                    (name.as_bytes(), room_info.room_id.to_u32()),
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,

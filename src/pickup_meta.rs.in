@@ -4,10 +4,10 @@
 pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ("Metroid1.pak", &[
         RoomInfo {
-            room_id: 0xD1241219,
+            room_id: ResId::<res_id::MREA>::new(0xD1241219),
             name: "Exterior Docking Hangar",
-            name_id: 0x45DAB3E8,
-            mapa_id: 0xF8F1E924,
+            name_id: ResId::<res_id::STRG>::new(0x45DAB3E8),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF8F1E924),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -21,10 +21,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x07640602,
+            room_id: ResId::<res_id::MREA>::new(0x07640602),
             name: "Air Lock",
-            name_id: 0x3D3859B2,
-            mapa_id: 0x2EB1FD3F,
+            name_id: ResId::<res_id::STRG>::new(0x3D3859B2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2EB1FD3F),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -44,10 +44,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x624F493A,
+            room_id: ResId::<res_id::MREA>::new(0x624F493A),
             name: "Deck Alpha Access Hall",
-            name_id: 0xB4A13728,
-            mapa_id: 0x4B9AB207,
+            name_id: ResId::<res_id::STRG>::new(0xB4A13728),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4B9AB207),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -67,10 +67,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC8971E99,
+            room_id: ResId::<res_id::MREA>::new(0xC8971E99),
             name: "Deck Alpha Mech Shaft",
-            name_id: 0x20AA1CFD,
-            mapa_id: 0xE142E5A4,
+            name_id: ResId::<res_id::STRG>::new(0x20AA1CFD),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE142E5A4),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -78,10 +78,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x20E48216,
+            room_id: ResId::<res_id::MREA>::new(0x20E48216),
             name: "Emergency Evacuation Area",
-            name_id: 0xF60AFC04,
-            mapa_id: 0x0931792B,
+            name_id: ResId::<res_id::STRG>::new(0xF60AFC04),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0931792B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -101,10 +101,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xAE1EC8BD,
+            room_id: ResId::<res_id::MREA>::new(0xAE1EC8BD),
             name: "Connection Elevator to Deck Alpha",
-            name_id: 0x78F0B6AF,
-            mapa_id: 0x87CB3380,
+            name_id: ResId::<res_id::STRG>::new(0x78F0B6AF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x87CB3380),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -112,10 +112,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEE21C026,
+            room_id: ResId::<res_id::MREA>::new(0xEE21C026),
             name: "Deck Alpha Umbilical Hall",
-            name_id: 0x26CA1FF6,
-            mapa_id: 0xC7F43B1B,
+            name_id: ResId::<res_id::STRG>::new(0x26CA1FF6),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC7F43B1B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -135,10 +135,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC5DE3C06,
+            room_id: ResId::<res_id::MREA>::new(0xC5DE3C06),
             name: "Biotech Research Area 2",
-            name_id: 0x449ED3E6,
-            mapa_id: 0xEC0BC73B,
+            name_id: ResId::<res_id::STRG>::new(0x449ED3E6),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEC0BC73B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -152,10 +152,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xCDE604F0,
+            room_id: ResId::<res_id::MREA>::new(0xCDE604F0),
             name: "Map Facility",
-            name_id: 0x1B087AE2,
-            mapa_id: 0xE433FFCD,
+            name_id: ResId::<res_id::STRG>::new(0x1B087AE2),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE433FFCD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -175,10 +175,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x1055715C,
+            room_id: ResId::<res_id::MREA>::new(0x1055715C),
             name: "Main Ventilation Shaft Section F",
-            name_id: 0xF8687338,
-            mapa_id: 0x39808A61,
+            name_id: ResId::<res_id::STRG>::new(0xF8687338),
+            mapa_id: ResId::<res_id::MAPA>::new(0x39808A61),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -192,10 +192,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x31C44B23,
+            room_id: ResId::<res_id::MREA>::new(0x31C44B23),
             name: "Connection Elevator to Deck Beta",
-            name_id: 0xE72A3531,
-            mapa_id: 0x1811B01E,
+            name_id: ResId::<res_id::STRG>::new(0xE72A3531),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1811B01E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -215,10 +215,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x292DDC1C,
+            room_id: ResId::<res_id::MREA>::new(0x292DDC1C),
             name: "Main Ventilation Shaft Section E",
-            name_id: 0xC110DE78,
-            mapa_id: 0x00F82721,
+            name_id: ResId::<res_id::STRG>::new(0xC110DE78),
+            mapa_id: ResId::<res_id::MAPA>::new(0x00F82721),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -232,10 +232,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA8813FB6,
+            room_id: ResId::<res_id::MREA>::new(0xA8813FB6),
             name: "Deck Beta Conduit Hall",
-            name_id: 0x7E6F41A4,
-            mapa_id: 0x8154C48B,
+            name_id: ResId::<res_id::STRG>::new(0x7E6F41A4),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8154C48B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -255,10 +255,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3E05B8DC,
+            room_id: ResId::<res_id::MREA>::new(0x3E05B8DC),
             name: "Main Ventilation Shaft Section D",
-            name_id: 0xD638BAB8,
-            mapa_id: 0x17D043E1,
+            name_id: ResId::<res_id::STRG>::new(0xD638BAB8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x17D043E1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -272,10 +272,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x85578E54,
+            room_id: ResId::<res_id::MREA>::new(0x85578E54),
             name: "Biotech Research Area 1",
-            name_id: 0x5AF23509,
-            mapa_id: 0xAC827569,
+            name_id: ResId::<res_id::STRG>::new(0x5AF23509),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAC827569),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -295,10 +295,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x5BDC869C,
+            room_id: ResId::<res_id::MREA>::new(0x5BDC869C),
             name: "Main Ventilation Shaft Section C",
-            name_id: 0xB3E184F8,
-            mapa_id: 0x72097DA1,
+            name_id: ResId::<res_id::STRG>::new(0xB3E184F8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x72097DA1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -312,10 +312,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x49C59925,
+            room_id: ResId::<res_id::MREA>::new(0x49C59925),
             name: "Deck Beta Security Hall",
-            name_id: 0x9F2BE737,
-            mapa_id: 0x60106218,
+            name_id: ResId::<res_id::STRG>::new(0x9F2BE737),
+            mapa_id: ResId::<res_id::MAPA>::new(0x60106218),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -335,10 +335,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x6ED3231B,
+            room_id: ResId::<res_id::MREA>::new(0x6ED3231B),
             name: "Connection Elevator to Deck Beta",
-            name_id: 0xDB1C5B1A,
-            mapa_id: 0x4706D826,
+            name_id: ResId::<res_id::STRG>::new(0xDB1C5B1A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4706D826),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -352,10 +352,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x093500E4,
+            room_id: ResId::<res_id::MREA>::new(0x093500E4),
             name: "Subventilation Shaft Section A",
-            name_id: 0x69848506,
-            mapa_id: 0x20E0FBD9,
+            name_id: ResId::<res_id::STRG>::new(0x69848506),
+            mapa_id: ResId::<res_id::MAPA>::new(0x20E0FBD9),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -369,10 +369,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4CF4E25C,
+            room_id: ResId::<res_id::MREA>::new(0x4CF4E25C),
             name: "Main Ventilation Shaft Section B",
-            name_id: 0xA4C9E038,
-            mapa_id: 0x65211961,
+            name_id: ResId::<res_id::STRG>::new(0xA4C9E038),
+            mapa_id: ResId::<res_id::MAPA>::new(0x65211961),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -386,10 +386,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD16B26D0,
+            room_id: ResId::<res_id::MREA>::new(0xD16B26D0),
             name: "Biohazard Containment",
-            name_id: 0xC92F52A5,
-            mapa_id: 0xF8BEDDED,
+            name_id: ResId::<res_id::STRG>::new(0xC92F52A5),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF8BEDDED),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -409,10 +409,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE667B605,
+            room_id: ResId::<res_id::MREA>::new(0xE667B605),
             name: "Deck Gamma Monitor Hall",
-            name_id: 0x86D633E7,
-            mapa_id: 0xCFB24D38,
+            name_id: ResId::<res_id::STRG>::new(0x86D633E7),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCFB24D38),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -426,10 +426,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC0BBB28A,
+            room_id: ResId::<res_id::MREA>::new(0xC0BBB28A),
             name: "Subventilation Shaft Section B",
-            name_id: 0x7574CA8B,
-            mapa_id: 0xE96E49B7,
+            name_id: ResId::<res_id::STRG>::new(0x7574CA8B),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE96E49B7),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -437,10 +437,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x758C4F1C,
+            room_id: ResId::<res_id::MREA>::new(0x758C4F1C),
             name: "Main Ventilation Shaft Section A",
-            name_id: 0x9DB14D78,
-            mapa_id: 0x5C59B421,
+            name_id: ResId::<res_id::STRG>::new(0x9DB14D78),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5C59B421),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -454,10 +454,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x2CA2A263,
+            room_id: ResId::<res_id::MREA>::new(0x2CA2A263),
             name: "Deck Beta Transit Hall",
-            name_id: 0xFA4CDC71,
-            mapa_id: 0x0577595E,
+            name_id: ResId::<res_id::STRG>::new(0xFA4CDC71),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0577595E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -477,10 +477,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x87452DC1,
+            room_id: ResId::<res_id::MREA>::new(0x87452DC1),
             name: "Reactor Core",
-            name_id: 0x240206E1,
-            mapa_id: 0xAE90D6FC,
+            name_id: ResId::<res_id::STRG>::new(0x240206E1),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAE90D6FC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -494,10 +494,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x6FF0FD62,
+            room_id: ResId::<res_id::MREA>::new(0x6FF0FD62),
             name: "Cargo Freight Lift to Deck Gamma",
-            name_id: 0x29E0D78B,
-            mapa_id: 0x4625065F,
+            name_id: ResId::<res_id::STRG>::new(0x29E0D78B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4625065F),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -511,10 +511,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3EA190EE,
+            room_id: ResId::<res_id::MREA>::new(0x3EA190EE),
             name: "Reactor Core Entrance",
-            name_id: 0xD69C928A,
-            mapa_id: 0x17746BD3,
+            name_id: ResId::<res_id::STRG>::new(0xD69C928A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x17746BD3),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -524,10 +524,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("Metroid2.pak", &[
         RoomInfo {
-            room_id: 0x3E6B2BB7,
+            room_id: ResId::<res_id::MREA>::new(0x3E6B2BB7),
             name: "Transport to Tallon Overworld North",
-            name_id: 0xF747143D,
-            mapa_id: 0x17BED08A,
+            name_id: ResId::<res_id::STRG>::new(0xF747143D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x17BED08A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -541,10 +541,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB7F1952A,
+            room_id: ResId::<res_id::MREA>::new(0xB7F1952A),
             name: "Ruins Entrance",
-            name_id: 0x14376D10,
-            mapa_id: 0x9E246E17,
+            name_id: ResId::<res_id::STRG>::new(0x14376D10),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9E246E17),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -564,10 +564,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD5CDB809,
+            room_id: ResId::<res_id::MREA>::new(0xD5CDB809),
             name: "Main Plaza",
-            name_id: 0xC10FF260,
-            mapa_id: 0xFC184334,
+            name_id: ResId::<res_id::STRG>::new(0xC10FF260),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFC184334),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131372 },
@@ -634,10 +634,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x560DBE38,
+            room_id: ResId::<res_id::MREA>::new(0x560DBE38),
             name: "Ruined Fountain Access",
-            name_id: 0xC9847D9B,
-            mapa_id: 0x7FD84505,
+            name_id: ResId::<res_id::STRG>::new(0xC9847D9B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7FD84505),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -657,10 +657,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xDF746AE0,
+            room_id: ResId::<res_id::MREA>::new(0xDF746AE0),
             name: "Ruined Shrine Access",
-            name_id: 0x9547BF17,
-            mapa_id: 0xF6A191DD,
+            name_id: ResId::<res_id::STRG>::new(0x9547BF17),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF6A191DD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -680,10 +680,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x092D89FD,
+            room_id: ResId::<res_id::MREA>::new(0x092D89FD),
             name: "Nursery Access",
-            name_id: 0x431E5C0A,
-            mapa_id: 0x20F872C0,
+            name_id: ResId::<res_id::STRG>::new(0x431E5C0A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x20F872C0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -703,10 +703,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x53359457,
+            room_id: ResId::<res_id::MREA>::new(0x53359457),
             name: "Plaza Access",
-            name_id: 0xF559A9BD,
-            mapa_id: 0x7AE06F6A,
+            name_id: ResId::<res_id::STRG>::new(0xF559A9BD),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7AE06F6A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -726,10 +726,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x2B3F1CEE,
+            room_id: ResId::<res_id::MREA>::new(0x2B3F1CEE),
             name: "Piston Tunnel",
-            name_id: 0x3BDF0E1A,
-            mapa_id: 0x02EAE7D3,
+            name_id: ResId::<res_id::STRG>::new(0x3BDF0E1A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x02EAE7D3),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -737,10 +737,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x165A4DE9,
+            room_id: ResId::<res_id::MREA>::new(0x165A4DE9),
             name: "Ruined Fountain",
-            name_id: 0x73012D88,
-            mapa_id: 0x3F8FB6D4,
+            name_id: ResId::<res_id::STRG>::new(0x73012D88),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3F8FB6D4),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524406 },
@@ -777,10 +777,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x3C785450,
+            room_id: ResId::<res_id::MREA>::new(0x3C785450),
             name: "Ruined Shrine",
-            name_id: 0x7A465821,
-            mapa_id: 0x15ADAF6D,
+            name_id: ResId::<res_id::STRG>::new(0x7A465821),
+            mapa_id: ResId::<res_id::MAPA>::new(0x15ADAF6D),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589860 },
@@ -854,10 +854,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xCB1E8A0B,
+            room_id: ResId::<res_id::MREA>::new(0xCB1E8A0B),
             name: "Eyon Tunnel",
-            name_id: 0x5870C051,
-            mapa_id: 0xE2CB7136,
+            name_id: ResId::<res_id::STRG>::new(0x5870C051),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE2CB7136),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -877,10 +877,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEF069019,
+            room_id: ResId::<res_id::MREA>::new(0xEF069019),
             name: "Vault",
-            name_id: 0xED05B6D6,
-            mapa_id: 0xC6D36B24,
+            name_id: ResId::<res_id::STRG>::new(0xED05B6D6),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC6D36B24),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720957 },
@@ -911,10 +911,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x3F04F304,
+            room_id: ResId::<res_id::MREA>::new(0x3F04F304),
             name: "Training Chamber",
-            name_id: 0x881D7FDF,
-            mapa_id: 0x16D10839,
+            name_id: ResId::<res_id::STRG>::new(0x881D7FDF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x16D10839),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
@@ -945,10 +945,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x870B0525,
+            room_id: ResId::<res_id::MREA>::new(0x870B0525),
             name: "Arboretum Access",
-            name_id: 0x0EE474A7,
-            mapa_id: 0xAEDEFE18,
+            name_id: ResId::<res_id::STRG>::new(0x0EE474A7),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAEDEFE18),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -974,10 +974,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x282B16B4,
+            room_id: ResId::<res_id::MREA>::new(0x282B16B4),
             name: "Meditation Fountain",
-            name_id: 0x89388C66,
-            mapa_id: 0x01FEED89,
+            name_id: ResId::<res_id::STRG>::new(0x89388C66),
+            mapa_id: ResId::<res_id::MAPA>::new(0x01FEED89),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -997,10 +997,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x59E0184E,
+            room_id: ResId::<res_id::MREA>::new(0x59E0184E),
             name: "Tower of Light Access",
-            name_id: 0x13D3CDB9,
-            mapa_id: 0x7035E373,
+            name_id: ResId::<res_id::STRG>::new(0x13D3CDB9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7035E373),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1026,10 +1026,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC2576E4D,
+            room_id: ResId::<res_id::MREA>::new(0xC2576E4D),
             name: "Ruined Nursery",
-            name_id: 0xA26E475A,
-            mapa_id: 0xEB829570,
+            name_id: ResId::<res_id::STRG>::new(0xA26E475A),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEB829570),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048674 },
@@ -1066,10 +1066,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xA5089191,
+            room_id: ResId::<res_id::MREA>::new(0xA5089191),
             name: "Vault Access",
-            name_id: 0x0D9BE20B,
-            mapa_id: 0x8CDD6AAC,
+            name_id: ResId::<res_id::STRG>::new(0x0D9BE20B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8CDD6AAC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1089,10 +1089,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x18D186BB,
+            room_id: ResId::<res_id::MREA>::new(0x18D186BB),
             name: "Training Chamber Access",
-            name_id: 0x93EB95D1,
-            mapa_id: 0x31047D86,
+            name_id: ResId::<res_id::STRG>::new(0x93EB95D1),
+            mapa_id: ResId::<res_id::MAPA>::new(0x31047D86),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179651 },
@@ -1135,10 +1135,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x18AB6106,
+            room_id: ResId::<res_id::MREA>::new(0x18AB6106),
             name: "Arboretum",
-            name_id: 0x1AA847C9,
-            mapa_id: 0x317E9A3B,
+            name_id: ResId::<res_id::STRG>::new(0x1AA847C9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x317E9A3B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1176,10 +1176,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x491BFABA,
+            room_id: ResId::<res_id::MREA>::new(0x491BFABA),
             name: "Magma Pool",
-            name_id: 0xC08FF8AD,
-            mapa_id: 0x60CE0187,
+            name_id: ResId::<res_id::STRG>::new(0xC08FF8AD),
+            mapa_id: ResId::<res_id::MAPA>::new(0x60CE0187),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310957 },
@@ -1216,10 +1216,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0D72F1F7,
+            room_id: ResId::<res_id::MREA>::new(0x0D72F1F7),
             name: "Tower of Light",
-            name_id: 0xCA78CC80,
-            mapa_id: 0x24A70ACA,
+            name_id: ResId::<res_id::STRG>::new(0xCA78CC80),
+            mapa_id: ResId::<res_id::MAPA>::new(0x24A70ACA),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1377077 },
@@ -1266,10 +1266,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x1D5E482C,
+            room_id: ResId::<res_id::MREA>::new(0x1D5E482C),
             name: "Save Station 1",
-            name_id: 0xA445FC31,
-            mapa_id: 0x348BB311,
+            name_id: ResId::<res_id::STRG>::new(0xA445FC31),
+            mapa_id: ResId::<res_id::MAPA>::new(0x348BB311),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1283,10 +1283,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x46295CA0,
+            room_id: ResId::<res_id::MREA>::new(0x46295CA0),
             name: "North Atrium",
-            name_id: 0x7285517C,
-            mapa_id: 0x6FFCA79D,
+            name_id: ResId::<res_id::STRG>::new(0x7285517C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6FFCA79D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1306,10 +1306,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x8316EDF5,
+            room_id: ResId::<res_id::MREA>::new(0x8316EDF5),
             name: "Transport to Magmoor Caverns North",
-            name_id: 0x71D36693,
-            mapa_id: 0xAAC316C8,
+            name_id: ResId::<res_id::STRG>::new(0x71D36693),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAAC316C8),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1335,10 +1335,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3D238FCD,
+            room_id: ResId::<res_id::MREA>::new(0x3D238FCD),
             name: "Sunchamber Lobby",
-            name_id: 0xA0B28BE7,
-            mapa_id: 0x14F674F0,
+            name_id: ResId::<res_id::STRG>::new(0xA0B28BE7),
+            mapa_id: ResId::<res_id::MAPA>::new(0x14F674F0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1358,10 +1358,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x95F2019E,
+            room_id: ResId::<res_id::MREA>::new(0x95F2019E),
             name: "Gathering Hall Access",
-            name_id: 0x1748FBBC,
-            mapa_id: 0xBC27FAA3,
+            name_id: ResId::<res_id::STRG>::new(0x1748FBBC),
+            mapa_id: ResId::<res_id::MAPA>::new(0xBC27FAA3),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1381,10 +1381,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x11BD63B7,
+            room_id: ResId::<res_id::MREA>::new(0x11BD63B7),
             name: "Tower Chamber",
-            name_id: 0xB53E5239,
-            mapa_id: 0x3868988A,
+            name_id: ResId::<res_id::STRG>::new(0xB53E5239),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3868988A),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769497 },
@@ -1425,10 +1425,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xE34FD92B,
+            room_id: ResId::<res_id::MREA>::new(0xE34FD92B),
             name: "Ruined Gallery",
-            name_id: 0x00091182,
-            mapa_id: 0xCA9A2216,
+            name_id: ResId::<res_id::STRG>::new(0x00091182),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCA9A2216),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1835044 },
@@ -1477,10 +1477,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xDE161372,
+            room_id: ResId::<res_id::MREA>::new(0xDE161372),
             name: "Sun Tower",
-            name_id: 0x71FAC7D0,
-            mapa_id: 0xF7C3E84F,
+            name_id: ResId::<res_id::STRG>::new(0x71FAC7D0),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF7C3E84F),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1500,10 +1500,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3AD2120F,
+            room_id: ResId::<res_id::MREA>::new(0x3AD2120F),
             name: "Transport Access North",
-            name_id: 0x9094037D,
-            mapa_id: 0x1307E932,
+            name_id: ResId::<res_id::STRG>::new(0x9094037D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1307E932),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966450 },
@@ -1534,10 +1534,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x54C40995,
+            room_id: ResId::<res_id::MREA>::new(0x54C40995),
             name: "Sunchamber Access",
-            name_id: 0xC57F2127,
-            mapa_id: 0x7D11F2A8,
+            name_id: ResId::<res_id::STRG>::new(0xC57F2127),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7D11F2A8),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1557,10 +1557,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x47E73BC5,
+            room_id: ResId::<res_id::MREA>::new(0x47E73BC5),
             name: "Gathering Hall",
-            name_id: 0x2FA5B346,
-            mapa_id: 0x6E32C0F8,
+            name_id: ResId::<res_id::STRG>::new(0x2FA5B346),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6E32C0F8),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2097239 },
@@ -1609,10 +1609,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xEA8A4073,
+            room_id: ResId::<res_id::MREA>::new(0xEA8A4073),
             name: "Totem Access",
-            name_id: 0xBA00BFC4,
-            mapa_id: 0xC35FBB4E,
+            name_id: ResId::<res_id::STRG>::new(0xBA00BFC4),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC35FBB4E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1632,10 +1632,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x1A5B2E16,
+            room_id: ResId::<res_id::MREA>::new(0x1A5B2E16),
             name: "Map Station",
-            name_id: 0xEF743A55,
-            mapa_id: 0x338ED52B,
+            name_id: ResId::<res_id::STRG>::new(0xEF743A55),
+            mapa_id: ResId::<res_id::MAPA>::new(0x338ED52B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1649,10 +1649,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x41CC90EC,
+            room_id: ResId::<res_id::MREA>::new(0x41CC90EC),
             name: "Sun Tower Access",
-            name_id: 0xECF526A6,
-            mapa_id: 0x68196BD1,
+            name_id: ResId::<res_id::STRG>::new(0xECF526A6),
+            mapa_id: ResId::<res_id::MAPA>::new(0x68196BD1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1672,10 +1672,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC8309DF6,
+            room_id: ResId::<res_id::MREA>::new(0xC8309DF6),
             name: "Hive Totem",
-            name_id: 0x8E1A98C3,
-            mapa_id: 0xE1E566CB,
+            name_id: ResId::<res_id::STRG>::new(0x8E1A98C3),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE1E566CB),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359772 },
@@ -1748,10 +1748,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x9A0A03EB,
+            room_id: ResId::<res_id::MREA>::new(0x9A0A03EB),
             name: "Sunchamber",
-            name_id: 0x23BE18E3,
-            mapa_id: 0xB3DFF8D6,
+            name_id: ResId::<res_id::STRG>::new(0x23BE18E3),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB3DFF8D6),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2435310 },
@@ -1853,10 +1853,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xEEEC837D,
+            room_id: ResId::<res_id::MREA>::new(0xEEEC837D),
             name: "Watery Hall Access",
-            name_id: 0x6B29DE67,
-            mapa_id: 0xC7397840,
+            name_id: ResId::<res_id::STRG>::new(0x6B29DE67),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC7397840),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2490376 },
@@ -1893,10 +1893,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xF7D8954E,
+            room_id: ResId::<res_id::MREA>::new(0xF7D8954E),
             name: "Save Station 2",
-            name_id: 0x4EC32153,
-            mapa_id: 0xDE0D6E73,
+            name_id: ResId::<res_id::STRG>::new(0x4EC32153),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDE0D6E73),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1910,10 +1910,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x713600E3,
+            room_id: ResId::<res_id::MREA>::new(0x713600E3),
             name: "East Atrium",
-            name_id: 0xF6263F11,
-            mapa_id: 0x58E3FBDE,
+            name_id: ResId::<res_id::STRG>::new(0xF6263F11),
+            mapa_id: ResId::<res_id::MAPA>::new(0x58E3FBDE),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -1933,10 +1933,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x492CBF4A,
+            room_id: ResId::<res_id::MREA>::new(0x492CBF4A),
             name: "Watery Hall",
-            name_id: 0xB01EE17B,
-            mapa_id: 0x60F94477,
+            name_id: ResId::<res_id::STRG>::new(0xB01EE17B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x60F94477),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687109 },
@@ -2000,10 +2000,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x463D0D2E,
+            room_id: ResId::<res_id::MREA>::new(0x463D0D2E),
             name: "Energy Core Access",
-            name_id: 0xDCD3AE3C,
-            mapa_id: 0x6FE8F613,
+            name_id: ResId::<res_id::STRG>::new(0xDCD3AE3C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6FE8F613),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2023,10 +2023,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x0F403B07,
-            name: "Dynamo Access", // this is the one in chozo
-            name_id: 0xB65B8F1A,
-            mapa_id: 0x2695C03A,
+            room_id: ResId::<res_id::MREA>::new(0x0F403B07),
+            name: "Dynamo Access",
+            name_id: ResId::<res_id::STRG>::new(0xB65B8F1A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2695C03A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2046,10 +2046,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC9D52BBC,
+            room_id: ResId::<res_id::MREA>::new(0xC9D52BBC),
             name: "Energy Core",
-            name_id: 0xF56712ED,
-            mapa_id: 0xE000D081,
+            name_id: ResId::<res_id::STRG>::new(0xF56712ED),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE000D081),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2069,10 +2069,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x04D6C285,
+            room_id: ResId::<res_id::MREA>::new(0x04D6C285),
             name: "Dynamo",
-            name_id: 0x1C7B67FC,
-            mapa_id: 0x2D0339B8,
+            name_id: ResId::<res_id::STRG>::new(0x1C7B67FC),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2D0339B8),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2949154 },
@@ -2103,10 +2103,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xEF7EB590,
+            room_id: ResId::<res_id::MREA>::new(0xEF7EB590),
             name: "Burn Dome Access",
-            name_id: 0x80BA3447,
-            mapa_id: 0xC6AB4EAD,
+            name_id: ResId::<res_id::STRG>::new(0x80BA3447),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC6AB4EAD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2120,10 +2120,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC2715A58,
+            room_id: ResId::<res_id::MREA>::new(0xC2715A58),
             name: "West Furnace Access",
-            name_id: 0x88428FAF,
-            mapa_id: 0xEBA4A165,
+            name_id: ResId::<res_id::STRG>::new(0x88428FAF),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEBA4A165),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2143,10 +2143,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4148F7B0,
+            room_id: ResId::<res_id::MREA>::new(0x4148F7B0),
             name: "Burn Dome",
-            name_id: 0xA20E3F19,
-            mapa_id: 0x689D0C8D,
+            name_id: ResId::<res_id::STRG>::new(0xA20E3F19),
+            mapa_id: ResId::<res_id::MAPA>::new(0x689D0C8D),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3145782 },
@@ -2198,10 +2198,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x2E318473,
+            room_id: ResId::<res_id::MREA>::new(0x2E318473),
             name: "Furnace",
-            name_id: 0x2C32A2BC,
-            mapa_id: 0x07E47F4E,
+            name_id: ResId::<res_id::STRG>::new(0x2C32A2BC),
+            mapa_id: ResId::<res_id::MAPA>::new(0x07E47F4E),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3211358 },
@@ -2244,10 +2244,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x44E528F6,
+            room_id: ResId::<res_id::MREA>::new(0x44E528F6),
             name: "East Furnace Access",
-            name_id: 0x0ED6FD01,
-            mapa_id: 0x6D30D3CB,
+            name_id: ResId::<res_id::STRG>::new(0x0ED6FD01),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6D30D3CB),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2279,10 +2279,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD9E78EB0,
+            room_id: ResId::<res_id::MREA>::new(0xD9E78EB0),
             name: "Crossway Access West",
-            name_id: 0x41DC4F4A,
-            mapa_id: 0xF032758D,
+            name_id: ResId::<res_id::STRG>::new(0x41DC4F4A),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF032758D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2302,10 +2302,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xFB54A0CB,
+            room_id: ResId::<res_id::MREA>::new(0xFB54A0CB),
             name: "Hall of the Elders",
-            name_id: 0x79C6DCFE,
-            mapa_id: 0xD2815BF6,
+            name_id: ResId::<res_id::STRG>::new(0x79C6DCFE),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD2815BF6),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3408606 },
@@ -2366,10 +2366,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x13FFF119,
+            room_id: ResId::<res_id::MREA>::new(0x13FFF119),
             name: "Crossway",
-            name_id: 0x11FCD7D6,
-            mapa_id: 0x3A2A0A24,
+            name_id: ResId::<res_id::STRG>::new(0x11FCD7D6),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3A2A0A24),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3474120 },
@@ -2418,10 +2418,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x9D516D9D,
+            room_id: ResId::<res_id::MREA>::new(0x9D516D9D),
             name: "Reflecting Pool Access",
-            name_id: 0x02D8AE3E,
-            mapa_id: 0xB48496A0,
+            name_id: ResId::<res_id::STRG>::new(0x02D8AE3E),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB48496A0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2441,10 +2441,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE1CE5BD1,
+            room_id: ResId::<res_id::MREA>::new(0xE1CE5BD1),
             name: "Elder Hall Access",
-            name_id: 0x45D3E6A2,
-            mapa_id: 0xC81BA0EC,
+            name_id: ResId::<res_id::STRG>::new(0x45D3E6A2),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC81BA0EC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2464,10 +2464,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x675A297F,
+            room_id: ResId::<res_id::MREA>::new(0x675A297F),
             name: "Crossway Access South",
-            name_id: 0xC347940C,
-            mapa_id: 0x4E8FD242,
+            name_id: ResId::<res_id::STRG>::new(0xC347940C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4E8FD242),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2499,10 +2499,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE1981EFC,
+            room_id: ResId::<res_id::MREA>::new(0xE1981EFC),
             name: "Elder Chamber",
-            name_id: 0x14B70ABF,
-            mapa_id: 0xC84DE5C1,
+            name_id: ResId::<res_id::STRG>::new(0x14B70ABF),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC84DE5C1),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3735555 },
@@ -2543,10 +2543,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x361ECAAC,
+            room_id: ResId::<res_id::MREA>::new(0x361ECAAC),
             name: "Reflecting Pool",
-            name_id: 0x90AE6BA3,
-            mapa_id: 0x1FCB3191,
+            name_id: ResId::<res_id::STRG>::new(0x90AE6BA3),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1FCB3191),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2596,10 +2596,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x188A23AF,
+            room_id: ResId::<res_id::MREA>::new(0x188A23AF),
             name: "Save Station 3",
-            name_id: 0xA19197B2,
-            mapa_id: 0x315FD892,
+            name_id: ResId::<res_id::STRG>::new(0xA19197B2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x315FD892),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2619,10 +2619,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA2F90C53,
+            room_id: ResId::<res_id::MREA>::new(0xA2F90C53),
             name: "Transport Access South",
-            name_id: 0x3DBD6A91,
-            mapa_id: 0x8B2CF76E,
+            name_id: ResId::<res_id::STRG>::new(0x3DBD6A91),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8B2CF76E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2648,10 +2648,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xAFEFE677,
+            room_id: ResId::<res_id::MREA>::new(0xAFEFE677),
             name: "Antechamber",
-            name_id: 0xA3715140,
-            mapa_id: 0x863A1D4A,
+            name_id: ResId::<res_id::STRG>::new(0xA3715140),
+            mapa_id: ResId::<res_id::MAPA>::new(0x863A1D4A),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3997699 },
@@ -2698,10 +2698,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xA5FA69A1,
+            room_id: ResId::<res_id::MREA>::new(0xA5FA69A1),
             name: "Transport to Tallon Overworld East",
-            name_id: 0x1CE1DDBC,
-            mapa_id: 0x8C2F929C,
+            name_id: ResId::<res_id::STRG>::new(0x1CE1DDBC),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8C2F929C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2715,10 +2715,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x236E1B0F,
+            room_id: ResId::<res_id::MREA>::new(0x236E1B0F),
             name: "Transport to Tallon Overworld South",
-            name_id: 0x9A75AF12,
-            mapa_id: 0x0ABBE032,
+            name_id: ResId::<res_id::STRG>::new(0x9A75AF12),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0ABBE032),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2734,10 +2734,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("Metroid3.pak", &[
         RoomInfo {
-            room_id: 0xC00E3781,
+            room_id: ResId::<res_id::MREA>::new(0xC00E3781),
             name: "Transport to Magmoor Caverns West",
-            name_id: 0xF7D14F4D,
-            mapa_id: 0xE9DBCCBC,
+            name_id: ResId::<res_id::STRG>::new(0xF7D14F4D),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE9DBCCBC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2751,10 +2751,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC4107CD7,
+            room_id: ResId::<res_id::MREA>::new(0xC4107CD7),
             name: "Shoreline Entrance",
-            name_id: 0x473E5158,
-            mapa_id: 0xEDC587EA,
+            name_id: ResId::<res_id::STRG>::new(0x473E5158),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEDC587EA),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2774,10 +2774,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xF7285979,
+            room_id: ResId::<res_id::MREA>::new(0xF7285979),
             name: "Phendrana Shorelines",
-            name_id: 0x6F9B4863,
-            mapa_id: 0xDEFDA244,
+            name_id: ResId::<res_id::STRG>::new(0x6F9B4863),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDEFDA244),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131438 },
@@ -2838,10 +2838,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x85D9F399,
+            room_id: ResId::<res_id::MREA>::new(0x85D9F399),
             name: "Temple Entryway",
-            name_id: 0xBA098307,
-            mapa_id: 0xAC0C08A4,
+            name_id: ResId::<res_id::STRG>::new(0xBA098307),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAC0C08A4),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2861,10 +2861,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x0581699D,
+            room_id: ResId::<res_id::MREA>::new(0x0581699D),
             name: "Save Station B",
-            name_id: 0xE8FD954C,
-            mapa_id: 0x2C5492A0,
+            name_id: ResId::<res_id::STRG>::new(0xE8FD954C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2C5492A0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2878,10 +2878,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3C13643A,
+            room_id: ResId::<res_id::MREA>::new(0x3C13643A),
             name: "Ruins Entryway",
-            name_id: 0xE968AE18,
-            mapa_id: 0x15C69F07,
+            name_id: ResId::<res_id::STRG>::new(0xE968AE18),
+            mapa_id: ResId::<res_id::MAPA>::new(0x15C69F07),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2901,10 +2901,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC8115292,
+            room_id: ResId::<res_id::MREA>::new(0xC8115292),
             name: "Plaza Walkway",
-            name_id: 0xF7C1220C,
-            mapa_id: 0xE1C4A9AF,
+            name_id: ResId::<res_id::STRG>::new(0xF7C1220C),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE1C4A9AF),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2924,10 +2924,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4E85203C,
+            room_id: ResId::<res_id::MREA>::new(0x4E85203C),
             name: "Ice Ruins Access",
-            name_id: 0x715550A2,
-            mapa_id: 0x6750DB01,
+            name_id: ResId::<res_id::STRG>::new(0x715550A2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6750DB01),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -2947,10 +2947,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x6655F51E,
+            room_id: ResId::<res_id::MREA>::new(0x6655F51E),
             name: "Chozo Ice Temple",
-            name_id: 0x768CA684,
-            mapa_id: 0x4F800E23,
+            name_id: ResId::<res_id::STRG>::new(0x768CA684),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4F800E23),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524887 },
@@ -2997,10 +2997,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xB33A0620,
+            room_id: ResId::<res_id::MREA>::new(0xB33A0620),
             name: "Ice Ruins West",
-            name_id: 0x4ED3BCD8,
-            mapa_id: 0x9AEFFD1D,
+            name_id: ResId::<res_id::STRG>::new(0x4ED3BCD8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9AEFFD1D),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 600301 },
@@ -3049,10 +3049,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xDAFCC26F,
+            room_id: ResId::<res_id::MREA>::new(0xDAFCC26F),
             name: "Ice Ruins East",
-            name_id: 0x27157897,
-            mapa_id: 0xF3293952,
+            name_id: ResId::<res_id::STRG>::new(0x27157897),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF3293952),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655531 },
@@ -3089,10 +3089,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xEF674B4C,
+            room_id: ResId::<res_id::MREA>::new(0xEF674B4C),
             name: "Chapel Tunnel",
-            name_id: 0xC0E2A999,
-            mapa_id: 0xC6B2B071,
+            name_id: ResId::<res_id::STRG>::new(0xC0E2A999),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC6B2B071),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3112,10 +3112,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xCFB8ABD1,
+            room_id: ResId::<res_id::MREA>::new(0xCFB8ABD1),
             name: "Courtyard Entryway",
-            name_id: 0x5E92DE43,
-            mapa_id: 0xE66D50EC,
+            name_id: ResId::<res_id::STRG>::new(0x5E92DE43),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE66D50EC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3135,10 +3135,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x034D8137,
+            room_id: ResId::<res_id::MREA>::new(0x034D8137),
             name: "Canyon Entryway",
-            name_id: 0x3C9DF1A9,
-            mapa_id: 0x2A987A0A,
+            name_id: ResId::<res_id::STRG>::new(0x3C9DF1A9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2A987A0A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3164,10 +3164,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x40C548E9,
+            room_id: ResId::<res_id::MREA>::new(0x40C548E9),
             name: "Chapel of the Elders",
-            name_id: 0x501C1B73,
-            mapa_id: 0x6910B3D4,
+            name_id: ResId::<res_id::STRG>::new(0x501C1B73),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6910B3D4),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917592 },
@@ -3219,10 +3219,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x1921876D,
+            room_id: ResId::<res_id::MREA>::new(0x1921876D),
             name: "Ruined Courtyard",
-            name_id: 0x2BB2D46B,
-            mapa_id: 0x30F47C50,
+            name_id: ResId::<res_id::STRG>::new(0x2BB2D46B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x30F47C50),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983596 },
@@ -3277,10 +3277,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xA20A7455,
+            room_id: ResId::<res_id::MREA>::new(0xA20A7455),
             name: "Phendrana Canyon",
-            name_id: 0x2146196C,
-            mapa_id: 0x8BDF8F68,
+            name_id: ResId::<res_id::STRG>::new(0x2146196C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8BDF8F68),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1048801 },
@@ -3321,10 +3321,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x5694A06B,
+            room_id: ResId::<res_id::MREA>::new(0x5694A06B),
             name: "Save Station A",
-            name_id: 0xAB7D1A93,
-            mapa_id: 0x7F415B56,
+            name_id: ResId::<res_id::STRG>::new(0xAB7D1A93),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7F415B56),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3338,10 +3338,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD341D2DB,
+            room_id: ResId::<res_id::MREA>::new(0xD341D2DB),
             name: "Specimen Storage",
-            name_id: 0x74674F6E,
-            mapa_id: 0xFA9429E6,
+            name_id: ResId::<res_id::STRG>::new(0x74674F6E),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFA9429E6),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3373,10 +3373,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEAB320CF,
+            room_id: ResId::<res_id::MREA>::new(0xEAB320CF),
             name: "Quarantine Access",
-            name_id: 0x218C6D34,
-            mapa_id: 0xC366DBF2,
+            name_id: ResId::<res_id::STRG>::new(0x218C6D34),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC366DBF2),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3396,10 +3396,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB51FCE29,
+            room_id: ResId::<res_id::MREA>::new(0xB51FCE29),
             name: "Research Entrance",
-            name_id: 0x2DACDF33,
-            mapa_id: 0x9CCA3514,
+            name_id: ResId::<res_id::STRG>::new(0x2DACDF33),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9CCA3514),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3437,10 +3437,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x05E1962E,
+            room_id: ResId::<res_id::MREA>::new(0x05E1962E),
             name: "North Quarantine Tunnel",
-            name_id: 0xBC838C42,
-            mapa_id: 0x2C346D13,
+            name_id: ResId::<res_id::STRG>::new(0xBC838C42),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2C346D13),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3472,10 +3472,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x83151B33,
+            room_id: ResId::<res_id::MREA>::new(0x83151B33),
             name: "Map Station",
-            name_id: 0x6E69E7E2,
-            mapa_id: 0xAAC0E00E,
+            name_id: ResId::<res_id::STRG>::new(0x6E69E7E2),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAAC0E00E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3489,10 +3489,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3947E047,
+            room_id: ResId::<res_id::MREA>::new(0x3947E047),
             name: "Hydra Lab Entryway",
-            name_id: 0x069790D9,
-            mapa_id: 0x10921B7A,
+            name_id: ResId::<res_id::STRG>::new(0x069790D9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x10921B7A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3524,10 +3524,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x70181194,
+            room_id: ResId::<res_id::MREA>::new(0x70181194),
             name: "Quarantine Cave",
-            name_id: 0x8DF1AB6C,
-            mapa_id: 0x59CDEAA9,
+            name_id: ResId::<res_id::STRG>::new(0x8DF1AB6C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x59CDEAA9),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1573322 },
@@ -3590,10 +3590,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x43E4CC25,
+            room_id: ResId::<res_id::MREA>::new(0x43E4CC25),
             name: "Research Lab Hydra",
-            name_id: 0x71779F23,
-            mapa_id: 0x6A313718,
+            name_id: ResId::<res_id::STRG>::new(0x71779F23),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6A313718),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1639699 },
@@ -3630,10 +3630,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0035FDAD,
+            room_id: ResId::<res_id::MREA>::new(0x0035FDAD),
             name: "South Quarantine Tunnel",
-            name_id: 0x5DED48EF,
-            mapa_id: 0x29E00690,
+            name_id: ResId::<res_id::STRG>::new(0x5DED48EF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x29E00690),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3665,10 +3665,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x2191A05D,
+            room_id: ResId::<res_id::MREA>::new(0x2191A05D),
             name: "Quarantine Monitor",
-            name_id: 0xE447DD59,
-            mapa_id: 0x08445B60,
+            name_id: ResId::<res_id::STRG>::new(0xE447DD59),
+            mapa_id: ResId::<res_id::MAPA>::new(0x08445B60),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769489 },
@@ -3687,10 +3687,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x37BBB33C,
+            room_id: ResId::<res_id::MREA>::new(0x37BBB33C),
             name: "Observatory Access",
-            name_id: 0xF0C42103,
-            mapa_id: 0x1E6E4801,
+            name_id: ResId::<res_id::STRG>::new(0xF0C42103),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1E6E4801),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3716,10 +3716,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xDD0B0739,
+            room_id: ResId::<res_id::MREA>::new(0xDD0B0739),
             name: "Transport to Magmoor Caverns South",
-            name_id: 0xEAD47FF5,
-            mapa_id: 0xF4DEFC04,
+            name_id: ResId::<res_id::STRG>::new(0xEAD47FF5),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF4DEFC04),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3751,10 +3751,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3FB4A34E,
+            room_id: ResId::<res_id::MREA>::new(0x3FB4A34E),
             name: "Observatory",
-            name_id: 0x3BC68CD9,
-            mapa_id: 0x16615873,
+            name_id: ResId::<res_id::STRG>::new(0x3BC68CD9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x16615873),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966838 },
@@ -3825,10 +3825,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xD695B958,
+            room_id: ResId::<res_id::MREA>::new(0xD695B958),
             name: "Transport Access",
-            name_id: 0x95098BC3,
-            mapa_id: 0xFF404265,
+            name_id: ResId::<res_id::STRG>::new(0x95098BC3),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFF404265),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2031781 },
@@ -3871,10 +3871,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x1E48B18F,
+            room_id: ResId::<res_id::MREA>::new(0x1E48B18F),
             name: "West Tower Entrance",
-            name_id: 0x2198C111,
-            mapa_id: 0x379D4AB2,
+            name_id: ResId::<res_id::STRG>::new(0x2198C111),
+            mapa_id: ResId::<res_id::MAPA>::new(0x379D4AB2),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3900,10 +3900,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x715C31EE,
+            room_id: ResId::<res_id::MREA>::new(0x715C31EE),
             name: "Save Station D",
-            name_id: 0xB48A4CEA,
-            mapa_id: 0x5889CAD3,
+            name_id: ResId::<res_id::STRG>::new(0xB48A4CEA),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5889CAD3),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3917,10 +3917,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD79EE805,
+            room_id: ResId::<res_id::MREA>::new(0xD79EE805),
             name: "Frozen Pike",
-            name_id: 0x2A7752FD,
-            mapa_id: 0xFE4B1338,
+            name_id: ResId::<res_id::STRG>::new(0x2A7752FD),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFE4B1338),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -3976,10 +3976,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD79D6B9F,
+            room_id: ResId::<res_id::MREA>::new(0xD79D6B9F),
             name: "West Tower ",
-            name_id: 0x54D106A6,
-            mapa_id: 0xFE4890A2,
+            name_id: ResId::<res_id::STRG>::new(0x54D106A6),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFE4890A2),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4005,10 +4005,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x760E731A,
+            room_id: ResId::<res_id::MREA>::new(0x760E731A),
             name: "Pike Access",
-            name_id: 0x8CA504D8,
-            mapa_id: 0x5FDB8827,
+            name_id: ResId::<res_id::STRG>::new(0x8CA504D8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5FDB8827),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4040,10 +4040,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x39C70FB9,
+            room_id: ResId::<res_id::MREA>::new(0x39C70FB9),
             name: "Frost Cave Access",
-            name_id: 0x08066AB5,
-            mapa_id: 0x1012F484,
+            name_id: ResId::<res_id::STRG>::new(0x08066AB5),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1012F484),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4075,10 +4075,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x20EA1D30,
+            room_id: ResId::<res_id::MREA>::new(0x20EA1D30),
             name: "Hunter Cave Access",
-            name_id: 0xC39D3F35,
-            mapa_id: 0x093FE60D,
+            name_id: ResId::<res_id::STRG>::new(0xC39D3F35),
+            mapa_id: ResId::<res_id::MAPA>::new(0x093FE60D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4110,10 +4110,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB3C33249,
+            room_id: ResId::<res_id::MREA>::new(0xB3C33249),
             name: "Control Tower",
-            name_id: 0xA31A61D3,
-            mapa_id: 0x9A16C974,
+            name_id: ResId::<res_id::STRG>::new(0xA31A61D3),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9A16C974),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2557135 },
@@ -4172,10 +4172,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xA49B2544,
+            room_id: ResId::<res_id::MREA>::new(0xA49B2544),
             name: "Research Core",
-            name_id: 0x3C28345E,
-            mapa_id: 0x8D4EDE79,
+            name_id: ResId::<res_id::STRG>::new(0x3C28345E),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8D4EDE79),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 69730588 },
@@ -4244,10 +4244,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x4C6F7773,
+            room_id: ResId::<res_id::MREA>::new(0x4C6F7773),
             name: "Frost Cave",
-            name_id: 0x5CB624E9,
-            mapa_id: 0x65BA8C4E,
+            name_id: ResId::<res_id::STRG>::new(0x5CB624E9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x65BA8C4E),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2687367 },
@@ -4302,10 +4302,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x1EC7951A,
+            room_id: ResId::<res_id::MREA>::new(0x1EC7951A),
             name: "Hunter Cave",
-            name_id: 0x0E1EC680,
-            mapa_id: 0x37126E27,
+            name_id: ResId::<res_id::STRG>::new(0x0E1EC680),
+            mapa_id: ResId::<res_id::MAPA>::new(0x37126E27),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4361,10 +4361,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x51091931,
+            room_id: ResId::<res_id::MREA>::new(0x51091931),
             name: "East Tower",
-            name_id: 0xD2457408,
-            mapa_id: 0x78DCE20C,
+            name_id: ResId::<res_id::STRG>::new(0xD2457408),
+            mapa_id: ResId::<res_id::MAPA>::new(0x78DCE20C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4396,10 +4396,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD8E905DD,
+            room_id: ResId::<res_id::MREA>::new(0xD8E905DD),
             name: "Research Core Access",
-            name_id: 0x6DCBC075,
-            mapa_id: 0xF13CFEE0,
+            name_id: ResId::<res_id::STRG>::new(0x6DCBC075),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF13CFEE0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4425,10 +4425,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xCEDDBA38,
+            room_id: ResId::<res_id::MREA>::new(0xCEDDBA38),
             name: "Save Station C",
-            name_id: 0x23A146E9,
-            mapa_id: 0xE7084105,
+            name_id: ResId::<res_id::STRG>::new(0x23A146E9),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE7084105),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4448,10 +4448,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x253E76B3,
+            room_id: ResId::<res_id::MREA>::new(0x253E76B3),
             name: "Upper Edge Tunnel",
-            name_id: 0x22F3FB98,
-            mapa_id: 0x0CEB8D8E,
+            name_id: ResId::<res_id::STRG>::new(0x22F3FB98),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0CEB8D8E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4483,10 +4483,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x53801084,
+            room_id: ResId::<res_id::MREA>::new(0x53801084),
             name: "Lower Edge Tunnel",
-            name_id: 0x6C50601A,
-            mapa_id: 0x7A55EBB9,
+            name_id: ResId::<res_id::STRG>::new(0x6C50601A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7A55EBB9),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4518,10 +4518,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xCA6CC052,
+            room_id: ResId::<res_id::MREA>::new(0xCA6CC052),
             name: "Chamber Access",
-            name_id: 0xBFFC1AEE,
-            mapa_id: 0xE3B93B6F,
+            name_id: ResId::<res_id::STRG>::new(0xBFFC1AEE),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE3B93B6F),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4553,10 +4553,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x89D7A0A6,
+            room_id: ResId::<res_id::MREA>::new(0x89D7A0A6),
             name: "Lake Tunnel",
-            name_id: 0xB607D038,
-            mapa_id: 0xA0025B9B,
+            name_id: ResId::<res_id::STRG>::new(0xB607D038),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA0025B9B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4588,10 +4588,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x98DCC321,
+            room_id: ResId::<res_id::MREA>::new(0x98DCC321),
             name: "Aether Lab Entryway",
-            name_id: 0xA70CB3BF,
-            mapa_id: 0xB109381C,
+            name_id: ResId::<res_id::STRG>::new(0xA70CB3BF),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB109381C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4623,10 +4623,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x21B4BFF6,
+            room_id: ResId::<res_id::MREA>::new(0x21B4BFF6),
             name: "Research Lab Aether",
-            name_id: 0x1327ECF0,
-            mapa_id: 0x086144CB,
+            name_id: ResId::<res_id::STRG>::new(0x1327ECF0),
+            mapa_id: ResId::<res_id::MAPA>::new(0x086144CB),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3343328 },
@@ -4669,10 +4669,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x54DEF128,
+            room_id: ResId::<res_id::MREA>::new(0x54DEF128),
             name: "Phendrana\'s Edge",
-            name_id: 0xA9374BD0,
-            mapa_id: 0x7D0B0A15,
+            name_id: ResId::<res_id::STRG>::new(0xA9374BD0),
+            mapa_id: ResId::<res_id::MAPA>::new(0x7D0B0A15),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4716,10 +4716,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x49175472,
+            room_id: ResId::<res_id::MREA>::new(0x49175472),
             name: "Gravity Chamber",
-            name_id: 0x832CFFC2,
-            mapa_id: 0x60C2AF4F,
+            name_id: ResId::<res_id::STRG>::new(0x832CFFC2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x60C2AF4F),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3473439 },
@@ -4788,10 +4788,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xF7C84340,
+            room_id: ResId::<res_id::MREA>::new(0xF7C84340),
             name: "Storage Cave",
-            name_id: 0x321E3E44,
-            mapa_id: 0xDE1DB87D,
+            name_id: ResId::<res_id::STRG>::new(0x321E3E44),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDE1DB87D),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3539113 },
@@ -4838,10 +4838,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x3C9490E5,
+            room_id: ResId::<res_id::MREA>::new(0x3C9490E5),
             name: "Security Cave",
-            name_id: 0xF942EDE1,
-            mapa_id: 0x15416BD8,
+            name_id: ResId::<res_id::STRG>::new(0xF942EDE1),
+            mapa_id: ResId::<res_id::MAPA>::new(0x15416BD8),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 3604505 },
@@ -4862,10 +4862,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("Metroid4.pak", &[
         RoomInfo {
-            room_id: 0xB2701146,
+            room_id: ResId::<res_id::MREA>::new(0xB2701146),
             name: "Landing Site",
-            name_id: 0xCD758404,
-            mapa_id: 0x9BA5EA7B,
+            name_id: ResId::<res_id::STRG>::new(0xCD758404),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9BA5EA7B),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 126 },
@@ -4914,10 +4914,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x7B143499,
+            room_id: ResId::<res_id::MREA>::new(0x7B143499),
             name: "Gully",
-            name_id: 0x6F6C8433,
-            mapa_id: 0x52C1CFA4,
+            name_id: ResId::<res_id::STRG>::new(0x6F6C8433),
+            mapa_id: ResId::<res_id::MAPA>::new(0x52C1CFA4),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4937,10 +4937,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEE209548,
+            room_id: ResId::<res_id::MREA>::new(0xEE209548),
             name: "Canyon Cavern",
-            name_id: 0x80E904C5,
-            mapa_id: 0xC7F56E75,
+            name_id: ResId::<res_id::STRG>::new(0x80E904C5),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC7F56E75),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4960,10 +4960,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x5B4E38F5,
+            room_id: ResId::<res_id::MREA>::new(0x5B4E38F5),
             name: "Temple Hall",
-            name_id: 0xDB1204A3,
-            mapa_id: 0x729BC3C8,
+            name_id: ResId::<res_id::STRG>::new(0xDB1204A3),
+            mapa_id: ResId::<res_id::MAPA>::new(0x729BC3C8),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -4983,10 +4983,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC44E7A07,
+            room_id: ResId::<res_id::MREA>::new(0xC44E7A07),
             name: "Alcove",
-            name_id: 0x1923E46E,
-            mapa_id: 0xED9B813A,
+            name_id: ResId::<res_id::STRG>::new(0x1923E46E),
+            mapa_id: ResId::<res_id::MAPA>::new(0xED9B813A),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 262151 },
@@ -5027,10 +5027,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xE76AD711,
+            room_id: ResId::<res_id::MREA>::new(0xE76AD711),
             name: "Waterfall Cavern",
-            name_id: 0x3C77171B,
-            mapa_id: 0xCEBF2C2C,
+            name_id: ResId::<res_id::STRG>::new(0x3C77171B),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCEBF2C2C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5056,10 +5056,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x2043C96E,
+            room_id: ResId::<res_id::MREA>::new(0x2043C96E),
             name: "Tallon Canyon",
-            name_id: 0xC4FA6C8B,
-            mapa_id: 0x09963253,
+            name_id: ResId::<res_id::STRG>::new(0xC4FA6C8B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x09963253),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5091,10 +5091,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBDB1FCAC,
+            room_id: ResId::<res_id::MREA>::new(0xBDB1FCAC),
             name: "Temple Security Station",
-            name_id: 0x56B0E7D8,
-            mapa_id: 0x94640791,
+            name_id: ResId::<res_id::STRG>::new(0x56B0E7D8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x94640791),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5120,10 +5120,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB9ABCD56,
+            room_id: ResId::<res_id::MREA>::new(0xB9ABCD56),
             name: "Frigate Crash Site",
-            name_id: 0xD6007C5A,
-            mapa_id: 0x907E366B,
+            name_id: ResId::<res_id::STRG>::new(0xD6007C5A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x907E366B),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524795 },
@@ -5172,10 +5172,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x13D96D3D,
+            room_id: ResId::<res_id::MREA>::new(0x13D96D3D),
             name: "Transport Tunnel A",
-            name_id: 0x9DEC347D,
-            mapa_id: 0x3A0C9600,
+            name_id: ResId::<res_id::STRG>::new(0x9DEC347D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3A0C9600),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5195,10 +5195,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x404804D9,
+            room_id: ResId::<res_id::MREA>::new(0x404804D9),
             name: "Root Tunnel",
-            name_id: 0x4BB5D760,
-            mapa_id: 0x699DFFE4,
+            name_id: ResId::<res_id::STRG>::new(0x4BB5D760),
+            mapa_id: ResId::<res_id::MAPA>::new(0x699DFFE4),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5224,10 +5224,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x234762BE,
+            room_id: ResId::<res_id::MREA>::new(0x234762BE),
             name: "Temple Lobby",
-            name_id: 0xD83F1351,
-            mapa_id: 0x0A929983,
+            name_id: ResId::<res_id::STRG>::new(0xD83F1351),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0A929983),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5247,10 +5247,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBB158C7E,
+            room_id: ResId::<res_id::MREA>::new(0xBB158C7E),
             name: "Frigate Access Tunnel",
-            name_id: 0x0238C356,
-            mapa_id: 0x92C07743,
+            name_id: ResId::<res_id::STRG>::new(0x0238C356),
+            mapa_id: ResId::<res_id::MAPA>::new(0x92C07743),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5276,10 +5276,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xCEA263E3,
+            room_id: ResId::<res_id::MREA>::new(0xCEA263E3),
             name: "Overgrown Cavern",
-            name_id: 0xBAE365B5,
-            mapa_id: 0xE77798DE,
+            name_id: ResId::<res_id::STRG>::new(0xBAE365B5),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE77798DE),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852166 },
@@ -5322,10 +5322,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x11A02448,
+            room_id: ResId::<res_id::MREA>::new(0x11A02448),
             name: "Transport to Chozo Ruins West",
-            name_id: 0x9EE2172A,
-            mapa_id: 0x3875DF75,
+            name_id: ResId::<res_id::STRG>::new(0x9EE2172A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3875DF75),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5339,10 +5339,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBD8C8625,
+            room_id: ResId::<res_id::MREA>::new(0xBD8C8625),
             name: "Root Cave",
-            name_id: 0x593523C0,
-            mapa_id: 0x94597D18,
+            name_id: ResId::<res_id::STRG>::new(0x593523C0),
+            mapa_id: ResId::<res_id::MAPA>::new(0x94597D18),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983090 },
@@ -5385,10 +5385,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x2398E906,
+            room_id: ResId::<res_id::MREA>::new(0x2398E906),
             name: "Artifact Temple",
-            name_id: 0x8159A513,
-            mapa_id: 0x0A4D123B,
+            name_id: ResId::<res_id::STRG>::new(0x8159A513),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0A4D123B),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 1, instance_id: 68157908 },
@@ -5442,10 +5442,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x5E0EE592,
+            room_id: ResId::<res_id::MREA>::new(0x5E0EE592),
             name: "Main Ventilation Shaft Section C",
-            name_id: 0x6AF70D68,
-            mapa_id: 0x77DB1EAF,
+            name_id: ResId::<res_id::STRG>::new(0x6AF70D68),
+            mapa_id: ResId::<res_id::MAPA>::new(0x77DB1EAF),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5465,10 +5465,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x85CA08AB,
+            room_id: ResId::<res_id::MREA>::new(0x85CA08AB),
             name: "Transport Tunnel C",
-            name_id: 0xB36AA9A4,
-            mapa_id: 0xAC1FF396,
+            name_id: ResId::<res_id::STRG>::new(0xB36AA9A4),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAC1FF396),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5500,10 +5500,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC7E821BA,
+            room_id: ResId::<res_id::MREA>::new(0xC7E821BA),
             name: "Transport Tunnel B",
-            name_id: 0x067D766B,
-            mapa_id: 0xEE3DDA87,
+            name_id: ResId::<res_id::STRG>::new(0x067D766B),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEE3DDA87),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1245494 },
@@ -5534,10 +5534,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x24F8AFF3,
+            room_id: ResId::<res_id::MREA>::new(0x24F8AFF3),
             name: "Arbor Chamber",
-            name_id: 0xD4E99B75,
-            mapa_id: 0x0D2D54CE,
+            name_id: ResId::<res_id::STRG>::new(0xD4E99B75),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0D2D54CE),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1310741 },
@@ -5562,10 +5562,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xAFD4E038,
+            room_id: ResId::<res_id::MREA>::new(0xAFD4E038),
             name: "Main Ventilation Shaft Section B",
-            name_id: 0x9B2D08C2,
-            mapa_id: 0x86011B05,
+            name_id: ResId::<res_id::STRG>::new(0x9B2D08C2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x86011B05),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5597,10 +5597,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x8A31665E,
+            room_id: ResId::<res_id::MREA>::new(0x8A31665E),
             name: "Transport to Chozo Ruins East",
-            name_id: 0x0573553C,
-            mapa_id: 0xA3E49D63,
+            name_id: ResId::<res_id::STRG>::new(0x0573553C),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA3E49D63),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5620,10 +5620,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x15D6FF8B,
+            room_id: ResId::<res_id::MREA>::new(0x15D6FF8B),
             name: "Transport to Magmoor Caverns East",
-            name_id: 0xF92C2264,
-            mapa_id: 0x3C0304B6,
+            name_id: ResId::<res_id::STRG>::new(0xF92C2264),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3C0304B6),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5637,10 +5637,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x66CBE887,
+            room_id: ResId::<res_id::MREA>::new(0x66CBE887),
             name: "Main Ventilation Shaft Section A",
-            name_id: 0x5232007D,
-            mapa_id: 0x4F1E13BA,
+            name_id: ResId::<res_id::STRG>::new(0x5232007D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4F1E13BA),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5660,10 +5660,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEE09629A,
+            room_id: ResId::<res_id::MREA>::new(0xEE09629A),
             name: "Reactor Core",
-            name_id: 0xF0412CCA,
-            mapa_id: 0xC7DC99A7,
+            name_id: ResId::<res_id::STRG>::new(0xF0412CCA),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC7DC99A7),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5677,10 +5677,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xFB427580,
+            room_id: ResId::<res_id::MREA>::new(0xFB427580),
             name: "Reactor Access",
-            name_id: 0xCFBB9D7A,
-            mapa_id: 0xD2978EBD,
+            name_id: ResId::<res_id::STRG>::new(0xCFBB9D7A),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD2978EBD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5694,10 +5694,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x37B3AFE6,
+            room_id: ResId::<res_id::MREA>::new(0x37B3AFE6),
             name: "Cargo Freight Lift to Deck Gamma",
-            name_id: 0xADE33280,
-            mapa_id: 0x1E6654DB,
+            name_id: ResId::<res_id::STRG>::new(0xADE33280),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1E6654DB),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1769749 },
@@ -5722,10 +5722,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xF0594C6D,
+            room_id: ResId::<res_id::MREA>::new(0xF0594C6D),
             name: "Savestation",
-            name_id: 0x93E22914,
-            mapa_id: 0xD98CB750,
+            name_id: ResId::<res_id::STRG>::new(0x93E22914),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD98CB750),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5739,10 +5739,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4A96005E,
+            room_id: ResId::<res_id::MREA>::new(0x4A96005E),
             name: "Deck Beta Transit Hall",
-            name_id: 0xCCC00015,
-            mapa_id: 0x6343FB63,
+            name_id: ResId::<res_id::STRG>::new(0xCCC00015),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6343FB63),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5762,10 +5762,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xAC2C58FE,
+            room_id: ResId::<res_id::MREA>::new(0xAC2C58FE),
             name: "Biohazard Containment",
-            name_id: 0x2834A136,
-            mapa_id: 0x85F9A3C3,
+            name_id: ResId::<res_id::STRG>::new(0x2834A136),
+            mapa_id: ResId::<res_id::MAPA>::new(0x85F9A3C3),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1966828 },
@@ -5796,10 +5796,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x76F6E356,
+            room_id: ResId::<res_id::MREA>::new(0x76F6E356),
             name: "Deck Beta Security Hall",
-            name_id: 0xF0A0E31D,
-            mapa_id: 0x5F23186B,
+            name_id: ResId::<res_id::STRG>::new(0xF0A0E31D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5F23186B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5819,10 +5819,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x5F2EB7B6,
+            room_id: ResId::<res_id::MREA>::new(0x5F2EB7B6),
             name: "Biotech Research Area 1",
-            name_id: 0x2CF7ADD2,
-            mapa_id: 0x76FB4C8B,
+            name_id: ResId::<res_id::STRG>::new(0x2CF7ADD2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x76FB4C8B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5842,10 +5842,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC3D44A6E,
+            room_id: ResId::<res_id::MREA>::new(0xC3D44A6E),
             name: "Deck Beta Conduit Hall",
-            name_id: 0x45824A25,
-            mapa_id: 0xEA01B153,
+            name_id: ResId::<res_id::STRG>::new(0x45824A25),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEA01B153),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5865,10 +5865,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE47228EF,
+            room_id: ResId::<res_id::MREA>::new(0xE47228EF),
             name: "Connection Elevator to Deck Beta",
-            name_id: 0x622428A4,
-            mapa_id: 0xCDA7D3D2,
+            name_id: ResId::<res_id::STRG>::new(0x622428A4),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCDA7D3D2),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5888,10 +5888,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xFFB4A966,
+            room_id: ResId::<res_id::MREA>::new(0xFFB4A966),
             name: "Hydro Access Tunnel",
-            name_id: 0x84ACB1F8,
-            mapa_id: 0xD661525B,
+            name_id: ResId::<res_id::STRG>::new(0x84ACB1F8),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD661525B),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2293843 },
@@ -5922,10 +5922,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xF47DBE5B,
+            room_id: ResId::<res_id::MREA>::new(0xF47DBE5B),
             name: "Great Tree Hall",
-            name_id: 0x10C41BBE,
-            mapa_id: 0xDDA84566,
+            name_id: ResId::<res_id::STRG>::new(0x10C41BBE),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDDA84566),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -5981,10 +5981,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC5D6A597,
+            room_id: ResId::<res_id::MREA>::new(0xC5D6A597),
             name: "Great Tree Chamber",
-            name_id: 0xC9ECABCD,
-            mapa_id: 0xEC035EAA,
+            name_id: ResId::<res_id::STRG>::new(0xC9ECABCD),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEC035EAA),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2424845 },
@@ -6009,10 +6009,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x1A932F64,
+            room_id: ResId::<res_id::MREA>::new(0x1A932F64),
             name: "Transport Tunnel D",
-            name_id: 0x217227A3,
-            mapa_id: 0x3346D459,
+            name_id: ResId::<res_id::STRG>::new(0x217227A3),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3346D459),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6044,10 +6044,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB4FBBEF5,
+            room_id: ResId::<res_id::MREA>::new(0xB4FBBEF5),
             name: "Life Grove Tunnel",
-            name_id: 0xEA2EF406,
-            mapa_id: 0x9D2E45C8,
+            name_id: ResId::<res_id::STRG>::new(0xEA2EF406),
+            mapa_id: ResId::<res_id::MAPA>::new(0x9D2E45C8),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2555958 },
@@ -6078,10 +6078,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x9D330A07,
+            room_id: ResId::<res_id::MREA>::new(0x9D330A07),
             name: "Transport Tunnel E",
-            name_id: 0x6CBA86A8,
-            mapa_id: 0xB4E6F13A,
+            name_id: ResId::<res_id::STRG>::new(0x6CBA86A8),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB4E6F13A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6113,10 +6113,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x0CA514F0,
+            room_id: ResId::<res_id::MREA>::new(0x0CA514F0),
             name: "Transport to Chozo Ruins South",
-            name_id: 0x630EA5FC,
-            mapa_id: 0x2570EFCD,
+            name_id: ResId::<res_id::STRG>::new(0x630EA5FC),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2570EFCD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6136,10 +6136,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x86EB2E02,
+            room_id: ResId::<res_id::MREA>::new(0x86EB2E02),
             name: "Life Grove",
-            name_id: 0x56E4C612,
-            mapa_id: 0xAF3ED53F,
+            name_id: ResId::<res_id::STRG>::new(0x56E4C612),
+            mapa_id: ResId::<res_id::MAPA>::new(0xAF3ED53F),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2752545 },
@@ -6196,10 +6196,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x7D106670,
+            room_id: ResId::<res_id::MREA>::new(0x7D106670),
             name: "Transport to Phazon Mines East",
-            name_id: 0xF2525512,
-            mapa_id: 0x54C59D4D,
+            name_id: ResId::<res_id::STRG>::new(0xF2525512),
+            mapa_id: ResId::<res_id::MAPA>::new(0x54C59D4D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6221,10 +6221,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("metroid5.pak", &[
         RoomInfo {
-            room_id: 0x430E999C,
+            room_id: ResId::<res_id::MREA>::new(0x430E999C),
             name: "Transport to Tallon Overworld South",
-            name_id: 0x8D7B16B4,
-            mapa_id: 0x6ADB62A1,
+            name_id: ResId::<res_id::STRG>::new(0x8D7B16B4),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6ADB62A1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6244,10 +6244,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x68CC7758,
+            room_id: ResId::<res_id::MREA>::new(0x68CC7758),
             name: "Quarry Access",
-            name_id: 0x398086EF,
-            mapa_id: 0x41198C65,
+            name_id: ResId::<res_id::STRG>::new(0x398086EF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x41198C65),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6279,10 +6279,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x643D038F,
+            room_id: ResId::<res_id::MREA>::new(0x643D038F),
             name: "Main Quarry",
-            name_id: 0xC88215F0,
-            mapa_id: 0x4DE8F8B2,
+            name_id: ResId::<res_id::STRG>::new(0xC88215F0),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4DE8F8B2),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 131635 },
@@ -6349,10 +6349,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x27A391B7,
+            room_id: ResId::<res_id::MREA>::new(0x27A391B7),
             name: "Waste Disposal",
-            name_id: 0xBCC2F6DA,
-            mapa_id: 0x0E766A8A,
+            name_id: ResId::<res_id::STRG>::new(0xBCC2F6DA),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0E766A8A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6384,10 +6384,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x361D41B0,
+            room_id: ResId::<res_id::MREA>::new(0x361D41B0),
             name: "Save Station Mines A",
-            name_id: 0xBC6E6792,
-            mapa_id: 0x1FC8BA8D,
+            name_id: ResId::<res_id::STRG>::new(0xBC6E6792),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1FC8BA8D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6407,10 +6407,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC7653A92,
+            room_id: ResId::<res_id::MREA>::new(0xC7653A92),
             name: "Security Access A",
-            name_id: 0xBF14F441,
-            mapa_id: 0xEEB0C1AF,
+            name_id: ResId::<res_id::STRG>::new(0xBF14F441),
+            mapa_id: ResId::<res_id::MAPA>::new(0xEEB0C1AF),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 328071 },
@@ -6453,10 +6453,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x97D2B2F6,
+            room_id: ResId::<res_id::MREA>::new(0x97D2B2F6),
             name: "Ore Processing",
-            name_id: 0x984F8443,
-            mapa_id: 0xBE0749CB,
+            name_id: ResId::<res_id::STRG>::new(0x984F8443),
+            mapa_id: ResId::<res_id::MAPA>::new(0xBE0749CB),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6512,10 +6512,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x956F1552,
+            room_id: ResId::<res_id::MREA>::new(0x956F1552),
             name: "Mine Security Station",
-            name_id: 0x4E16675E,
-            mapa_id: 0xBCBAEE6F,
+            name_id: ResId::<res_id::STRG>::new(0x4E16675E),
+            mapa_id: ResId::<res_id::MAPA>::new(0xBCBAEE6F),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6553,10 +6553,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4346A747,
+            room_id: ResId::<res_id::MREA>::new(0x4346A747),
             name: "Research Access",
-            name_id: 0x694D175C,
-            mapa_id: 0x6A935C7A,
+            name_id: ResId::<res_id::STRG>::new(0x694D175C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6A935C7A),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6588,10 +6588,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE39C342B,
+            room_id: ResId::<res_id::MREA>::new(0xE39C342B),
             name: "Storage Depot B",
-            name_id: 0x30A2AC20,
-            mapa_id: 0xCA49CF16,
+            name_id: ResId::<res_id::STRG>::new(0x30A2AC20),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCA49CF16),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 589827 },
@@ -6638,10 +6638,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x26219C01,
+            room_id: ResId::<res_id::MREA>::new(0x26219C01),
             name: "Elevator Access A",
-            name_id: 0xA211C4F9,
-            mapa_id: 0x0FF4673C,
+            name_id: ResId::<res_id::STRG>::new(0xA211C4F9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x0FF4673C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6673,10 +6673,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA20201D4,
+            room_id: ResId::<res_id::MREA>::new(0xA20201D4),
             name: "Security Access B",
-            name_id: 0x744827E4,
-            mapa_id: 0x8BD7FAE9,
+            name_id: ResId::<res_id::STRG>::new(0x744827E4),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8BD7FAE9),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6696,10 +6696,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x35C5D736,
+            room_id: ResId::<res_id::MREA>::new(0x35C5D736),
             name: "Storage Depot A",
-            name_id: 0xE6FB4F3D,
-            mapa_id: 0x1C102C0B,
+            name_id: ResId::<res_id::STRG>::new(0xE6FB4F3D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1C102C0B),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786470 },
@@ -6746,10 +6746,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x8A97BB54,
+            room_id: ResId::<res_id::MREA>::new(0x8A97BB54),
             name: "Elite Research",
-            name_id: 0x854AB4FB,
-            mapa_id: 0xA3424069,
+            name_id: ResId::<res_id::STRG>::new(0x854AB4FB),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA3424069),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 852800 },
@@ -6808,10 +6808,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0146ED43,
+            room_id: ResId::<res_id::MREA>::new(0x0146ED43),
             name: "Elevator A",
-            name_id: 0xB8A06707,
-            mapa_id: 0x2893167E,
+            name_id: ResId::<res_id::STRG>::new(0xB8A06707),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2893167E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6843,10 +6843,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x8988D1CB,
+            room_id: ResId::<res_id::MREA>::new(0x8988D1CB),
             name: "Elite Control Access",
-            name_id: 0x2485B657,
-            mapa_id: 0xA05D2AF6,
+            name_id: ResId::<res_id::STRG>::new(0x2485B657),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA05D2AF6),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 983181 },
@@ -6889,10 +6889,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xC50AF17A,
+            room_id: ResId::<res_id::MREA>::new(0xC50AF17A),
             name: "Elite Control",
-            name_id: 0x531357E6,
-            mapa_id: 0xECDF0A47,
+            name_id: ResId::<res_id::STRG>::new(0x531357E6),
+            mapa_id: ResId::<res_id::MAPA>::new(0xECDF0A47),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6930,10 +6930,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xECEFEA8D,
+            room_id: ResId::<res_id::MREA>::new(0xECEFEA8D),
             name: "Maintenance Tunnel",
-            name_id: 0xEFD965F2,
-            mapa_id: 0xC53A11B0,
+            name_id: ResId::<res_id::STRG>::new(0xEFD965F2),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC53A11B0),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -6965,10 +6965,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x90709AAC,
+            room_id: ResId::<res_id::MREA>::new(0x90709AAC),
             name: "Ventilation Shaft",
-            name_id: 0x1E8FD727,
-            mapa_id: 0xB9A56191,
+            name_id: ResId::<res_id::STRG>::new(0x1E8FD727),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB9A56191),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1179916 },
@@ -7005,10 +7005,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xAD2E7EB9,
+            room_id: ResId::<res_id::MREA>::new(0xAD2E7EB9),
             name: "Phazon Processing Center",
-            name_id: 0x233DBF4F,
-            mapa_id: 0x84FB8584,
+            name_id: ResId::<res_id::STRG>::new(0x233DBF4F),
+            mapa_id: ResId::<res_id::MAPA>::new(0x84FB8584),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1247078 },
@@ -7063,10 +7063,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x3F375ECC,
+            room_id: ResId::<res_id::MREA>::new(0x3F375ECC),
             name: "Omega Research",
-            name_id: 0xD5872548,
-            mapa_id: 0x16E2A5F1,
+            name_id: ResId::<res_id::STRG>::new(0xD5872548),
+            mapa_id: ResId::<res_id::MAPA>::new(0x16E2A5F1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7104,10 +7104,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x42C4AAF1,
+            room_id: ResId::<res_id::MREA>::new(0x42C4AAF1),
             name: "Transport Access",
-            name_id: 0x779E257F,
-            mapa_id: 0x6B1151CC,
+            name_id: ResId::<res_id::STRG>::new(0x779E257F),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6B1151CC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7139,10 +7139,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xED6DE73B,
+            room_id: ResId::<res_id::MREA>::new(0xED6DE73B),
             name: "Processing Center Access",
-            name_id: 0xF10A57D1,
-            mapa_id: 0xC4B81C06,
+            name_id: ResId::<res_id::STRG>::new(0xF10A57D1),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC4B81C06),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1441959 },
@@ -7185,10 +7185,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x198FF5DC,
+            room_id: ResId::<res_id::MREA>::new(0x198FF5DC),
             name: "Map Station Mines",
-            name_id: 0x63AD0B3D,
-            mapa_id: 0x305A0EE1,
+            name_id: ResId::<res_id::STRG>::new(0x63AD0B3D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x305A0EE1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7208,10 +7208,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xF517A1EA,
-            name: "Dynamo Access", // this is the one in mines
-            name_id: 0xD5D30482,
-            mapa_id: 0xDCC25AD7,
+            room_id: ResId::<res_id::MREA>::new(0xF517A1EA),
+            name: "Dynamo Access",
+            name_id: ResId::<res_id::STRG>::new(0xD5D30482),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDCC25AD7),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7237,10 +7237,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE2C2CF38,
+            room_id: ResId::<res_id::MREA>::new(0xE2C2CF38),
             name: "Transport to Magmoor Caverns South",
-            name_id: 0x47C4108D,
-            mapa_id: 0xCB173405,
+            name_id: ResId::<res_id::STRG>::new(0x47C4108D),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCB173405),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7260,10 +7260,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3953C353,
+            room_id: ResId::<res_id::MREA>::new(0x3953C353),
             name: "Elite Quarters",
-            name_id: 0xE8616CEA,
-            mapa_id: 0x1086386E,
+            name_id: ResId::<res_id::STRG>::new(0xE8616CEA),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1086386E),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1705144 },
@@ -7301,10 +7301,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xFEA372E2,
+            room_id: ResId::<res_id::MREA>::new(0xFEA372E2),
             name: "Central Dynamo",
-            name_id: 0x1EDBF6ED,
-            mapa_id: 0xD77689DF,
+            name_id: ResId::<res_id::STRG>::new(0x1EDBF6ED),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD77689DF),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1770673 },
@@ -7359,10 +7359,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x71343C3F,
+            room_id: ResId::<res_id::MREA>::new(0x71343C3F),
             name: "Elite Quarters Access",
-            name_id: 0x038AE79F,
-            mapa_id: 0x58E1C702,
+            name_id: ResId::<res_id::STRG>::new(0x038AE79F),
+            mapa_id: ResId::<res_id::MAPA>::new(0x58E1C702),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7394,10 +7394,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x5ABEEC20,
+            room_id: ResId::<res_id::MREA>::new(0x5ABEEC20),
             name: "Quarantine Access A",
-            name_id: 0x5347762C,
-            mapa_id: 0x736B171D,
+            name_id: ResId::<res_id::STRG>::new(0x5347762C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x736B171D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7429,10 +7429,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x7BD5E0BB,
+            room_id: ResId::<res_id::MREA>::new(0x7BD5E0BB),
             name: "Save Station Mines B",
-            name_id: 0xF1A6C699,
-            mapa_id: 0x52001B86,
+            name_id: ResId::<res_id::STRG>::new(0xF1A6C699),
+            mapa_id: ResId::<res_id::MAPA>::new(0x52001B86),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7452,10 +7452,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBB3AFC4E,
+            room_id: ResId::<res_id::MREA>::new(0xBB3AFC4E),
             name: "Metroid Quarantine B",
-            name_id: 0x6EF51E44,
-            mapa_id: 0x92EF0773,
+            name_id: ResId::<res_id::STRG>::new(0x6EF51E44),
+            mapa_id: ResId::<res_id::MAPA>::new(0x92EF0773),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2032133 },
@@ -7510,10 +7510,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xFB051F5A,
+            room_id: ResId::<res_id::MREA>::new(0xFB051F5A),
             name: "Metroid Quarantine A",
-            name_id: 0xEF8D4438,
-            mapa_id: 0xD2D0E467,
+            name_id: ResId::<res_id::STRG>::new(0xEF8D4438),
+            mapa_id: ResId::<res_id::MAPA>::new(0xD2D0E467),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2098666 },
@@ -7556,10 +7556,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x14530779,
+            room_id: ResId::<res_id::MREA>::new(0x14530779),
             name: "Quarantine Access B",
-            name_id: 0xC8D6343A,
-            mapa_id: 0x3D86FC44,
+            name_id: ResId::<res_id::STRG>::new(0xC8D6343A),
+            mapa_id: ResId::<res_id::MAPA>::new(0x3D86FC44),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7591,10 +7591,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x66D0D003,
+            room_id: ResId::<res_id::MREA>::new(0x66D0D003),
             name: "Save Station Mines C",
-            name_id: 0xECA3F621,
-            mapa_id: 0x4F052B3E,
+            name_id: ResId::<res_id::STRG>::new(0xECA3F621),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4F052B3E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7614,10 +7614,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x3FD9D766,
+            room_id: ResId::<res_id::MREA>::new(0x3FD9D766),
             name: "Elevator Access B",
-            name_id: 0x981BA589,
-            mapa_id: 0x160C2C5B,
+            name_id: ResId::<res_id::STRG>::new(0x981BA589),
+            mapa_id: ResId::<res_id::MAPA>::new(0x160C2C5B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7649,10 +7649,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEC47C242,
+            room_id: ResId::<res_id::MREA>::new(0xEC47C242),
             name: "Fungal Hall B",
-            name_id: 0xA5A9CDE1,
-            mapa_id: 0xC592397F,
+            name_id: ResId::<res_id::STRG>::new(0xA5A9CDE1),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC592397F),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2359591 },
@@ -7707,10 +7707,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xE87957E0,
+            room_id: ResId::<res_id::MREA>::new(0xE87957E0),
             name: "Elevator B",
-            name_id: 0xFD73B341,
-            mapa_id: 0xC1ACACDD,
+            name_id: ResId::<res_id::STRG>::new(0xFD73B341),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC1ACACDD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7742,10 +7742,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xB089331E,
+            room_id: ResId::<res_id::MREA>::new(0xB089331E),
             name: "Missile Station Mines",
-            name_id: 0x3AFA153C,
-            mapa_id: 0x995CC823,
+            name_id: ResId::<res_id::STRG>::new(0x3AFA153C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x995CC823),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7765,10 +7765,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBBFA4AB3,
+            room_id: ResId::<res_id::MREA>::new(0xBBFA4AB3),
             name: "Phazon Mining Tunnel",
-            name_id: 0x4E424694,
-            mapa_id: 0x922FB18E,
+            name_id: ResId::<res_id::STRG>::new(0x4E424694),
+            mapa_id: ResId::<res_id::MAPA>::new(0x922FB18E),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2556031 },
@@ -7827,10 +7827,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xDE9D71F5,
+            room_id: ResId::<res_id::MREA>::new(0xDE9D71F5),
             name: "Fungal Hall Access",
-            name_id: 0x851E9531,
-            mapa_id: 0xF7488AC8,
+            name_id: ResId::<res_id::STRG>::new(0x851E9531),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF7488AC8),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 2621698 },
@@ -7873,10 +7873,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0F5277D1,
+            room_id: ResId::<res_id::MREA>::new(0x0F5277D1),
             name: "Fungal Hall A",
-            name_id: 0x24D1979D,
-            mapa_id: 0x26878CEC,
+            name_id: ResId::<res_id::STRG>::new(0x24D1979D),
+            mapa_id: ResId::<res_id::MAPA>::new(0x26878CEC),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7910,10 +7910,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("Metroid6.pak", &[
         RoomInfo {
-            room_id: 0x3BEAADC9,
+            room_id: ResId::<res_id::MREA>::new(0x3BEAADC9),
             name: "Transport to Chozo Ruins North",
-            name_id: 0x1BEFC19B,
-            mapa_id: 0x123F56F4,
+            name_id: ResId::<res_id::STRG>::new(0x1BEFC19B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x123F56F4),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7927,10 +7927,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x6D434F4E,
+            room_id: ResId::<res_id::MREA>::new(0x6D434F4E),
             name: "Burning Trail",
-            name_id: 0x18880D33,
-            mapa_id: 0x4496B473,
+            name_id: ResId::<res_id::STRG>::new(0x18880D33),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4496B473),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7962,10 +7962,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x79784D3D,
+            room_id: ResId::<res_id::MREA>::new(0x79784D3D),
             name: "Lake Tunnel",
-            name_id: 0x9AA5CF58,
-            mapa_id: 0x50ADB600,
+            name_id: ResId::<res_id::STRG>::new(0x9AA5CF58),
+            mapa_id: ResId::<res_id::MAPA>::new(0x50ADB600),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -7985,10 +7985,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x09B3E01C,
+            room_id: ResId::<res_id::MREA>::new(0x09B3E01C),
             name: "Save Station Magmoor A",
-            name_id: 0xF685E768,
-            mapa_id: 0x20661B21,
+            name_id: ResId::<res_id::STRG>::new(0xF685E768),
+            mapa_id: ResId::<res_id::MAPA>::new(0x20661B21),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8002,10 +8002,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA4719C6A,
+            room_id: ResId::<res_id::MREA>::new(0xA4719C6A),
             name: "Lava Lake",
-            name_id: 0x2EA8BA7F,
-            mapa_id: 0x8DA46757,
+            name_id: ResId::<res_id::STRG>::new(0x2EA8BA7F),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8DA46757),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 272508 },
@@ -8052,10 +8052,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xDA2ECB94,
+            room_id: ResId::<res_id::MREA>::new(0xDA2ECB94),
             name: "Pit Tunnel",
-            name_id: 0x39F349F1,
-            mapa_id: 0xF3FB30A9,
+            name_id: ResId::<res_id::STRG>::new(0x39F349F1),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF3FB30A9),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8075,10 +8075,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBAD9EDBF,
+            room_id: ResId::<res_id::MREA>::new(0xBAD9EDBF),
             name: "Triclops Pit",
-            name_id: 0x3000CBAA,
-            mapa_id: 0x930C1682,
+            name_id: ResId::<res_id::STRG>::new(0x3000CBAA),
+            mapa_id: ResId::<res_id::MAPA>::new(0x930C1682),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 393484 },
@@ -8115,10 +8115,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0DCC4BCC,
+            room_id: ResId::<res_id::MREA>::new(0x0DCC4BCC),
             name: "Monitor Tunnel",
-            name_id: 0xEE11C9A9,
-            mapa_id: 0x2419B0F1,
+            name_id: ResId::<res_id::STRG>::new(0xEE11C9A9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2419B0F1),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8138,10 +8138,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xADEF843E,
+            room_id: ResId::<res_id::MREA>::new(0xADEF843E),
             name: "Storage Cavern",
-            name_id: 0x4A01FD0C,
-            mapa_id: 0x843A7F03,
+            name_id: ResId::<res_id::STRG>::new(0x4A01FD0C),
+            mapa_id: ResId::<res_id::MAPA>::new(0x843A7F03),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 524303 },
@@ -8166,10 +8166,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x0C57A641,
+            room_id: ResId::<res_id::MREA>::new(0x0C57A641),
             name: "Monitor Station",
-            name_id: 0x2B228EDA,
-            mapa_id: 0x25825D7C,
+            name_id: ResId::<res_id::STRG>::new(0x2B228EDA),
+            mapa_id: ResId::<res_id::MAPA>::new(0x25825D7C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8201,10 +8201,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x47F2C087,
+            room_id: ResId::<res_id::MREA>::new(0x47F2C087),
             name: "Transport Tunnel A",
-            name_id: 0xA42F42E2,
-            mapa_id: 0x6E273BBA,
+            name_id: ResId::<res_id::STRG>::new(0xA42F42E2),
+            mapa_id: ResId::<res_id::MAPA>::new(0x6E273BBA),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 655366 },
@@ -8235,10 +8235,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x89A6CB8D,
+            room_id: ResId::<res_id::MREA>::new(0x89A6CB8D),
             name: "Warrior Shrine",
-            name_id: 0x6E48B2BF,
-            mapa_id: 0xA07330B0,
+            name_id: ResId::<res_id::STRG>::new(0x6E48B2BF),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA07330B0),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 720951 },
@@ -8279,10 +8279,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x901040DF,
+            room_id: ResId::<res_id::MREA>::new(0x901040DF),
             name: "Shore Tunnel",
-            name_id: 0x73CDC2BA,
-            mapa_id: 0xB9C5BBE2,
+            name_id: ResId::<res_id::STRG>::new(0x73CDC2BA),
+            mapa_id: ResId::<res_id::MAPA>::new(0xB9C5BBE2),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 786472 },
@@ -8329,10 +8329,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0xDCA9A28B,
+            room_id: ResId::<res_id::MREA>::new(0xDCA9A28B),
             name: "Transport to Phendrana Drifts North",
-            name_id: 0xE0E1C4DA,
-            mapa_id: 0xF57C59B6,
+            name_id: ResId::<res_id::STRG>::new(0xE0E1C4DA),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF57C59B6),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8346,10 +8346,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xF5EF1862,
+            room_id: ResId::<res_id::MREA>::new(0xF5EF1862),
             name: "Fiery Shores",
-            name_id: 0x049C2897,
-            mapa_id: 0xDC3AE35F,
+            name_id: ResId::<res_id::STRG>::new(0x049C2897),
+            mapa_id: ResId::<res_id::MAPA>::new(0xDC3AE35F),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 917978 },
@@ -8386,10 +8386,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x3346C676,
+            room_id: ResId::<res_id::MREA>::new(0x3346C676),
             name: "Transport Tunnel B",
-            name_id: 0xD09B4413,
-            mapa_id: 0x1A933D4B,
+            name_id: ResId::<res_id::STRG>::new(0xD09B4413),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1A933D4B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8409,10 +8409,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4C3D244C,
+            room_id: ResId::<res_id::MREA>::new(0x4C3D244C),
             name: "Transport to Tallon Overworld West",
-            name_id: 0xBD4E14B9,
-            mapa_id: 0x65E8DF71,
+            name_id: ResId::<res_id::STRG>::new(0xBD4E14B9),
+            mapa_id: ResId::<res_id::MAPA>::new(0x65E8DF71),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8432,10 +8432,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xE4A4462E,
+            room_id: ResId::<res_id::MREA>::new(0xE4A4462E),
             name: "Twin Fires Tunnel",
-            name_id: 0x0779C44B,
-            mapa_id: 0xCD71BD13,
+            name_id: ResId::<res_id::STRG>::new(0x0779C44B),
+            mapa_id: ResId::<res_id::MAPA>::new(0xCD71BD13),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8455,10 +8455,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4C784BEA,
+            room_id: ResId::<res_id::MREA>::new(0x4C784BEA),
             name: "Twin Fires",
-            name_id: 0xC6A16DFF,
-            mapa_id: 0x65ADB0D7,
+            name_id: ResId::<res_id::STRG>::new(0xC6A16DFF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x65ADB0D7),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8484,10 +8484,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA73BD0E0,
+            room_id: ResId::<res_id::MREA>::new(0xA73BD0E0),
             name: "North Core Tunnel",
-            name_id: 0x44E65285,
-            mapa_id: 0x8EEE2BDD,
+            name_id: ResId::<res_id::STRG>::new(0x44E65285),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8EEE2BDD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8519,10 +8519,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC0498676,
+            room_id: ResId::<res_id::MREA>::new(0xC0498676),
             name: "Geothermal Core",
-            name_id: 0x4A90A063,
-            mapa_id: 0xE99C7D4B,
+            name_id: ResId::<res_id::STRG>::new(0x4A90A063),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE99C7D4B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8554,10 +8554,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4CC18E5A,
+            room_id: ResId::<res_id::MREA>::new(0x4CC18E5A),
             name: "Plasma Processing",
-            name_id: 0x7D25E938,
-            mapa_id: 0x65147567,
+            name_id: ResId::<res_id::STRG>::new(0x7D25E938),
+            mapa_id: ResId::<res_id::MAPA>::new(0x65147567),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1376287 },
@@ -8604,10 +8604,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x70D950B8,
+            room_id: ResId::<res_id::MREA>::new(0x70D950B8),
             name: "South Core Tunnel",
-            name_id: 0x9304D2DD,
-            mapa_id: 0x590CAB85,
+            name_id: ResId::<res_id::STRG>::new(0x9304D2DD),
+            mapa_id: ResId::<res_id::MAPA>::new(0x590CAB85),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8639,10 +8639,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x8ABEB3C3,
+            room_id: ResId::<res_id::MREA>::new(0x8ABEB3C3),
             name: "Magmoor Workstation",
-            name_id: 0xB6F6D592,
-            mapa_id: 0xA36B48FE,
+            name_id: ResId::<res_id::STRG>::new(0xB6F6D592),
+            mapa_id: ResId::<res_id::MAPA>::new(0xA36B48FE),
             pickup_locations: &[
                 PickupLocation {
                     location: ScriptObjectLocation { layer: 0, instance_id: 1507982 },
@@ -8685,10 +8685,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             ],
         },
         RoomInfo {
-            room_id: 0x046D5649,
+            room_id: ResId::<res_id::MREA>::new(0x046D5649),
             name: "Workstation Tunnel",
-            name_id: 0x4CAB9C23,
-            mapa_id: 0x2DB8AD74,
+            name_id: ResId::<res_id::STRG>::new(0x4CAB9C23),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2DB8AD74),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8714,10 +8714,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xD38FD611,
+            room_id: ResId::<res_id::MREA>::new(0xD38FD611),
             name: "Transport Tunnel C",
-            name_id: 0x30525474,
-            mapa_id: 0xFA5A2D2C,
+            name_id: ResId::<res_id::STRG>::new(0x30525474),
+            mapa_id: ResId::<res_id::MAPA>::new(0xFA5A2D2C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8749,10 +8749,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xEF2F1440,
+            room_id: ResId::<res_id::MREA>::new(0xEF2F1440),
             name: "Transport to Phazon Mines West",
-            name_id: 0xFF5F6594,
-            mapa_id: 0xC6FAEF7D,
+            name_id: ResId::<res_id::STRG>::new(0xFF5F6594),
+            mapa_id: ResId::<res_id::MAPA>::new(0xC6FAEF7D),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8772,10 +8772,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xC1AC9233,
+            room_id: ResId::<res_id::MREA>::new(0xC1AC9233),
             name: "Transport to Phendrana Drifts South",
-            name_id: 0x66DEBE97,
-            mapa_id: 0xE879690E,
+            name_id: ResId::<res_id::STRG>::new(0x66DEBE97),
+            mapa_id: ResId::<res_id::MAPA>::new(0xE879690E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8801,10 +8801,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x7F56D921,
+            room_id: ResId::<res_id::MREA>::new(0x7F56D921),
             name: "Save Station Magmoor B",
-            name_id: 0x701195C6,
-            mapa_id: 0x5683221C,
+            name_id: ResId::<res_id::STRG>::new(0x701195C6),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5683221C),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8820,10 +8820,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
     ]),
     ("Metroid7.pak", &[
         RoomInfo {
-            room_id: 0x93668996,
+            room_id: ResId::<res_id::MREA>::new(0x93668996),
             name: "Crater Entry Point",
-            name_id: 0xDF9C7D3C,
-            mapa_id: 0xBAB372AB,
+            name_id: ResId::<res_id::STRG>::new(0xDF9C7D3C),
+            mapa_id: ResId::<res_id::MAPA>::new(0xBAB372AB),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8843,10 +8843,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x49CB2363,
+            room_id: ResId::<res_id::MREA>::new(0x49CB2363),
             name: "Crater Tunnel A",
-            name_id: 0x5856D93B,
-            mapa_id: 0x601ED85E,
+            name_id: ResId::<res_id::STRG>::new(0x5856D93B),
+            mapa_id: ResId::<res_id::MAPA>::new(0x601ED85E),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8878,10 +8878,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xBD946AC3,
+            room_id: ResId::<res_id::MREA>::new(0xBD946AC3),
             name: "Phazon Core",
-            name_id: 0x201FF947,
-            mapa_id: 0x944191FE,
+            name_id: ResId::<res_id::STRG>::new(0x201FF947),
+            mapa_id: ResId::<res_id::MAPA>::new(0x944191FE),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8925,10 +8925,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x4D446C3F,
+            room_id: ResId::<res_id::MREA>::new(0x4D446C3F),
             name: "Crater Missile Station",
-            name_id: 0xD5D8DD20,
-            mapa_id: 0x64919702,
+            name_id: ResId::<res_id::STRG>::new(0xD5D8DD20),
+            mapa_id: ResId::<res_id::MAPA>::new(0x64919702),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8948,10 +8948,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x32D5A180,
+            room_id: ResId::<res_id::MREA>::new(0x32D5A180),
             name: "Crater Tunnel B",
-            name_id: 0x23485BD8,
-            mapa_id: 0x1B005ABD,
+            name_id: ResId::<res_id::STRG>::new(0x23485BD8),
+            mapa_id: ResId::<res_id::MAPA>::new(0x1B005ABD),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -8983,10 +8983,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x67156A0D,
+            room_id: ResId::<res_id::MREA>::new(0x67156A0D),
             name: "Phazon Infusion Chamber",
-            name_id: 0xE531EDAF,
-            mapa_id: 0x4EC09130,
+            name_id: ResId::<res_id::STRG>::new(0xE531EDAF),
+            mapa_id: ResId::<res_id::MAPA>::new(0x4EC09130),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9006,10 +9006,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xDADF06C3,
+            room_id: ResId::<res_id::MREA>::new(0xDADF06C3),
             name: "Subchamber One",
-            name_id: 0x58FB8161,
-            mapa_id: 0xF30AFDFE,
+            name_id: ResId::<res_id::STRG>::new(0x58FB8161),
+            mapa_id: ResId::<res_id::MAPA>::new(0xF30AFDFE),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9017,10 +9017,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x0749DF46,
+            room_id: ResId::<res_id::MREA>::new(0x0749DF46),
             name: "Subchamber Two",
-            name_id: 0x856D58E4,
-            mapa_id: 0x2E9C247B,
+            name_id: ResId::<res_id::STRG>::new(0x856D58E4),
+            mapa_id: ResId::<res_id::MAPA>::new(0x2E9C247B),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9028,10 +9028,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x7A3AD91E,
+            room_id: ResId::<res_id::MREA>::new(0x7A3AD91E),
             name: "Subchamber Three",
-            name_id: 0xF81E5EBC,
-            mapa_id: 0x53EF2223,
+            name_id: ResId::<res_id::STRG>::new(0xF81E5EBC),
+            mapa_id: ResId::<res_id::MAPA>::new(0x53EF2223),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9039,10 +9039,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0xA7AC009B,
+            room_id: ResId::<res_id::MREA>::new(0xA7AC009B),
             name: "Subchamber Four",
-            name_id: 0x25888739,
-            mapa_id: 0x8E79FBA6,
+            name_id: ResId::<res_id::STRG>::new(0x25888739),
+            mapa_id: ResId::<res_id::MAPA>::new(0x8E79FBA6),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9050,10 +9050,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x77714498,
+            room_id: ResId::<res_id::MREA>::new(0x77714498),
             name: "Subchamber Five",
-            name_id: 0xBFE8F636,
-            mapa_id: 0x5EA4BFA5,
+            name_id: ResId::<res_id::STRG>::new(0xBFE8F636),
+            mapa_id: ResId::<res_id::MAPA>::new(0x5EA4BFA5),
             pickup_locations: &[
             ],
             door_locations: &[
@@ -9061,10 +9061,10 @@ pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[
             objects_to_remove: &[],
         },
         RoomInfo {
-            room_id: 0x1A666C55,
+            room_id: ResId::<res_id::MREA>::new(0x1A666C55),
             name: "Metroid Prime Lair",
-            name_id: 0x9842EBF7,
-            mapa_id: 0x33B39768,
+            name_id: ResId::<res_id::STRG>::new(0x9842EBF7),
+            mapa_id: ResId::<res_id::MAPA>::new(0x33B39768),
             pickup_locations: &[
             ],
             door_locations: &[
