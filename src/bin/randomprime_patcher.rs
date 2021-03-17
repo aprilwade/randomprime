@@ -1,21 +1,13 @@
 use randomprime::{
     patches,
     reader_writer,
-    starting_items::StartingItems,
     structs,
     patch_config::randomprime_parse_input,
 };
 
-use clap::{
-    Arg,
-    ArgGroup,
-    App,
-    Format, // XXX This is an undocumented enum
-    crate_version,
-};
+use clap::Format;
 
 use std::{
-    fs::{File, OpenOptions},
     panic,
     process::Command,
 };

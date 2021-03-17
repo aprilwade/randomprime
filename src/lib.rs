@@ -9,18 +9,11 @@ use reader_writer::{
     Reader,
 };
 
-use enum_map::EnumMap;
 use flate2::{Decompress, FlushDecompress};
-use num_bigint::BigUint;
-use num_integer::Integer;
-use num_traits::ToPrimitive;
 
 use std::{
     borrow::Cow,
-    collections::hash_map::DefaultHasher,
-    ffi::{CStr, CString},
-    hash::{Hash,Hasher},
-    iter,
+    ffi::CString,
 };
 
 pub mod c_interface;
@@ -36,9 +29,6 @@ pub mod patches;
 pub mod pickup_meta;
 pub mod starting_items;
 pub mod txtr_conversions;
-
-use crate::pickup_meta::PickupType;
-use crate::elevators::{Elevator, SpawnRoom};
 
 pub trait GcDiscLookupExtensions<'a>
 {

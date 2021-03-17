@@ -9,17 +9,13 @@ use crate::patch_config::randomprime_parse_input;
 
 use std::{
     cell::Cell,
-    collections::hash_map::DefaultHasher,
-    convert::TryInto,
     ffi::{CStr, CString},
-    fs::{File, OpenOptions},
-    hash::{Hash, Hasher},
     panic,
     path::Path,
     os::raw::c_char,
 };
 
-use serde::{Serialize, Deserialize};
+use serde::{Serialize};
 
 #[derive(Serialize)]
 #[serde(tag = "type")]

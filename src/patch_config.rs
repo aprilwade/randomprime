@@ -1,27 +1,16 @@
-use flate2::{Decompress, FlushDecompress};
 use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::ToPrimitive;
-use std::collections::HashSet;
 use std::{
-    borrow::Cow,
     collections::hash_map::DefaultHasher,
-    ffi::{CStr, CString},
+    ffi::{CStr},
     hash::{Hash,Hasher},
     convert::TryInto,
     iter,
     fs::{File, OpenOptions},
 };
 
-use clap::{
-    Arg,
-    ArgGroup,
-    App,
-    Format, // XXX This is an undocumented enum
-    crate_version,
-};
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize};
 
 use enum_map::EnumMap;
 use crate::elevators::{Elevator, SpawnRoom};
@@ -186,7 +175,6 @@ struct PatchConfigPrivate
 {
     input_iso: Option<String>,
     output_iso: Option<String>,
-    iso_format: Option<IsoFormat>,
     preferences: Option<Preferences>,
     game_config: Option<GameConfig>,
     layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
@@ -293,7 +281,6 @@ const DEFAULT_PREFERENCES: Preferences = Preferences {
 const DEFAULT_PATCHER_CONFIG: PatchConfigPrivate = PatchConfigPrivate {
     input_iso: None,
     output_iso: None,
-    iso_format: None,
     game_config: None,
     preferences: None,
     layout: None,

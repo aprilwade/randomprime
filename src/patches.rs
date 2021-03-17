@@ -15,7 +15,6 @@ use rand::{
 
 use crate::patch_config::{
     ArtifactHintBehavior,
-    Layout,
     IsoFormat,
     PatchConfig,
     GameBanner
@@ -27,7 +26,6 @@ use crate::{
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom},
     gcz_writer::GczWriter,
-    memmap,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
     patcher::{PatcherState, PrimePatcher},
@@ -60,7 +58,6 @@ use std::{
     convert::TryInto,
     ffi::CString,
     fmt,
-    fs::File,
     io::Write,
     iter,
     mem,
