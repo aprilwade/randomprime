@@ -122,7 +122,7 @@ fn inner(config_json: *const c_char, cb_data: *const (), cb: extern fn(*const ()
     let config_json = unsafe { CStr::from_ptr(config_json) }.to_str()
         .map_err(|e| format!("JSON parse failed: {}", e))?;
 
-    let patch_config = randomprime_parse_input(None, false)?;
+    let patch_config = randomprime_parse_input(Some(config_json), false)?;
 
     let pn = ProgressNotifier::new(cb_data, cb);
     patches::patch_iso(patch_config, pn)?;
