@@ -9,7 +9,6 @@ use reader_writer::{
     Reader,
 };
 
-
 use enum_map::EnumMap;
 use flate2::{Decompress, FlushDecompress};
 use num_bigint::BigUint;
@@ -20,7 +19,7 @@ use std::{
     borrow::Cow,
     collections::hash_map::DefaultHasher,
     ffi::{CStr, CString},
-    hash::Hasher,
+    hash::{Hash,Hasher},
     iter,
 };
 
@@ -31,6 +30,7 @@ pub mod dol_patcher;
 pub mod elevators;
 pub mod gcz_writer;
 pub mod mlvl_wrapper;
+pub mod patch_config;
 pub mod patcher;
 pub mod patches;
 pub mod pickup_meta;
@@ -175,155 +175,6 @@ impl<'a> GcDiscLookupExtensions<'a> for structs::GcDisc<'a>
         Ok(())
     }
 }
-
-pub fn extract_flaahgra_music_files(iso_path: &str) -> Result<[nod_wrapper::FileWrapper; 2], String>
-{
-    let res = (|| {
-        let dw = nod_wrapper::DiscWrapper::new(iso_path)?;
-        Ok([
-            dw.open_file(CStr::from_bytes_with_nul(b"rui_flaaghraR.dsp\0").unwrap())?,
-            dw.open_file(CStr::from_bytes_with_nul(b"rui_flaaghraL.dsp\0").unwrap())?,
-        ])
-    })();
-    res.map_err(|s: String| format!("Failed to extract Flaahgra music files: {}", s))
-}
-
-pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, checksum_size: usize, is: I)
-    -> Result<Vec<u8>, String>
-    where I: Iterator<Item = u8> + Clone
-{
-    const LAYOUT_CHAR_TABLE: [u8; 64] =
-        *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
-
-    let mut sum: BigUint = 0u8.into();
-    for c in bytes.iter().rev() {
-        if let Some(idx) = LAYOUT_CHAR_TABLE.iter().position(|i| i == c) {
-            sum = sum * BigUint::from(64u8) + BigUint::from(idx);
-        } else {
-            return Err(format!("Layout contains invalid character '{}'.", c));
-        }
-    }
-
-    // Reverse the order of the odd bits
-    let mut bits = sum.to_str_radix(2).into_bytes();
-    for i in 0..(bits.len() / 4) {
-        let len = bits.len() - bits.len() % 2;
-        bits.swap(i * 2 + 1, len - i * 2 - 1);
-    }
-    sum = BigUint::parse_bytes(&bits, 2).unwrap();
-
-    // The upper `checksum_size` bits are a checksum, so seperate them from the sum.
-    let checksum_bitmask = (1u8 << checksum_size) - 1;
-    let checksum = sum.clone() & (BigUint::from(checksum_bitmask) << layout_data_size);
-    sum -= checksum.clone();
-    let checksum = (checksum >> layout_data_size).to_u8().unwrap();
-
-    let mut computed_checksum = 0;
-    {
-        let mut sum = sum.clone();
-        while sum > 0u8.into() {
-            let remainder = (sum.clone() & BigUint::from(checksum_bitmask)).to_u8().unwrap();
-            computed_checksum = (computed_checksum + remainder) & checksum_bitmask;
-            sum >>= checksum_size;
-        }
-    }
-    if checksum != computed_checksum {
-        return Err("Layout checksum failed.".to_string());
-    }
-
-    let mut res = vec![];
-    for denum in is {
-        let (quotient, remainder) = sum.div_rem(&denum.into());
-        res.push(remainder.to_u8().unwrap());
-        sum = quotient;
-    }
-
-    assert!(sum == 0u8.into());
-
-    res.reverse();
-    Ok(res)
-}
-
-
-#[derive(Clone, Debug)]
-pub struct Layout
-{
-    pickups: Vec<PickupType>,
-    starting_location: SpawnRoom,
-    elevators: EnumMap<Elevator, SpawnRoom>,
-    seed: u64,
-}
-
-impl std::str::FromStr for Layout {
-    type Err = String;
-    fn from_str(text: &str) -> Result<Layout, String>
-    {
-        if !text.is_ascii() {
-            return Err("Layout string contains non-ascii characters.".to_string());
-        }
-        let text = text.as_bytes();
-
-        let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
-            (&text[..n], &text[(n + 1)..])
-        } else {
-            (b"qzoCAr2fwehJmRjM" as &[u8], text)
-        };
-
-        if elevator_bytes.len() != 16 {
-            let msg = "The section of the layout string before the '.' should be 16 characters";
-            return Err(msg.to_string());
-        }
-
-        let (pickup_bytes, has_scan_visor) = if pickup_bytes.starts_with(b"!") {
-            (&pickup_bytes[1..], true)
-        } else {
-            (pickup_bytes, false)
-        };
-        if pickup_bytes.len() != 87 {
-            return Err("Layout string should be exactly 87 characters".to_string());
-        }
-
-        // XXX The distribution on this hash probably isn't very good, but we don't use it for anything
-        //     particularly important anyway...
-        let mut hasher = DefaultHasher::new();
-        hasher.write(elevator_bytes);
-        hasher.write(pickup_bytes);
-        let seed = hasher.finish();
-
-        let pickup_layout = parse_layout_chars_to_ints(
-                pickup_bytes,
-                if has_scan_visor { 521 } else { 517 },
-                if has_scan_visor { 1 } else { 5 },
-                iter::repeat(if has_scan_visor { 37u8 } else { 36u8 }).take(100)
-            ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
-        let pickups = pickup_layout.iter()
-            .map(|i| PickupType::from_idx(*i as usize).unwrap())
-            .collect();
-
-        let elevator_nums = parse_layout_chars_to_ints(
-                elevator_bytes,
-                91, 5,
-                iter::once(21u8).chain(iter::repeat(20u8).take(20))
-            ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
-
-        let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32)
-            .unwrap();
-        let mut elevators = EnumMap::<Elevator, SpawnRoom>::new();
-        elevators.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
-            .zip(Elevator::iter())
-            .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
-        );
-
-        Ok(Layout {
-            pickups,
-            starting_location,
-            elevators,
-            seed,
-        })
-    }
-}
-
-
 
 #[derive(Clone, Debug)]
 pub struct ResourceData<'a>
