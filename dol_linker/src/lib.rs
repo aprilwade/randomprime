@@ -621,7 +621,7 @@ impl<'a> Section<'a>
     ) -> Self
     {
         let mut relocations = elf.shdr_relocs.iter()
-            .filter(|(idx, _)| *idx == sec_idx + 1)
+            .filter(|(idx, _)| elf.section_headers[*idx].sh_info == sec_idx as u32)
             .flat_map(|(_, reloc_section)| reloc_section.iter())
             .map(|reloc| Relocation::from_reloc(reloc, &elf, &map_sec_index, &map_bss_index))
             .collect::<Vec<_>>();
