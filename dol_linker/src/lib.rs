@@ -326,6 +326,7 @@ enum RelRelocationType
 }
 
 
+const SHN_ABS: u16 = 65521;
 const SHN_COMMON: u16 = 65522;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -333,6 +334,7 @@ enum RelocationKind<'a>
 {
     ExternalSymbol(&'a str),
     InternalSymbol(u32 /* sec idx */, u32 /* offset */),
+    AbsoluteSymbol(u32),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -364,6 +366,8 @@ impl<'a> Relocation<'a>
                 RelocationKind::ExternalSymbol(elf.strtab.get(sym.st_name).unwrap().unwrap())
             } else if sym.st_shndx as u16 == SHN_COMMON {
                 RelocationKind::InternalSymbol(map_bss_index(reloc.r_sym as u32), 0)
+            } else if sym.st_shndx as u16 == SHN_ABS {
+                RelocationKind::AbsoluteSymbol(sym.st_value as u32)
             } else {
                 RelocationKind::InternalSymbol(
                     map_sec_index(sym.st_shndx as u32),
@@ -391,6 +395,7 @@ impl<'a> Relocation<'a>
                 } else {
                     (true, false)
                 },
+            RelocationKind::AbsoluteSymbol(_) => (true, false),
         };
 
         match self.type_ {
@@ -416,7 +421,8 @@ impl<'a> Relocation<'a>
     {
         match self.kind {
             RelocationKind::ExternalSymbol(sym_name) => !local_sym_table.contains_key(sym_name),
-            _ => false,
+            RelocationKind::AbsoluteSymbol(_) => true,
+            RelocationKind::InternalSymbol(_, _) => false,
         }
     }
 
@@ -447,6 +453,7 @@ impl<'a> Relocation<'a>
                     unreachable!()
                 }
             },
+            RelocationKind::AbsoluteSymbol(addr) => (0, addr),
         };
 
         Ok(RelRelocation {
@@ -506,6 +513,10 @@ impl<'a> Relocation<'a>
                     // We should have already filtered out any unresolved symbols
                     unreachable!("Symbol: {}", sym_name)
                 }
+            },
+            RelocationKind::AbsoluteSymbol(addr) => {
+                rel_addr = None;
+                abs_addr = Some((addr + self.addend) as i64);
             },
         };
         let rel_addr = rel_addr.map(|addr| (addr - self_offset as i64));
@@ -1379,6 +1390,7 @@ pub fn link_obj_files_to_bin<'a>(
                         );
                     }
                     RelocationKind::InternalSymbol(_, _) => (),
+                    RelocationKind::AbsoluteSymbol(_) => (),
                 }
             }
         }
