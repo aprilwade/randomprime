@@ -26,7 +26,7 @@ use crate::starting_items::StartingItems;
 
 /*** Parsed Config (fn patch_iso) ***/
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum IsoFormat
 {
@@ -44,7 +44,7 @@ pub struct Layout
     pub seed: u64,
 }
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum ArtifactHintBehavior
 {
@@ -64,6 +64,7 @@ pub struct GameBanner
     pub description: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct PatchConfig
 {
     pub input_iso: memmap::Mmap,
@@ -153,7 +154,7 @@ fn default_game_config()
 
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(untagged)]
 enum LayoutWrapper
 {
@@ -189,7 +190,7 @@ impl TryInto<Layout> for LayoutWrapper
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
@@ -202,7 +203,7 @@ struct Preferences
     quiet: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
@@ -225,7 +226,7 @@ struct GameConfig
     main_menu_message: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct PatchConfigPrivate
 {
@@ -255,7 +256,7 @@ pub fn randomprime_parse_input(
     // 1st pass - Parse c-interface JSON
     if json_config_raw.is_some()
     {
-        let json_config: PatchConfigPrivate = serde_json::from_str(&json_config_raw.unwrap())
+        let json_config: PatchConfigPrivate = serde_json::from_str(json_config_raw.unwrap())
             .map_err(|e| format!("JSON parse failed: {}", e))?;
         
         merge_config(&mut patch_config, &json_config);
@@ -273,6 +274,7 @@ pub fn randomprime_parse_input(
                 .takes_value(true))
             .arg(Arg::with_name("profile json path")
                 .long("profile")
+                .help("Path to JSON file with patch configuration (cli config takes priority). See documentation for details.")
                 .takes_value(true))
             .arg(Arg::with_name("pickup layout")
                 .long("layout")
@@ -368,11 +370,10 @@ pub fn randomprime_parse_input(
         if cli_app.is_present("profile json path")
         {
             let json_path = cli_app.value_of("profile json path").unwrap();
-
             let cli_json_config_raw:&str = &fs::read_to_string(json_path)
                         .map_err(|e| format!("Could not read JSON file: {}",e)).unwrap();
 
-            let cli_json_config: PatchConfigPrivate = serde_json::from_str(&cli_json_config_raw)
+            let cli_json_config: PatchConfigPrivate = serde_json::from_str(cli_json_config_raw)
                 .map_err(|e| format!("JSON parse failed: {}", e))?;
 
             merge_config(&mut patch_config, &cli_json_config);
@@ -452,7 +453,7 @@ pub fn randomprime_parse_input(
     if patch_config.preferences.skip_hudmenus.is_none()                {patch_config.preferences.skip_hudmenus                = Some(true);}
     if patch_config.preferences.obfuscate_items.is_none()              {patch_config.preferences.obfuscate_items              = Some(false);}
     if patch_config.preferences.artifact_hint_behavior.is_none()       {patch_config.preferences.artifact_hint_behavior       = Some("all".to_string());}
-    if patch_config.preferences.trilogy_disc_path.is_none()            {patch_config.preferences.trilogy_disc_path            = Some("".to_string());}
+    // trilogy disc path stays None so that it gets skipped
     if patch_config.preferences.keep_fmvs.is_none()                    {patch_config.preferences.keep_fmvs                    = Some(false);}
     if patch_config.preferences.quickplay.is_none()                    {patch_config.preferences.quickplay                    = Some(false);}
     if patch_config.preferences.quiet.is_none()                        {patch_config.preferences.quiet                        = Some(false);}
@@ -465,7 +466,7 @@ pub fn randomprime_parse_input(
     if patch_config.game_config.starting_items.is_none()               {patch_config.game_config.starting_items               = Some(StartingItems::from_u64(1));}
     if patch_config.game_config.random_starting_items.is_none()        {patch_config.game_config.random_starting_items        = Some(StartingItems::from_u64(0));}
     if patch_config.game_config.etank_capacity.is_none()               {patch_config.game_config.etank_capacity               = Some(100);}
-    if patch_config.game_config.max_obtainable_missiles.is_none()      {patch_config.game_config.max_obtainable_missiles      = Some(1000);}
+    if patch_config.game_config.max_obtainable_missiles.is_none()      {patch_config.game_config.max_obtainable_missiles      = Some(999);}
     if patch_config.game_config.max_obtainable_power_bombs.is_none()   {patch_config.game_config.max_obtainable_power_bombs   = Some(8);}
     if patch_config.game_config.comment.is_none()                      {patch_config.game_config.comment                      = Some("".to_string());}
     if patch_config.game_config.main_menu_message.is_none()            {patch_config.game_config.main_menu_message            = Some("randomprime".to_string());}
