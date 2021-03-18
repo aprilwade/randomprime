@@ -38,7 +38,7 @@ pub struct Pickup<'r>
 
     pub active: u8,
     pub spawn_delay: f32,
-    pub part: ResId<CMDL>,
+    pub part: ResId<PART>,
 }
 
 impl<'r> SclyPropertyData for Pickup<'r>
