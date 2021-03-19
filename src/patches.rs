@@ -2946,6 +2946,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
     let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
+    let pickup_resources = &pickup_resources;
+
+    let door_resources = collect_door_resources(gc_disc);
+    let _door_resources = &door_resources;
+
     let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
 
     // XXX These values need to out live the patcher
@@ -2955,8 +2960,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let n = format!("Video/04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
     let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
-
-    let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
     patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
     if !config.keep_fmvs {
