@@ -1,5 +1,4 @@
 use crate::{
-    pickup_meta::ScriptObjectLocation,
     custom_assets::custom_asset_ids,
     structs::scly_props::structs::{DamageVulnerability, BeamCombos, ChargedBeams},
 };

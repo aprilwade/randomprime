@@ -21,8 +21,8 @@ use crate::{
     gcz_writer::GczWriter,
     memmap,
     mlvl_wrapper,
-    pickup_meta::{self, PickupType},
-    door_meta::{DoorType, BlastShieldType, DoorLocation},
+    pickup_meta::{self, PickupType, DoorLocation},
+    door_meta::{DoorType, BlastShieldType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
     txtr_conversions::{
@@ -159,7 +159,7 @@ fn collect_door_resources<'r>(gc_disc: &structs::GcDisc<'r>)
     }
 
     // Iterate through all paks and add add any dependencies to the resource pool //
-    for pak_name in pickup_meta::PICKUP_LOCATIONS.iter().map(|(name, _)| name) { // for all paks
+    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) { // for all paks
 
         // get the pak //
         let file_entry = gc_disc.find_file(pak_name).unwrap();
