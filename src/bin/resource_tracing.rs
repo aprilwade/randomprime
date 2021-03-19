@@ -29,6 +29,15 @@ pub struct PickupLocation
     post_pickup_relay_connections: Vec<structs::Connection>,
 }
 
+#[derive(Clone, Debug)]
+pub struct DoorLocation
+{
+    door_location: ScriptObjectLocation,
+    door_force_location: ScriptObjectLocation,
+    door_shield_location: Option<ScriptObjectLocation>,
+    dock_number: Option<u32>,
+}
+
 struct ResourceDb<'r>
 {
     map: HashMap<ResourceKey, ResourceDbRecord<'r>>,
@@ -335,9 +344,12 @@ struct PickupData
 #[derive(Debug)]
 struct RoomInfo
 {
-    room_id: u32,
+    room_id: ResId<res_id::MREA>,
     name: String,
+    name_id: ResId<res_id::STRG>,
+    mapa_id: ResId<res_id::MAPA>,
     pickups: Vec<PickupLocation>,
+    doors: Vec<DoorLocation>,
     objects_to_remove: HashMap<u32, Vec<u32>>,
 }
 
@@ -428,6 +440,95 @@ fn extract_pickup_data<'r>(
         hudmemo_strg,
         attainment_audio_file_name,
     }
+}
+
+fn extract_door_location<'r>(
+    scly: &structs::Scly<'r>,
+    obj: &structs::SclyObject<'r>,
+    obj_location: ScriptObjectLocation
+) -> (Option<DoorLocation>,Option<DoorLocation>)
+{
+
+    let scly_db = build_scly_db(scly);
+
+    let shield = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_actor()
+            .map(|sh| sh.name.to_str().unwrap().starts_with("Actor_DoorShield") &&
+                !sh.name.to_str().unwrap().contains("Key"))
+            .unwrap_or(false),
+        );
+    let unlock_shield_loc = match shield {
+        Some(shield) => Some(ScriptObjectLocation {
+            layer: scly_db[&shield.instance_id].0 as u32,
+            instance_id: shield.instance_id,
+        }),
+        None => None,
+    };
+
+    let forceunlock = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_damageable_trigger()
+            .map(|sh| sh.name.to_str().unwrap().contains("DoorUnlock"))
+            .unwrap_or(false),
+        ).unwrap();
+    let unlock_force_loc = ScriptObjectLocation {
+        layer: scly_db[&forceunlock.instance_id].0 as u32,
+        instance_id: forceunlock.instance_id,
+    };
+
+    let key_shield = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_actor()
+            .map(|sh| sh.name.to_str().unwrap().starts_with("Actor_DoorShield_Key"))
+            .unwrap_or(false),
+        );
+    let key_shield_loc = match key_shield {
+        Some(key_shield) => Some(ScriptObjectLocation {
+            layer: scly_db[&forceunlock.instance_id].0 as u32,
+            instance_id: key_shield.instance_id,
+        }),
+        None => None,
+    };
+
+    let forcekey = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.as_damageable_trigger()
+            .map(|sh| sh.name.to_str().unwrap().contains("DoorKey"))
+            .unwrap_or(false),
+        );
+    let key_force_loc = match forcekey {
+        Some(forcekey) => Some(ScriptObjectLocation {
+            layer: scly_db[&forcekey.instance_id].0 as u32,
+            instance_id: forcekey.instance_id,
+        }),
+        None => None,
+    };
+
+    let dock = search_for_scly_object(&obj.connections, &scly_db,
+        |obj| obj.property_data.is_dock());
+
+    // Handle dock_number exception (Main Ventillation Shaft B) //
+    let dock_number = match dock {
+        Some(dock) => Some(dock.property_data.as_dock().unwrap().dock_number),
+        None if obj_location.instance_id == 0x150062 => Some(3),
+        None if obj_location.instance_id == 0x150066 => Some(2),
+        None => None,
+    };
+
+    let key_door_location = if !key_shield_loc.is_none() && !key_force_loc.is_none() {
+        Some(DoorLocation {
+            door_location: obj_location,
+            door_force_location: key_force_loc.unwrap(),
+            door_shield_location: key_shield_loc,
+            dock_number,
+        })
+    } else {
+        None
+    };
+
+    (Some(DoorLocation {
+        door_location: obj_location,
+        door_force_location: unlock_force_loc,
+        door_shield_location: unlock_shield_loc,
+        dock_number,
+    }),key_door_location)
 }
 
 fn extract_pickup_location<'r>(
@@ -822,6 +923,28 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupType, PickupData>)
     }).is_none());
 }
 
+// doors that throw off the patcher, these are all in frigate (intro) //
+const PROBLEMATIC_DOORS: [u32; 10] = [
+    0x070009,
+    0x090004,
+    0x0B0004,
+    0x0D0004,
+    0x0E0110,
+    0x0F0004,
+    0x110058,
+    0x130011,
+    0x1500F6,
+    0x160007,
+];
+
+// animations of doors openable by player-weapons
+// used to idenify which doors are patchable from those which are not
+const OPENABLE_DOOR_ANCS: [u32; 3] = [
+    0x26886945, // normal door
+    0xF57DD484, // vertical door
+    0xFAFB5784, // frigate door
+];
+
 fn main()
 {
     let file = File::open(args().nth(1).unwrap()).unwrap();
@@ -830,11 +953,13 @@ fn main()
     let gc_disc: structs::GcDisc = reader.read(());
 
     let filenames = [
+        "Metroid1.pak",
         "Metroid2.pak",
         "Metroid3.pak",
         "Metroid4.pak",
         "metroid5.pak",
         "Metroid6.pak",
+        "Metroid7.pak",
     ];
 
     let mut pickup_table = HashMap::new();
@@ -864,6 +989,11 @@ fn main()
             .map(|area| (area.mrea, area.area_name_strg))
             .collect();
 
+        let mut mapw_res = resources.iter()
+            .find(|res| res.fourcc() == b"MAPW".into())
+            .unwrap().into_owned();
+        let mut mapw = mapw_res.kind.as_mapw_mut().unwrap().area_maps.iter();
+
         locations.push(vec![]);
         let pak_locations = locations.last_mut().unwrap();
 
@@ -878,7 +1008,45 @@ fn main()
 
             let mut room_locations = vec![];
             let mut room_removals = HashMap::new();
+            let mut door_locations = vec![];
+
+            let target_mapa_id = mapw.next().unwrap().into_owned();
+            let target_mapa = resources.iter()
+                .find(|res| res.fourcc() == b"MAPA".into() && res.file_id == target_mapa_id)
+                .unwrap().into_owned();
+            let mapa_id = &ResId::<res_id::MAPA>::new(target_mapa.file_id);
+
             for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
+
+                // trace door resources //
+                for obj in scly_layer.objects.iter() {
+                    let obj = obj.into_owned();
+                    let door = if let Some(door) = obj.property_data.as_door() {
+                        door
+                    } else {
+                        continue
+                    };
+
+                    // Skip all doors that aren't openable //
+                    if !OPENABLE_DOOR_ANCS.contains(&door.ancs.file_id.to_u32()) {continue;}
+
+                    // Skip all problematic doors (all in frigate intro level) //
+                    if PROBLEMATIC_DOORS.contains(&obj.instance_id) { continue; }
+
+                    let obj_loc = ScriptObjectLocation {
+                        instance_id: obj.instance_id,
+                        layer: layer_num as u32,
+                    };
+                    
+                    let (unlock_door_loc,key_door_loc) = extract_door_location(&scly,&obj,obj_loc);
+                    door_locations.push(unlock_door_loc.unwrap());
+                    match key_door_loc {
+                        Some(key_door_loc) => door_locations.push(key_door_loc),
+                        None => (),
+                    }
+                }
+
+                // trace pickup resources //
                 for obj in scly_layer.objects.iter() {
                     let obj = obj.into_owned();
                     let pickup = if let Some(pickup) = obj.property_data.as_pickup() {
@@ -941,7 +1109,7 @@ fn main()
                 }
             }
 
-            if room_locations.len() != 0 {
+            {
                 let strg_id = mrea_name_strg_map[&ResId::<res_id::MREA>::new(res.file_id)];
                 let strg: structs::Strg = res_db.map[&ResourceKey::from(strg_id)]
                     .data.data.clone().read(());
@@ -951,9 +1119,12 @@ fn main()
                     .into_owned().into_string();
 
                 pak_locations.push(RoomInfo {
-                    room_id: res.file_id,
+                    room_id: ResId::<res_id::MREA>::new(res.file_id),
                     name,
+                    name_id: strg_id,
+                    mapa_id: *mapa_id,
                     pickups: room_locations,
+                    doors: door_locations,
                     objects_to_remove: room_removals,
                 })
             }
@@ -978,14 +1149,16 @@ fn main()
     println!("");
     println!("");
 
-    println!("pub const PICKUP_LOCATIONS: &[(&str, &[RoomInfo]); 5] = &[");
+    println!("pub const ROOM_INFO: &[(&str, &[RoomInfo]); 7] = &[");
     for (fname, locations) in filenames.iter().zip(locations.into_iter()) {
         // println!("    // {}", fname);
         println!("    ({:?}, &[", fname);
         for room_info in locations {
             println!("        RoomInfo {{");
-            println!("            room_id: 0x{:08X},", room_info.room_id);
+            println!("            room_id: ResId::<res_id::MREA>::new(0x{:08X}),", room_info.room_id.to_u32());
             println!("            name: {:?},", &room_info.name[..(room_info.name.len() - 1)]);
+            println!("            name_id: ResId::<res_id::STRG>::new(0x{:08X}),", room_info.name_id.to_u32());
+            println!("            mapa_id: ResId::<res_id::MAPA>::new(0x{:08X}),", room_info.mapa_id.to_u32());
             println!("            pickup_locations: &[");
             for location in room_info.pickups {
                 println!("                PickupLocation {{");
@@ -1006,6 +1179,16 @@ fn main()
                     }
                     println!("                    ],");
                 }
+                println!("                }},");
+            }
+            println!("            ],");
+            println!("            door_locations: &[");
+            for door in room_info.doors {
+                println!("                DoorLocation {{");
+                println!("                    door_location: {:?},", door.door_location);
+                println!("                    door_force_location: {:?},", door.door_force_location);
+                println!("                    door_shield_location: {:?},", door.door_shield_location);
+                println!("                    dock_number: {:?},", door.dock_number);
                 println!("                }},");
             }
             println!("            ],");

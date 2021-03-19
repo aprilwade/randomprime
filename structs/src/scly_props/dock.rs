@@ -17,7 +17,7 @@ pub struct Dock<'r>
     pub unknown0: u8,
     pub position: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
-    pub dock_number: f32,
+    pub dock_number: u32,
     pub this_room: u8,
     pub unknown1: u8,
 }

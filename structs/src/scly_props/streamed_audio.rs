@@ -1,8 +1,6 @@
 use auto_struct_macros::auto_struct;
 
 use reader_writer::CStr;
-use reader_writer::typenum::*;
-use reader_writer::generic_array::GenericArray;
 use crate::SclyPropertyData;
 
 #[auto_struct(Readable, Writable)]
@@ -17,8 +15,12 @@ pub struct StreamedAudio<'r>
     pub active: u8,
     pub audio_file_name: CStr<'r>,
 
-    // 6 unknown properties
-    pub unknowns: GenericArray<u8, U18>,
+    pub no_stop_on_deactivate: u8,
+    pub fade_in_time: f32,
+    pub fade_out_time: f32,
+    pub volume: u32,
+    pub oneshot: u32,
+    pub is_music: u8,
 }
 
 impl<'r> SclyPropertyData for StreamedAudio<'r>
