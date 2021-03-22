@@ -3,7 +3,6 @@ use reader_writer::{
     FourCC, LCow, Readable, Reader, RoArray, Writable, align_byte_count, pad_bytes,
 };
 
-
 use std::borrow::Cow;
 use std::fmt;
 use std::io;
@@ -21,6 +20,7 @@ use crate::{
     savw::Savw,
     scan::Scan,
     strg::Strg,
+    ctwk::*,
 };
 
 #[auto_struct(Readable, Writable)]
@@ -650,5 +650,5 @@ build_resource_data!(
     Savw, b"SAVW", as_savw, as_savw_mut,
     Scan, b"SCAN", as_scan, as_scan_mut,
     Strg, b"STRG", as_strg, as_strg_mut,
+    Ctwk, b"CTWK", as_ctwk, as_ctwk_mut,
 );
-
