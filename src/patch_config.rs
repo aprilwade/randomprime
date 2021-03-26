@@ -7,6 +7,7 @@ use std::{
     hash::{Hash,Hasher},
     convert::TryInto,
     iter,
+    fmt,
     fs::{File, OpenOptions},
     fs,
 };
@@ -53,6 +54,21 @@ pub enum ArtifactHintBehavior
     All,
 }
 
+#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum MapState
+{
+    Default,
+    Visible,
+    Visited,
+}
+
+impl fmt::Display for MapState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -83,6 +99,7 @@ pub struct PatchConfig
     pub staggered_suit_damage: bool,
     pub max_obtainable_missiles: u32,
     pub max_obtainable_power_bombs: u32,
+    pub map_default_state: MapState,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
@@ -148,6 +165,7 @@ struct Preferences
 {
     skip_hudmenus: Option<bool>,
     obfuscate_items: Option<bool>,
+    map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
     trilogy_disc_path: Option<String>,
     keep_fmvs: Option<bool>,
@@ -252,6 +270,10 @@ impl PatchConfig
                 .long("max-obtainable-power-bombs")
                 .help("Set the max amount of Power Bombs you can carry")
                 .takes_value(true))
+            .arg(Arg::with_name("map default state")
+                .long("map-default-state")
+                .help("Change the default state of map for each world (Either default, visible or visited)")
+                .takes_value(true))
             .arg(Arg::with_name("auto enabled elevators")
                 .long("auto-enabled-elevators")
                 .help("Every elevator will be automatically enabled without scaning its terminal"))
@@ -350,6 +372,9 @@ impl PatchConfig
         if let Some(output_iso_path) = matches.value_of("output iso path") {
             patch_config.output_iso = Some(output_iso_path.to_string());
         }
+        if let Some(map_default_state) = matches.value_of("map default state") {
+            patch_config.preferences.map_default_state = Some(map_default_state.to_string());
+        }
         if let Some(artifact_behavior) = matches.value_of("artifact hint behavior") {
             patch_config.preferences.artifact_hint_behavior = Some(artifact_behavior.to_string());
         }
@@ -446,6 +471,23 @@ impl PatchConfigPrivate
                 ))?
             }
         };
+        
+        let map_default_state = {
+            let map_default_state_string = self.preferences.map_default_state
+                                               .as_deref()
+                                               .unwrap_or("default")
+                                               .trim()
+                                               .to_lowercase();
+            match &map_default_state_string[..] {
+                "default" => MapState::Default,
+                "visited" => MapState::Visited,
+                "visible" => MapState::Visible,
+                _ => Err(format!(
+                    "Unhandled map default state - '{}'",
+                    map_default_state_string
+                ))?,
+            }
+        };
 
         let flaahgra_music_files = self.preferences.trilogy_disc_path.as_ref()
             .map(|path| extract_flaahgra_music_files(path))
@@ -471,6 +513,7 @@ impl PatchConfigPrivate
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
             auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap_or(false),
+            map_default_state,
             enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
             starting_items: self.game_config.starting_items.clone()
