@@ -11,7 +11,14 @@ use rand::{
     SeedableRng,
     Rng,
 };
-use serde::Deserialize;
+
+
+use crate::patch_config::{
+    ArtifactHintBehavior,
+    IsoFormat,
+    PatchConfig,
+    GameBanner
+};
 
 use crate::{
     custom_assets::custom_asset_ids,
@@ -19,7 +26,6 @@ use crate::{
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom},
     gcz_writer::GczWriter,
-    memmap,
     mlvl_wrapper,
     pickup_meta::{self, PickupType, DoorLocation},
     door_meta::{DoorType, BlastShieldType},
@@ -54,7 +60,6 @@ use std::{
     convert::TryInto,
     ffi::CString,
     fmt,
-    fs::File,
     io::Write,
     iter,
     mem,
@@ -501,7 +506,7 @@ fn modify_pickups_in_mrea<'r>(
     pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
     pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    config: &ParsedConfig,
+    config: &PatchConfig,
 ) -> Result<(), String>
 {
     let location_idx = 0;
@@ -2357,7 +2362,7 @@ fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
     spawn_room: SpawnRoom,
     version: Version,
-    config: &ParsedConfig,
+    config: &PatchConfig,
 ) -> Result<(), String>
 {
     if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
@@ -2690,7 +2695,11 @@ fn empty_frigate_pak<'r>(file: &mut structs::FstEntryFile)
     Ok(())
 }
 
-fn patch_bnr(file: &mut structs::FstEntryFile, config: &ParsedConfig) -> Result<(), String>
+fn patch_bnr(
+    file: &mut structs::FstEntryFile,
+    banner: &GameBanner,
+)
+    -> Result<(), String>
 {
     let bnr = match file {
         structs::FstEntryFile::Bnr(bnr) => bnr,
@@ -2714,103 +2723,22 @@ fn patch_bnr(file: &mut structs::FstEntryFile, config: &ParsedConfig) -> Result<
         Ok(())
     }
 
-    write_encoded_str("game_name", &config.bnr_game_name, &mut bnr.english_fields.game_name)?;
-    write_encoded_str("developer", &config.bnr_developer, &mut bnr.english_fields.developer)?;
+    write_encoded_str("game_name", &banner.game_name, &mut bnr.english_fields.game_name)?;
+    write_encoded_str("developer", &banner.developer, &mut bnr.english_fields.developer)?;
     write_encoded_str(
         "game_name_full",
-        &config.bnr_game_name_full,
+        &banner.game_name_full,
         &mut bnr.english_fields.game_name_full
     )?;
     write_encoded_str(
         "developer_full",
-        &config.bnr_developer_full,
+        &banner.developer_full,
         &mut bnr.english_fields.developer_full)
     ?;
-    write_encoded_str("description", &config.bnr_description, &mut bnr.english_fields.description)?;
+    write_encoded_str("description", &banner.description, &mut bnr.english_fields.description)?;
 
     Ok(())
 }
-
-// XXX Deserialize is implemented here for c_interface. Ideally this could be done in
-//     c_interface.rs itself...
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum IsoFormat
-{
-    Iso,
-    Gcz,
-    Ciso,
-}
-
-impl Default for IsoFormat
-{
-    fn default() -> IsoFormat
-    {
-        IsoFormat::Iso
-    }
-}
-
-#[derive(Deserialize, Copy, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum ArtifactHintBehavior
-{
-    Default,
-    None,
-    All,
-}
-
-impl Default for ArtifactHintBehavior
-{
-    fn default() -> Self
-    {
-        ArtifactHintBehavior::Default
-    }
-}
-
-pub struct ParsedConfig
-{
-    pub input_iso: memmap::Mmap,
-    pub output_iso: File,
-    // pub layout_string: String,
-
-    pub layout: crate::Layout,
-
-    pub iso_format: IsoFormat,
-    pub skip_frigate: bool,
-    pub skip_hudmenus: bool,
-    pub keep_fmvs: bool,
-    pub obfuscate_items: bool,
-    pub etank_capacity: u32,
-    pub nonvaria_heat_damage: bool,
-    pub heat_damage_per_sec: f32,
-    pub staggered_suit_damage: bool,
-    pub max_obtainable_missiles: u32,
-    pub max_obtainable_power_bombs: u32,
-    pub auto_enabled_elevators: bool,
-    pub quiet: bool,
-
-    pub enable_vault_ledge_door: bool,
-    pub artifact_hint_behavior: ArtifactHintBehavior,
-
-    pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
-
-    pub suit_hue_rotate_angle: Option<i32>,
-
-    pub starting_items: StartingItems,
-    pub random_starting_items: StartingItems,
-    pub comment: String,
-    pub main_menu_message: String,
-
-    pub quickplay: bool,
-
-    pub bnr_game_name: Option<String>,
-    pub bnr_developer: Option<String>,
-
-    pub bnr_game_name_full: Option<String>,
-    pub bnr_developer_full: Option<String>,
-    pub bnr_description: Option<String>,
-}
-
 
 #[derive(PartialEq, Copy, Clone)]
 enum Version
@@ -2842,7 +2770,7 @@ impl fmt::Display for Version
     }
 }
 
-pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
+pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
     let mut ct = Vec::new();
@@ -2935,7 +2863,7 @@ pub fn patch_iso<T>(config: ParsedConfig, mut pn: T) -> Result<(), String>
     Ok(())
 }
 
-fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, version: Version)
+fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
     let pickup_layout = &config.layout.pickups[..];
@@ -2961,7 +2889,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &ParsedConfig, v
     let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
     let mut patcher = PrimePatcher::new();
-    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, config));
+    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
     if !config.keep_fmvs {
         // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
         // copy and to make compressed ISOs smaller.
