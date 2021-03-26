@@ -24,7 +24,7 @@ use crate::{
     custom_assets::custom_asset_ids,
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{Elevator, SpawnRoom},
+    elevators::{Elevator, SpawnRoom, SpawnRoomData, World, spawn_room_data_from_string},
     gcz_writer::GczWriter,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
@@ -706,7 +706,10 @@ fn patch_ending_scene_straight_to_credits(
 }
 
 
-fn patch_frigate_teleporter<'r>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: SpawnRoom)
+fn patch_frigate_teleporter<'r>(
+    area: &mut mlvl_wrapper::MlvlArea,
+    spawn_room: SpawnRoomData,
+)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -2199,7 +2202,7 @@ fn patch_starting_pickups<'r>(
 
 include!("../compile_to_ppc/patches_config.rs");
 fn create_rel_config_file(
-    spawn_room: SpawnRoom,
+    spawn_room: SpawnRoomData,
     quickplay: bool,
 ) -> Vec<u8>
 {
@@ -2214,7 +2217,7 @@ fn create_rel_config_file(
 
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
-    spawn_room: SpawnRoom,
+    spawn_room: SpawnRoomData,
     version: Version,
     config: &PatchConfig,
 ) -> Result<(), String>
@@ -2722,8 +2725,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 {
     let pickup_layout = &config.layout.pickups[..];
     let elevator_layout = &config.layout.elevators;
-    let spawn_room = config.layout.starting_location;
-
+    let new_save_spawn_room = spawn_room_data_from_string(config.new_save_spawn_room.to_string());
+    
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 

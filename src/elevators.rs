@@ -2,6 +2,56 @@
 
 use serde::Deserialize;
 use enum_map::{Enum, EnumMap};
+use crate::{pickup_meta::{self, PickupType}};
+
+pub enum World {
+    FrigateOrpheon,
+    TallonOverworld,
+    ChozoRuins,
+    MagmoorCaverns,
+    PhendranaDrifts,
+    PhazonMines,
+    ImpactCrater,
+}
+
+impl World {
+    pub fn from_pak(pak_str:&str) -> Option<Self> {
+        match pak_str {
+            "Metroid1.pak" => Some(World::FrigateOrpheon),
+            "Metroid2.pak" => Some(World::ChozoRuins),
+            "Metroid3.pak" => Some(World::PhendranaDrifts),
+            "Metroid4.pak" => Some(World::TallonOverworld),
+            "metroid5.pak" => Some(World::PhazonMines),
+            "Metroid6.pak" => Some(World::MagmoorCaverns),
+            "Metroid7.pak" => Some(World::ImpactCrater),
+            _ => None
+        }
+    }
+
+    pub fn mlvl(&self) -> u32 {
+        match self {
+            World::FrigateOrpheon  => 0x158efe17,
+            World::ChozoRuins      => 0x83f6ff6f,
+            World::PhendranaDrifts => 0xa8be6291,
+            World::TallonOverworld => 0x39f2de28,
+            World::PhazonMines     => 0xb1ac4d65,
+            World::MagmoorCaverns  => 0x3ef8237c,
+            World::ImpactCrater    => 0xc13b09d1,
+        }
+    }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            World::FrigateOrpheon  => "Frigate Orpheon"   .to_string(),
+            World::ChozoRuins      => "Chozo Ruins"       .to_string(),
+            World::PhendranaDrifts => "Phendrana Drifts"  .to_string(),
+            World::TallonOverworld => "Tallon Overworld"  .to_string(),
+            World::PhazonMines     => "Mines, Phazon"     .to_string(),
+            World::MagmoorCaverns  => "Magmoor Caverns"   .to_string(),
+            World::ImpactCrater    => "Crater, Impact"    .to_string(),
+        }
+    }
+}
 
 macro_rules! decl_elevators {
     ($($name:ident => { $($contents:tt)* },)*) => {
@@ -460,8 +510,78 @@ macro_rules! decl_spawn_rooms {
                     }
                 }
             }
+
+            pub fn to_string(&self) -> String
+            {
+                for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
+                    for room_info in rooms.iter() { // for each room in the pak
+                        if self.spawn_room_data().mrea == room_info.room_id.to_u32() {
+                            return room_info.name.to_string();
+                        }
+                    }
+                }
+
+                panic!("Failed to find a specific mrea id in pickup_meta.rs.in");
+                return "".to_string();
+            }
         }
     };
+}
+
+pub fn spawn_room_data_from_string(_dest_name: String)
+-> SpawnRoomData
+{
+    let dest_name = _dest_name.to_lowercase();
+
+    // Handle special destinations //
+    if dest_name == "credits" {
+        return *SpawnRoom::EndingCinematic.spawn_room_data();
+    }
+
+    if dest_name == "frigate" {
+        return *SpawnRoom::FrigateExteriorDockingHangar.spawn_room_data();
+    }
+
+    // Handle elevator destinations //
+    for elevator in Elevator::iter() {
+        let elevator_name = elevator.name.to_lowercase();
+        elevator_name.replace("\0","").retain(|c| !c.is_whitespace());
+        if elevator_name == dest_name {
+            return *elevator.spawn_room_data();
+        }
+    }
+
+    // Handle specific room destinations //
+    let vec: Vec<&str> = dest_name.split(":").collect();
+    assert!(vec.len() == 2);
+    let world_name = vec[0].trim();
+    let room_name = vec[1].trim();
+
+    for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
+        let world = World::from_pak(pak_name).unwrap();
+
+        if !world.as_string().to_lowercase().starts_with(&world_name) {
+            continue;
+        }
+
+        let mut idx: u32 = 0;
+        for room_info in rooms.iter() { // for each room in the pak
+            if room_info.name.to_lowercase() == room_name {
+
+                return SpawnRoomData {
+                    pak_name,
+                    mlvl: world.mlvl(),
+                    mrea: room_info.room_id.to_u32(),
+                    mrea_idx: idx,
+                    room_id: 0,
+                    name: room_info.name,
+                };
+            }
+            idx = idx + 1;
+        }
+    }
+
+    panic!("Error - Could not find room '{}'", _dest_name);
 }
 
 impl std::ops::Deref for SpawnRoom
