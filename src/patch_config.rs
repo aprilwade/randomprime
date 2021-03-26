@@ -3,7 +3,7 @@ use num_integer::Integer;
 use num_traits::ToPrimitive;
 use std::{
     collections::hash_map::DefaultHasher,
-    ffi::{CStr},
+    ffi::CStr,
     hash::{Hash,Hasher},
     convert::TryInto,
     iter,
@@ -17,7 +17,7 @@ use clap::{
     crate_version,
 };
 
-use serde::{Deserialize};
+use serde::Deserialize;
 
 use enum_map::EnumMap;
 use crate::elevators::{Elevator, SpawnRoom};
@@ -53,7 +53,7 @@ pub enum ArtifactHintBehavior
     All,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
 {
@@ -72,7 +72,7 @@ pub struct PatchConfig
     pub output_iso: File,
 
     pub layout: Layout,
-    
+
     pub skip_frigate: bool,
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -103,54 +103,6 @@ pub struct PatchConfig
     pub main_menu_message: String,
 }
 
-/*** Define Defaults (all None) ***/
-
-fn default_patch_config_private()
-    -> PatchConfigPrivate
-{
-    PatchConfigPrivate {
-        input_iso: None,
-        output_iso: None,
-        game_config: default_game_config(),
-        preferences: default_preferences(),
-        layout: None,
-    }
-}
-
-fn default_preferences()
-    -> Preferences
-{
-    Preferences {
-        skip_hudmenus: None,
-        obfuscate_items: None,
-        artifact_hint_behavior: None,
-        trilogy_disc_path: None,
-        keep_fmvs: None,
-        quickplay: None,
-        quiet: None,
-    }
-}
-
-fn default_game_config()
-    -> GameConfig
-{
-    GameConfig {
-        skip_frigate: None,
-        nonvaria_heat_damage: None,
-        staggered_suit_damage: None,
-        heat_damage_per_sec: None,
-        auto_enabled_elevators: None,
-        enable_vault_ledge_door: None,
-        starting_items: None,
-        random_starting_items: None,
-        etank_capacity: None,
-        max_obtainable_missiles: None,
-        max_obtainable_power_bombs: None,
-        game_banner: None,
-        comment: None,
-        main_menu_message: None,
-    }
-}
 
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
 
@@ -190,7 +142,7 @@ impl TryInto<Layout> for LayoutWrapper
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
@@ -203,7 +155,7 @@ struct Preferences
     quiet: Option<bool>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
@@ -226,45 +178,36 @@ struct GameConfig
     main_menu_message: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 struct PatchConfigPrivate
 {
     input_iso: Option<String>,
     output_iso: Option<String>,
 
-    #[serde(default = "default_preferences")]
+    #[serde(default)]
     preferences: Preferences,
-    
-    #[serde(default = "default_game_config")]
+
+    #[serde(default)]
     game_config: GameConfig,
-    
+
     layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
 }
 
 /*** Parse Patcher Input ***/
 
-pub fn randomprime_parse_input(
-    json_config_raw: Option<&str>,
-    cli: bool,
-)
-    -> Result<PatchConfig, String>
+impl PatchConfig
 {
-    // 0th pass - Start with default config
-    let mut patch_config = default_patch_config_private();
-
-    // 1st pass - Parse c-interface JSON
-    if json_config_raw.is_some()
+    pub fn from_json(json: &str) -> Result<Self, String>
     {
-        let json_config: PatchConfigPrivate = serde_json::from_str(json_config_raw.unwrap())
+        let json_config: PatchConfigPrivate = serde_json::from_str(json)
             .map_err(|e| format!("JSON parse failed: {}", e))?;
-        
-        merge_config(&mut patch_config, &json_config);
+        json_config.parse()
     }
 
-    if cli
+    pub fn from_cli_options() -> Result<Self, String>
     {
-        let cli_app = App::new("randomprime ISO patcher")
+        let matches = App::new("randomprime ISO patcher")
             .version(crate_version!())
             .arg(Arg::with_name("input iso path")
                 .long("input-iso")
@@ -366,181 +309,100 @@ pub fn randomprime_parse_input(
                 .takes_value(true))
             .get_matches();
 
-        // 2nd pass - Parse JSON file specified by cli
-        if cli_app.is_present("profile json path")
-        {
-            let json_path = cli_app.value_of("profile json path").unwrap();
-            let cli_json_config_raw:&str = &fs::read_to_string(json_path)
-                        .map_err(|e| format!("Could not read JSON file: {}",e)).unwrap();
+        let mut patch_config = if matches.is_present("profile json path") {
+            let json_path = matches.value_of("profile json path").unwrap();
+            let cli_json_config_raw: &str = &fs::read_to_string(json_path)
+                .map_err(|e| format!("Could not read JSON file: {}",e)).unwrap();
 
-            let cli_json_config: PatchConfigPrivate = serde_json::from_str(cli_json_config_raw)
-                .map_err(|e| format!("JSON parse failed: {}", e))?;
+            serde_json::from_str(cli_json_config_raw)
+                .map_err(|e| format!("JSON parse failed: {}", e))?
+        } else {
+            PatchConfigPrivate::default()
+        };
 
-            merge_config(&mut patch_config, &cli_json_config);
+
+        macro_rules! populate_config_bool {
+            ($matches:expr; $($name:expr => $cfg:expr,)*) => {
+                $(if $matches.is_present($name) {
+                    $cfg = Some(true);
+                })*
+            };
         }
 
-        // 3rd pass - Parse cli options (cli takes priority over JSON, so we parse last)
-        {
-            // TODO: prime realestate for some macros, a shame I'm too dumb to figure it out - toasterparty
-            // TODO: error handling on unwrap/parse
+        // bool
+        populate_config_bool!(matches;
+            "skip hudmenus" => patch_config.preferences.skip_hudmenus,
+            "obfuscate items" => patch_config.preferences.obfuscate_items,
+            "keep attract mode" => patch_config.preferences.keep_fmvs,
+            "quickplay" => patch_config.preferences.quickplay,
+            "quiet" => patch_config.preferences.quiet,
+            "skip frigate" => patch_config.game_config.skip_frigate,
+            "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
+            "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
+            "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
+            "enable vault ledge door" => patch_config.game_config.enable_vault_ledge_door,
+        );
 
-            // string
-            if cli_app.is_present("input iso path" ) {patch_config.input_iso  = Some(cli_app.value_of("input iso path" ).unwrap().to_string());}
-            if cli_app.is_present("output iso path") {patch_config.output_iso = Some(cli_app.value_of("output iso path").unwrap().to_string());}
-            if cli_app.is_present("artifact hint behavior") {patch_config.preferences.artifact_hint_behavior = Some(cli_app.value_of("artifact hint behavior").unwrap().to_string());}
-            if cli_app.is_present("trilogy disc path"     ) {patch_config.preferences.trilogy_disc_path      = Some(cli_app.value_of("trilogy disc path"     ).unwrap().to_string());}
-
-            // bool
-            if cli_app.is_present("skip hudmenus"          ) {patch_config.preferences.skip_hudmenus           = Some(true);}
-            if cli_app.is_present("obfuscate items"        ) {patch_config.preferences.obfuscate_items         = Some(true);}
-            if cli_app.is_present("keep attract mode"      ) {patch_config.preferences.keep_fmvs               = Some(true);}
-            if cli_app.is_present("quickplay"              ) {patch_config.preferences.quickplay               = Some(true);}
-            if cli_app.is_present("quiet"                  ) {patch_config.preferences.quiet                   = Some(true);}
-            if cli_app.is_present("skip frigate"           ) {patch_config.game_config.skip_frigate            = Some(true);}
-            if cli_app.is_present("nonvaria heat damage"   ) {patch_config.game_config.nonvaria_heat_damage    = Some(true);}
-            if cli_app.is_present("staggered suit damage"  ) {patch_config.game_config.staggered_suit_damage   = Some(true);}
-            if cli_app.is_present("auto enabled elevators" ) {patch_config.game_config.auto_enabled_elevators  = Some(true);}
-            if cli_app.is_present("enable vault ledge door") {patch_config.game_config.enable_vault_ledge_door = Some(true);}
-
-            // integer/float
-            if cli_app.is_present("heat damage per sec"       ) {patch_config.game_config.heat_damage_per_sec        = Some(cli_app.value_of("heat damage per sec"       ).unwrap().parse::<f32>().unwrap());}
-            if cli_app.is_present("etank capacity"            ) {patch_config.game_config.etank_capacity             = Some(cli_app.value_of("etank capacity"            ).unwrap().parse::<u32>().unwrap());}
-            if cli_app.is_present("max obtainable missiles"   ) {patch_config.game_config.max_obtainable_missiles    = Some(cli_app.value_of("max obtainable missiles"   ).unwrap().parse::<u32>().unwrap());}
-            if cli_app.is_present("max obtainable power bombs") {patch_config.game_config.max_obtainable_power_bombs = Some(cli_app.value_of("max obtainable power bombs").unwrap().parse::<u32>().unwrap());}
-
-            // custom
-            if cli_app.is_present("pickup layout")
-            {
-                patch_config.layout  = Some(
-                    LayoutWrapper::String(
-                        cli_app.value_of("pickup layout")
-                        .unwrap()
-                        .to_string()
-                    )
-                );
-            }
-            if cli_app.is_present("starting items")
-            {
-                patch_config.game_config.starting_items = Some(
-                    StartingItems::from_u64(
-                        cli_app.value_of("starting items")
-                            .unwrap()
-                            .parse::<u64>()
-                            .unwrap()
-                    )
-                );
-            }
-            if cli_app.is_present("random starting items")
-            {
-                patch_config.game_config.random_starting_items = Some(
-                    StartingItems::from_u64(
-                        cli_app.value_of("random starting items")
-                            .unwrap()
-                            .parse::<u64>()
-                            .unwrap()
-                    )
-                );
-            }
-
-            // TODO: missing banner, comment and main menu message
+        // string
+        if let Some(input_iso_path) = matches.value_of("input iso path") {
+            patch_config.input_iso  = Some(input_iso_path.to_string());
         }
+        if let Some(output_iso_path) = matches.value_of("output iso path") {
+            patch_config.output_iso = Some(output_iso_path.to_string());
+        }
+        if let Some(artifact_behavior) = matches.value_of("artifact hint behavior") {
+            patch_config.preferences.artifact_hint_behavior = Some(artifact_behavior.to_string());
+        }
+        if let Some(trilogy_disc_path) = matches.value_of("trilogy disc path") {
+            patch_config.preferences.trilogy_disc_path = Some(trilogy_disc_path.to_string());
+        }
+
+        // integer/float
+        if let Some(damage) = matches.value_of("heat damage per sec") {
+            patch_config.game_config.heat_damage_per_sec = Some(damage.parse::<f32>().unwrap());
+        }
+        if let Some(etank_capacity) = matches.value_of("etank capacity") {
+            patch_config.game_config.etank_capacity = Some(etank_capacity.parse::<u32>().unwrap());
+        }
+        if let Some(s) = matches.value_of("max obtainable missiles") {
+            patch_config.game_config.max_obtainable_missiles= Some(s.parse::<u32>().unwrap());
+        }
+        if let Some(s) = matches.value_of("max obtainable power bombs") {
+            patch_config.game_config.max_obtainable_power_bombs = Some(s.parse::<u32>().unwrap());
+        }
+
+        // custom
+        if let Some(pickup_layout_str) = matches.value_of("pickup layout") {
+            patch_config.layout = Some(LayoutWrapper::String(pickup_layout_str.to_string()));
+        }
+        if let Some(starting_items_str) = matches.value_of("starting items") {
+            patch_config.game_config.starting_items = Some(
+                StartingItems::from_u64(starting_items_str.parse::<u64>().unwrap())
+            );
+        }
+        if let Some(random_starting_items_str) = matches.value_of("random starting items") {
+            patch_config.game_config.random_starting_items = Some(
+                StartingItems::from_u64(random_starting_items_str.parse::<u64>().unwrap())
+            );
+        }
+
+        patch_config.parse()
     }
-
-    // 4th pass - set any remaining unspecifed config values with sensible defaults
-    // TODO: prime realestate for some macros, a shame I'm too dumb to figure it out - toasterparty
-    if patch_config.input_iso.is_none()                                {patch_config.input_iso                                = Some("prime.iso".to_string());}
-    if patch_config.output_iso.is_none()                               {patch_config.output_iso                               = Some("prime_out.iso".to_string());}
-    if patch_config.preferences.skip_hudmenus.is_none()                {patch_config.preferences.skip_hudmenus                = Some(true);}
-    if patch_config.preferences.obfuscate_items.is_none()              {patch_config.preferences.obfuscate_items              = Some(false);}
-    if patch_config.preferences.artifact_hint_behavior.is_none()       {patch_config.preferences.artifact_hint_behavior       = Some("all".to_string());}
-    // trilogy disc path stays None so that it gets skipped
-    if patch_config.preferences.keep_fmvs.is_none()                    {patch_config.preferences.keep_fmvs                    = Some(false);}
-    if patch_config.preferences.quickplay.is_none()                    {patch_config.preferences.quickplay                    = Some(false);}
-    if patch_config.preferences.quiet.is_none()                        {patch_config.preferences.quiet                        = Some(false);}
-    if patch_config.game_config.skip_frigate.is_none()                 {patch_config.game_config.skip_frigate                 = Some(true);}
-    if patch_config.game_config.nonvaria_heat_damage.is_none()         {patch_config.game_config.nonvaria_heat_damage         = Some(false);}
-    if patch_config.game_config.staggered_suit_damage.is_none()        {patch_config.game_config.staggered_suit_damage        = Some(false);}
-    if patch_config.game_config.heat_damage_per_sec.is_none()          {patch_config.game_config.heat_damage_per_sec          = Some(10.0);}
-    if patch_config.game_config.auto_enabled_elevators.is_none()       {patch_config.game_config.auto_enabled_elevators       = Some(false);}
-    if patch_config.game_config.enable_vault_ledge_door.is_none()      {patch_config.game_config.enable_vault_ledge_door      = Some(false);}
-    if patch_config.game_config.starting_items.is_none()               {patch_config.game_config.starting_items               = Some(StartingItems::from_u64(1));}
-    if patch_config.game_config.random_starting_items.is_none()        {patch_config.game_config.random_starting_items        = Some(StartingItems::from_u64(0));}
-    if patch_config.game_config.etank_capacity.is_none()               {patch_config.game_config.etank_capacity               = Some(100);}
-    if patch_config.game_config.max_obtainable_missiles.is_none()      {patch_config.game_config.max_obtainable_missiles      = Some(999);}
-    if patch_config.game_config.max_obtainable_power_bombs.is_none()   {patch_config.game_config.max_obtainable_power_bombs   = Some(8);}
-    if patch_config.game_config.comment.is_none()                      {patch_config.game_config.comment                      = Some("".to_string());}
-    if patch_config.game_config.main_menu_message.is_none()            {patch_config.game_config.main_menu_message            = Some("randomprime".to_string());}
-
-    if patch_config.layout.is_none()
-    {
-        patch_config.layout = Some(
-            LayoutWrapper::String(
-                "NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4".to_string()
-            )
-        );
-    }
-
-    if patch_config.game_config.game_banner.is_none()
-    {
-        patch_config.game_config.game_banner = Some(
-            GameBanner {
-                game_name: None,
-                game_name_full: None,
-                developer: None,
-                developer_full: None,
-                description: None,
-            }
-        );
-    }
-
-    // convert to native types used by patches.rs and return
-    patch_config.parse()
 }
 
-// Copy config from b to a, skipping absent values (None)
-fn merge_config(a: &mut PatchConfigPrivate, b: &PatchConfigPrivate)
-{
-    // TODO: prime realestate for some macros, a shame I'm too dumb to figure it out - toasterparty
-    if b.input_iso.is_some()                                {a.input_iso                                = b.input_iso.clone();}
-    if b.output_iso.is_some()                               {a.output_iso                               = b.output_iso.clone();}
-    if b.layout.is_some()                                   {a.layout                                   = b.layout.clone();}
-
-    if b.preferences.skip_hudmenus.is_some()                {a.preferences.skip_hudmenus                = b.preferences.skip_hudmenus;}
-    if b.preferences.obfuscate_items.is_some()              {a.preferences.obfuscate_items              = b.preferences.obfuscate_items;}
-    if b.preferences.artifact_hint_behavior.is_some()       {a.preferences.artifact_hint_behavior       = b.preferences.artifact_hint_behavior.clone();}
-    if b.preferences.trilogy_disc_path.is_some()            {a.preferences.trilogy_disc_path            = b.preferences.trilogy_disc_path.clone();}
-    if b.preferences.keep_fmvs.is_some()                    {a.preferences.keep_fmvs                    = b.preferences.keep_fmvs;}
-    if b.preferences.quickplay.is_some()                    {a.preferences.quickplay                    = b.preferences.quickplay;}
-    if b.preferences.quiet.is_some()                        {a.preferences.quiet                        = b.preferences.quiet;}
-
-    if b.game_config.skip_frigate.is_some()                 {a.game_config.skip_frigate                 = b.game_config.skip_frigate;}
-    if b.game_config.nonvaria_heat_damage.is_some()         {a.game_config.nonvaria_heat_damage         = b.game_config.nonvaria_heat_damage;}
-    if b.game_config.staggered_suit_damage.is_some()        {a.game_config.staggered_suit_damage        = b.game_config.staggered_suit_damage;}
-    if b.game_config.heat_damage_per_sec.is_some()          {a.game_config.heat_damage_per_sec          = b.game_config.heat_damage_per_sec;}
-    if b.game_config.auto_enabled_elevators.is_some()       {a.game_config.auto_enabled_elevators       = b.game_config.auto_enabled_elevators;}
-    if b.game_config.enable_vault_ledge_door.is_some()      {a.game_config.enable_vault_ledge_door      = b.game_config.enable_vault_ledge_door;}
-    if b.game_config.starting_items.is_some()               {a.game_config.starting_items               = b.game_config.starting_items.clone();}
-    if b.game_config.random_starting_items.is_some()        {a.game_config.random_starting_items        = b.game_config.random_starting_items.clone();}
-    if b.game_config.etank_capacity.is_some()               {a.game_config.etank_capacity               = b.game_config.etank_capacity;}
-    if b.game_config.max_obtainable_missiles.is_some()      {a.game_config.max_obtainable_missiles      = b.game_config.max_obtainable_missiles;}
-    if b.game_config.max_obtainable_power_bombs.is_some()   {a.game_config.max_obtainable_power_bombs   = b.game_config.max_obtainable_power_bombs;}
-    if b.game_config.game_banner.is_some()                  {a.game_config.game_banner                  = b.game_config.game_banner.clone();}
-    if b.game_config.comment.is_some()                      {a.game_config.comment                      = b.game_config.comment.clone();}
-    if b.game_config.main_menu_message.is_some()            {a.game_config.main_menu_message            = b.game_config.main_menu_message.clone();}
-}
 
 impl PatchConfigPrivate
 {
     fn parse(&self) -> Result<PatchConfig, String>
     {
-        let input_iso_path = self.input_iso.as_ref().unwrap();
+        let input_iso_path = self.input_iso.as_deref().unwrap_or("prime.iso");
         let input_iso_file = File::open(input_iso_path.trim())
             .map_err(|e| format!("Failed to open {}: {}", input_iso_path, e))?;
 
         let input_iso = unsafe { memmap::Mmap::map(&input_iso_file) }
             .map_err(|e| format!("Failed to open {}: {}", input_iso_path,  e))?;
 
-        let output_iso_path = self.output_iso.as_ref().unwrap();
+        let output_iso_path = self.output_iso.as_deref().unwrap_or("prime_out.iso");
 
         let output_iso = OpenOptions::new()
             .write(true)
@@ -548,7 +410,7 @@ impl PatchConfigPrivate
             .truncate(true)
             .open(&output_iso_path)
             .map_err(|e| format!("Failed to open {}: {}", output_iso_path, e))?;
-        
+
         let iso_format = if output_iso_path.ends_with(".gcz") {
             IsoFormat::Gcz
         } else if output_iso_path.ends_with(".ciso") {
@@ -557,28 +419,37 @@ impl PatchConfigPrivate
             IsoFormat::Iso
         };
 
-        let _layout = self.layout.as_ref().unwrap().clone();
+        let _layout = self.layout.clone()
+            .unwrap_or_else(|| LayoutWrapper::String(
+                "NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4".to_string()
+            ));
+
         let layout = _layout.try_into()?;
 
         let artifact_hint_behavior = {
-            let artifact_hint_behavior_string = self.preferences.artifact_hint_behavior.as_ref().unwrap().trim().to_lowercase();
+            let artifact_hint_behavior_string = self.preferences.artifact_hint_behavior
+                .as_deref()
+                .unwrap_or("all")
+                .trim()
+                .to_lowercase();
 
             if artifact_hint_behavior_string == "all" {
                 ArtifactHintBehavior::All
             } else if artifact_hint_behavior_string == "none" {
-                ArtifactHintBehavior::None  
+                ArtifactHintBehavior::None
             } else if artifact_hint_behavior_string == "default" {
                 ArtifactHintBehavior::Default
             } else {
-                panic!("Unhandled artifact hint behavior - '{}'", artifact_hint_behavior_string);
+                Err(format!(
+                    "Unhandled artifact hint behavior - '{}'",
+                    artifact_hint_behavior_string
+                ))?
             }
         };
-    
-        let flaahgra_music_files = if let Some(path) = self.preferences.trilogy_disc_path.as_ref() {
-            Some(extract_flaahgra_music_files(&path)?)
-        } else {
-            None
-        };
+
+        let flaahgra_music_files = self.preferences.trilogy_disc_path.as_ref()
+            .map(|path| extract_flaahgra_music_files(path))
+            .transpose()?;
 
         Ok(PatchConfig {
             input_iso,
@@ -586,32 +457,35 @@ impl PatchConfigPrivate
             output_iso,
             layout,
 
-            skip_hudmenus: self.preferences.skip_hudmenus.unwrap(),
-            obfuscate_items: self.preferences.obfuscate_items.unwrap(),
+            skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
+            obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
-            keep_fmvs: self.preferences.keep_fmvs.unwrap(),
+            keep_fmvs: self.preferences.keep_fmvs.unwrap_or(false),
             suit_hue_rotate_angle: None,
-            quiet: self.preferences.quiet.unwrap(),
-            quickplay: self.preferences.quickplay.unwrap(),
+            quiet: self.preferences.quiet.unwrap_or(false),
+            quickplay: self.preferences.quickplay.unwrap_or(false),
 
-            skip_frigate: self.game_config.skip_frigate.unwrap(),
-            nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap(),
-            staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap(),
-            heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap(),
-            auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap(),
-            enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap(),
+            skip_frigate: self.game_config.skip_frigate.unwrap_or(true),
+            nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
+            staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
+            heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
+            auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap_or(false),
+            enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
-            starting_items: self.game_config.starting_items.as_ref().unwrap().clone(),
-            random_starting_items: self.game_config.random_starting_items.as_ref().unwrap().clone(),
+            starting_items: self.game_config.starting_items.clone()
+                .unwrap_or_else(|| StartingItems::from_u64(1)),
+            random_starting_items: self.game_config.random_starting_items.clone()
+                .unwrap_or_else(|| StartingItems::from_u64(0)),
 
-            etank_capacity: self.game_config.etank_capacity.unwrap(),
-            max_obtainable_missiles: self.game_config.max_obtainable_missiles.unwrap(),
-            max_obtainable_power_bombs: self.game_config.max_obtainable_power_bombs.unwrap(),
+            etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
+            max_obtainable_missiles: self.game_config.max_obtainable_missiles.unwrap_or(999),
+            max_obtainable_power_bombs: self.game_config.max_obtainable_power_bombs.unwrap_or(8),
 
-            game_banner: self.game_config.game_banner.as_ref().unwrap().clone(),
-            comment: self.game_config.comment.as_ref().unwrap().to_string(),
-            main_menu_message: self.game_config.main_menu_message.as_ref().unwrap().to_string(),
+            game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
+            comment: self.game_config.comment.clone().unwrap_or(String::new()),
+            main_menu_message: self.game_config.main_menu_message.clone()
+                .unwrap_or_else(|| "randomprime".to_string()),
         })
     }
 }
@@ -716,8 +590,8 @@ impl std::str::FromStr for Layout
             return Err("Layout string should be exactly 87 characters".to_string());
         }
 
-        // XXX The distribution on this hash probably isn't very good, but we don't use it for anything
-        //     particularly important anyway...
+        // XXX The distribution on this hash probably isn't very good, but we don't use it for
+        //     anything particularly important anyway...
         let mut hasher = DefaultHasher::new();
         hasher.write(elevator_bytes);
         hasher.write(pickup_bytes);

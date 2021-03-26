@@ -2,7 +2,7 @@ use randomprime::{
     patches,
     reader_writer,
     structs,
-    patch_config::randomprime_parse_input,
+    patch_config::PatchConfig,
 };
 
 use clap::Format;
@@ -101,7 +101,7 @@ fn maybe_pause_at_exit()
 
 fn main_inner() -> Result<(), String>
 {
-    let patch_config = randomprime_parse_input(None, true)?;
+    let patch_config = PatchConfig::from_cli_options()?;
     let pn = ProgressNotifier::new(patch_config.quiet);
     patches::patch_iso(patch_config, pn)?;
     println!("Done");
