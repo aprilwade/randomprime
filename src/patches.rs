@@ -15,6 +15,7 @@ use rand::{
 
 use crate::patch_config::{
     ArtifactHintBehavior,
+    MapState,
     IsoFormat,
     PatchConfig,
     GameBanner
@@ -2485,6 +2486,22 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
+    
+    if config.map_default_state != MapState::Default {
+        let is_mapped_patch = ppcasm!(symbol_addr!("IsMapped__13CMapWorldInfoCF7TAreaId", version), {
+            li      r3, 0x1;
+            blr;
+        });
+        dol_patcher.ppcasm_patch(&is_mapped_patch)?;
+        if config.map_default_state == MapState::Visited {
+            let is_area_visited_patch = ppcasm!(symbol_addr!("IsAreaVisited__13CMapWorldInfoCF7TAreaId", version), {
+                li      r3, 0x1;
+                blr;
+            });
+            dol_patcher.ppcasm_patch(&is_area_visited_patch)?;
+        }
+    }
+    
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::NtscU0_00 => {
             let loader_bytes = rel_files::REL_LOADER_100;
@@ -2639,6 +2656,7 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
+    writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
