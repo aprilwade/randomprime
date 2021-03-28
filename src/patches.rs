@@ -2549,6 +2549,18 @@ fn empty_frigate_pak<'r>(file: &mut structs::FstEntryFile)
     Ok(())
 }
 
+fn patch_ctwk_player_gun(res: &mut structs::Resource)
+    -> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let mut ctwk_player_gun = match &mut ctwk {
+        structs::Ctwk::CtwkPlayerGun(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkPlayerGun", res.file_id),
+    };
+    println!("before - {:?}", ctwk_player_gun);
+    Ok(())
+}
+
 fn patch_bnr(
     file: &mut structs::FstEntryFile,
     banner: &GameBanner,

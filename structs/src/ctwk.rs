@@ -1,6 +1,6 @@
 use auto_struct_macros::auto_struct;
 use reader_writer::{
-    Reader, Readable, Writable, CStr, generic_array::GenericArray, typenum::{U2, U3, U8},
+    Reader, Readable, Writable, CStr, generic_array::GenericArray, typenum::{U2, U3, U5, U6, U8},
 };
 use std::io;
 
@@ -9,6 +9,7 @@ pub enum Ctwk<'r>
 {
     CtwkGame(CtwkGame<'r>),
     CtwkPlayer(CtwkPlayer<'r>),
+    CtwkPlayerGun(CtwkPlayerGun<'r>),
 }
 
 impl<'r> Writable for Ctwk<'r>
@@ -18,6 +19,7 @@ impl<'r> Writable for Ctwk<'r>
         match self {
             Ctwk::CtwkGame(ctwk) => ctwk.write_to(writer),
             Ctwk::CtwkPlayer(ctwk) => ctwk.write_to(writer),
+            Ctwk::CtwkPlayerGun(ctwk) => ctwk.write_to(writer),
         }
     }
 }
@@ -33,6 +35,7 @@ impl<'r> Readable<'r> for Ctwk<'r>
         match reader.len() {
              96 => Ctwk::CtwkGame(reader.read(())),
             800 => Ctwk::CtwkPlayer(reader.read(())),
+            512 => Ctwk::CtwkPlayerGun(reader.read(())),
             _ => panic!("Unhandled CTWK size - {}", reader.size()),
         }
     }
@@ -42,10 +45,10 @@ impl<'r> Readable<'r> for Ctwk<'r>
         match self {
             Ctwk::CtwkGame(ctwk) => ctwk.size(),
             Ctwk::CtwkPlayer(ctwk) => ctwk.size(),
+            Ctwk::CtwkPlayerGun(ctwk) => ctwk.size(),
         }
     }
 }
-
 
 #[auto_struct(Readable, Writable)]
 #[derive(Clone, Debug)]
@@ -254,169 +257,63 @@ pub struct CtwkPlayer<'r>
     _pad: (),
 }
 
-/*
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-*/
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct SShotParam
+{
+    pub weapon_type: i32,
+    pub charged : u8,
+    pub combo : u8,
+    pub insta_kill : u8,
+    pub damage: f32,
+    pub radius_damage: f32,
+    pub radius: f32,
+    pub knockback: f32,
+    pub no_immunity: u8,
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct SWeaponInfo
+{
+    pub cool_down: f32,
+    pub normal: SShotParam,
+    pub charged: SShotParam,
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct CtwkPlayerGun<'r>
+{
+    pub start: Reader<'r>,
+    pub up_look_angle: f32,
+    pub down_look_angle: f32,
+    pub vertical_spread: f32,
+    pub horizontal_spread: f32,
+    pub high_vertical_spread: f32,
+    pub high_horizontal_spread: f32,
+    pub low_vertical_spread: f32,
+    pub low_horizontal_spread: f32,
+    pub aim_vertical_speed: f32,
+    pub aim_horizontal_speed: f32,
+    pub bomb_fuse_time: f32,
+    pub bomb_drop_delay_time: f32,
+    pub holo_hold_time: f32,
+    pub gun_transform_time: f32,
+    pub gun_holster_time: f32,
+    pub gun_not_firing_time: f32,
+    pub fixed_vertical_aim: f32,
+    pub gun_extend_distance: f32,
+    pub gun_position: GenericArray<f32, U3>,
+    pub unknown0: GenericArray<f32, U3>,
+    pub grappling_arm_position: GenericArray<f32, U3>,
+    pub bomb: SShotParam,
+    pub power_bomb: SShotParam,
+    pub missile: SShotParam,
+    pub beams: GenericArray<SWeaponInfo, U5>,
+    pub combos: GenericArray<SShotParam, U5>,
+    pub ricochet_data: GenericArray<f32, U6>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+}
