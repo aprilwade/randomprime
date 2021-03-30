@@ -44,6 +44,7 @@ use os::*;
 
 cpp! {{
     #include <nod/nod.hpp>
+    #include <nod/DiscBase.hpp>
 
     struct FileWrapper
     {
