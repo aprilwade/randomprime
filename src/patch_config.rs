@@ -88,8 +88,8 @@ pub struct PatchConfig
     pub output_iso: File,
 
     pub layout: Layout,
+    pub strarting_room: String,
 
-    pub skip_frigate: bool,
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
@@ -177,7 +177,8 @@ struct Preferences
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
-    skip_frigate: Option<bool>, // TODO: remove, calculate automatically once starting room is a thing
+    strarting_room: Option<String>,
+
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
     heat_damage_per_sec: Option<f32>,
@@ -241,9 +242,10 @@ impl PatchConfig
                 .long("layout")
                 .takes_value(true)
                 .allow_hyphen_values(true))
-            .arg(Arg::with_name("skip frigate")
-                .long("skip-frigate")
-                .help("New save files will skip the \"Space Pirate Frigate\" tutorial level"))
+            .arg(Arg::with_name("starting room")
+                .long("starting-room")
+                .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
+                .takes_value(true))
             .arg(Arg::with_name("skip hudmenus")
                 .long("non-modal-item-messages")
                 .help("Display a non-modal message when an item is is acquired"))
@@ -358,7 +360,6 @@ impl PatchConfig
             "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
-            "skip frigate" => patch_config.game_config.skip_frigate,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
@@ -508,7 +509,6 @@ impl PatchConfigPrivate
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
 
-            skip_frigate: self.game_config.skip_frigate.unwrap_or(true),
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
