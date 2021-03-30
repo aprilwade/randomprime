@@ -332,8 +332,7 @@ pub fn collect_game_resources<'r>(
         assert!(found.insert(key, res).is_none());
     }
 
-    if !looking_for.is_empty()
-    {
+    if !looking_for.is_empty() {
         panic!("error - still looking for {:?}", looking_for);
     }
 
