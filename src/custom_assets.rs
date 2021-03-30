@@ -1,14 +1,23 @@
 use resource_info_table::resource_info;
-use reader_writer::{FourCC, Reader, Writable};
+use reader_writer::{
+    FourCC,
+    Reader,
+    Writable,
+};
 use structs::{res_id, ResId, Resource, ResourceKind};
 
 use crate::{
-    pickup_meta::PickupType,
+    pickup_meta::{self, PickupType},
+    door_meta::{DoorType, BlastShieldType},
     starting_items::StartingItems,
     ResourceData,
+    GcDiscLookupExtensions,
 };
 
-use std::collections::HashMap;
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 macro_rules! def_asset_ids {
     (@Build { $prev:expr } $id:ident: $fc:ident, $($rest:tt)*) => {
@@ -125,58 +134,42 @@ pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<
         original_offset: 0,
     }
 }
-fn extra_assets<'r>() -> Vec<Resource<'r>>
+
+// Assets defined in an external file
+fn extern_assets<'r>() -> Vec<Resource<'r>>
 {
-    let extra_assets: &[((u32, FourCC), &[u8])] = &[
-        // Phazon Suit TXTR 1
-        (custom_asset_ids::PHAZON_SUIT_TXTR1.into(),
-        include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
-        // Phazon Suit TXTR 2
-        (custom_asset_ids::PHAZON_SUIT_TXTR2.into(),
-        include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
-        // Nothing texture
-        (custom_asset_ids::NOTHING_TXTR.into(),
-        include_bytes!("../extra_assets/nothing_texture.txtr")),
-        // Shiny Missile TXTR 0
-        (custom_asset_ids::SHINY_MISSILE_TXTR0.into(),
-        include_bytes!("../extra_assets/shiny-missile0.txtr")),
-        // Shiny Missile TXTR 1
-        (custom_asset_ids::SHINY_MISSILE_TXTR1.into(),
-        include_bytes!("../extra_assets/shiny-missile1.txtr")),
-        // Shiny Missile TXTR 2
-        (custom_asset_ids::SHINY_MISSILE_TXTR2.into(),
-        include_bytes!("../extra_assets/shiny-missile2.txtr")),
+    let extern_assets: &[(ResId<res_id::TXTR>, [u8; 4], &[u8])] = &[
+        (custom_asset_ids::PHAZON_SUIT_TXTR1,         *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
+        (custom_asset_ids::PHAZON_SUIT_TXTR2,         *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
+        (custom_asset_ids::NOTHING_TXTR,              *b"TXTR", include_bytes!("../extra_assets/nothing_texture.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR0,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile0.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR1,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile1.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR2,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile2.txtr")),
+        (custom_asset_ids::AI_DOOR_TXTR,              *b"TXTR", include_bytes!("../extra_assets/holorim_ai.txtr")),
+        (custom_asset_ids::MORPH_BALL_BOMB_DOOR_TXTR, *b"TXTR", include_bytes!("../extra_assets/holorim_bombs.txtr")),
+        (custom_asset_ids::POWER_BOMB_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_powerbomb.txtr")),
+        (custom_asset_ids::SUPER_MISSILE_DOOR_TXTR,   *b"TXTR", include_bytes!("../extra_assets/holorim_super.txtr")),
+        (custom_asset_ids::WAVEBUSTER_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_wavebuster.txtr")),
+        (custom_asset_ids::ICESPREADER_DOOR_TXTR,     *b"TXTR", include_bytes!("../extra_assets/holorim_icespreader.txtr")),
+        (custom_asset_ids::FLAMETHROWER_DOOR_TXTR,    *b"TXTR", include_bytes!("../extra_assets/holorim_flamethrower.txtr")),
     ];
 
-    extra_assets.iter().map(|&((file_id, fourcc), bytes)| {
-        build_resource_raw(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc))
-    }).collect()
-}
-
-const EXTRA_ASSETS_DOORS: &[(ResId<res_id::TXTR>, [u8; 4], &[u8])] = &[
-    (custom_asset_ids::AI_DOOR_TXTR,              *b"TXTR", include_bytes!("../extra_assets/holorim_ai.txtr")),
-    (custom_asset_ids::MORPH_BALL_BOMB_DOOR_TXTR, *b"TXTR", include_bytes!("../extra_assets/holorim_bombs.txtr")),
-    (custom_asset_ids::POWER_BOMB_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_powerbomb.txtr")),
-    (custom_asset_ids::SUPER_MISSILE_DOOR_TXTR,   *b"TXTR", include_bytes!("../extra_assets/holorim_super.txtr")),
-    (custom_asset_ids::WAVEBUSTER_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_wavebuster.txtr")),
-    (custom_asset_ids::ICESPREADER_DOOR_TXTR,     *b"TXTR", include_bytes!("../extra_assets/holorim_icespreader.txtr")),
-    (custom_asset_ids::FLAMETHROWER_DOOR_TXTR,    *b"TXTR", include_bytes!("../extra_assets/holorim_flamethrower.txtr")),
-];
-
-pub fn extra_assets_doors<'r>() -> Vec<Resource<'r>>
-{
-    EXTRA_ASSETS_DOORS.iter().map(|&(res, ref fourcc, bytes)| {
+    extern_assets.iter().map(|&(res, ref fourcc, bytes)| {
         build_resource(res, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
     }).collect()
 }
 
+// Assets not found in the base game
 pub fn custom_assets<'r>(
     resources: &HashMap<(u32, FourCC),
     structs::Resource<'r>>,
     starting_items: &StartingItems
 ) -> Vec<Resource<'r>>
 {
-    let mut assets = extra_assets();
+    // External assets
+    let mut assets = extern_assets();
+    
+    // Custom pickup model assets
     assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
         resources,
         custom_asset_ids::NOTHING_CMDL,
@@ -256,7 +249,139 @@ pub fn custom_assets<'r>(
         ));
     }
 
+    // Custom door assets
+    for door_type in DoorType::iter() {
+        if door_type.shield_cmdl().to_u32() >= 0xDEAF0000 { // only if it doesn't exist in-game already
+            assets.push(create_custom_door_cmdl(resources, door_type));
+        }
+    }
+
     assets
+}
+
+// When modifying resources in an MREA, we need to give the room a copy of the resources/
+// assests used b. Create a cache of all the resources needed by any pickup, door, etc...
+pub fn collect_game_resources<'r>(
+    gc_disc: &structs::GcDisc<'r>,
+    starting_items: &StartingItems
+)
+    -> HashMap<(u32, FourCC), structs::Resource<'r>>
+{
+    // Get list of all dependencies patcher needs //
+    let mut looking_for = HashSet::<_>::new();
+    
+    {
+        let looking_for_pickup: HashSet<_> = PickupType::iter()
+            .flat_map(|pt| pt.dependencies().iter().cloned())
+            .chain(PickupType::iter().map(|pt| pt.hudmemo_strg().into()))
+            .collect();
+        
+        for (key, value) in looking_for_pickup.iter() {
+            looking_for.insert((*key, *value));
+        }
+    }
+
+    {
+        let looking_for_door: HashSet<_> = DoorType::iter()
+            .flat_map(|pt| pt.dependencies().into_iter())
+            .collect();
+        
+        for (key, value) in looking_for_door.iter() {
+            looking_for.insert((*key, *value));
+        } 
+    }
+
+    {
+        let looking_for_blast_shield: HashSet<_> = BlastShieldType::iter()
+            .flat_map(|pt| pt.dependencies().into_iter())
+            .collect();
+        
+        for (key, value) in looking_for_blast_shield.iter() {
+            looking_for.insert((*key, *value));
+        }
+    }
+
+    // Dependencies read from paks and custom assets will go here //
+    let mut found = HashMap::with_capacity(looking_for.len());
+
+    // Iterate through every level Pak //
+    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) {
+        let file_entry = gc_disc.find_file(pak_name).unwrap();
+        let pak = match *file_entry.file().unwrap() {
+            structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
+            structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
+            _ => panic!(),
+        };
+
+        // Iterate through all resources in level Pak //
+        for res in pak.resources.iter() {
+            // If this resource is a dependency needed by the patcher, add the resource to the output list //
+            let key = (res.file_id, res.fourcc());
+            if looking_for.remove(&key) {
+                assert!(found.insert(key, res.into_owned()).is_none());
+            }
+        }
+    }
+
+    // Remove extra assets from dependency search since they won't appear     //
+    // in any pak. Instead add them to the output resource pool. These assets //
+    // are provided as external files checked into the repository.            //
+    for res in custom_assets(&found, starting_items) {
+        let key = (res.file_id, res.fourcc());
+        looking_for.remove(&key);
+        assert!(found.insert(key, res).is_none());
+    }
+
+    if !looking_for.is_empty()
+    {
+        panic!("error - still looking for {:?}", looking_for);
+    }
+
+    found
+}
+
+fn create_custom_door_cmdl<'r>(
+    resources: &HashMap<(u32, FourCC),
+    structs::Resource<'r>>,
+    door_type: DoorType,
+) -> structs::Resource<'r>
+{
+    let new_cmdl_id: ResId<res_id::CMDL> = door_type.shield_cmdl();
+    let new_txtr_id: ResId<res_id::TXTR> = door_type.holorim_texture();
+
+    let new_door_cmdl = {
+        // Find and read the blue door CMDL
+        let blue_door_cmdl = {
+            if door_type.is_vertical() {
+                ResourceData::new(&resources[&resource_info!("18D0AEE6.CMDL").into()]) // actually white door but who cares
+            } else {
+                ResourceData::new(&resources[&resource_info!("blueShield_v1.CMDL").into()])
+            }
+        };
+
+        // Deserialize the blue door CMDL into a new mutable CMDL
+        let blue_door_cmdl_bytes = blue_door_cmdl.decompress().into_owned();
+        let mut new_cmdl = Reader::new(&blue_door_cmdl_bytes[..]).read::<structs::Cmdl>(());
+        
+        // Modify the new CMDL to make it unique
+        new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr_id;
+        
+        // Re-serialize the CMDL //
+        let mut new_cmdl_bytes = vec![];
+        new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
+
+        // Pad length to multiple of 32 bytes //
+        let len = new_cmdl_bytes.len();
+        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Assemble into a proper resource object
+        crate::custom_assets::build_resource(
+            new_cmdl_id, // Custom ids start with 0xDEAFxxxx
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
+        )
+    };
+    
+    new_door_cmdl
 }
 
 fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> structs::Strg<'r>

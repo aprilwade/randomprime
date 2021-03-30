@@ -22,14 +22,13 @@ use crate::patch_config::{
 };
 
 use crate::{
-    custom_assets::custom_asset_ids,
+    custom_assets::{custom_asset_ids, collect_game_resources},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom},
     gcz_writer::GczWriter,
     mlvl_wrapper,
-    pickup_meta::{self, PickupType, DoorLocation},
-    door_meta::{DoorType, BlastShieldType},
+    pickup_meta::{self, PickupType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
     txtr_conversions::{
@@ -37,7 +36,6 @@ use crate::{
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
-    ResourceData,
 };
 
 use dol_symbol_table::mp1_symbol;
@@ -57,7 +55,7 @@ use structs::{res_id, ResId};
 
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     convert::TryInto,
     ffi::CString,
     fmt,
@@ -68,192 +66,6 @@ use std::{
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
-
-
-// When changing a pickup, we need to give the room a copy of the resources/
-// assests used by the pickup. Create a cache of all the resources needed by
-// any pickup.
-fn collect_pickup_resources<'r>(
-    gc_disc: &structs::GcDisc<'r>,
-    starting_items: &StartingItems
-)
-    -> HashMap<(u32, FourCC), structs::Resource<'r>>
-{
-    // Get list of all dependencies patcher needs //
-    let mut looking_for: HashSet<_> = PickupType::iter()
-        .flat_map(|pt| pt.dependencies().iter().cloned())
-        .chain(PickupType::iter().map(|pt| pt.hudmemo_strg().into()))
-        .collect();
-
-    // Dependencies read from paks and custom assets will go here //
-    let mut found = HashMap::with_capacity(looking_for.len());
-
-    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) {
-        let file_entry = gc_disc.find_file(pak_name).unwrap();
-        let pak = match *file_entry.file().unwrap() {
-            structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
-            structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
-            _ => panic!(),
-        };
-
-        // Iterate through all resources in pak //
-        for res in pak.resources.iter() {
-            // If this resource is a dependency needed by the patcher, add the resource to the output list //
-            let key = (res.file_id, res.fourcc());
-            if looking_for.remove(&key) {
-                assert!(found.insert(key, res.into_owned()).is_none());
-            }
-        }
-    }
-
-    // Remove extra assets from dependency search since they won't appear     //
-    // in any pak. Instead add them to the output resource pool. These assets //
-    // are provided as external files checked into the repository.            //
-    for res in crate::custom_assets::custom_assets(&found, starting_items) {
-        let key = (res.file_id, res.fourcc());
-        looking_for.remove(&key);
-        assert!(found.insert(key, res).is_none());
-    }
-
-    if !looking_for.is_empty()
-    {
-        println!("error - still looking for {:?}", looking_for);
-    }
-
-    assert!(looking_for.is_empty());
-
-    found
-}
-
-
-// Door assets are not shared across all areas either,
-// so we have to make a cache for them as well.
-fn collect_door_resources<'r>(gc_disc: &structs::GcDisc<'r>)
-    -> HashMap<(u32, FourCC), structs::Resource<'r>>
-{   
-    // Get list of all dependencies needed by custom doors //
-    
-    let mut looking_for = HashSet::<_>::new();
-
-    {
-        let looking_for_door: HashSet<_> = DoorType::iter()
-            .flat_map(|pt| pt.dependencies().into_iter())
-            .collect();
-
-        let looking_for_blast_shield: HashSet<_> = BlastShieldType::iter()
-            .flat_map(|pt| pt.dependencies().into_iter())
-            .collect();
-        
-        for (key, value) in looking_for_door.iter() {
-            looking_for.insert((*key, *value));
-        } 
-        for (key, value) in looking_for_blast_shield.iter() {
-            looking_for.insert((*key, *value));
-        }
-    }
-    
-    // Dependencies read from paks and custom assets will go here //
-    let mut found = HashMap::with_capacity(looking_for.len());
-
-    // Remove extra assets from dependency search since they won't appear     //
-    // in any pak. Instead add them to the output resource pool. These assets //
-    // are provided as external files checked into the repository.            //
-    let extra_assets = crate::custom_assets::extra_assets_doors();
-    for res in extra_assets {
-        looking_for.remove(&(res.file_id, res.fourcc()));
-        assert!(found.insert((res.file_id, res.fourcc()), res.clone()).is_none());
-    }
-
-    // Iterate through all paks and add add any dependencies to the resource pool //
-    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) { // for all paks
-
-        // get the pak //
-        let file_entry = gc_disc.find_file(pak_name).unwrap();
-        let pak = match *file_entry.file().unwrap() {
-            structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
-            structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
-            _ => panic!(),
-        };
-
-        // Iterate through all resources in the pak //
-        for res in pak.resources.iter() {
-            let key = (res.file_id, res.fourcc());
-            if looking_for.remove(&key) { // If it's one of our dependencies
-                assert!(found.insert(key, res.into_owned()).is_none()); // collect it
-            }
-        }
-    }
-
-    // Generate custom assets (new door variants) //
-    let mut new_assets = vec![];
-
-    for door_type in DoorType::iter() {
-        if door_type.shield_cmdl().to_u32() >= 0xDEAF0000 { // only if it doesn't exist in-game already
-            new_assets.push(create_custom_door_cmdl(&found, door_type));
-        }
-    }
-
-    // Add the newly generated resources //
-    for res in new_assets {
-        let key = (res.file_id, res.fourcc());
-        if looking_for.remove(&key) {
-            assert!(found.insert(key, res).is_none());
-        }
-    }
-
-    if !looking_for.is_empty()
-    {
-        println!("error - still looking for {:?}", looking_for);
-    }
-
-    assert!(looking_for.is_empty());
-
-    found
-}
-
-fn create_custom_door_cmdl<'r>(
-    resources: &HashMap<(u32, FourCC),
-    structs::Resource<'r>>,
-    door_type: DoorType,
-) -> structs::Resource<'r>
-{
-    let new_cmdl_id: ResId<res_id::CMDL> = door_type.shield_cmdl();
-    let new_txtr_id: ResId<res_id::TXTR> = door_type.holorim_texture();
-
-    let new_door_cmdl = {
-        // Find and read the blue door CMDL
-        let blue_door_cmdl = {
-            if door_type.is_vertical() {
-                ResourceData::new(&resources[&resource_info!("18D0AEE6.CMDL").into()]) // actually white door but who cares
-            } else {
-                ResourceData::new(&resources[&resource_info!("blueShield_v1.CMDL").into()])
-            }
-        };
-
-        // Deserialize the blue door CMDL into a new mutable CMDL
-        let blue_door_cmdl_bytes = blue_door_cmdl.decompress().into_owned();
-        let mut new_cmdl = Reader::new(&blue_door_cmdl_bytes[..]).read::<structs::Cmdl>(());
-        
-        // Modify the new CMDL to make it unique
-        new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr_id;
-        
-        // Re-serialize the CMDL //
-        let mut new_cmdl_bytes = vec![];
-        new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
-
-        // Pad length to multiple of 32 bytes //
-        let len = new_cmdl_bytes.len();
-        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
-
-        // Assemble into a proper resource object
-        crate::custom_assets::build_resource(
-            new_cmdl_id, // Custom ids start with 0xDEAFxxxx
-            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
-        )
-    };
-    
-    new_door_cmdl
-}
 
 fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     -> structs::SclyObject<'r>
@@ -506,7 +318,7 @@ fn modify_pickups_in_mrea<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     config: &PatchConfig,
 ) -> Result<(), String>
 {
@@ -537,7 +349,7 @@ fn modify_pickups_in_mrea<'r>(
         pickup_type.hudmemo_strg().into()
     };
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
     let scly = area.mrea().scly_section_mut();
     let layers = scly.layers.as_mut_vec();
@@ -2249,7 +2061,7 @@ fn patch_starting_pickups<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     starting_items: &StartingItems,
     show_starting_items: bool,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -2336,7 +2148,7 @@ fn patch_starting_pickups<'r>(
         );
 
         area.add_dependencies(
-            &pickup_resources,
+            &game_resources,
             0,
             iter::once(custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG.into())
         );
@@ -2891,11 +2703,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
-    let pickup_resources = &pickup_resources;
-
-    let door_resources = collect_door_resources(gc_disc);
-    let _door_resources = &door_resources;
+    let game_resources = collect_game_resources(gc_disc, &config.random_starting_items);
+    let game_resources = &game_resources;
 
     let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
 
@@ -2997,7 +2806,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             area,
                             pickup_type,
                             pickup_location,
-                            pickup_resources,
+                            game_resources,
                             config
                         )
                 );
@@ -3103,7 +2912,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             area,
             &starting_items,
             show_starting_items,
-            &pickup_resources,
+            &game_resources,
         )
     );
 
