@@ -262,14 +262,14 @@ pub struct CtwkPlayer<'r>
 pub struct SShotParam
 {
     pub weapon_type: i32,
-    pub charged : u8,
-    pub combo : u8,
-    pub insta_kill : u8,
+//    pub charged : u8,
+//    pub combo : u8,
+//    pub insta_kill : u8,
     pub damage: f32,
     pub radius_damage: f32,
     pub radius: f32,
     pub knockback: f32,
-    pub no_immunity: u8,
+//    pub no_immunity: u8,
 }
 
 #[auto_struct(Readable, Writable)]
