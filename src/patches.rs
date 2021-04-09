@@ -22,7 +22,7 @@ use crate::patch_config::{
 };
 
 use crate::{
-    custom_assets::custom_asset_ids,
+    custom_assets::{custom_asset_ids, collect_game_resources},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World, spawn_room_data_from_string},
@@ -55,7 +55,7 @@ use structs::{res_id, ResId};
 
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     convert::TryInto,
     ffi::CString,
     fmt,
@@ -66,48 +66,6 @@ use std::{
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
 const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
-
-
-// When changing a pickup, we need to give the room a copy of the resources/
-// assests used by the pickup. Create a cache of all the resources needed by
-// any pickup.
-fn collect_pickup_resources<'r>(gc_disc: &structs::GcDisc<'r>, starting_items: &StartingItems)
-    -> HashMap<(u32, FourCC), structs::Resource<'r>>
-{
-
-    let mut looking_for: HashSet<_> = PickupType::iter()
-        .flat_map(|pt| pt.dependencies().iter().cloned())
-        .chain(PickupType::iter().map(|pt| pt.hudmemo_strg().into()))
-        .collect();
-
-    let mut found = HashMap::with_capacity(looking_for.len());
-
-    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) {
-        let file_entry = gc_disc.find_file(pak_name).unwrap();
-        let pak = match *file_entry.file().unwrap() {
-            structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
-            structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
-            _ => panic!(),
-        };
-
-        for res in pak.resources.iter() {
-            let key = (res.file_id, res.fourcc());
-            if looking_for.remove(&key) {
-                assert!(found.insert(key, res.into_owned()).is_none());
-            }
-        }
-    }
-
-    for res in crate::custom_assets::custom_assets(&found, starting_items) {
-        let key = (res.file_id, res.fourcc());
-        looking_for.remove(&key);
-        assert!(found.insert(key, res).is_none());
-    }
-
-    assert!(looking_for.is_empty());
-
-    found
-}
 
 fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     -> structs::SclyObject<'r>
@@ -360,7 +318,7 @@ fn modify_pickups_in_mrea<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     config: &PatchConfig,
 ) -> Result<(), String>
 {
@@ -391,7 +349,7 @@ fn modify_pickups_in_mrea<'r>(
         pickup_type.hudmemo_strg().into()
     };
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(pickup_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
     let scly = area.mrea().scly_section_mut();
     let layers = scly.layers.as_mut_vec();
@@ -2106,7 +2064,7 @@ fn patch_starting_pickups<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     starting_items: &StartingItems,
     show_starting_items: bool,
-    pickup_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -2193,7 +2151,7 @@ fn patch_starting_pickups<'r>(
         );
 
         area.add_dependencies(
-            &pickup_resources,
+            &game_resources,
             0,
             iter::once(custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG.into())
         );
@@ -2771,7 +2729,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let pickup_resources = collect_pickup_resources(gc_disc, &config.random_starting_items);
+    let game_resources = collect_game_resources(gc_disc, &config.random_starting_items);
+    let game_resources = &game_resources;
+
     let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
 
     // XXX These values need to out live the patcher
@@ -2781,8 +2741,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let n = format!("Video/04_fileselect_playgame_{}.thp", select_game_fmv_suffix);
     let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
-
-    let pickup_resources = &pickup_resources;
     let mut patcher = PrimePatcher::new();
     patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
     if !config.keep_fmvs {
@@ -2874,7 +2832,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             area,
                             pickup_type,
                             pickup_location,
-                            pickup_resources,
+                            game_resources,
                             config
                         )
                 );
@@ -2981,7 +2939,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             area,
             &starting_items,
             show_starting_items,
-            &pickup_resources,
+            &game_resources,
         )
     );
     */
