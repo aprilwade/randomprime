@@ -2715,12 +2715,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         if starting_room.mlvl == World::FrigateOrpheon.mlvl() {
             false
         } else {
-            elevator_layout.values()
+            !elevator_layout.values()
             .any(|sr| sr.spawn_room_data().mlvl == World::FrigateOrpheon.mlvl())
         }
     };
-    assert!(starting_room.mlvl != World::FrigateOrpheon.mlvl() || skip_frigate); // panic if the games starts in the removed frigate level
-
+    
     // If any of the elevators go straight to the ending, patch out the pre-credits cutscene
     let skip_ending_cinematic = elevator_layout.values()
     .any(|sr| sr == &SpawnRoom::EndingCinematic);
