@@ -528,60 +528,62 @@ macro_rules! decl_spawn_rooms {
     };
 }
 
-pub fn spawn_room_data_from_string(_dest_name: String)
--> SpawnRoomData
+impl SpawnRoomData
 {
-    let dest_name = _dest_name.to_lowercase();
+    pub fn from_string(_dest_name: String) -> Self
+    {
+        let dest_name = _dest_name.to_lowercase();
 
-    // Handle special destinations //
-    if dest_name == "credits" {
-        return *SpawnRoom::EndingCinematic.spawn_room_data();
-    }
-
-    if dest_name == "frigate" {
-        return *SpawnRoom::FrigateExteriorDockingHangar.spawn_room_data();
-    }
-
-    // Handle elevator destinations //
-    for elevator in Elevator::iter() {
-        let elevator_name = elevator.name.to_lowercase();
-        elevator_name.replace("\0","").retain(|c| !c.is_whitespace());
-        if elevator_name == dest_name {
-            return *elevator.spawn_room_data();
-        }
-    }
-
-    // Handle specific room destinations //
-    let vec: Vec<&str> = dest_name.split(":").collect();
-    assert!(vec.len() == 2);
-    let world_name = vec[0].trim();
-    let room_name = vec[1].trim();
-
-    for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
-        let world = World::from_pak(pak_name).unwrap();
-
-        if !world.as_string().to_lowercase().starts_with(&world_name) {
-            continue;
+        // Handle special destinations //
+        if dest_name == "credits" {
+            return *SpawnRoom::EndingCinematic.spawn_room_data();
         }
 
-        let mut idx: u32 = 0;
-        for room_info in rooms.iter() { // for each room in the pak
-            if room_info.name.to_lowercase() == room_name {
+        if dest_name == "frigate" {
+            return *SpawnRoom::FrigateExteriorDockingHangar.spawn_room_data();
+        }
 
-                return SpawnRoomData {
-                    pak_name,
-                    mlvl: world.mlvl(),
-                    mrea: room_info.room_id.to_u32(),
-                    mrea_idx: idx,
-                    room_id: 0,
-                    name: room_info.name,
-                };
+        // Handle elevator destinations //
+        for elevator in Elevator::iter() {
+            let elevator_name = elevator.name.to_lowercase();
+            elevator_name.replace("\0","").retain(|c| !c.is_whitespace());
+            if elevator_name == dest_name {
+                return *elevator.spawn_room_data();
             }
-            idx = idx + 1;
         }
-    }
 
-    panic!("Error - Could not find room '{}'", _dest_name);
+        // Handle specific room destinations //
+        let vec: Vec<&str> = dest_name.split(":").collect();
+        assert!(vec.len() == 2);
+        let world_name = vec[0].trim();
+        let room_name = vec[1].trim();
+
+        for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
+            let world = World::from_pak(pak_name).unwrap();
+
+            if !world.as_string().to_lowercase().starts_with(&world_name) {
+                continue;
+            }
+
+            let mut idx: u32 = 0;
+            for room_info in rooms.iter() { // for each room in the pak
+                if room_info.name.to_lowercase() == room_name {
+
+                    return SpawnRoomData {
+                        pak_name,
+                        mlvl: world.mlvl(),
+                        mrea: room_info.room_id.to_u32(),
+                        mrea_idx: idx,
+                        room_id: 0,
+                        name: room_info.name,
+                    };
+                }
+                idx = idx + 1;
+            }
+        }
+
+        panic!("Error - Could not find destination '{}'", _dest_name);
+    }
 }
 
 impl std::ops::Deref for SpawnRoom

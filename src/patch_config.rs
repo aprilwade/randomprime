@@ -88,7 +88,8 @@ pub struct PatchConfig
     pub output_iso: File,
 
     pub layout: Layout,
-    pub strarting_room: String,
+    pub starting_room: String,
+    pub starting_memo: Option<String>,
 
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -104,7 +105,6 @@ pub struct PatchConfig
     pub quiet: bool,
 
     pub starting_items: StartingItems,
-    pub random_starting_items: StartingItems,
 
     pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
@@ -177,7 +177,8 @@ struct Preferences
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
-    strarting_room: Option<String>,
+    starting_room: Option<String>,
+    starting_memo: Option<String>,
 
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
@@ -186,7 +187,6 @@ struct GameConfig
     enable_vault_ledge_door: Option<bool>, // TODO: remove, calculate automatically once door patching is a thing
 
     starting_items: Option<StartingItems>,
-    random_starting_items: Option<StartingItems>, // TODO: replace with a "game start memo" string
 
     etank_capacity: Option<u32>,
     max_obtainable_missiles: Option<u32>, // TODO: rename
@@ -245,6 +245,10 @@ impl PatchConfig
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
+                .takes_value(true))
+            .arg(Arg::with_name("starting memo")
+                .long("starting-memo")
+                .help("String which is shown to the player after they start a new save file")
                 .takes_value(true))
             .arg(Arg::with_name("skip hudmenus")
                 .long("non-modal-item-messages")
@@ -406,11 +410,6 @@ impl PatchConfig
                 StartingItems::from_u64(starting_items_str.parse::<u64>().unwrap())
             );
         }
-        if let Some(random_starting_items_str) = matches.value_of("random starting items") {
-            patch_config.game_config.random_starting_items = Some(
-                StartingItems::from_u64(random_starting_items_str.parse::<u64>().unwrap())
-            );
-        }
 
         patch_config.parse()
     }
@@ -509,6 +508,9 @@ impl PatchConfigPrivate
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
 
+            starting_room: self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
+            starting_memo: self.game_config.starting_memo.clone(),
+
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
@@ -518,9 +520,6 @@ impl PatchConfigPrivate
 
             starting_items: self.game_config.starting_items.clone()
                 .unwrap_or_else(|| StartingItems::from_u64(1)),
-            random_starting_items: self.game_config.random_starting_items.clone()
-                .unwrap_or_else(|| StartingItems::from_u64(0)),
-
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             max_obtainable_missiles: self.game_config.max_obtainable_missiles.unwrap_or(999),
             max_obtainable_power_bombs: self.game_config.max_obtainable_power_bombs.unwrap_or(8),

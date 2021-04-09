@@ -1,9 +1,9 @@
-
 use encoding::{
     all::WINDOWS_1252,
     Encoding,
     EncoderTrap,
 };
+
 use enum_map::EnumMap;
 use rand::{
     rngs::StdRng,
@@ -11,7 +11,6 @@ use rand::{
     SeedableRng,
     Rng,
 };
-
 
 use crate::patch_config::{
     ArtifactHintBehavior,
@@ -25,7 +24,7 @@ use crate::{
     custom_assets::{custom_asset_ids, collect_game_resources},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{Elevator, SpawnRoom, SpawnRoomData, World, spawn_room_data_from_string},
+    elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
     gcz_writer::GczWriter,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
@@ -2059,7 +2058,6 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
     Ok(())
 }
 
-
 fn patch_starting_pickups<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     starting_items: &StartingItems,
@@ -2704,7 +2702,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let pickup_layout = &config.layout.pickups[..];
     let elevator_layout = &config.layout.elevators;
 
-    let strarting_room = spawn_room_data_from_string(config.strarting_room.to_string());
+    let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
+    // let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
 
     /*
     let frigate_done_spawn_room = spawn_room_data_from_string(config.frigate_done_spawn_room.to_string());
@@ -2713,14 +2712,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     // If none of the elevators go to frigate, and the spawn room isn't frigate, we can remove it to improve patch time
     let skip_frigate = {
-        if strarting_room.mlvl == World::FrigateOrpheon.mlvl() {
+        if starting_room.mlvl == World::FrigateOrpheon.mlvl() {
             false
         } else {
             elevator_layout.values()
             .any(|sr| sr.spawn_room_data().mlvl == World::FrigateOrpheon.mlvl())
         }
     };
-    assert!(strarting_room.mlvl != World::FrigateOrpheon.mlvl() || skip_frigate); // panic if the games starts in the removed frigate level
+    assert!(starting_room.mlvl != World::FrigateOrpheon.mlvl() || skip_frigate); // panic if the games starts in the removed frigate level
 
     // If any of the elevators go straight to the ending, patch out the pre-credits cutscene
     let skip_ending_cinematic = elevator_layout.values()
@@ -2729,10 +2728,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let game_resources = collect_game_resources(gc_disc, &config.random_starting_items);
-    let game_resources = &game_resources;
+    let show_starting_memo = config.starting_memo.is_some();
 
-    let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
+    let game_resources = collect_game_resources(gc_disc, config.starting_memo.clone());
+    let game_resources = &game_resources;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -2846,19 +2845,19 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             b"default.dol",
             move |file| patch_dol(
                 file,
-                strarting_room,
+                starting_room,
                 version,
                 config,
             )
         );
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
-        rel_config = create_rel_config_file(strarting_room, config.quickplay);
+        rel_config = create_rel_config_file(starting_room, config.quickplay);
     } else {
         patcher.add_file_patch(
             b"default.dol",
             |file| patch_dol(
                 file,
-                strarting_room,
+                starting_room,
                 version,
                 config,
             )
@@ -2869,7 +2868,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             move |_ps, area| patch_frigate_teleporter(area, *SpawnRoom::LandingSite.spawn_room_data()) // TODO: use destination specified in layout
         );
         rel_config = create_rel_config_file(
-            strarting_room,
+            starting_room,
             config.quickplay
         );
     }
@@ -2931,18 +2930,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_save_banner_txtr
     );
 
-    /*
-    let show_starting_items = !config.random_starting_items.is_empty();
     patcher.add_scly_patch(
-        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
+        (starting_room.pak_name.as_bytes(), starting_room.mrea),
         move |_ps, area| patch_starting_pickups(
             area,
-            &starting_items,
-            show_starting_items,
+            &config.starting_items,
+            show_starting_memo,
             &game_resources,
         )
     );
-    */
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
@@ -3060,7 +3056,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    if spawn_room != SpawnRoom::LandingSite {
+    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(
@@ -3069,9 +3065,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    // If any of the elevators go straight to the ending, patch out the pre-credits cutscene.
-    let skip_ending_cinematic = elevator_layout.values()
-        .any(|sr| sr == &SpawnRoom::EndingCinematic);
     if skip_ending_cinematic {
         patcher.add_scly_patch(
             resource_info!("01_endcinema.MREA").into(),
