@@ -90,6 +90,7 @@ pub struct PatchConfig
     pub layout: Layout,
     pub starting_room: String,
     pub starting_memo: Option<String>,
+    pub frigate_done_room: String,
 
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -179,6 +180,7 @@ struct GameConfig
 {
     starting_room: Option<String>,
     starting_memo: Option<String>,
+    frigate_done_room: Option<String>,
 
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
@@ -246,6 +248,10 @@ impl PatchConfig
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
                 .takes_value(true))
+            .arg(Arg::with_name("frigate done room")
+                .long("frigate-done-room")
+                .help("Room which the player is sent to after the frigate is destroyed. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
+                .takes_value(true))
             .arg(Arg::with_name("starting memo")
                 .long("starting-memo")
                 .help("String which is shown to the player after they start a new save file")
@@ -287,9 +293,6 @@ impl PatchConfig
                 .long("artifact-hint-behavior")
                 .help("Set the behavior of artifact temple hints. Can be 'all', 'none', or 'default' (vanilla)")
                 .takes_value(true))
-            .arg(Arg::with_name("skip impact crater")
-                .long("skip-impact-crater")
-                .help("Elevators to the Impact Crater immediately go to the game end sequence"))
             .arg(Arg::with_name("enable vault ledge door")
                 .long("enable-vault-ledge-door")
                 .help("Enable Chozo Ruins Vault door from Main Plaza"))
@@ -385,6 +388,12 @@ impl PatchConfig
         }
         if let Some(trilogy_disc_path) = matches.value_of("trilogy disc path") {
             patch_config.preferences.trilogy_disc_path = Some(trilogy_disc_path.to_string());
+        }
+        if let Some(starting_room) = matches.value_of("starting room") {
+            patch_config.game_config.starting_room = Some(starting_room.to_string());
+        }
+        if let Some(frigate_done_room) = matches.value_of("frigate done room") {
+            patch_config.game_config.frigate_done_room = Some(frigate_done_room.to_string());
         }
 
         // integer/float
@@ -510,6 +519,7 @@ impl PatchConfigPrivate
 
             starting_room: self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
             starting_memo: self.game_config.starting_memo.clone(),
+            frigate_done_room: self.game_config.frigate_done_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
 
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),

@@ -2703,12 +2703,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let elevator_layout = &config.layout.elevators;
 
     let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
-    // let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
-
-    /*
-    let frigate_done_spawn_room = spawn_room_data_from_string(config.frigate_done_spawn_room.to_string());
-    assert!(frigate_done_spawn_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
-    */
+    let frigate_done_room = SpawnRoomData::from_string(config.frigate_done_room.to_string());
+    assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
     // If none of the elevators go to frigate, and the spawn room isn't frigate, we can remove it to improve patch time
     let skip_frigate = {
@@ -2719,10 +2715,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             .any(|sr| sr.spawn_room_data().mlvl == World::FrigateOrpheon.mlvl())
         }
     };
-    
+
     // If any of the elevators go straight to the ending, patch out the pre-credits cutscene
     let skip_ending_cinematic = elevator_layout.values()
-    .any(|sr| sr == &SpawnRoom::EndingCinematic);
+    .any(|sr| sr == &SpawnRoom::EndingCinematic) || frigate_done_room.mrea == SpawnRoom::EndingCinematic.spawn_room_data().mrea;
 
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2838,39 +2834,30 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    let rel_config;
-    if skip_frigate {
-        patcher.add_file_patch(
-            b"default.dol",
-            move |file| patch_dol(
-                file,
-                starting_room,
-                version,
-                config,
-            )
-        );
-        patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
-        rel_config = create_rel_config_file(starting_room, config.quickplay);
-    } else {
-        patcher.add_file_patch(
-            b"default.dol",
-            |file| patch_dol(
-                file,
-                starting_room,
-                version,
-                config,
-            )
-        );
+    // set save spawn room
+    patcher.add_file_patch(
+        b"default.dol",
+        |file| patch_dol(
+            file,
+            starting_room,
+            version,
+            config,
+        )
+    );
 
+    let rel_config = create_rel_config_file(starting_room, config.quickplay);
+
+    if skip_frigate {
+        // remove frigate data to save time/space
+        patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
+    } else {
+        // redirect end of frigate cutscene to room specified in layout
         patcher.add_scly_patch(
             resource_info!("01_intro_hanger.MREA").into(),
-            move |_ps, area| patch_frigate_teleporter(area, *SpawnRoom::LandingSite.spawn_room_data()) // TODO: use destination specified in layout
-        );
-        rel_config = create_rel_config_file(
-            starting_room,
-            config.quickplay
+            move |_ps, area| patch_frigate_teleporter(area, frigate_done_room),
         );
     }
+
     gc_disc.add_file(
         "rel_config.bin",
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
