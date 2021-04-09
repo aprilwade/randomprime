@@ -2658,7 +2658,10 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
+    writeln!(ct, "etank capacity: {}", config.etank_capacity).unwrap();
     writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
+    writeln!(ct, "max obtainable missiles: {}", config.max_obtainable_missiles).unwrap();
+    writeln!(ct, "max obtainable power bombs: {}", config.max_obtainable_power_bombs).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
