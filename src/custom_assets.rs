@@ -269,37 +269,10 @@ pub fn collect_game_resources<'r>(
 {
     // Get list of all dependencies patcher needs //
     let mut looking_for = HashSet::<_>::new();
-    
-    {
-        let looking_for_pickup: HashSet<_> = PickupType::iter()
-            .flat_map(|pt| pt.dependencies().iter().cloned())
-            .chain(PickupType::iter().map(|pt| pt.hudmemo_strg().into()))
-            .collect();
-        
-        for (key, value) in looking_for_pickup.iter() {
-            looking_for.insert((*key, *value));
-        }
-    }
-
-    {
-        let looking_for_door: HashSet<_> = DoorType::iter()
-            .flat_map(|pt| pt.dependencies().into_iter())
-            .collect();
-        
-        for (key, value) in looking_for_door.iter() {
-            looking_for.insert((*key, *value));
-        } 
-    }
-
-    {
-        let looking_for_blast_shield: HashSet<_> = BlastShieldType::iter()
-            .flat_map(|pt| pt.dependencies().into_iter())
-            .collect();
-        
-        for (key, value) in looking_for_blast_shield.iter() {
-            looking_for.insert((*key, *value));
-        }
-    }
+    looking_for.extend(PickupType::iter().flat_map(|x| x.dependencies().iter().cloned()));
+    looking_for.extend(PickupType::iter().map(|x| -> (_, _) { x.hudmemo_strg().into() }));
+    looking_for.extend(DoorType::iter().flat_map(|x| x.dependencies()));
+    looking_for.extend(BlastShieldType::iter().flat_map(|x| x.dependencies()));
 
     // Dependencies read from paks and custom assets will go here //
     let mut found = HashMap::with_capacity(looking_for.len());
