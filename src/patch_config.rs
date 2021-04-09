@@ -99,8 +99,8 @@ pub struct PatchConfig
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,
-    pub max_obtainable_missiles: u32,
-    pub max_obtainable_power_bombs: u32,
+    pub missile_capacity: u32,
+    pub power_bomb_capacity: u32,
     pub map_default_state: MapState,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
@@ -191,8 +191,8 @@ struct GameConfig
     starting_items: Option<StartingItems>,
 
     etank_capacity: Option<u32>,
-    max_obtainable_missiles: Option<u32>, // TODO: rename
-    max_obtainable_power_bombs: Option<u32>, // TODO: rename
+    missile_capacity: Option<u32>,
+    power_bomb_capacity: Option<u32>,
 
     game_banner: Option<GameBanner>,
     comment: Option<String>,
@@ -274,12 +274,12 @@ impl PatchConfig
                 .long("staggered-suit-damage")
                 .help(concat!("The suit damage reduction is determinted by the number of suits ",
                                 "collected rather than the most powerful one collected.")))
-            .arg(Arg::with_name("max obtainable missiles")
-                .long("max-obtainable-missiles")
+            .arg(Arg::with_name("missile capacity")
+                .long("missile-capacity")
                 .help("Set the max amount of Missiles you can carry")
                 .takes_value(true))
-            .arg(Arg::with_name("max obtainable power bombs")
-                .long("max-obtainable-power-bombs")
+            .arg(Arg::with_name("power bomb capacity")
+                .long("power-bomb-capacity")
                 .help("Set the max amount of Power Bombs you can carry")
                 .takes_value(true))
             .arg(Arg::with_name("map default state")
@@ -403,11 +403,11 @@ impl PatchConfig
         if let Some(etank_capacity) = matches.value_of("etank capacity") {
             patch_config.game_config.etank_capacity = Some(etank_capacity.parse::<u32>().unwrap());
         }
-        if let Some(s) = matches.value_of("max obtainable missiles") {
-            patch_config.game_config.max_obtainable_missiles= Some(s.parse::<u32>().unwrap());
+        if let Some(s) = matches.value_of("missile capacity") {
+            patch_config.game_config.missile_capacity= Some(s.parse::<u32>().unwrap());
         }
-        if let Some(s) = matches.value_of("max obtainable power bombs") {
-            patch_config.game_config.max_obtainable_power_bombs = Some(s.parse::<u32>().unwrap());
+        if let Some(s) = matches.value_of("power bomb capacity") {
+            patch_config.game_config.power_bomb_capacity = Some(s.parse::<u32>().unwrap());
         }
 
         // custom
@@ -531,8 +531,8 @@ impl PatchConfigPrivate
             starting_items: self.game_config.starting_items.clone()
                 .unwrap_or_else(|| StartingItems::from_u64(1)),
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
-            max_obtainable_missiles: self.game_config.max_obtainable_missiles.unwrap_or(999),
-            max_obtainable_power_bombs: self.game_config.max_obtainable_power_bombs.unwrap_or(8),
+            missile_capacity: self.game_config.missile_capacity.unwrap_or(999),
+            power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(8),
 
             game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
             comment: self.game_config.comment.clone().unwrap_or(String::new()),

@@ -2410,25 +2410,25 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if config.max_obtainable_missiles > 999 {
+    if config.missile_capacity > 999 {
         Err("The max amount of missiles you can carry has exceeded the limit (>999)!".to_string())?;
     }
 
-    if config.max_obtainable_power_bombs > 9 {
+    if config.power_bomb_capacity > 9 {
         Err("The max amount of power bombs you can carry has exceeded the limit (>9)!".to_string())?;
     }
 
     // CPlayerState_PowerUpMaxValues[4]
-    let max_obtainable_missiles_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
-        .long config.max_obtainable_missiles;
+    let missile_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
+        .long config.missile_capacity;
     });
-    dol_patcher.ppcasm_patch(&max_obtainable_missiles_patch)?;
+    dol_patcher.ppcasm_patch(&missile_capacity_patch)?;
 
     // CPlayerState_PowerUpMaxValues[7]
-    let max_obtainable_power_bombs_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
-        .long config.max_obtainable_power_bombs;
+    let power_bomb_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
+        .long config.power_bomb_capacity;
     });
-    dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
+    dol_patcher.ppcasm_patch(&power_bomb_capacity_patch)?;
 
     // set etank capacity and base health
     let etank_capacity = config.etank_capacity as f32;
@@ -2616,8 +2616,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "etank capacity: {}", config.etank_capacity).unwrap();
     writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
-    writeln!(ct, "max obtainable missiles: {}", config.max_obtainable_missiles).unwrap();
-    writeln!(ct, "max obtainable power bombs: {}", config.max_obtainable_power_bombs).unwrap();
+    writeln!(ct, "missile capacity: {}", config.missile_capacity).unwrap();
+    writeln!(ct, "power bomb capacity: {}", config.power_bomb_capacity).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
