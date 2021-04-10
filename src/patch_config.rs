@@ -149,6 +149,7 @@ pub struct PatchConfig
     pub quiet: bool,
 
     pub starting_items: StartingItems,
+    pub item_loss_items: StartingItems,
 
     pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
@@ -230,6 +231,7 @@ struct GameConfig
     enable_vault_ledge_door: Option<bool>, // TODO: remove, calculate automatically once door patching is a thing
 
     starting_items: Option<StartingItems>,
+    item_loss_items: Option<StartingItems>,
 
     etank_capacity: Option<u32>,
     missile_capacity: Option<u32>,
@@ -359,15 +361,13 @@ impl PatchConfig
                 .long("main-menu-message")
                 .hidden(true)
                 .takes_value(true))
-            .arg(Arg::with_name("random starting items")
-                .long("random-starting-items")
-                .hidden(true)
+            .arg(Arg::with_name("starting items")
+                .long("starting-items")
                 .takes_value(true)
                 .validator(|s| s.parse::<u64>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
-            .arg(Arg::with_name("change starting items")
-                .long("starting-items")
-                .hidden(true)
+            .arg(Arg::with_name("item loss items")
+                .long("item-loss-items")
                 .takes_value(true)
                 .validator(|s| s.parse::<u64>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
@@ -454,6 +454,11 @@ impl PatchConfig
         if let Some(starting_items_str) = matches.value_of("starting items") {
             patch_config.game_config.starting_items = Some(
                 StartingItems::from_u64(starting_items_str.parse::<u64>().unwrap())
+            );
+        }
+        if let Some(item_loss_items_str) = matches.value_of("item loss items") {
+            patch_config.game_config.item_loss_items = Some(
+                StartingItems::from_u64(item_loss_items_str.parse::<u64>().unwrap())
             );
         }
 
@@ -566,7 +571,10 @@ impl PatchConfigPrivate
             enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
             starting_items: self.game_config.starting_items.clone()
-                .unwrap_or_else(|| StartingItems::from_u64(1)),
+            .unwrap_or_else(|| StartingItems::from_u64(1)),
+            item_loss_items: self.game_config.item_loss_items.clone()
+            .unwrap_or_else(|| StartingItems::from_u64(1)),
+
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             missile_capacity: self.game_config.missile_capacity.unwrap_or(999),
             power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(8),

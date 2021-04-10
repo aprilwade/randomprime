@@ -2088,14 +2088,14 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
 fn patch_starting_pickups<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     starting_items: &StartingItems,
-    show_starting_items: bool,
+    show_starting_memo: bool,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
     let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
 
-    if show_starting_items {
+    if show_starting_memo {
         // Turn on "Randomizer - Starting Items popup Layer"
         area.layer_flags.flags |= 1 << layer_count;
         area.add_layer(b"Randomizer - Starting Items popup Layer\0".as_cstr());
@@ -2123,7 +2123,7 @@ fn patch_starting_pickups<'r>(
         }
     }
 
-    if show_starting_items {
+    if show_starting_memo {
         scly.layers.as_mut_vec()[layer_count as usize].objects.as_mut_vec().extend_from_slice(
             &[
                 structs::SclyObject {
@@ -2955,6 +2955,29 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             &game_resources,
         )
     );
+
+    if !skip_frigate {
+        patcher.add_scly_patch(
+            resource_info!("02_intro_elevator.MREA").into(),
+            move |_ps, area| patch_starting_pickups(
+                area,
+                &config.item_loss_items,
+                false,
+                &game_resources,
+            )
+        );
+
+        // TODO: only works for landing site
+        patcher.add_scly_patch(
+            (frigate_done_room.pak_name.as_bytes(), frigate_done_room.mrea),
+            move |_ps, area| patch_starting_pickups(
+                area,
+                &config.item_loss_items,
+                false,
+                &game_resources,
+            )
+        );
+    }
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
