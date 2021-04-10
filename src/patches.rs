@@ -501,13 +501,15 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
-
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
     level_data: &HashMap<String,LevelConfig>,
     auto_enabled_elevators: bool,
 )
+-> (bool, bool)
 {
+    let mut skip_frigate = true;
+    let mut skip_ending_cinematic = false;
     for (_, level) in level_data.iter() {
         for (elevator_name, destination_name) in level.transports.iter() {
 
@@ -522,6 +524,14 @@ fn make_elevators_patch<'a>(
             }
             let elv = elv.unwrap();
             let dest = SpawnRoomData::from_string(destination_name.to_string());
+
+            if dest.mlvl == World::FrigateOrpheon.mlvl() {
+                skip_frigate = false;
+            }
+
+            if dest.mrea == SpawnRoom::EndingCinematic.spawn_room_data().mrea {
+                skip_ending_cinematic = true;
+            }
 
             patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
                 let scly = area.mrea().scly_section_mut();
@@ -600,6 +610,8 @@ fn make_elevators_patch<'a>(
             });
         }
     }
+
+    (skip_frigate, skip_ending_cinematic)
 }
 
 fn patch_landing_site_cutscene_triggers(
@@ -2714,16 +2726,12 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    println!("config - {:#?}", config);
-
     let pickup_layout = &config.layout.pickups[..];
 
     let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
 
     let frigate_done_room = {
-
         let mut destination_name = "Tallon:Landing Site";
-
         let frigate_level = config.level_data.get(&"frigate".to_string());
         if frigate_level.is_some() {
             let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
@@ -2735,20 +2743,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         SpawnRoomData::from_string(destination_name.to_string())
     };
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
-
-    // If none of the elevators go to frigate, and the spawn room isn't frigate, we can remove it to improve patch time
-    let skip_frigate = {
-        if starting_room.mlvl == World::FrigateOrpheon.mlvl() {
-            false
-        } else {
-            // TODO: calculate automatically
-            true
-        }
-    };
-
-    // If any of the elevators go straight to the ending, patch out the pre-credits cutscene
-    let skip_ending_cinematic = false; // TODO: calculate automatically
-
 
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2864,6 +2858,12 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
+    let (skip_frigate, skip_ending_cinematic) = make_elevators_patch(
+        &mut patcher,
+        &config.level_data,
+        config.auto_enabled_elevators,
+    );
+
     // set save spawn room
     patcher.add_file_patch(
         b"default.dol",
@@ -2877,7 +2877,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let rel_config = create_rel_config_file(starting_room, config.quickplay);
 
-    if skip_frigate {
+    if skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl(){
         // remove frigate data to save time/space
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
     } else {
@@ -2957,8 +2957,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
-
-    make_elevators_patch(&mut patcher, &config.level_data, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 

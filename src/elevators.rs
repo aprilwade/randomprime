@@ -150,7 +150,6 @@ macro_rules! decl_elevators {
 impl Elevator
 {
     pub fn from_string(_name: &String) -> Option<Self> {
-        println!("\n\n\n\n");
         let mut name = _name.to_lowercase().replace("\0","");
         name.retain(|c| !c.is_whitespace());
         for elevator in Elevator::iter() {
