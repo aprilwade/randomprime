@@ -232,8 +232,7 @@ pub fn custom_assets<'r>(
         assets.push(build_resource(
             custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
             structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-                //"&just=center;Nothing acquired!\0".to_owned(),
-                format!("{}\0", starting_memo.clone().unwrap()),
+                format!("&just=center;{}\0", starting_memo.clone().unwrap()),
             ])),
         ));
     }

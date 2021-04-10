@@ -6,6 +6,7 @@ use std::{
     ffi::CStr,
     hash::{Hash,Hasher},
     convert::TryInto,
+    collections::HashMap,
     iter,
     fmt,
     fs::{File, OpenOptions},
@@ -80,6 +81,46 @@ pub struct GameBanner
     pub description: Option<String>,
 }
 
+// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PickupConfig
+{
+    // pub pickup_type: String,
+    // pub count: u32,
+    // pub model: PickupModelType,
+    // pub scan_text: String,
+    // pub hudmemo_text: String,
+    // pub desination: String,
+    // pub position: [f32;3],
+}
+
+// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RoomConfig
+{
+    // pub remove_locks: bool,
+    // pub superheated: bool,
+    // pub remove_water: bool,
+    // pub submerge: bool,
+    // pub extra_water: Vec<WaterConfig>,
+    // pub doors: Vec<String>,
+    // pub blast_shields: Vec<String>,
+    // pub pickups: Vec<PickupConfig>,
+    // pub extra_pickups: Vec<PickupConfig>,
+    // pub extra_scans: Vec<ScanConfig>,
+    // pub aether_transform: Vec<AetherTransformConfig>,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LevelConfig
+{
+    pub transports: HashMap<String,String>,
+    pub rooms: HashMap<String,RoomConfig>,
+}
+
 #[derive(Debug)]
 pub struct PatchConfig
 {
@@ -88,9 +129,11 @@ pub struct PatchConfig
     pub output_iso: File,
 
     pub layout: Layout,
+
+    pub level_data: HashMap<String,LevelConfig>,
+
     pub starting_room: String,
     pub starting_memo: Option<String>,
-    pub frigate_done_room: String,
 
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
@@ -132,7 +175,6 @@ enum LayoutWrapper
     Struct {
         pickups: Vec<PickupType>,
         starting_location: SpawnRoom,
-        // #[serde(default = "Elevator::default_layout")]
         elevators: EnumMap<Elevator, SpawnRoom>,
     },
 }
@@ -160,7 +202,7 @@ impl TryInto<Layout> for LayoutWrapper
     }
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
@@ -174,13 +216,12 @@ struct Preferences
     quiet: Option<bool>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
     starting_room: Option<String>,
     starting_memo: Option<String>,
-    frigate_done_room: Option<String>,
 
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
@@ -199,7 +240,7 @@ struct GameConfig
     main_menu_message: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct PatchConfigPrivate
 {
@@ -211,6 +252,9 @@ struct PatchConfigPrivate
 
     #[serde(default)]
     game_config: GameConfig,
+
+    #[serde(default)]
+    level_data: HashMap<String,LevelConfig>,
 
     layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
 }
@@ -247,10 +291,6 @@ impl PatchConfig
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
-                .takes_value(true))
-            .arg(Arg::with_name("frigate done room")
-                .long("frigate-done-room")
-                .help("Room which the player is sent to after the frigate is destroyed. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
                 .takes_value(true))
             .arg(Arg::with_name("starting memo")
                 .long("starting-memo")
@@ -392,9 +432,6 @@ impl PatchConfig
         if let Some(starting_room) = matches.value_of("starting room") {
             patch_config.game_config.starting_room = Some(starting_room.to_string());
         }
-        if let Some(frigate_done_room) = matches.value_of("frigate done room") {
-            patch_config.game_config.frigate_done_room = Some(frigate_done_room.to_string());
-        }
 
         // integer/float
         if let Some(damage) = matches.value_of("heat damage per sec") {
@@ -507,6 +544,7 @@ impl PatchConfigPrivate
             iso_format,
             output_iso,
             layout,
+            level_data: self.level_data.clone(),
 
             skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
@@ -519,7 +557,6 @@ impl PatchConfigPrivate
 
             starting_room: self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
             starting_memo: self.game_config.starting_memo.clone(),
-            frigate_done_room: self.game_config.frigate_done_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
 
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),

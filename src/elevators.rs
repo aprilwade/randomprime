@@ -4,6 +4,7 @@ use serde::Deserialize;
 use enum_map::{Enum, EnumMap};
 use crate::{pickup_meta::{self, PickupType}};
 
+#[derive(Clone, Copy, Debug)]
 pub enum World {
     FrigateOrpheon,
     TallonOverworld,
@@ -15,6 +16,19 @@ pub enum World {
 }
 
 impl World {
+    pub fn iter() -> impl Iterator<Item = World>
+    {
+        [
+            World::FrigateOrpheon,
+            World::ChozoRuins,
+            World::PhendranaDrifts,
+            World::TallonOverworld,
+            World::PhazonMines,
+            World::MagmoorCaverns,
+            World::ImpactCrater,
+        ].iter().map(|i| *i)
+    }
+
     pub fn from_pak(pak_str:&str) -> Option<Self> {
         match pak_str {
             "Metroid1.pak" => Some(World::FrigateOrpheon),
@@ -49,6 +63,18 @@ impl World {
             World::PhazonMines     => "Mines, Phazon"     .to_string(),
             World::MagmoorCaverns  => "Magmoor Caverns"   .to_string(),
             World::ImpactCrater    => "Crater, Impact"    .to_string(),
+        }
+    }
+
+    pub fn as_json_key(&self) -> String {
+        match self {
+            World::FrigateOrpheon  => "frigate".to_string(),
+            World::ChozoRuins      => "chozo".to_string(),
+            World::PhendranaDrifts => "phendrana".to_string(),
+            World::TallonOverworld => "tallon".to_string(),
+            World::PhazonMines     => "mines".to_string(),
+            World::MagmoorCaverns  => "magmoor".to_string(),
+            World::ImpactCrater    => "impact".to_string(),
         }
     }
 }
@@ -123,9 +149,19 @@ macro_rules! decl_elevators {
 
 impl Elevator
 {
-    pub fn default_layout() -> EnumMap<Elevator, SpawnRoom>
-    {
-        EnumMap::from(|elv: Elevator| SpawnRoom::Elevator(elv.default_dest))
+    pub fn from_string(_name: &String) -> Option<Self> {
+        println!("\n\n\n\n");
+        let mut name = _name.to_lowercase().replace("\0","");
+        name.retain(|c| !c.is_whitespace());
+        for elevator in Elevator::iter() {
+            let mut elevator_name = elevator.name.to_lowercase().replace("\0","");
+            elevator_name.retain(|c| !c.is_whitespace());
+            if elevator_name == name {
+                return Some(elevator);
+            }
+        }
+
+        None
     }
 }
 
@@ -544,12 +580,9 @@ impl SpawnRoomData
         }
 
         // Handle elevator destinations //
-        for elevator in Elevator::iter() {
-            let elevator_name = elevator.name.to_lowercase();
-            elevator_name.replace("\0","").retain(|c| !c.is_whitespace());
-            if elevator_name == dest_name {
-                return *elevator.spawn_room_data();
-            }
+        let elevator = Elevator::from_string(&dest_name);
+        if elevator.is_some() {
+            return *elevator.unwrap().spawn_room_data();
         }
 
         // Handle specific room destinations //

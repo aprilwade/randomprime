@@ -4,7 +4,6 @@ use encoding::{
     EncoderTrap,
 };
 
-use enum_map::EnumMap;
 use rand::{
     rngs::StdRng,
     seq::SliceRandom,
@@ -17,7 +16,8 @@ use crate::patch_config::{
     MapState,
     IsoFormat,
     PatchConfig,
-    GameBanner
+    GameBanner,
+    LevelConfig,
 };
 
 use crate::{
@@ -504,86 +504,101 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
-    layout: &'a EnumMap<Elevator, SpawnRoom>,
+    level_data: &HashMap<String,LevelConfig>,
     auto_enabled_elevators: bool,
 )
 {
-    for (elv, dest) in layout.iter() {
-        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
-            let scly = area.mrea().scly_section_mut();
-            for layer in scly.layers.iter_mut() {
-                let obj = layer.objects.iter_mut()
-                    .find(|obj| obj.instance_id == elv.scly_id);
-                if let Some(obj) = obj {
-                    let wt = obj.property_data.as_world_transporter_mut().unwrap();
-                    wt.mrea = ResId::new(dest.mrea);
-                    wt.mlvl = ResId::new(dest.mlvl);
-                }
+    for (_, level) in level_data.iter() {
+        for (elevator_name, destination_name) in level.transports.iter() {
+
+            // special case, handled elsewhere
+            if elevator_name == "destroyed frigate cutscene" {
+                continue;
             }
 
-            if auto_enabled_elevators {
-                // Auto enable the elevator
-                let layer = &mut scly.layers.as_mut_vec()[0];
-                let mr_id = layer.objects.iter()
-                    .find(|obj| obj.property_data.as_memory_relay()
-                        .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
-                        .unwrap_or(false)
-                    )
-                    .map(|mr| mr.instance_id);
-
-                if let Some(mr_id) = mr_id {
-                    layer.objects.as_mut_vec().push(structs::SclyObject {
-                        instance_id: ps.fresh_instance_id_range.next().unwrap(),
-                        property_data: structs::Timer {
-                            name: b"Auto enable elevator\0".as_cstr(),
-
-                            start_time: 0.001,
-                            max_random_add: 0f32,
-                            reset_to_zero: 0,
-                            start_immediately: 1,
-                            active: 1,
-                        }.into(),
-                        connections: vec![
-                            structs::Connection {
-                                state: structs::ConnectionState::ZERO,
-                                message: structs::ConnectionMsg::ACTIVATE,
-                                target_object_id: mr_id,
-                            },
-                        ].into(),
-                    });
-                }
+            let elv = Elevator::from_string(&elevator_name.to_string());
+            if elv.is_none() {
+                panic!("Failed to parse elevator '{}'", elevator_name);
             }
+            let elv = elv.unwrap();
+            let dest = SpawnRoomData::from_string(destination_name.to_string());
 
-            Ok(())
-        });
-
-        let room_dest_name = dest.name.replace('\0', "\n");
-        let hologram_name = dest.name.replace('\0', " ");
-        let control_name = dest.name.replace('\0', " ");
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to {}\u{0}", room_dest_name);
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
-            let string = format!(
-                "Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}",
-                hologram_name,
-            );
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
-            let string = format!(
-                "Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}",
-                control_name,
-            );
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
+            patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
+                let scly = area.mrea().scly_section_mut();
+                for layer in scly.layers.iter_mut() {
+                    let obj = layer.objects.iter_mut()
+                        .find(|obj| obj.instance_id == elv.scly_id);
+                    if let Some(obj) = obj {
+                        let wt = obj.property_data.as_world_transporter_mut().unwrap();
+                        wt.mrea = ResId::new(dest.mrea);
+                        wt.mlvl = ResId::new(dest.mlvl);
+                    }
+                }
+    
+                if auto_enabled_elevators {
+                    // Auto enable the elevator
+                    let layer = &mut scly.layers.as_mut_vec()[0];
+                    let mr_id = layer.objects.iter()
+                        .find(|obj| obj.property_data.as_memory_relay()
+                            .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
+                            .unwrap_or(false)
+                        )
+                        .map(|mr| mr.instance_id);
+    
+                    if let Some(mr_id) = mr_id {
+                        layer.objects.as_mut_vec().push(structs::SclyObject {
+                            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                            property_data: structs::Timer {
+                                name: b"Auto enable elevator\0".as_cstr(),
+    
+                                start_time: 0.001,
+                                max_random_add: 0f32,
+                                reset_to_zero: 0,
+                                start_immediately: 1,
+                                active: 1,
+                            }.into(),
+                            connections: vec![
+                                structs::Connection {
+                                    state: structs::ConnectionState::ZERO,
+                                    message: structs::ConnectionMsg::ACTIVATE,
+                                    target_object_id: mr_id,
+                                },
+                            ].into(),
+                        });
+                    }
+                }
+    
+                Ok(())
+            });
+    
+            let room_dest_name = dest.name.replace('\0', "\n");
+            let hologram_name = dest.name.replace('\0', " ");
+            let control_name = dest.name.replace('\0', " ");
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
+                let string = format!("Transport to {}\u{0}", room_dest_name);
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
+                let string = format!(
+                    "Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}",
+                    hologram_name,
+                );
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
+                let string = format!(
+                    "Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}",
+                    control_name,
+                );
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+        }
     }
 }
 
@@ -2699,11 +2714,26 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
+    println!("config - {:#?}", config);
+
     let pickup_layout = &config.layout.pickups[..];
-    let elevator_layout = &config.layout.elevators;
 
     let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
-    let frigate_done_room = SpawnRoomData::from_string(config.frigate_done_room.to_string());
+
+    let frigate_done_room = {
+
+        let mut destination_name = "Tallon:Landing Site";
+
+        let frigate_level = config.level_data.get(&"frigate".to_string());
+        if frigate_level.is_some() {
+            let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
+            if x.is_some() {
+                destination_name = x.unwrap();
+            }
+        }
+
+        SpawnRoomData::from_string(destination_name.to_string())
+    };
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
     // If none of the elevators go to frigate, and the spawn room isn't frigate, we can remove it to improve patch time
@@ -2711,14 +2741,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         if starting_room.mlvl == World::FrigateOrpheon.mlvl() {
             false
         } else {
-            !elevator_layout.values()
-            .any(|sr| sr.spawn_room_data().mlvl == World::FrigateOrpheon.mlvl())
+            // TODO: calculate automatically
+            true
         }
     };
 
     // If any of the elevators go straight to the ending, patch out the pre-credits cutscene
-    let skip_ending_cinematic = elevator_layout.values()
-    .any(|sr| sr == &SpawnRoom::EndingCinematic) || frigate_done_room.mrea == SpawnRoom::EndingCinematic.spawn_room_data().mrea;
+    let skip_ending_cinematic = false; // TODO: calculate automatically
+
 
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
@@ -2928,7 +2958,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
-    make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
+    make_elevators_patch(&mut patcher, &config.level_data, config.auto_enabled_elevators);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
