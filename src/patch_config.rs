@@ -117,8 +117,8 @@ pub struct RoomConfig
 #[serde(rename_all = "camelCase")]
 pub struct LevelConfig
 {
-    pub transports: HashMap<String,String>,
-    pub rooms: HashMap<String,RoomConfig>,
+    pub transports: HashMap<String,String>, 
+    pub rooms: HashMap<String,RoomConfig>, 
 }
 
 #[derive(Debug)]
@@ -130,7 +130,7 @@ pub struct PatchConfig
 
     pub layout: Layout,
 
-    pub level_data: HashMap<String,LevelConfig>,
+    pub level_data: HashMap<String,LevelConfig>, 
 
     pub starting_room: String,
     pub starting_memo: Option<String>,

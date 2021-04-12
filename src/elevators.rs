@@ -54,27 +54,27 @@ impl World {
         }
     }
 
-    pub fn as_string(&self) -> String {
+    pub fn to_str(&self) -> &'static str {
         match self {
-            World::FrigateOrpheon  => "Frigate Orpheon"   .to_string(),
-            World::ChozoRuins      => "Chozo Ruins"       .to_string(),
-            World::PhendranaDrifts => "Phendrana Drifts"  .to_string(),
-            World::TallonOverworld => "Tallon Overworld"  .to_string(),
-            World::PhazonMines     => "Mines, Phazon"     .to_string(),
-            World::MagmoorCaverns  => "Magmoor Caverns"   .to_string(),
-            World::ImpactCrater    => "Crater, Impact"    .to_string(),
+            World::FrigateOrpheon  => "Frigate Orpheon",
+            World::ChozoRuins      => "Chozo Ruins",
+            World::PhendranaDrifts => "Phendrana Drifts",
+            World::TallonOverworld => "Tallon Overworld",
+            World::PhazonMines     => "Mines, Phazon",
+            World::MagmoorCaverns  => "Magmoor Caverns",
+            World::ImpactCrater    => "Crater, Impact",
         }
     }
 
-    pub fn as_json_key(&self) -> String {
+    pub fn to_json_key(&self) -> &'static str {
         match self {
-            World::FrigateOrpheon  => "frigate".to_string(),
-            World::ChozoRuins      => "chozo".to_string(),
-            World::PhendranaDrifts => "phendrana".to_string(),
-            World::TallonOverworld => "tallon".to_string(),
-            World::PhazonMines     => "mines".to_string(),
-            World::MagmoorCaverns  => "magmoor".to_string(),
-            World::ImpactCrater    => "impact".to_string(),
+            World::FrigateOrpheon  => "frigate",
+            World::ChozoRuins      => "chozo",
+            World::PhendranaDrifts => "phendrana",
+            World::TallonOverworld => "tallon",
+            World::PhazonMines     => "mines",
+            World::MagmoorCaverns  => "magmoor",
+            World::ImpactCrater    => "impact",
         }
     }
 }
@@ -149,8 +149,8 @@ macro_rules! decl_elevators {
 
 impl Elevator
 {
-    pub fn from_string(_name: &String) -> Option<Self> {
-        let mut name = _name.to_lowercase().replace("\0","");
+    pub fn from_str(name: &str) -> Option<Self> {
+        let mut name = name.to_lowercase().replace("\0","");
         name.retain(|c| !c.is_whitespace());
         for elevator in Elevator::iter() {
             let mut elevator_name = elevator.name.to_lowercase().replace("\0","");
@@ -546,18 +546,17 @@ macro_rules! decl_spawn_rooms {
                 }
             }
 
-            pub fn to_string(&self) -> String
+            pub fn to_str(&self) -> &'static str
             {
                 for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
                     for room_info in rooms.iter() { // for each room in the pak
                         if self.spawn_room_data().mrea == room_info.room_id.to_u32() {
-                            return room_info.name.to_string();
+                            return room_info.name;
                         }
                     }
                 }
 
-                panic!("Failed to find a specific mrea id in pickup_meta.rs.in");
-                return "".to_string();
+                panic!("Failed to find a mreaId={} in pickup_meta.rs.in",self.spawn_room_data().mrea)
             }
         }
     };
@@ -565,9 +564,9 @@ macro_rules! decl_spawn_rooms {
 
 impl SpawnRoomData
 {
-    pub fn from_string(_dest_name: String) -> Self
+    pub fn from_str(dest_name: &str) -> Self
     {
-        let dest_name = _dest_name.to_lowercase();
+        let dest_name = dest_name.to_lowercase();
 
         // Handle special destinations //
         if dest_name == "credits" {
@@ -579,9 +578,8 @@ impl SpawnRoomData
         }
 
         // Handle elevator destinations //
-        let elevator = Elevator::from_string(&dest_name);
-        if elevator.is_some() {
-            return *elevator.unwrap().spawn_room_data();
+        if let Some(elevator) = Elevator::from_str(&dest_name) {
+            return *elevator.spawn_room_data();
         }
 
         // Handle specific room destinations //
@@ -593,7 +591,7 @@ impl SpawnRoomData
         for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
             let world = World::from_pak(pak_name).unwrap();
 
-            if !world.as_string().to_lowercase().starts_with(&world_name) {
+            if !world.to_str().to_lowercase().starts_with(&world_name) {
                 continue;
             }
 
@@ -614,7 +612,7 @@ impl SpawnRoomData
             }
         }
 
-        panic!("Error - Could not find destination '{}'", _dest_name);
+        panic!("Error - Could not find destination '{}'", dest_name)
     }
 }
 

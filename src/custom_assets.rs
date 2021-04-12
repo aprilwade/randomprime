@@ -162,7 +162,7 @@ fn extern_assets<'r>() -> Vec<Resource<'r>>
 pub fn custom_assets<'r>(
     resources: &HashMap<(u32, FourCC),
     structs::Resource<'r>>,
-    starting_memo: Option<String>,
+    starting_memo: Option<&str>,
 ) -> Vec<Resource<'r>>
 {
     // External assets
@@ -267,7 +267,7 @@ pub fn custom_assets<'r>(
 // assests used b. Create a cache of all the resources needed by any pickup, door, etc...
 pub fn collect_game_resources<'r>(
     gc_disc: &structs::GcDisc<'r>,
-    starting_memo: Option<String>,
+    starting_memo: Option<&str>,
 )
     -> HashMap<(u32, FourCC), structs::Resource<'r>>
 {

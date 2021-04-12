@@ -502,9 +502,9 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 }
 
 fn make_elevators_patch<'a>(
-    patcher: &mut PrimePatcher<'_, 'a>,
-    level_data: &HashMap<String,LevelConfig>,
-    auto_enabled_elevators: bool,
+    patcher: &mut PrimePatcher<'_, 'a>, 
+    level_data: &HashMap<String,LevelConfig>, 
+    auto_enabled_elevators: bool, 
 )
 -> (bool, bool)
 {
@@ -518,12 +518,12 @@ fn make_elevators_patch<'a>(
                 continue;
             }
 
-            let elv = Elevator::from_string(&elevator_name.to_string());
+            let elv = Elevator::from_str(&elevator_name);
             if elv.is_none() {
                 panic!("Failed to parse elevator '{}'", elevator_name);
             }
             let elv = elv.unwrap();
-            let dest = SpawnRoomData::from_string(destination_name.to_string());
+            let dest = SpawnRoomData::from_str(destination_name);
 
             if dest.mlvl == World::FrigateOrpheon.mlvl() {
                 skip_frigate = false;
@@ -2728,7 +2728,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 {
     let pickup_layout = &config.layout.pickups[..];
 
-    let starting_room = SpawnRoomData::from_string(config.starting_room.to_string());
+    let starting_room = SpawnRoomData::from_str(&config.starting_room);
 
     let frigate_done_room = {
         let mut destination_name = "Tallon:Landing Site";
@@ -2740,7 +2740,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             }
         }
 
-        SpawnRoomData::from_string(destination_name.to_string())
+        SpawnRoomData::from_str(destination_name)
     };
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
@@ -2749,7 +2749,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let show_starting_memo = config.starting_memo.is_some();
 
-    let game_resources = collect_game_resources(gc_disc, config.starting_memo.clone());
+    let starting_memo = {
+        if config.starting_memo.is_some() {
+            Some(config.starting_memo.as_ref().unwrap().as_str())
+        } else {
+            None
+        }
+    };
+
+    let game_resources = collect_game_resources(gc_disc, starting_memo);
     let game_resources = &game_resources;
 
     // XXX These values need to out live the patcher
