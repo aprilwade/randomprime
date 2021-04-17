@@ -9,7 +9,6 @@ use structs::{res_id, ResId, Resource, ResourceKind};
 use crate::{
     pickup_meta::{self, PickupType},
     door_meta::{DoorType, BlastShieldType},
-    starting_items::StartingItems,
     ResourceData,
     GcDiscLookupExtensions,
 };
@@ -100,7 +99,7 @@ pub mod custom_asset_ids {
         FLAMETHROWER_DOOR_TXTR: TXTR,
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
-        
+
         // has to be at the end //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
@@ -163,12 +162,12 @@ fn extern_assets<'r>() -> Vec<Resource<'r>>
 pub fn custom_assets<'r>(
     resources: &HashMap<(u32, FourCC),
     structs::Resource<'r>>,
-    starting_items: &StartingItems
+    starting_memo: Option<&str>,
 ) -> Vec<Resource<'r>>
 {
     // External assets
     let mut assets = extern_assets();
-    
+
     // Custom pickup model assets
     assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
         resources,
@@ -228,10 +227,15 @@ pub fn custom_assets<'r>(
             "&just=center;Shiny Missile acquired!\0".to_owned(),
         ])),
     ));
-    assets.push(build_resource(
-        custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
-        structs::ResourceKind::Strg(create_starting_items_hud_memo_strg(starting_items)),
-    ));
+
+    if starting_memo.is_some() {
+        assets.push(build_resource(
+            custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
+            structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+                format!("&just=center;{}\0", starting_memo.clone().unwrap()),
+            ])),
+        ));
+    }
 
     for pt in PickupType::iter() {
         let id = pt.skip_hudmemos_strg();
@@ -263,7 +267,7 @@ pub fn custom_assets<'r>(
 // assests used b. Create a cache of all the resources needed by any pickup, door, etc...
 pub fn collect_game_resources<'r>(
     gc_disc: &structs::GcDisc<'r>,
-    starting_items: &StartingItems
+    starting_memo: Option<&str>,
 )
     -> HashMap<(u32, FourCC), structs::Resource<'r>>
 {
@@ -299,7 +303,7 @@ pub fn collect_game_resources<'r>(
     // Remove extra assets from dependency search since they won't appear     //
     // in any pak. Instead add them to the output resource pool. These assets //
     // are provided as external files checked into the repository.            //
-    for res in custom_assets(&found, starting_items) {
+    for res in custom_assets(&found, starting_memo) {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
         assert!(found.insert(key, res).is_none());
@@ -334,10 +338,10 @@ fn create_custom_door_cmdl<'r>(
         // Deserialize the blue door CMDL into a new mutable CMDL
         let blue_door_cmdl_bytes = blue_door_cmdl.decompress().into_owned();
         let mut new_cmdl = Reader::new(&blue_door_cmdl_bytes[..]).read::<structs::Cmdl>(());
-        
+
         // Modify the new CMDL to make it unique
         new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr_id;
-        
+
         // Re-serialize the CMDL //
         let mut new_cmdl_bytes = vec![];
         new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
@@ -352,114 +356,8 @@ fn create_custom_door_cmdl<'r>(
             structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
         )
     };
-    
+
     new_door_cmdl
-}
-
-fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> structs::Strg<'r>
-{
-    let mut items = vec![];
-
-    if starting_items.scan_visor {
-        items.push("Scan Visor");
-    }
-
-    let missiles_text: String;
-    if starting_items.missiles > 1 {
-        missiles_text = format!("{} Missiles", starting_items.missiles);
-        items.push(&missiles_text[..]);
-    }
-
-    let energy_tanks_text: String;
-    if starting_items.energy_tanks >= 1 {
-        let text = if starting_items.energy_tanks == 1 {
-            "1 Energy Tank"
-        } else {
-            energy_tanks_text = format!("{} Energy Tanks", starting_items.energy_tanks);
-            &energy_tanks_text[..]
-        };
-        items.push(text);
-    }
-
-    let power_bombs_text: String;
-    if starting_items.power_bombs >= 1 {
-        let text = if starting_items.power_bombs == 1 {
-            "1 Power Bomb"
-        } else {
-            power_bombs_text = format!("{} Power Bombs", starting_items.power_bombs);
-            &power_bombs_text
-        };
-        items.push(text);
-    }
-
-    if starting_items.wave {
-        items.push("Wave Beam");
-    }
-    if starting_items.ice {
-        items.push("Ice Beam");
-    }
-    if starting_items.plasma {
-        items.push("Plasma Beam");
-    }
-    if starting_items.charge {
-        items.push("Charge Beam");
-    }
-    if starting_items.morph_ball {
-        items.push("Morph Ball");
-    }
-    if starting_items.bombs {
-        items.push("Morph Ball Bombs");
-    }
-    if starting_items.spider_ball {
-        items.push("Spider Ball");
-    }
-    if starting_items.boost_ball {
-        items.push("Boost Ball");
-    }
-    if starting_items.varia_suit {
-        items.push("Varia Suit");
-    }
-    if starting_items.gravity_suit {
-        items.push("Gravity Suit");
-    }
-    if starting_items.phazon_suit {
-        items.push("Phazon Suit");
-    }
-    if starting_items.thermal_visor {
-        items.push("Thermal Visor");
-    }
-    if starting_items.xray {
-        items.push("XRay Visor");
-    }
-    if starting_items.space_jump {
-        items.push("Space Jump Boots");
-    }
-    if starting_items.grapple {
-        items.push("Grapple Beam");
-    }
-    if starting_items.super_missile {
-        items.push("Super Missile");
-    }
-    if starting_items.wavebuster {
-        items.push("Wavebuster");
-    }
-    if starting_items.ice_spreader {
-        items.push("Ice Spreader");
-    }
-    if starting_items.flamethrower {
-        items.push("Flamethrower");
-    }
-
-    let mut items_arr = vec![];
-    for (i, item) in items.chunks(11).enumerate() {
-        if i == 0 {
-            items_arr.push(format!("&just=center;Additional Starting Items : {}\0", item.join(", ")).to_owned());
-        } else {
-            items_arr.push(format!("&just=center;{}\0", item.join(", ")).to_owned());
-        }
-    }
-
-    structs::Strg::from_strings(items_arr)
 }
 
 fn create_suit_icon_cmdl_and_ancs<'r>(

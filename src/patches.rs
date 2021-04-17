@@ -1,10 +1,9 @@
-
 use encoding::{
     all::WINDOWS_1252,
     Encoding,
     EncoderTrap,
 };
-use enum_map::EnumMap;
+
 use rand::{
     rngs::StdRng,
     seq::SliceRandom,
@@ -12,20 +11,20 @@ use rand::{
     Rng,
 };
 
-
 use crate::patch_config::{
     ArtifactHintBehavior,
     MapState,
     IsoFormat,
     PatchConfig,
-    GameBanner
+    GameBanner,
+    LevelConfig,
 };
 
 use crate::{
     custom_assets::{custom_asset_ids, collect_game_resources},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{Elevator, SpawnRoom},
+    elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
     gcz_writer::GczWriter,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
@@ -502,90 +501,117 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
-
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
-    layout: &'a EnumMap<Elevator, SpawnRoom>,
+    level_data: &HashMap<String, LevelConfig>,
     auto_enabled_elevators: bool,
 )
+-> (bool, bool)
 {
-    for (elv, dest) in layout.iter() {
-        patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
-            let scly = area.mrea().scly_section_mut();
-            for layer in scly.layers.iter_mut() {
-                let obj = layer.objects.iter_mut()
-                    .find(|obj| obj.instance_id == elv.scly_id);
-                if let Some(obj) = obj {
-                    let wt = obj.property_data.as_world_transporter_mut().unwrap();
-                    wt.mrea = ResId::new(dest.mrea);
-                    wt.mlvl = ResId::new(dest.mlvl);
-                }
+    let mut skip_frigate = true;
+    let mut skip_ending_cinematic = false;
+    for (_, level) in level_data.iter() {
+        for (elevator_name, destination_name) in level.transports.iter() {
+
+            // special case, handled elsewhere
+            if elevator_name == "destroyed frigate cutscene" {
+                continue;
             }
 
-            if auto_enabled_elevators {
-                // Auto enable the elevator
-                let layer = &mut scly.layers.as_mut_vec()[0];
-                let mr_id = layer.objects.iter()
-                    .find(|obj| obj.property_data.as_memory_relay()
-                        .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
-                        .unwrap_or(false)
-                    )
-                    .map(|mr| mr.instance_id);
+            let elv = Elevator::from_str(&elevator_name);
+            if elv.is_none() {
+                panic!("Failed to parse elevator '{}'", elevator_name);
+            }
+            let elv = elv.unwrap();
+            let dest = SpawnRoomData::from_str(destination_name);
 
-                if let Some(mr_id) = mr_id {
-                    layer.objects.as_mut_vec().push(structs::SclyObject {
-                        instance_id: ps.fresh_instance_id_range.next().unwrap(),
-                        property_data: structs::Timer {
-                            name: b"Auto enable elevator\0".as_cstr(),
-
-                            start_time: 0.001,
-                            max_random_add: 0f32,
-                            reset_to_zero: 0,
-                            start_immediately: 1,
-                            active: 1,
-                        }.into(),
-                        connections: vec![
-                            structs::Connection {
-                                state: structs::ConnectionState::ZERO,
-                                message: structs::ConnectionMsg::ACTIVATE,
-                                target_object_id: mr_id,
-                            },
-                        ].into(),
-                    });
-                }
+            if dest.mlvl == World::FrigateOrpheon.mlvl() {
+                skip_frigate = false;
             }
 
-            Ok(())
-        });
+            if dest.mrea == SpawnRoom::EndingCinematic.spawn_room_data().mrea {
+                skip_ending_cinematic = true;
+            }
 
-        let room_dest_name = dest.name.replace('\0', "\n");
-        let hologram_name = dest.name.replace('\0', " ");
-        let control_name = dest.name.replace('\0', " ");
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
-            let string = format!("Transport to {}\u{0}", room_dest_name);
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
-            let string = format!(
-                "Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}",
-                hologram_name,
-            );
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
-        patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
-            let string = format!(
-                "Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}",
-                control_name,
-            );
-            let strg = structs::Strg::from_strings(vec![string]);
-            res.kind = structs::ResourceKind::Strg(strg);
-            Ok(())
-        });
+            patcher.add_scly_patch((elv.pak_name.as_bytes(), elv.mrea), move |ps, area| {
+                let scly = area.mrea().scly_section_mut();
+                for layer in scly.layers.iter_mut() {
+                    let obj = layer.objects.iter_mut()
+                        .find(|obj| obj.instance_id == elv.scly_id);
+                    if let Some(obj) = obj {
+                        let wt = obj.property_data.as_world_transporter_mut().unwrap();
+                        wt.mrea = ResId::new(dest.mrea);
+                        wt.mlvl = ResId::new(dest.mlvl);
+                    }
+                }
+
+                if auto_enabled_elevators {
+                    // Auto enable the elevator
+                    let layer = &mut scly.layers.as_mut_vec()[0];
+                    let mr_id = layer.objects.iter()
+                        .find(|obj| obj.property_data.as_memory_relay()
+                            .map(|mr| mr.name == b"Memory Relay - dim scan holo\0".as_cstr())
+                            .unwrap_or(false)
+                        )
+                        .map(|mr| mr.instance_id);
+
+                    if let Some(mr_id) = mr_id {
+                        layer.objects.as_mut_vec().push(structs::SclyObject {
+                            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                            property_data: structs::Timer {
+                                name: b"Auto enable elevator\0".as_cstr(),
+
+                                start_time: 0.001,
+                                max_random_add: 0f32,
+                                reset_to_zero: 0,
+                                start_immediately: 1,
+                                active: 1,
+                            }.into(),
+                            connections: vec![
+                                structs::Connection {
+                                    state: structs::ConnectionState::ZERO,
+                                    message: structs::ConnectionMsg::ACTIVATE,
+                                    target_object_id: mr_id,
+                                },
+                            ].into(),
+                        });
+                    }
+                }
+
+                Ok(())
+            });
+
+            let room_dest_name = dest.name.replace('\0', "\n");
+            let hologram_name = dest.name.replace('\0', " ");
+            let control_name = dest.name.replace('\0', " ");
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
+                let string = format!("Transport to {}\u{0}", room_dest_name);
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.hologram_strg, b"STRG".into()), move |res| {
+                let string = format!(
+                    "Access to &main-color=#FF3333;{} &main-color=#89D6FF;granted. Please step into the hologram.\u{0}",
+                    hologram_name,
+                );
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+            patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.control_strg, b"STRG".into()), move |res| {
+                let string = format!(
+                    "Transport to &main-color=#FF3333;{}&main-color=#89D6FF; active.\u{0}",
+                    control_name,
+                );
+                let strg = structs::Strg::from_strings(vec![string]);
+                res.kind = structs::ResourceKind::Strg(strg);
+                Ok(())
+            });
+        }
     }
+
+    (skip_frigate, skip_ending_cinematic)
 }
 
 fn patch_landing_site_cutscene_triggers(
@@ -665,7 +691,10 @@ fn patch_ending_scene_straight_to_credits(
 }
 
 
-fn patch_frigate_teleporter<'r>(area: &mut mlvl_wrapper::MlvlArea, spawn_room: SpawnRoom)
+fn patch_frigate_teleporter<'r>(
+    area: &mut mlvl_wrapper::MlvlArea,
+    spawn_room: SpawnRoomData,
+)
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
@@ -2056,18 +2085,17 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
     Ok(())
 }
 
-
 fn patch_starting_pickups<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     starting_items: &StartingItems,
-    show_starting_items: bool,
+    show_starting_memo: bool,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
     let layer_count = area.mrea().scly_section_mut().layers.as_mut_vec().len() as u32;
 
-    if show_starting_items {
+    if show_starting_memo {
         // Turn on "Randomizer - Starting Items popup Layer"
         area.layer_flags.flags |= 1 << layer_count;
         area.add_layer(b"Randomizer - Starting Items popup Layer\0".as_cstr());
@@ -2095,7 +2123,7 @@ fn patch_starting_pickups<'r>(
         }
     }
 
-    if show_starting_items {
+    if show_starting_memo {
         scly.layers.as_mut_vec()[layer_count as usize].objects.as_mut_vec().extend_from_slice(
             &[
                 structs::SclyObject {
@@ -2158,7 +2186,7 @@ fn patch_starting_pickups<'r>(
 
 include!("../compile_to_ppc/patches_config.rs");
 fn create_rel_config_file(
-    spawn_room: SpawnRoom,
+    spawn_room: SpawnRoomData,
     quickplay: bool,
 ) -> Vec<u8>
 {
@@ -2173,7 +2201,7 @@ fn create_rel_config_file(
 
 fn patch_dol<'r>(
     file: &mut structs::FstEntryFile,
-    spawn_room: SpawnRoom,
+    spawn_room: SpawnRoomData,
     version: Version,
     config: &PatchConfig,
 ) -> Result<(), String>
@@ -2409,25 +2437,25 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if config.max_obtainable_missiles > 999 {
+    if config.missile_capacity > 999 {
         Err("The max amount of missiles you can carry has exceeded the limit (>999)!".to_string())?;
     }
 
-    if config.max_obtainable_power_bombs > 9 {
+    if config.power_bomb_capacity > 9 {
         Err("The max amount of power bombs you can carry has exceeded the limit (>9)!".to_string())?;
     }
 
     // CPlayerState_PowerUpMaxValues[4]
-    let max_obtainable_missiles_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
-        .long config.max_obtainable_missiles;
+    let missile_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
+        .long config.missile_capacity;
     });
-    dol_patcher.ppcasm_patch(&max_obtainable_missiles_patch)?;
+    dol_patcher.ppcasm_patch(&missile_capacity_patch)?;
 
     // CPlayerState_PowerUpMaxValues[7]
-    let max_obtainable_power_bombs_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
-        .long config.max_obtainable_power_bombs;
+    let power_bomb_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
+        .long config.power_bomb_capacity;
     });
-    dol_patcher.ppcasm_patch(&max_obtainable_power_bombs_patch)?;
+    dol_patcher.ppcasm_patch(&power_bomb_capacity_patch)?;
 
     // set etank capacity and base health
     let etank_capacity = config.etank_capacity as f32;
@@ -2444,7 +2472,7 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
-    
+
     if config.map_default_state != MapState::Default {
         let is_mapped_patch = ppcasm!(symbol_addr!("IsMapped__13CMapWorldInfoCF7TAreaId", version), {
             li      r3, 0x1;
@@ -2459,7 +2487,7 @@ fn patch_dol<'r>(
             dol_patcher.ppcasm_patch(&is_area_visited_patch)?;
         }
     }
-    
+
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::NtscU0_00 => {
             let loader_bytes = rel_files::REL_LOADER_100;
@@ -2607,7 +2635,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "layout: {:#?}", config.layout).unwrap();
-    writeln!(ct, "skip frigate: {}", config.skip_frigate).unwrap();
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
@@ -2616,8 +2643,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "etank capacity: {}", config.etank_capacity).unwrap();
     writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
-    writeln!(ct, "max obtainable missiles: {}", config.max_obtainable_missiles).unwrap();
-    writeln!(ct, "max obtainable power bombs: {}", config.max_obtainable_power_bombs).unwrap();
+    writeln!(ct, "missile capacity: {}", config.missile_capacity).unwrap();
+    writeln!(ct, "power bomb capacity: {}", config.power_bomb_capacity).unwrap();
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
@@ -2700,16 +2727,38 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     -> Result<(), String>
 {
     let pickup_layout = &config.layout.pickups[..];
-    let elevator_layout = &config.layout.elevators;
-    let spawn_room = config.layout.starting_location;
+
+    let starting_room = SpawnRoomData::from_str(&config.starting_room);
+
+    let frigate_done_room = {
+        let mut destination_name = "Tallon:Landing Site";
+        let frigate_level = config.level_data.get(&"frigate".to_string());
+        if frigate_level.is_some() {
+            let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
+            if x.is_some() {
+                destination_name = x.unwrap();
+            }
+        }
+
+        SpawnRoomData::from_str(destination_name)
+    };
+    assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
     let mut rng = StdRng::seed_from_u64(config.layout.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
 
-    let game_resources = collect_game_resources(gc_disc, &config.random_starting_items);
-    let game_resources = &game_resources;
+    let show_starting_memo = config.starting_memo.is_some();
 
-    let starting_items = StartingItems::merge(config.starting_items.clone(), config.random_starting_items.clone());
+    let starting_memo = {
+        if config.starting_memo.is_some() {
+            Some(config.starting_memo.as_ref().unwrap().as_str())
+        } else {
+            None
+        }
+    };
+
+    let game_resources = collect_game_resources(gc_disc, starting_memo);
+    let game_resources = &game_resources;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -2817,39 +2866,36 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    let rel_config;
-    if config.skip_frigate {
-        patcher.add_file_patch(
-            b"default.dol",
-            move |file| patch_dol(
-                file,
-                spawn_room,
-                version,
-                config,
-            )
-        );
-        patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
-        rel_config = create_rel_config_file(spawn_room, config.quickplay);
-    } else {
-        patcher.add_file_patch(
-            b"default.dol",
-            |file| patch_dol(
-                file,
-                SpawnRoom::FrigateExteriorDockingHangar,
-                version,
-                config,
-            )
-        );
+    let (skip_frigate, skip_ending_cinematic) = make_elevators_patch(
+        &mut patcher,
+        &config.level_data,
+        config.auto_enabled_elevators,
+    );
 
+    // set save spawn room
+    patcher.add_file_patch(
+        b"default.dol",
+        |file| patch_dol(
+            file,
+            starting_room,
+            version,
+            config,
+        )
+    );
+
+    let rel_config = create_rel_config_file(starting_room, config.quickplay);
+
+    if skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl(){
+        // remove frigate data to save time/space
+        patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
+    } else {
+        // redirect end of frigate cutscene to room specified in layout
         patcher.add_scly_patch(
             resource_info!("01_intro_hanger.MREA").into(),
-            move |_ps, area| patch_frigate_teleporter(area, spawn_room)
-        );
-        rel_config = create_rel_config_file(
-            SpawnRoom::FrigateExteriorDockingHangar,
-            config.quickplay
+            move |_ps, area| patch_frigate_teleporter(area, frigate_done_room),
         );
     }
+
     gc_disc.add_file(
         "rel_config.bin",
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
@@ -2908,20 +2954,40 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_save_banner_txtr
     );
 
-    let show_starting_items = !config.random_starting_items.is_empty();
     patcher.add_scly_patch(
-        (spawn_room.pak_name.as_bytes(), spawn_room.mrea),
+        (starting_room.pak_name.as_bytes(), starting_room.mrea),
         move |_ps, area| patch_starting_pickups(
             area,
-            &starting_items,
-            show_starting_items,
+            &config.starting_items,
+            show_starting_memo,
             &game_resources,
         )
     );
 
-    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
+    if !skip_frigate {
+        patcher.add_scly_patch(
+            resource_info!("02_intro_elevator.MREA").into(),
+            move |_ps, area| patch_starting_pickups(
+                area,
+                &config.item_loss_items,
+                false,
+                &game_resources,
+            )
+        );
 
-    make_elevators_patch(&mut patcher, &elevator_layout, config.auto_enabled_elevators);
+        // TODO: only works for landing site
+        patcher.add_scly_patch(
+            (frigate_done_room.pak_name.as_bytes(), frigate_done_room.mrea),
+            move |_ps, area| patch_starting_pickups(
+                area,
+                &config.item_loss_items,
+                false,
+                &game_resources,
+            )
+        );
+    }
+
+    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
 
     make_elite_research_fight_prereq_patches(&mut patcher);
 
@@ -3035,7 +3101,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    if spawn_room != SpawnRoom::LandingSite {
+    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(
@@ -3044,9 +3110,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    // If any of the elevators go straight to the ending, patch out the pre-credits cutscene.
-    let skip_ending_cinematic = elevator_layout.values()
-        .any(|sr| sr == &SpawnRoom::EndingCinematic);
     if skip_ending_cinematic {
         patcher.add_scly_patch(
             resource_info!("01_endcinema.MREA").into(),

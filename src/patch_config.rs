@@ -4,8 +4,9 @@ use num_traits::ToPrimitive;
 use std::{
     collections::hash_map::DefaultHasher,
     ffi::CStr,
-    hash::{Hash,Hasher},
+    hash::{Hash, Hasher},
     convert::TryInto,
+    collections::HashMap,
     iter,
     fmt,
     fs::{File, OpenOptions},
@@ -80,6 +81,46 @@ pub struct GameBanner
     pub description: Option<String>,
 }
 
+// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PickupConfig
+{
+    // pub pickup_type: String,
+    // pub count: u32,
+    // pub model: PickupModelType,
+    // pub scan_text: String,
+    // pub hudmemo_text: String,
+    // pub desination: String,
+    // pub position: [f32;3],
+}
+
+// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RoomConfig
+{
+    // pub remove_locks: bool,
+    // pub superheated: bool,
+    // pub remove_water: bool,
+    // pub submerge: bool,
+    // pub extra_water: Vec<WaterConfig>,
+    // pub doors: Vec<String>,
+    // pub blast_shields: Vec<String>,
+    // pub pickups: Vec<PickupConfig>,
+    // pub extra_pickups: Vec<PickupConfig>,
+    // pub extra_scans: Vec<ScanConfig>,
+    // pub aether_transform: Vec<AetherTransformConfig>,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LevelConfig
+{
+    pub transports: HashMap<String, String>,
+    pub rooms: HashMap<String, RoomConfig>,
+}
+
 #[derive(Debug)]
 pub struct PatchConfig
 {
@@ -89,7 +130,11 @@ pub struct PatchConfig
 
     pub layout: Layout,
 
-    pub skip_frigate: bool,
+    pub level_data: HashMap<String, LevelConfig>,
+
+    pub starting_room: String,
+    pub starting_memo: Option<String>,
+
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
@@ -97,14 +142,14 @@ pub struct PatchConfig
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,
-    pub max_obtainable_missiles: u32,
-    pub max_obtainable_power_bombs: u32,
+    pub missile_capacity: u32,
+    pub power_bomb_capacity: u32,
     pub map_default_state: MapState,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
 
     pub starting_items: StartingItems,
-    pub random_starting_items: StartingItems,
+    pub item_loss_items: StartingItems,
 
     pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
@@ -131,7 +176,6 @@ enum LayoutWrapper
     Struct {
         pickups: Vec<PickupType>,
         starting_location: SpawnRoom,
-        // #[serde(default = "Elevator::default_layout")]
         elevators: EnumMap<Elevator, SpawnRoom>,
     },
 }
@@ -159,7 +203,7 @@ impl TryInto<Layout> for LayoutWrapper
     }
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
@@ -173,11 +217,13 @@ struct Preferences
     quiet: Option<bool>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct GameConfig
 {
-    skip_frigate: Option<bool>, // TODO: remove, calculate automatically once starting room is a thing
+    starting_room: Option<String>,
+    starting_memo: Option<String>,
+
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
     heat_damage_per_sec: Option<f32>,
@@ -185,18 +231,18 @@ struct GameConfig
     enable_vault_ledge_door: Option<bool>, // TODO: remove, calculate automatically once door patching is a thing
 
     starting_items: Option<StartingItems>,
-    random_starting_items: Option<StartingItems>, // TODO: replace with a "game start memo" string
+    item_loss_items: Option<StartingItems>,
 
     etank_capacity: Option<u32>,
-    max_obtainable_missiles: Option<u32>, // TODO: rename
-    max_obtainable_power_bombs: Option<u32>, // TODO: rename
+    missile_capacity: Option<u32>,
+    power_bomb_capacity: Option<u32>,
 
     game_banner: Option<GameBanner>,
     comment: Option<String>,
     main_menu_message: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 struct PatchConfigPrivate
 {
@@ -208,6 +254,9 @@ struct PatchConfigPrivate
 
     #[serde(default)]
     game_config: GameConfig,
+
+    #[serde(default)]
+    level_data: HashMap<String, LevelConfig>,
 
     layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
 }
@@ -241,9 +290,14 @@ impl PatchConfig
                 .long("layout")
                 .takes_value(true)
                 .allow_hyphen_values(true))
-            .arg(Arg::with_name("skip frigate")
-                .long("skip-frigate")
-                .help("New save files will skip the \"Space Pirate Frigate\" tutorial level"))
+            .arg(Arg::with_name("starting room")
+                .long("starting-room")
+                .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
+                .takes_value(true))
+            .arg(Arg::with_name("starting memo")
+                .long("starting-memo")
+                .help("String which is shown to the player after they start a new save file")
+                .takes_value(true))
             .arg(Arg::with_name("skip hudmenus")
                 .long("non-modal-item-messages")
                 .help("Display a non-modal message when an item is is acquired"))
@@ -262,12 +316,12 @@ impl PatchConfig
                 .long("staggered-suit-damage")
                 .help(concat!("The suit damage reduction is determinted by the number of suits ",
                                 "collected rather than the most powerful one collected.")))
-            .arg(Arg::with_name("max obtainable missiles")
-                .long("max-obtainable-missiles")
+            .arg(Arg::with_name("missile capacity")
+                .long("missile-capacity")
                 .help("Set the max amount of Missiles you can carry")
                 .takes_value(true))
-            .arg(Arg::with_name("max obtainable power bombs")
-                .long("max-obtainable-power-bombs")
+            .arg(Arg::with_name("power bomb capacity")
+                .long("power-bomb-capacity")
                 .help("Set the max amount of Power Bombs you can carry")
                 .takes_value(true))
             .arg(Arg::with_name("map default state")
@@ -281,9 +335,6 @@ impl PatchConfig
                 .long("artifact-hint-behavior")
                 .help("Set the behavior of artifact temple hints. Can be 'all', 'none', or 'default' (vanilla)")
                 .takes_value(true))
-            .arg(Arg::with_name("skip impact crater")
-                .long("skip-impact-crater")
-                .help("Elevators to the Impact Crater immediately go to the game end sequence"))
             .arg(Arg::with_name("enable vault ledge door")
                 .long("enable-vault-ledge-door")
                 .help("Enable Chozo Ruins Vault door from Main Plaza"))
@@ -310,15 +361,13 @@ impl PatchConfig
                 .long("main-menu-message")
                 .hidden(true)
                 .takes_value(true))
-            .arg(Arg::with_name("random starting items")
-                .long("random-starting-items")
-                .hidden(true)
+            .arg(Arg::with_name("starting items")
+                .long("starting-items")
                 .takes_value(true)
                 .validator(|s| s.parse::<u64>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
-            .arg(Arg::with_name("change starting items")
-                .long("starting-items")
-                .hidden(true)
+            .arg(Arg::with_name("item loss items")
+                .long("item-loss-items")
                 .takes_value(true)
                 .validator(|s| s.parse::<u64>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
@@ -334,7 +383,7 @@ impl PatchConfig
         let mut patch_config = if matches.is_present("profile json path") {
             let json_path = matches.value_of("profile json path").unwrap();
             let cli_json_config_raw: &str = &fs::read_to_string(json_path)
-                .map_err(|e| format!("Could not read JSON file: {}",e)).unwrap();
+                .map_err(|e| format!("Could not read JSON file: {}", e)).unwrap();
 
             serde_json::from_str(cli_json_config_raw)
                 .map_err(|e| format!("JSON parse failed: {}", e))?
@@ -358,7 +407,6 @@ impl PatchConfig
             "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
-            "skip frigate" => patch_config.game_config.skip_frigate,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
@@ -381,6 +429,9 @@ impl PatchConfig
         if let Some(trilogy_disc_path) = matches.value_of("trilogy disc path") {
             patch_config.preferences.trilogy_disc_path = Some(trilogy_disc_path.to_string());
         }
+        if let Some(starting_room) = matches.value_of("starting room") {
+            patch_config.game_config.starting_room = Some(starting_room.to_string());
+        }
 
         // integer/float
         if let Some(damage) = matches.value_of("heat damage per sec") {
@@ -389,11 +440,11 @@ impl PatchConfig
         if let Some(etank_capacity) = matches.value_of("etank capacity") {
             patch_config.game_config.etank_capacity = Some(etank_capacity.parse::<u32>().unwrap());
         }
-        if let Some(s) = matches.value_of("max obtainable missiles") {
-            patch_config.game_config.max_obtainable_missiles= Some(s.parse::<u32>().unwrap());
+        if let Some(s) = matches.value_of("missile capacity") {
+            patch_config.game_config.missile_capacity= Some(s.parse::<u32>().unwrap());
         }
-        if let Some(s) = matches.value_of("max obtainable power bombs") {
-            patch_config.game_config.max_obtainable_power_bombs = Some(s.parse::<u32>().unwrap());
+        if let Some(s) = matches.value_of("power bomb capacity") {
+            patch_config.game_config.power_bomb_capacity = Some(s.parse::<u32>().unwrap());
         }
 
         // custom
@@ -405,9 +456,9 @@ impl PatchConfig
                 StartingItems::from_u64(starting_items_str.parse::<u64>().unwrap())
             );
         }
-        if let Some(random_starting_items_str) = matches.value_of("random starting items") {
-            patch_config.game_config.random_starting_items = Some(
-                StartingItems::from_u64(random_starting_items_str.parse::<u64>().unwrap())
+        if let Some(item_loss_items_str) = matches.value_of("item loss items") {
+            patch_config.game_config.item_loss_items = Some(
+                StartingItems::from_u64(item_loss_items_str.parse::<u64>().unwrap())
             );
         }
 
@@ -471,7 +522,7 @@ impl PatchConfigPrivate
                 ))?
             }
         };
-        
+
         let map_default_state = {
             let map_default_state_string = self.preferences.map_default_state
                                                .as_deref()
@@ -498,6 +549,7 @@ impl PatchConfigPrivate
             iso_format,
             output_iso,
             layout,
+            level_data: self.level_data.clone(),
 
             skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
@@ -508,7 +560,9 @@ impl PatchConfigPrivate
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
 
-            skip_frigate: self.game_config.skip_frigate.unwrap_or(true),
+            starting_room: self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
+            starting_memo: self.game_config.starting_memo.clone(),
+
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
@@ -517,13 +571,13 @@ impl PatchConfigPrivate
             enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
             starting_items: self.game_config.starting_items.clone()
-                .unwrap_or_else(|| StartingItems::from_u64(1)),
-            random_starting_items: self.game_config.random_starting_items.clone()
-                .unwrap_or_else(|| StartingItems::from_u64(0)),
+            .unwrap_or_else(|| StartingItems::from_u64(1)),
+            item_loss_items: self.game_config.item_loss_items.clone()
+            .unwrap_or_else(|| StartingItems::from_u64(1)),
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
-            max_obtainable_missiles: self.game_config.max_obtainable_missiles.unwrap_or(999),
-            max_obtainable_power_bombs: self.game_config.max_obtainable_power_bombs.unwrap_or(8),
+            missile_capacity: self.game_config.missile_capacity.unwrap_or(999),
+            power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(8),
 
             game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
             comment: self.game_config.comment.clone().unwrap_or(String::new()),
