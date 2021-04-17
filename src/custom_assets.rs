@@ -1,14 +1,22 @@
 use resource_info_table::resource_info;
-use reader_writer::{FourCC, Reader, Writable};
+use reader_writer::{
+    FourCC,
+    Reader,
+    Writable,
+};
 use structs::{res_id, ResId, Resource, ResourceKind};
 
 use crate::{
-    pickup_meta::PickupType,
-    starting_items::StartingItems,
+    pickup_meta::{self, PickupType},
+    door_meta::{DoorType, BlastShieldType},
     ResourceData,
+    GcDiscLookupExtensions,
 };
 
-use std::collections::HashMap;
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 macro_rules! def_asset_ids {
     (@Build { $prev:expr } $id:ident: $fc:ident, $($rest:tt)*) => {
@@ -27,6 +35,7 @@ macro_rules! def_asset_ids {
 
 pub mod custom_asset_ids {
     def_asset_ids! {
+        // Item Assets //
         PHAZON_SUIT_SCAN: SCAN = 0xDEAF0000,
         PHAZON_SUIT_STRG: STRG,
         PHAZON_SUIT_TXTR1: TXTR,
@@ -56,6 +65,42 @@ pub mod custom_asset_ids {
         SHINY_MISSILE_SCAN: SCAN,
         STARTING_ITEMS_HUDMEMO_STRG: STRG,
 
+        // Door Assets //
+        MORPH_BALL_BOMB_DOOR_CMDL: CMDL,
+        POWER_BOMB_DOOR_CMDL: CMDL,
+        MISSILE_DOOR_CMDL: CMDL,
+        CHARGE_DOOR_CMDL: CMDL,
+        SUPER_MISSILE_DOOR_CMDL: CMDL,
+        WAVEBUSTER_DOOR_CMDL: CMDL,
+        ICESPREADER_DOOR_CMDL: CMDL,
+        FLAMETHROWER_DOOR_CMDL: CMDL,
+        DISABLED_DOOR_CMDL: CMDL,
+        AI_DOOR_CMDL: CMDL,
+
+        VERTICAL_RED_DOOR_CMDL: CMDL,
+        VERTICAL_POWER_BOMB_DOOR_CMDL: CMDL,
+        VERTICAL_MORPH_BALL_BOMB_DOOR_CMDL: CMDL,
+        VERTICAL_MISSILE_DOOR_CMDL: CMDL,
+        VERTICAL_CHARGE_DOOR_CMDL: CMDL,
+        VERTICAL_SUPER_MISSILE_DOOR_CMDL: CMDL,
+        VERTICAL_DISABLED_DOOR_CMDL: CMDL,
+        VERTICAL_WAVEBUSTER_DOOR_CMDL: CMDL,
+        VERTICAL_ICESPREADER_DOOR_CMDL: CMDL,
+        VERTICAL_FLAMETHROWER_DOOR_CMDL: CMDL,
+        VERTICAL_AI_DOOR_CMDL: CMDL,
+
+        MORPH_BALL_BOMB_DOOR_TXTR: TXTR,
+        POWER_BOMB_DOOR_TXTR: TXTR,
+        MISSILE_DOOR_TXTR: TXTR,
+        CHARGE_DOOR_TXTR: TXTR,
+        SUPER_MISSILE_DOOR_TXTR: TXTR,
+        WAVEBUSTER_DOOR_TXTR: TXTR,
+        ICESPREADER_DOOR_TXTR: TXTR,
+        FLAMETHROWER_DOOR_TXTR: TXTR,
+        DISABLED_DOOR_TXTR: TXTR,
+        AI_DOOR_TXTR: TXTR,
+
+        // has to be at the end //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
     }
@@ -88,40 +133,42 @@ pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<
         original_offset: 0,
     }
 }
-fn extra_assets<'r>() -> Vec<Resource<'r>>
+
+// Assets defined in an external file
+fn extern_assets<'r>() -> Vec<Resource<'r>>
 {
-    let extra_assets: &[((u32, FourCC), &[u8])] = &[
-        // Phazon Suit TXTR 1
-        (custom_asset_ids::PHAZON_SUIT_TXTR1.into(),
-        include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
-        // Phazon Suit TXTR 2
-        (custom_asset_ids::PHAZON_SUIT_TXTR2.into(),
-        include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
-        // Nothing texture
-        (custom_asset_ids::NOTHING_TXTR.into(),
-        include_bytes!("../extra_assets/nothing_texture.txtr")),
-        // Shiny Missile TXTR 0
-        (custom_asset_ids::SHINY_MISSILE_TXTR0.into(),
-        include_bytes!("../extra_assets/shiny-missile0.txtr")),
-        // Shiny Missile TXTR 1
-        (custom_asset_ids::SHINY_MISSILE_TXTR1.into(),
-        include_bytes!("../extra_assets/shiny-missile1.txtr")),
-        // Shiny Missile TXTR 2
-        (custom_asset_ids::SHINY_MISSILE_TXTR2.into(),
-        include_bytes!("../extra_assets/shiny-missile2.txtr")),
+    let extern_assets: &[(ResId<res_id::TXTR>, [u8; 4], &[u8])] = &[
+        (custom_asset_ids::PHAZON_SUIT_TXTR1,         *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
+        (custom_asset_ids::PHAZON_SUIT_TXTR2,         *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_2.txtr")),
+        (custom_asset_ids::NOTHING_TXTR,              *b"TXTR", include_bytes!("../extra_assets/nothing_texture.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR0,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile0.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR1,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile1.txtr")),
+        (custom_asset_ids::SHINY_MISSILE_TXTR2,       *b"TXTR", include_bytes!("../extra_assets/shiny-missile2.txtr")),
+        (custom_asset_ids::AI_DOOR_TXTR,              *b"TXTR", include_bytes!("../extra_assets/holorim_ai.txtr")),
+        (custom_asset_ids::MORPH_BALL_BOMB_DOOR_TXTR, *b"TXTR", include_bytes!("../extra_assets/holorim_bombs.txtr")),
+        (custom_asset_ids::POWER_BOMB_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_powerbomb.txtr")),
+        (custom_asset_ids::SUPER_MISSILE_DOOR_TXTR,   *b"TXTR", include_bytes!("../extra_assets/holorim_super.txtr")),
+        (custom_asset_ids::WAVEBUSTER_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_wavebuster.txtr")),
+        (custom_asset_ids::ICESPREADER_DOOR_TXTR,     *b"TXTR", include_bytes!("../extra_assets/holorim_icespreader.txtr")),
+        (custom_asset_ids::FLAMETHROWER_DOOR_TXTR,    *b"TXTR", include_bytes!("../extra_assets/holorim_flamethrower.txtr")),
     ];
 
-    extra_assets.iter().map(|&((file_id, fourcc), bytes)| {
-        build_resource_raw(file_id, ResourceKind::Unknown(Reader::new(bytes), fourcc))
+    extern_assets.iter().map(|&(res, ref fourcc, bytes)| {
+        build_resource(res, ResourceKind::Unknown(Reader::new(bytes), fourcc.into()))
     }).collect()
 }
 
+// Assets not found in the base game
 pub fn custom_assets<'r>(
-    resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    starting_items: &StartingItems
+    resources: &HashMap<(u32, FourCC),
+    structs::Resource<'r>>,
+    starting_memo: Option<&str>,
 ) -> Vec<Resource<'r>>
 {
-    let mut assets = extra_assets();
+    // External assets
+    let mut assets = extern_assets();
+
+    // Custom pickup model assets
     assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
         resources,
         custom_asset_ids::NOTHING_CMDL,
@@ -180,10 +227,15 @@ pub fn custom_assets<'r>(
             "&just=center;Shiny Missile acquired!\0".to_owned(),
         ])),
     ));
-    assets.push(build_resource(
-        custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
-        structs::ResourceKind::Strg(create_starting_items_hud_memo_strg(starting_items)),
-    ));
+
+    if starting_memo.is_some() {
+        assets.push(build_resource(
+            custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
+            structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+                format!("&just=center;{}\0", starting_memo.clone().unwrap()),
+            ])),
+        ));
+    }
 
     for pt in PickupType::iter() {
         let id = pt.skip_hudmemos_strg();
@@ -201,113 +253,111 @@ pub fn custom_assets<'r>(
         ));
     }
 
-    assets
-}
-
-fn create_starting_items_hud_memo_strg<'r>(starting_items: &StartingItems) -> structs::Strg<'r>
-{
-    let mut items = vec![];
-
-    if starting_items.scan_visor {
-        items.push("Scan Visor");
-    }
-
-    let missiles_text: String;
-    if starting_items.missiles > 1 {
-        missiles_text = format!("{} Missiles", starting_items.missiles);
-        items.push(&missiles_text[..]);
-    }
-
-    let energy_tanks_text: String;
-    if starting_items.energy_tanks >= 1 {
-        let text = if starting_items.energy_tanks == 1 {
-            "1 Energy Tank"
-        } else {
-            energy_tanks_text = format!("{} Energy Tanks", starting_items.energy_tanks);
-            &energy_tanks_text[..]
-        };
-        items.push(text);
-    }
-
-    let power_bombs_text: String;
-    if starting_items.power_bombs >= 1 {
-        let text = if starting_items.power_bombs == 1 {
-            "1 Power Bomb"
-        } else {
-            power_bombs_text = format!("{} Power Bombs", starting_items.power_bombs);
-            &power_bombs_text
-        };
-        items.push(text);
-    }
-
-    if starting_items.wave {
-        items.push("Wave Beam");
-    }
-    if starting_items.ice {
-        items.push("Ice Beam");
-    }
-    if starting_items.plasma {
-        items.push("Plasma Beam");
-    }
-    if starting_items.charge {
-        items.push("Charge Beam");
-    }
-    if starting_items.morph_ball {
-        items.push("Morph Ball");
-    }
-    if starting_items.bombs {
-        items.push("Morph Ball Bombs");
-    }
-    if starting_items.spider_ball {
-        items.push("Spider Ball");
-    }
-    if starting_items.boost_ball {
-        items.push("Boost Ball");
-    }
-    if starting_items.varia_suit {
-        items.push("Varia Suit");
-    }
-    if starting_items.gravity_suit {
-        items.push("Gravity Suit");
-    }
-    if starting_items.phazon_suit {
-        items.push("Phazon Suit");
-    }
-    if starting_items.thermal_visor {
-        items.push("Thermal Visor");
-    }
-    if starting_items.xray {
-        items.push("XRay Visor");
-    }
-    if starting_items.space_jump {
-        items.push("Space Jump Boots");
-    }
-    if starting_items.grapple {
-        items.push("Grapple Beam");
-    }
-    if starting_items.super_missile {
-        items.push("Super Missile");
-    }
-    if starting_items.wavebuster {
-        items.push("Wavebuster");
-    }
-    if starting_items.ice_spreader {
-        items.push("Ice Spreader");
-    }
-    if starting_items.flamethrower {
-        items.push("Flamethrower");
-    }
-
-    let mut items_arr = vec![];
-    for (i, item) in items.chunks(11).enumerate() {
-        if i == 0 {
-            items_arr.push(format!("&just=center;Additional Starting Items : {}\0", item.join(", ")).to_owned());
-        } else {
-            items_arr.push(format!("&just=center;{}\0", item.join(", ")).to_owned());
+    // Custom door assets
+    for door_type in DoorType::iter() {
+        if door_type.shield_cmdl().to_u32() >= 0xDEAF0000 { // only if it doesn't exist in-game already
+            assets.push(create_custom_door_cmdl(resources, door_type));
         }
     }
 
-    structs::Strg::from_strings(items_arr)
+    assets
+}
+
+// When modifying resources in an MREA, we need to give the room a copy of the resources/
+// assests used b. Create a cache of all the resources needed by any pickup, door, etc...
+pub fn collect_game_resources<'r>(
+    gc_disc: &structs::GcDisc<'r>,
+    starting_memo: Option<&str>,
+)
+    -> HashMap<(u32, FourCC), structs::Resource<'r>>
+{
+    // Get list of all dependencies patcher needs //
+    let mut looking_for = HashSet::<_>::new();
+    looking_for.extend(PickupType::iter().flat_map(|x| x.dependencies().iter().cloned()));
+    looking_for.extend(PickupType::iter().map(|x| -> (_, _) { x.hudmemo_strg().into() }));
+    looking_for.extend(DoorType::iter().flat_map(|x| x.dependencies()));
+    looking_for.extend(BlastShieldType::iter().flat_map(|x| x.dependencies()));
+
+    // Dependencies read from paks and custom assets will go here //
+    let mut found = HashMap::with_capacity(looking_for.len());
+
+    // Iterate through every level Pak //
+    for pak_name in pickup_meta::ROOM_INFO.iter().map(|(name, _)| name) {
+        let file_entry = gc_disc.find_file(pak_name).unwrap();
+        let pak = match *file_entry.file().unwrap() {
+            structs::FstEntryFile::Pak(ref pak) => Cow::Borrowed(pak),
+            structs::FstEntryFile::Unknown(ref reader) => Cow::Owned(reader.clone().read(())),
+            _ => panic!(),
+        };
+
+        // Iterate through all resources in level Pak //
+        for res in pak.resources.iter() {
+            // If this resource is a dependency needed by the patcher, add the resource to the output list //
+            let key = (res.file_id, res.fourcc());
+            if looking_for.remove(&key) {
+                assert!(found.insert(key, res.into_owned()).is_none());
+            }
+        }
+    }
+
+    // Remove extra assets from dependency search since they won't appear     //
+    // in any pak. Instead add them to the output resource pool. These assets //
+    // are provided as external files checked into the repository.            //
+    for res in custom_assets(&found, starting_memo) {
+        let key = (res.file_id, res.fourcc());
+        looking_for.remove(&key);
+        assert!(found.insert(key, res).is_none());
+    }
+
+    if !looking_for.is_empty() {
+        panic!("error - still looking for {:?}", looking_for);
+    }
+
+    found
+}
+
+fn create_custom_door_cmdl<'r>(
+    resources: &HashMap<(u32, FourCC),
+    structs::Resource<'r>>,
+    door_type: DoorType,
+) -> structs::Resource<'r>
+{
+    let new_cmdl_id: ResId<res_id::CMDL> = door_type.shield_cmdl();
+    let new_txtr_id: ResId<res_id::TXTR> = door_type.holorim_texture();
+
+    let new_door_cmdl = {
+        // Find and read the blue door CMDL
+        let blue_door_cmdl = {
+            if door_type.is_vertical() {
+                ResourceData::new(&resources[&resource_info!("18D0AEE6.CMDL").into()]) // actually white door but who cares
+            } else {
+                ResourceData::new(&resources[&resource_info!("blueShield_v1.CMDL").into()])
+            }
+        };
+
+        // Deserialize the blue door CMDL into a new mutable CMDL
+        let blue_door_cmdl_bytes = blue_door_cmdl.decompress().into_owned();
+        let mut new_cmdl = Reader::new(&blue_door_cmdl_bytes[..]).read::<structs::Cmdl>(());
+
+        // Modify the new CMDL to make it unique
+        new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr_id;
+
+        // Re-serialize the CMDL //
+        let mut new_cmdl_bytes = vec![];
+        new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
+
+        // Pad length to multiple of 32 bytes //
+        let len = new_cmdl_bytes.len();
+        new_cmdl_bytes.extend(reader_writer::pad_bytes(32, len).iter());
+
+        // Assemble into a proper resource object
+        crate::custom_assets::build_resource(
+            new_cmdl_id, // Custom ids start with 0xDEAFxxxx
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
+        )
+    };
+
+    new_door_cmdl
 }
 
 fn create_suit_icon_cmdl_and_ancs<'r>(

@@ -6,17 +6,21 @@ fn main()
     build
         .include("nod/include/")
         .include("nod/logvisor/include/")
+        .include("nod/logvisor/fmt/include/")
         .file("nod/lib/aes.cpp")
         .file("nod/lib/DirectoryEnumerator.cpp")
         .file("nod/lib/DiscBase.cpp")
         .file("nod/lib/DiscGCN.cpp")
         .file("nod/lib/DiscIOISO.cpp")
+        .file("nod/lib/DiscIONFS.cpp")
         .file("nod/lib/DiscIOWBFS.cpp")
         .file("nod/lib/DiscWii.cpp")
         .file("nod/lib/aes.cpp")
         .file("nod/lib/nod.cpp")
         .file("nod/lib/sha1.c")
-        .file("nod/logvisor/lib/logvisor.cpp");
+        .file("nod/logvisor/lib/logvisor.cpp")
+        .file("nod/logvisor/fmt/src/format.cc")
+        .file("nod/logvisor/fmt/src/os.cc");
 
     let target = std::env::var("TARGET").unwrap();
     let is_windows = target.contains("windows");
@@ -53,8 +57,10 @@ fn main()
             .flag("-Wno-unused-parameter")
             .flag("-Wno-unused-variable")
             .flag("-Wno-sign-compare")
-            .flag("-Wno-deprecated")
-            .flag("-maes");
+            .flag("-Wno-deprecated");
+        if target.contains("x86") {
+            build.flag("-maes");
+        }
     }
     build.build("src/lib.rs");
 }
