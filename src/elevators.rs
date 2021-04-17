@@ -29,7 +29,7 @@ impl World {
         ].iter().map(|i| *i)
     }
 
-    pub fn from_pak(pak_str:&str) -> Option<Self> {
+    pub fn from_pak(pak_str: &str) -> Option<Self> {
         match pak_str {
             "Metroid1.pak" => Some(World::FrigateOrpheon),
             "Metroid2.pak" => Some(World::ChozoRuins),

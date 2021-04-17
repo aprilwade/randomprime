@@ -99,7 +99,7 @@ pub mod custom_asset_ids {
         FLAMETHROWER_DOOR_TXTR: TXTR,
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
-        
+
         // has to be at the end //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
@@ -167,7 +167,7 @@ pub fn custom_assets<'r>(
 {
     // External assets
     let mut assets = extern_assets();
-    
+
     // Custom pickup model assets
     assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
         resources,
@@ -338,10 +338,10 @@ fn create_custom_door_cmdl<'r>(
         // Deserialize the blue door CMDL into a new mutable CMDL
         let blue_door_cmdl_bytes = blue_door_cmdl.decompress().into_owned();
         let mut new_cmdl = Reader::new(&blue_door_cmdl_bytes[..]).read::<structs::Cmdl>(());
-        
+
         // Modify the new CMDL to make it unique
         new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr_id;
-        
+
         // Re-serialize the CMDL //
         let mut new_cmdl_bytes = vec![];
         new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
@@ -356,7 +356,7 @@ fn create_custom_door_cmdl<'r>(
             structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
         )
     };
-    
+
     new_door_cmdl
 }
 

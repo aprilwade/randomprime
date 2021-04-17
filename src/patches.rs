@@ -502,9 +502,9 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
 }
 
 fn make_elevators_patch<'a>(
-    patcher: &mut PrimePatcher<'_, 'a>, 
-    level_data: &HashMap<String,LevelConfig>, 
-    auto_enabled_elevators: bool, 
+    patcher: &mut PrimePatcher<'_, 'a>,
+    level_data: &HashMap<String, LevelConfig>,
+    auto_enabled_elevators: bool,
 )
 -> (bool, bool)
 {
@@ -544,7 +544,7 @@ fn make_elevators_patch<'a>(
                         wt.mlvl = ResId::new(dest.mlvl);
                     }
                 }
-    
+
                 if auto_enabled_elevators {
                     // Auto enable the elevator
                     let layer = &mut scly.layers.as_mut_vec()[0];
@@ -554,13 +554,13 @@ fn make_elevators_patch<'a>(
                             .unwrap_or(false)
                         )
                         .map(|mr| mr.instance_id);
-    
+
                     if let Some(mr_id) = mr_id {
                         layer.objects.as_mut_vec().push(structs::SclyObject {
                             instance_id: ps.fresh_instance_id_range.next().unwrap(),
                             property_data: structs::Timer {
                                 name: b"Auto enable elevator\0".as_cstr(),
-    
+
                                 start_time: 0.001,
                                 max_random_add: 0f32,
                                 reset_to_zero: 0,
@@ -577,10 +577,10 @@ fn make_elevators_patch<'a>(
                         });
                     }
                 }
-    
+
                 Ok(())
             });
-    
+
             let room_dest_name = dest.name.replace('\0', "\n");
             let hologram_name = dest.name.replace('\0', " ");
             let control_name = dest.name.replace('\0', " ");
@@ -2472,7 +2472,7 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&players_choice_scan_dash_patch)?;
     }
-    
+
     if config.map_default_state != MapState::Default {
         let is_mapped_patch = ppcasm!(symbol_addr!("IsMapped__13CMapWorldInfoCF7TAreaId", version), {
             li      r3, 0x1;
@@ -2487,7 +2487,7 @@ fn patch_dol<'r>(
             dol_patcher.ppcasm_patch(&is_area_visited_patch)?;
         }
     }
-    
+
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::NtscU0_00 => {
             let loader_bytes = rel_files::REL_LOADER_100;

@@ -4,7 +4,7 @@ use num_traits::ToPrimitive;
 use std::{
     collections::hash_map::DefaultHasher,
     ffi::CStr,
-    hash::{Hash,Hasher},
+    hash::{Hash, Hasher},
     convert::TryInto,
     collections::HashMap,
     iter,
@@ -117,8 +117,8 @@ pub struct RoomConfig
 #[serde(rename_all = "camelCase")]
 pub struct LevelConfig
 {
-    pub transports: HashMap<String,String>, 
-    pub rooms: HashMap<String,RoomConfig>, 
+    pub transports: HashMap<String, String>,
+    pub rooms: HashMap<String, RoomConfig>,
 }
 
 #[derive(Debug)]
@@ -130,7 +130,7 @@ pub struct PatchConfig
 
     pub layout: Layout,
 
-    pub level_data: HashMap<String,LevelConfig>, 
+    pub level_data: HashMap<String, LevelConfig>,
 
     pub starting_room: String,
     pub starting_memo: Option<String>,
@@ -256,7 +256,7 @@ struct PatchConfigPrivate
     game_config: GameConfig,
 
     #[serde(default)]
-    level_data: HashMap<String,LevelConfig>,
+    level_data: HashMap<String, LevelConfig>,
 
     layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
 }
@@ -383,7 +383,7 @@ impl PatchConfig
         let mut patch_config = if matches.is_present("profile json path") {
             let json_path = matches.value_of("profile json path").unwrap();
             let cli_json_config_raw: &str = &fs::read_to_string(json_path)
-                .map_err(|e| format!("Could not read JSON file: {}",e)).unwrap();
+                .map_err(|e| format!("Could not read JSON file: {}", e)).unwrap();
 
             serde_json::from_str(cli_json_config_raw)
                 .map_err(|e| format!("JSON parse failed: {}", e))?
@@ -522,7 +522,7 @@ impl PatchConfigPrivate
                 ))?
             }
         };
-        
+
         let map_default_state = {
             let map_default_state_string = self.preferences.map_default_state
                                                .as_deref()
