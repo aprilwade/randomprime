@@ -740,7 +740,7 @@ fn fix_artifact_of_truth_requirements(
 ) -> Result<(), String>
 {
     let truth_req_layer_id = area.layer_flags.layer_count;
-    assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
+    area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
 
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
     let at_pickup_kind = {
@@ -757,8 +757,6 @@ fn fix_artifact_of_truth_requirements(
         _at_pickup_kind
     };
 
-    area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
-    
     for i in 0..12 {
         let layer_number = if i == 0 {
             truth_req_layer_id
@@ -2889,14 +2887,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         });
     }
 
-    // Patch pickups
-    for (level_name, level) in config.level_data.iter() {
-        let pak_name = World::from_json_key(level_name).unwrap().to_pak_str().as_bytes();
-        for (room_name, room) in level.rooms.iter() {
-            let room_info = pickup_meta::RoomInfo::from_str(room_name);
+
+    for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
+        let world = World::from_pak(pak_name).unwrap();
+        
+        for room_info in rooms.iter() {
 
             // Remove objects patch
-            patcher.add_scly_patch((pak_name, room_info.room_id.to_u32()), move |_, area| {
+            patcher.add_scly_patch((pak_name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
                 let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
                 for otr in room_info.objects_to_remove {
                     layers[otr.layer as usize].objects.as_mut_vec()
@@ -2905,14 +2903,32 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 Ok(())
             });
 
-            if room.pickups.len() == 0 {continue;}
-            let pickup_iter = room.pickups.iter();
-            let location_iter = room_info.pickup_locations.iter();
-            let iter = location_iter.zip(pickup_iter);
+            // Get list of pickups specified for this room
+            let pickups = {
+                let mut _pickups = Vec::new();
+                
+                let level = config.level_data.get(world.to_json_key());
+                if level.is_some() {
+                    let room = level.unwrap().rooms.get(room_info.name);
+                    if room.is_some() {
+                        _pickups = room.unwrap().pickups.clone();
+                    }
+                }
+                _pickups
+            };
 
-            for (pickup_location, pickup) in iter {
+            // Patch all existing item locations
+            let mut idx = 0;
+            let pickups_config_len = pickups.len();
+            for pickup_location in room_info.pickup_locations.iter() {
                 let pickup_type = {
-                    let _pickup_type = PickupType::from_str(&pickup.pickup_type);
+                    let mut _pickup_type = {
+                        if idx >= pickups_config_len {
+                            PickupType::Nothing // TODO: Could figure out the vanilla item instead
+                        } else {
+                            PickupType::from_str(&pickups[idx].pickup_type)
+                        }
+                    };
 
                     // 1 in 1024 chance of a missile being shiny means a player is likely to see a
                     // shiny missile every 40ish games (assuming most players collect about half of the
@@ -2923,9 +2939,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         _pickup_type
                     }
                 };
+                idx = idx + 1;
 
+                // modify pickup, connections, hudmemo etc.
                 patcher.add_scly_patch(
-                    (pak_name, room_info.room_id.to_u32()),
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,
@@ -2936,6 +2954,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         )
                 );
             }
+
+            // Patch extra item locations
+
         }
     }
 
