@@ -15,6 +15,7 @@ use crate::patch_config::{
     ArtifactHintBehavior,
     MapState,
     IsoFormat,
+    PickupConfig,
     PatchConfig,
     GameBanner,
     LevelConfig,
@@ -340,7 +341,7 @@ impl MaybeObfuscatedPickup
 fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
-    pickup_type: PickupType,
+    pickup: &PickupConfig,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     config: &PatchConfig,
@@ -348,10 +349,12 @@ fn modify_pickups_in_mrea<'r>(
 {
     let location_idx = 0;
 
+    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup.pickup_type);
+
     let pickup_type = if config.obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_type)
+        MaybeObfuscatedPickup::Obfuscated(pickup_type_maybe_obfuscated)
     } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_type)
+        MaybeObfuscatedPickup::Unobfuscated(pickup_type_maybe_obfuscated)
     };
 
     let deps_iter = pickup_type.dependencies().iter()
@@ -404,12 +407,12 @@ fn modify_pickups_in_mrea<'r>(
         });
     }
 
-    let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
+    let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup, pickup_type);
+    update_pickup(pickup_obj, pickup_type, pickup);
     if additional_connections.len() > 0 {
-        pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
+        pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
     }
 
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
@@ -426,10 +429,24 @@ fn modify_pickups_in_mrea<'r>(
     Ok(())
 }
 
-fn update_pickup(pickup: &mut structs::SclyObject, pickup_type: MaybeObfuscatedPickup)
+fn update_pickup(
+    pickup: &mut structs::SclyObject,
+    pickup_type: MaybeObfuscatedPickup,
+    pickup_data: &PickupConfig,
+)
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
-    let original_pickup = pickup.clone();
+    let mut original_pickup = pickup.clone();
+
+    if pickup_data.position.is_some() {
+        original_pickup.position = pickup_data.position.unwrap().into();
+    }
+
+    if pickup_data.count.is_some() {
+        let count = pickup_data.count.unwrap();
+        original_pickup.curr_increase = count;
+        original_pickup.max_increase = count;
+    }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
     let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_type.pickup_data().cmdl).unwrap();
@@ -456,6 +473,8 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_type: MaybeObfuscatedP
         fade_in_timer: original_pickup.fade_in_timer,
         spawn_delay: original_pickup.spawn_delay,
         active: original_pickup.active,
+        curr_increase: original_pickup.curr_increase,
+        max_increase: original_pickup.curr_increase,
 
         ..(pickup_type.pickup_data().into_owned())
     };
@@ -2921,22 +2940,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             let mut idx = 0;
             let pickups_config_len = pickups.len();
             for pickup_location in room_info.pickup_locations.iter() {
-                let pickup_type = {
-                    let mut _pickup_type = {
-                        if idx >= pickups_config_len {
-                            PickupType::Nothing // TODO: Could figure out the vanilla item instead
-                        } else {
-                            PickupType::from_str(&pickups[idx].pickup_type)
-                        }
-                    };
-
-                    // 1 in 1024 chance of a missile being shiny means a player is likely to see a
-                    // shiny missile every 40ish games (assuming most players collect about half of the
-                    // missiles)
-                    if _pickup_type == PickupType::Missile && rng.gen_ratio(1, 1024) {
-                        PickupType::ShinyMissile
+                let pickup = {
+                    if idx >= pickups_config_len {
+                        PickupConfig {
+                            pickup_type: "Nothing".to_string(), // TODO: Could figure out the vanilla item instead
+                            count: None,
+                            position: None,
+                        } 
                     } else {
-                        _pickup_type
+                        pickups[idx].clone() // TODO: bad clone
                     }
                 };
                 idx = idx + 1;
@@ -2947,7 +2959,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,
-                            pickup_type,
+                            &pickup,
                             *pickup_location,
                             game_resources,
                             config

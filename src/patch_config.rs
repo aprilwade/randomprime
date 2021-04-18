@@ -68,12 +68,12 @@ pub struct PickupConfig
 {
     #[serde(alias  = "type")]
     pub pickup_type: String,
-    // pub Option<count>: u32,
-    // pub Option<model>: PickupModelType,
-    // pub Option<scan_text>: String,
-    // pub Option<hudmemo_text>: String,
-    // pub Option<desination>: String,
-    // pub Option<position>: [f32;3],
+    pub count: Option<u32>,
+    // pub model: Option<PickupModelType>,
+    // pub scan_text: Option<String>,
+    // pub hudmemo_text: Option<String>,
+    // pub desination: Option<String>,
+    pub position: Option<[f32;3]>,
 }
 
 // TODO: defaults
