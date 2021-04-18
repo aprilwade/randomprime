@@ -295,8 +295,6 @@ pub fn custom_assets<'r>(
         }
     }
 
-    println!("Hudmemos - {:?}", pickup_hudmemos); // TODO: debug
-
     // Create fallback pickup hudmemo strings //
     for pt in PickupType::iter() {
         let id = pt.skip_hudmemos_strg();

@@ -577,10 +577,6 @@ fn modify_pickups_in_mrea<'r>(
     };
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
 
-    if pickup.hudmemo_text.is_some() { // TODO: debug
-        println!("using user-defined hudmemo text - {:?}", hudmemo_dep);
-    }
-
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
