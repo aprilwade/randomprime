@@ -22,7 +22,7 @@ use crate::patch_config::{
 };
 
 use crate::{
-    custom_assets::{custom_asset_ids, collect_game_resources},
+    custom_assets::{custom_asset_ids, collect_game_resources, HudMemoHashKey},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
@@ -391,11 +391,7 @@ fn patch_add_item<'r>(
             Box::new(structs::Pickup {
                 position: pickup_position.into(),
                 hitbox: [1.0, 1.0, 2.0].into(), // missile hitbox
-                scan_offset: [
-                    0.0,
-                    0.0,
-                    1.0,
-                ].into(),
+                scan_offset: [0.0, 0.0, 0.0].into(),
                 fade_in_timer: 0.0,
                 spawn_delay: 0.0,
                 active: 1,
@@ -541,6 +537,8 @@ fn modify_pickups_in_mrea<'r>(
     pickup: &PickupConfig,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    pickup_hudmemos: &HashMap<HudMemoHashKey, ResId<res_id::STRG>>,
+    hudmemo_hash_key: HudMemoHashKey,
     config: &PatchConfig,
 ) -> Result<(), String>
 {
@@ -566,12 +564,23 @@ fn modify_pickups_in_mrea<'r>(
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
-    // Add our custom STRG
-    let hudmemo_dep = if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
-        pickup_type.skip_hudmemos_strg().into()
-    } else {
-        pickup_type.hudmemo_strg().into()
+    // Which string should we use? //
+    let hudmemo_strg: ResId<res_id::STRG> = {
+        if pickup.hudmemo_text.is_some() {
+            println!("keying with - {:?}", hudmemo_hash_key);
+            *pickup_hudmemos.get(&hudmemo_hash_key).unwrap()
+        } else if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+            pickup_type.skip_hudmemos_strg()
+        } else {
+            pickup_type.hudmemo_strg()
+        }
     };
+    let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
+
+    if pickup.hudmemo_text.is_some() { // TODO: debug
+        println!("using user-defined hudmemo text - {:?}", hudmemo_dep);
+    }
+
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
@@ -615,8 +624,11 @@ fn modify_pickups_in_mrea<'r>(
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
         .unwrap();
-    update_hudmemo(hudmemo, pickup_type, location_idx, config.skip_hudmenus);
-
+    // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
+    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
+    // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
+    // TODO: location_idx is always 0?
+    update_hudmemo(hudmemo, hudmemo_strg, config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx));
 
     let location = pickup_location.attainment_audio;
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
@@ -679,25 +691,22 @@ fn update_pickup(
 
 fn update_hudmemo(
     hudmemo: &mut structs::SclyObject,
-    pickup_type: MaybeObfuscatedPickup,
-    location_idx: usize,
-    skip_hudmenus: bool)
+    hudmemo_strg: ResId<res_id::STRG>,
+    skip_hudmenus: bool,
+)
 {
-    // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
-    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
-    // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
-    if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+    hudmemo.strg = hudmemo_strg;
+    if skip_hudmenus {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = pickup_type.skip_hudmemos_strg();
-    } else {
-        hudmemo.strg = pickup_type.hudmemo_strg();
     }
 }
 
-fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
-                           pickup_type: MaybeObfuscatedPickup)
+fn update_attainment_audio(
+    attainment_audio: &mut structs::SclyObject,
+    pickup_type: MaybeObfuscatedPickup,
+)
 {
     let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
     let bytes = pickup_type.attainment_audio_file_name().as_bytes();
@@ -3032,8 +3041,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let game_resources = collect_game_resources(gc_disc, starting_memo);
+    let (game_resources, pickup_hudmemos) = collect_game_resources(gc_disc, starting_memo, &config);
     let game_resources = &game_resources;
+    let pickup_hudmemos = &pickup_hudmemos;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -3133,7 +3143,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 _pickups
             };
 
-            // Patch all existing item locations
+            // Patch existing item locations
             let mut idx = 0;
             let pickups_config_len = pickups.len();
             for pickup_location in room_info.pickup_locations.iter() {
@@ -3143,12 +3153,18 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             pickup_type: "Nothing".to_string(), // TODO: Could figure out the vanilla item instead
                             count: None,
                             position: None,
+                            hudmemo_text: None,
                         } 
                     } else {
                         pickups[idx].clone() // TODO: cloning is suboptimal
                     }
                 };
-                idx = idx + 1;
+                
+                let key = HudMemoHashKey {
+                    level_id: world.mlvl(),
+                    room_id: room_info.room_id.to_u32(),
+                    pickup_idx: idx as u32,
+                };
 
                 // modify pickup, connections, hudmemo etc.
                 patcher.add_scly_patch(
@@ -3159,9 +3175,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             &pickup,
                             *pickup_location,
                             game_resources,
+                            pickup_hudmemos,
+                            key,
                             config
                         )
                 );
+
+                idx = idx + 1;
             }
 
             // Patch extra item locations

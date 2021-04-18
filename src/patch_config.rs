@@ -71,7 +71,7 @@ pub struct PickupConfig
     pub count: Option<u32>,
     // pub model: Option<PickupModelType>,
     // pub scan_text: Option<String>,
-    // pub hudmemo_text: Option<String>,
+    pub hudmemo_text: Option<String>,
     // pub desination: Option<String>,
     pub position: Option<[f32;3]>,
 }
