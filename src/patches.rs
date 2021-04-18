@@ -22,7 +22,7 @@ use crate::patch_config::{
 };
 
 use crate::{
-    custom_assets::{custom_asset_ids, collect_game_resources, HudMemoHashKey},
+    custom_assets::{custom_asset_ids, collect_game_resources, PickupHashKey},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
@@ -537,8 +537,9 @@ fn modify_pickups_in_mrea<'r>(
     pickup: &PickupConfig,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    pickup_hudmemos: &HashMap<HudMemoHashKey, ResId<res_id::STRG>>,
-    hudmemo_hash_key: HudMemoHashKey,
+    pickup_hudmemos: &HashMap<PickupHashKey, ResId<res_id::STRG>>,
+    pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    pickup_hash_key: PickupHashKey,
     config: &PatchConfig,
 ) -> Result<(), String>
 {
@@ -564,11 +565,10 @@ fn modify_pickups_in_mrea<'r>(
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
-    // Which string should we use? //
+    // Add hudmemo string as dependency to room //
     let hudmemo_strg: ResId<res_id::STRG> = {
         if pickup.hudmemo_text.is_some() {
-            println!("keying with - {:?}", hudmemo_hash_key);
-            *pickup_hudmemos.get(&hudmemo_hash_key).unwrap()
+            *pickup_hudmemos.get(&pickup_hash_key).unwrap()
         } else if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
             pickup_type.skip_hudmemos_strg()
         } else {
@@ -576,9 +576,27 @@ fn modify_pickups_in_mrea<'r>(
         }
     };
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
-
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+
+    // If custom scan text, add that to dependencies as well //
+    let scan_id = {
+        if pickup.scan_text.is_some() {
+            let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
+            
+            let scan_dep: structs::Dependency = scan.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
+
+            let strg_dep: structs::Dependency = strg.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+            
+            // TODO: should remove now obsolete vanilla scan from dependencies list
+            
+            Some(scan)
+        } else {
+            None
+        }
+    };
 
     let scly = area.mrea().scly_section_mut();
     let layers = scly.layers.as_mut_vec();
@@ -612,7 +630,7 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup_obj, pickup_type, pickup);
+    update_pickup(pickup_obj, pickup_type, pickup, scan_id);
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
     }
@@ -638,6 +656,7 @@ fn update_pickup(
     pickup: &mut structs::SclyObject,
     pickup_type: MaybeObfuscatedPickup,
     pickup_data: &PickupConfig,
+    scan_id: Option<ResId<res_id::SCAN>>,
 )
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
@@ -683,6 +702,10 @@ fn update_pickup(
 
         ..(pickup_type.pickup_data().into_owned())
     };
+
+    if scan_id.is_some() {
+        pickup.actor_params.scan_params.scan = scan_id.unwrap();
+    }
 }
 
 fn update_hudmemo(
@@ -3037,9 +3060,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos) = collect_game_resources(gc_disc, starting_memo, &config);
+    let (game_resources, pickup_hudmemos, pickup_scans) = collect_game_resources(gc_disc, starting_memo, &config);
     let game_resources = &game_resources;
     let pickup_hudmemos = &pickup_hudmemos;
+    let pickup_scans = &pickup_scans;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -3150,13 +3174,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             count: None,
                             position: None,
                             hudmemo_text: None,
+                            scan_text: None,
                         } 
                     } else {
                         pickups[idx].clone() // TODO: cloning is suboptimal
                     }
                 };
                 
-                let key = HudMemoHashKey {
+                let key = PickupHashKey {
                     level_id: world.mlvl(),
                     room_id: room_info.room_id.to_u32(),
                     pickup_idx: idx as u32,
@@ -3172,6 +3197,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             *pickup_location,
                             game_resources,
                             pickup_hudmemos,
+                            pickup_scans,
                             key,
                             config
                         )
