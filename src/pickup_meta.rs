@@ -261,7 +261,7 @@ impl PickupType
         ].iter().map(|i| *i)
     }
 
-    pub fn from_string(string: String) -> Self {
+    pub fn from_str(string: &str) -> Self {
         for i in PickupType::iter() {
             if i.name().to_string().to_lowercase().trim() == string.to_lowercase().trim() {
                 return i;
@@ -360,6 +360,22 @@ pub struct ObjectsToRemove
 {
     pub layer: u32,
     pub instance_ids: &'static [u32],
+}
+
+impl RoomInfo
+{
+    pub fn from_str(string: &str) -> Self
+    {
+        for (_, rooms) in ROOM_INFO.iter() {
+            for room_info in rooms.iter() {
+                if room_info.name == string {
+                    return *room_info;
+                }
+            }
+        }
+
+        panic!("Could not find room {}", string)
+    }
 }
 
 include!("pickup_meta.rs.in");

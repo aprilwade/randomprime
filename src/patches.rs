@@ -99,7 +99,7 @@ fn post_pickup_relay_template<'r>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng: &mut R)
+fn build_artifact_temple_totem_scan_strings<R>(config: &PatchConfig, rng: &mut R)
     -> [String; 12]
     where R: Rng
 {
@@ -120,19 +120,52 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
     generic_text_templates.shuffle(rng);
     let mut generic_templates_iter = generic_text_templates.iter();
 
+    let mut artifact_locations = Vec::<(&str, PickupType)>::new();
+    const VANILLA_ARTIFACT_ROOMS: [(&'static str, &'static str, PickupType);12] = [
+        ("tallon",   "Artifact Temple",      PickupType::ArtifactOfTruth),
+        ("tallon",   "Life Grove",           PickupType::ArtifactOfChozo),
+        ("chozo",    "Sunchamber",           PickupType::ArtifactOfWild),
+        ("chozo",    "Hall of the Elders",   PickupType::ArtifactOfWorld),
+        ("chozo",    "Tower Chamber",        PickupType::ArtifactOfLifegiver),
+        ("magmoor",  "Warrior Shrine",        PickupType::ArtifactOfStrength),
+        ("magmoor",  "Lava Lake",             PickupType::ArtifactOfNature),
+        ("phendrana", "Chozo Ice Temple",     PickupType::ArtifactOfSun),
+        ("phendrana", "Control Tower",        PickupType::ArtifactOfElder),
+        ("phendrana", "Phendrana's Edge",     PickupType::ArtifactOfSpirit),
+        ("mines",     "Elite Research",       PickupType::ArtifactOfWarrior),
+        ("mines",     "Phazon Mining Tunnel", PickupType::ArtifactOfNewborn),
+    ];
+
+    for (level_name, level) in config.level_data.iter() {
+        // check for vanilla locations (unshuffled)
+        for (artifact_level_name, artifact_room_name, pickup_type) in VANILLA_ARTIFACT_ROOMS.iter() {
+            if &level_name.as_str() == artifact_level_name && !level.rooms.contains_key(&artifact_room_name.to_string()) {
+                artifact_locations.push((artifact_room_name, *pickup_type));
+            }
+        }
+
+        // check for new locations (shuffled)
+        for (room_name, room) in level.rooms.iter() {
+            for pickup in room.pickups.iter() {
+                let pickup_type = PickupType::from_str(&pickup.pickup_type);
+                if pickup_type.idx() >= PickupType::ArtifactOfLifegiver.idx() && pickup_type.idx() <= PickupType::ArtifactOfStrength.idx() {
+                    artifact_locations.push((&room_name.as_str(), pickup_type));
+                }
+            }
+        }
+    }
+
     // TODO: If there end up being a large number of these, we could use a binary search
     //       instead of searching linearly.
     // XXX It would be nice if we didn't have to use Vec here and could allocated on the stack
     //     instead, but there doesn't seem to be a way to do it that isn't extremely painful or
     //     relies on unsafe code.
     let mut specific_room_templates = [
-        // Artifact Temple
-        (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
+        ("Artifact Temple", vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
     for rt in &mut specific_room_templates {
         rt.1.shuffle(rng);
     }
-
 
     let mut scan_text = [
         String::new(), String::new(), String::new(), String::new(),
@@ -140,16 +173,8 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         String::new(), String::new(), String::new(), String::new(),
     ];
 
-    let names_iter = pickup_meta::ROOM_INFO.iter()
-        .flat_map(|i| i.1.iter()) // Flatten out the rooms of the paks
-        .flat_map(|l| iter::repeat((l.room_id, l.name)).take(l.pickup_locations.len()));
-    let iter = pickup_layout.iter()
-        .zip(names_iter)
-        // ▼▼▼▼ Only yield artifacts ▼▼▼▼
-        .filter(|&(pt, _)| pt.is_artifact());
-
     // Shame there isn't a way to flatten tuples automatically
-    for (pt, (room_id, name)) in iter {
+    for (room_name, pt) in artifact_locations.iter() {
         let artifact_id = pt.idx() - PickupType::ArtifactOfLifegiver.idx();
         if scan_text[artifact_id].len() != 0 {
             // If there are multiple of this particular artifact, then we use the first instance
@@ -160,11 +185,11 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         // If there are specific messages for this room, choose one, other wise choose a generic
         // message.
         let template = specific_room_templates.iter_mut()
-            .find(|row| row.0 == room_id.to_u32())
+            .find(|row| &row.0 == room_name)
             .and_then(|row| row.1.pop())
             .unwrap_or_else(|| generic_templates_iter.next().unwrap());
         let pickup_name = pt.name();
-        scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
+        scan_text[artifact_id] = template.replace("{room}", room_name).replace("{pickup}", pickup_name);
     }
 
     // Set a default value for any artifacts that we didn't find.
@@ -711,16 +736,29 @@ fn patch_frigate_teleporter<'r>(
 fn fix_artifact_of_truth_requirements(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
-    pickup_layout: &[PickupType],
+    config: &PatchConfig,
 ) -> Result<(), String>
 {
     let truth_req_layer_id = area.layer_flags.layer_count;
     assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
 
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
-    area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
+    let at_pickup_kind = {
+        let mut _at_pickup_kind = PickupType::ArtifactOfTruth.pickup_data().kind;
+        if config.level_data.contains_key(World::TallonOverworld.to_json_key()) {
+            let rooms = &config.level_data.get(World::TallonOverworld.to_json_key()).unwrap().rooms;
+            if rooms.contains_key("Artifact Temple") {
+                let artifact_temple_pickups = &rooms.get("Artifact Temple").unwrap().pickups;
+                if artifact_temple_pickups.len() != 0 {
+                    _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).pickup_data().kind;
+                }
+            }
+        }
+        _at_pickup_kind
+    };
 
-    let at_pickup_kind = pickup_layout[63].pickup_data().kind;
+    area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
+    
     for i in 0..12 {
         let layer_number = if i == 0 {
             truth_req_layer_id
@@ -728,8 +766,25 @@ fn fix_artifact_of_truth_requirements(
             i + 1
         };
         let kind = i + 29;
-        let exists = pickup_layout.iter()
-            .any(|pt| kind == pt.pickup_data().kind);
+        
+        // TODO: suboptimal solution to if exists problem
+        let exists = {
+            let mut _exists = false;
+            for (_, level) in config.level_data.iter() {
+                if _exists {break;}
+                for (_, room) in level.rooms.iter() {
+                    if _exists {break;}
+                    for pickup in room.pickups.iter() {
+                        if PickupType::from_str(&pickup.pickup_type).pickup_data().kind == kind {
+                            _exists = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            _exists
+        };
+
         if exists && at_pickup_kind != kind {
             // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
             // layer as inactive. It will be activated when the item is collected.
@@ -2025,7 +2080,7 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
 }
 
 
-fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
+fn patch_credits(res: &mut structs::Resource, config: &PatchConfig)
     -> Result<(), String>
 {
     use std::fmt::Write;
@@ -2060,16 +2115,25 @@ fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
         "&pop;",
     ).to_owned();
     for pickup_type in PICKUPS_TO_PRINT {
-        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_type) {
-            i
-        } else {
-            continue
+        let room_name = {
+            let mut _room_name = String::new();
+            for (_, level) in config.level_data.iter() {
+                for (room_name, room) in level.rooms.iter() {
+                    for pickup_info in room.pickups.iter() {
+                        if pickup_type.name() == pickup_info.pickup_type {
+                            _room_name = room_name.to_string();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if _room_name.len() == 0 {
+                _room_name = "<Vanilla Location or Missing>".to_string();
+            }
+
+            _room_name
         };
-        let room_name = pickup_meta::ROOM_INFO.iter()
-            .flat_map(|pak_locs| pak_locs.1.iter())
-            .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
-            .nth(room_idx)
-            .unwrap();
         let pickup_name = pickup_type.name();
         write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
     }
@@ -2634,7 +2698,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION")).unwrap();
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
-    writeln!(ct, "layout: {:#?}", config.layout).unwrap();
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
@@ -2726,8 +2789,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    let pickup_layout = &config.layout.pickups[..];
-
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
 
     let frigate_done_room = {
@@ -2744,8 +2805,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     };
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
-    let mut rng = StdRng::seed_from_u64(config.layout.seed);
-    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
+    let mut rng = StdRng::seed_from_u64(config.seed);
+    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(config, &mut rng);
 
     let show_starting_memo = config.starting_memo.is_some();
 
@@ -2829,11 +2890,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     // Patch pickups
-    let mut layout_iterator = pickup_layout.iter();
-    for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
-        for room_info in rooms.iter() {
-             patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
-                // Remove objects
+    for (level_name, level) in config.level_data.iter() {
+        let pak_name = World::from_json_key(level_name).unwrap().to_pak_str().as_bytes();
+        for (room_name, room) in level.rooms.iter() {
+            let room_info = pickup_meta::RoomInfo::from_str(room_name);
+
+            // Remove objects patch
+            patcher.add_scly_patch((pak_name, room_info.room_id.to_u32()), move |_, area| {
                 let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
                 for otr in room_info.objects_to_remove {
                     layers[otr.layer as usize].objects.as_mut_vec()
@@ -2841,23 +2904,33 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 }
                 Ok(())
             });
-            let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
-            for (&pickup_location, &pickup_type) in iter {
-                // 1 in 1024 chance of a missile being shiny means a player is likely to see a
-                // shiny missile every 40ish games (assuming most players collect about half of the
-                // missiles)
-                let pickup_type = if pickup_type == PickupType::Missile && rng.gen_ratio(1, 1024) {
-                    PickupType::ShinyMissile
-                } else {
-                    pickup_type
+
+            if room.pickups.len() == 0 {continue;}
+            let pickup_iter = room.pickups.iter();
+            let location_iter = room_info.pickup_locations.iter();
+            let iter = location_iter.zip(pickup_iter);
+
+            for (pickup_location, pickup) in iter {
+                let pickup_type = {
+                    let _pickup_type = PickupType::from_str(&pickup.pickup_type);
+
+                    // 1 in 1024 chance of a missile being shiny means a player is likely to see a
+                    // shiny missile every 40ish games (assuming most players collect about half of the
+                    // missiles)
+                    if _pickup_type == PickupType::Missile && rng.gen_ratio(1, 1024) {
+                        PickupType::ShinyMissile
+                    } else {
+                        _pickup_type
+                    }
                 };
+
                 patcher.add_scly_patch(
-                    (name.as_bytes(), room_info.room_id.to_u32()),
+                    (pak_name, room_info.room_id.to_u32()),
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,
                             pickup_type,
-                            pickup_location,
+                            *pickup_location,
                             game_resources,
                             config
                         )
@@ -2933,7 +3006,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
-        |res| patch_credits(res, &pickup_layout)
+        |res| patch_credits(res, config)
     );
 
     patcher.add_resource_patch(
@@ -2942,7 +3015,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
-        |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
+        |ps, area| fix_artifact_of_truth_requirements(ps, area, config)
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
@@ -3171,4 +3244,3 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.run(gc_disc)?;
     Ok(())
 }
-

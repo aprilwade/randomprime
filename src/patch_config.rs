@@ -1,13 +1,6 @@
-use num_bigint::BigUint;
-use num_integer::Integer;
-use num_traits::ToPrimitive;
 use std::{
-    collections::hash_map::DefaultHasher,
     ffi::CStr,
-    hash::{Hash, Hasher},
-    convert::TryInto,
     collections::HashMap,
-    iter,
     fmt,
     fs::{File, OpenOptions},
     fs,
@@ -21,9 +14,6 @@ use clap::{
 
 use serde::Deserialize;
 
-use enum_map::EnumMap;
-use crate::elevators::{Elevator, SpawnRoom};
-use crate::pickup_meta::PickupType;
 use crate::starting_items::StartingItems;
 
 /*** Parsed Config (fn patch_iso) ***/
@@ -35,15 +25,6 @@ pub enum IsoFormat
     Iso,
     Gcz,
     Ciso,
-}
-
-#[derive(Clone, Debug)]
-pub struct Layout
-{
-    pub pickups: Vec<PickupType>,
-    pub starting_location: SpawnRoom,
-    pub elevators: EnumMap<Elevator, SpawnRoom>,
-    pub seed: u64,
 }
 
 #[derive(Deserialize, Debug, Copy, Clone)]
@@ -81,18 +62,18 @@ pub struct GameBanner
     pub description: Option<String>,
 }
 
-// TODO: defaults
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PickupConfig
 {
-    // pub pickup_type: String,
-    // pub count: u32,
-    // pub model: PickupModelType,
-    // pub scan_text: String,
-    // pub hudmemo_text: String,
-    // pub desination: String,
-    // pub position: [f32;3],
+    #[serde(alias  = "type")]
+    pub pickup_type: String,
+    // pub Option<count>: u32,
+    // pub Option<model>: PickupModelType,
+    // pub Option<scan_text>: String,
+    // pub Option<hudmemo_text>: String,
+    // pub Option<desination>: String,
+    // pub Option<position>: [f32;3],
 }
 
 // TODO: defaults
@@ -107,7 +88,7 @@ pub struct RoomConfig
     // pub extra_water: Vec<WaterConfig>,
     // pub doors: Vec<String>,
     // pub blast_shields: Vec<String>,
-    // pub pickups: Vec<PickupConfig>,
+    pub pickups: Vec<PickupConfig>,
     // pub extra_pickups: Vec<PickupConfig>,
     // pub extra_scans: Vec<ScanConfig>,
     // pub aether_transform: Vec<AetherTransformConfig>,
@@ -128,7 +109,7 @@ pub struct PatchConfig
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
-    pub layout: Layout,
+    pub seed: u64,
 
     pub level_data: HashMap<String, LevelConfig>,
 
@@ -167,41 +148,6 @@ pub struct PatchConfig
 
 
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
-
-#[derive(Deserialize, Clone, Debug)]
-#[serde(untagged)]
-enum LayoutWrapper
-{
-    String(String),
-    Struct {
-        pickups: Vec<PickupType>,
-        starting_location: SpawnRoom,
-        elevators: EnumMap<Elevator, SpawnRoom>,
-    },
-}
-
-impl TryInto<Layout> for LayoutWrapper
-{
-    type Error = String;
-    fn try_into(self) -> Result<Layout, Self::Error>
-    {
-        match self {
-            LayoutWrapper::String(s) => s.parse(),
-            LayoutWrapper::Struct { pickups, starting_location, elevators } => {
-                let mut hasher = DefaultHasher::new();
-                pickups.hash(&mut hasher);
-                starting_location.hash(&mut hasher);
-                elevators.hash(&mut hasher);
-                Ok(Layout {
-                    pickups,
-                    starting_location,
-                    elevators,
-                    seed: hasher.finish(),
-                })
-            },
-        }
-    }
-}
 
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -248,6 +194,7 @@ struct PatchConfigPrivate
 {
     input_iso: Option<String>,
     output_iso: Option<String>,
+    seed: Option<u64>,
 
     #[serde(default)]
     preferences: Preferences,
@@ -257,8 +204,6 @@ struct PatchConfigPrivate
 
     #[serde(default)]
     level_data: HashMap<String, LevelConfig>,
-
-    layout: Option<LayoutWrapper>, // TODO: only support struct (because of doors)
 }
 
 /*** Parse Patcher Input ***/
@@ -286,10 +231,6 @@ impl PatchConfig
                 .long("profile")
                 .help("Path to JSON file with patch configuration (cli config takes priority). See documentation for details.")
                 .takes_value(true))
-            .arg(Arg::with_name("pickup layout")
-                .long("layout")
-                .takes_value(true)
-                .allow_hyphen_values(true))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
@@ -434,6 +375,9 @@ impl PatchConfig
         }
 
         // integer/float
+        if let Some(s) = matches.value_of("seed") {
+            patch_config.seed = Some(s.parse::<u64>().unwrap());
+        }
         if let Some(damage) = matches.value_of("heat damage per sec") {
             patch_config.game_config.heat_damage_per_sec = Some(damage.parse::<f32>().unwrap());
         }
@@ -448,9 +392,6 @@ impl PatchConfig
         }
 
         // custom
-        if let Some(pickup_layout_str) = matches.value_of("pickup layout") {
-            patch_config.layout = Some(LayoutWrapper::String(pickup_layout_str.to_string()));
-        }
         if let Some(starting_items_str) = matches.value_of("starting items") {
             patch_config.game_config.starting_items = Some(
                 StartingItems::from_u64(starting_items_str.parse::<u64>().unwrap())
@@ -494,13 +435,6 @@ impl PatchConfigPrivate
         } else {
             IsoFormat::Iso
         };
-
-        let _layout = self.layout.clone()
-            .unwrap_or_else(|| LayoutWrapper::String(
-                "NCiq7nTAtTnqPcap9VMQk_o8Qj6ZjbPiOdYDB5tgtwL_f01-UpYklNGnL-gTu5IeVW3IoUiflH5LqNXB3wVEER4".to_string()
-            ));
-
-        let layout = _layout.try_into()?;
 
         let artifact_hint_behavior = {
             let artifact_hint_behavior_string = self.preferences.artifact_hint_behavior
@@ -548,7 +482,8 @@ impl PatchConfigPrivate
             input_iso,
             iso_format,
             output_iso,
-            layout,
+            seed: self.seed.unwrap_or(123),
+
             level_data: self.level_data.clone(),
 
             skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
@@ -599,130 +534,4 @@ pub fn extract_flaahgra_music_files(iso_path: &str) -> Result<[nod_wrapper::File
         ])
     })();
     res.map_err(|s: String| format!("Failed to extract Flaahgra music files: {}", s))
-}
-
-pub fn parse_layout_chars_to_ints<I>(bytes: &[u8], layout_data_size: usize, checksum_size: usize, is: I)
-    -> Result<Vec<u8>, String>
-    where I: Iterator<Item = u8> + Clone
-{
-    const LAYOUT_CHAR_TABLE: [u8; 64] =
-        *b"ABCDEFGHIJKLMNOPQRSTUWVXYZabcdefghijklmnopqrstuwvxyz0123456789-_";
-
-    let mut sum: BigUint = 0u8.into();
-    for c in bytes.iter().rev() {
-        if let Some(idx) = LAYOUT_CHAR_TABLE.iter().position(|i| i == c) {
-            sum = sum * BigUint::from(64u8) + BigUint::from(idx);
-        } else {
-            return Err(format!("Layout contains invalid character '{}'.", c));
-        }
-    }
-
-    // Reverse the order of the odd bits
-    let mut bits = sum.to_str_radix(2).into_bytes();
-    for i in 0..(bits.len() / 4) {
-        let len = bits.len() - bits.len() % 2;
-        bits.swap(i * 2 + 1, len - i * 2 - 1);
-    }
-    sum = BigUint::parse_bytes(&bits, 2).unwrap();
-
-    // The upper `checksum_size` bits are a checksum, so seperate them from the sum.
-    let checksum_bitmask = (1u8 << checksum_size) - 1;
-    let checksum = sum.clone() & (BigUint::from(checksum_bitmask) << layout_data_size);
-    sum -= checksum.clone();
-    let checksum = (checksum >> layout_data_size).to_u8().unwrap();
-
-    let mut computed_checksum = 0;
-    {
-        let mut sum = sum.clone();
-        while sum > 0u8.into() {
-            let remainder = (sum.clone() & BigUint::from(checksum_bitmask)).to_u8().unwrap();
-            computed_checksum = (computed_checksum + remainder) & checksum_bitmask;
-            sum >>= checksum_size;
-        }
-    }
-    if checksum != computed_checksum {
-        return Err("Layout checksum failed.".to_string());
-    }
-
-    let mut res = vec![];
-    for denum in is {
-        let (quotient, remainder) = sum.div_rem(&denum.into());
-        res.push(remainder.to_u8().unwrap());
-        sum = quotient;
-    }
-
-    assert!(sum == 0u8.into());
-
-    res.reverse();
-    Ok(res)
-}
-
-impl std::str::FromStr for Layout
-{
-    type Err = String;
-    fn from_str(text: &str) -> Result<Layout, String>
-    {
-        if !text.is_ascii() {
-            return Err("Layout string contains non-ascii characters.".to_string());
-        }
-        let text = text.as_bytes();
-
-        let (elevator_bytes, pickup_bytes) = if let Some(n) = text.iter().position(|c| *c == b'.') {
-            (&text[..n], &text[(n + 1)..])
-        } else {
-            (b"qzoCAr2fwehJmRjM" as &[u8], text)
-        };
-
-        if elevator_bytes.len() != 16 {
-            let msg = "The section of the layout string before the '.' should be 16 characters";
-            return Err(msg.to_string());
-        }
-
-        let (pickup_bytes, has_scan_visor) = if pickup_bytes.starts_with(b"!") {
-            (&pickup_bytes[1..], true)
-        } else {
-            (pickup_bytes, false)
-        };
-        if pickup_bytes.len() != 87 {
-            return Err("Layout string should be exactly 87 characters".to_string());
-        }
-
-        // XXX The distribution on this hash probably isn't very good, but we don't use it for
-        //     anything particularly important anyway...
-        let mut hasher = DefaultHasher::new();
-        hasher.write(elevator_bytes);
-        hasher.write(pickup_bytes);
-        let seed = hasher.finish();
-
-        let pickup_layout = parse_layout_chars_to_ints(
-                pickup_bytes,
-                if has_scan_visor { 521 } else { 517 },
-                if has_scan_visor { 1 } else { 5 },
-                iter::repeat(if has_scan_visor { 37u8 } else { 36u8 }).take(100)
-            ).map_err(|err| format!("Parsing pickup layout: {}", err))?;
-        let pickups = pickup_layout.iter()
-            .map(|i| PickupType::from_idx(*i as usize).unwrap())
-            .collect();
-
-        let elevator_nums = parse_layout_chars_to_ints(
-                elevator_bytes,
-                91, 5,
-                iter::once(21u8).chain(iter::repeat(20u8).take(20))
-            ).map_err(|err| format!("Parsing elevator layout: {}", err))?;
-
-        let starting_location = SpawnRoom::from_u32(*elevator_nums.last().unwrap() as u32)
-            .unwrap();
-        let mut elevators = EnumMap::<Elevator, SpawnRoom>::new();
-        elevators.extend(elevator_nums[..(elevator_nums.len() - 1)].iter()
-            .zip(Elevator::iter())
-            .map(|(i, elv)| (elv, SpawnRoom::from_u32(*i as u32).unwrap()))
-        );
-
-        Ok(Layout {
-            pickups,
-            starting_location,
-            elevators,
-            seed,
-        })
-    }
 }

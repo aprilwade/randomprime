@@ -29,17 +29,27 @@ impl World {
         ].iter().map(|i| *i)
     }
 
-    pub fn from_pak(pak_str: &str) -> Option<Self> {
-        match pak_str {
-            "Metroid1.pak" => Some(World::FrigateOrpheon),
-            "Metroid2.pak" => Some(World::ChozoRuins),
-            "Metroid3.pak" => Some(World::PhendranaDrifts),
-            "Metroid4.pak" => Some(World::TallonOverworld),
-            "metroid5.pak" => Some(World::PhazonMines),
-            "Metroid6.pak" => Some(World::MagmoorCaverns),
-            "Metroid7.pak" => Some(World::ImpactCrater),
-            _ => None
+    pub fn to_pak_str(&self) -> &'static str
+    {
+        match self {
+            World::FrigateOrpheon  => "Metroid1.pak",
+            World::ChozoRuins      => "Metroid2.pak",
+            World::PhendranaDrifts => "Metroid3.pak",
+            World::TallonOverworld => "Metroid4.pak",
+            World::PhazonMines     => "metroid5.pak",
+            World::MagmoorCaverns  => "Metroid6.pak",
+            World::ImpactCrater    => "Metroid7.pak",
         }
+    }
+
+    pub fn from_pak(pak_str: &str) -> Option<Self> {
+        for world in World::iter() {
+            if pak_str == world.to_pak_str() {
+                return Some(world);
+            }
+        }
+
+        None
     }
 
     pub fn mlvl(&self) -> u32 {
@@ -76,6 +86,16 @@ impl World {
             World::MagmoorCaverns  => "magmoor",
             World::ImpactCrater    => "impact",
         }
+    }
+
+    pub fn from_json_key(string: &str) -> Option<Self> {
+        for world in World::iter() {
+            if string.trim().to_lowercase() == world.to_json_key() {
+                return Some(world);
+            }
+        }
+
+        None
     }
 }
 
