@@ -338,6 +338,203 @@ impl MaybeObfuscatedPickup
     }
 }
 
+fn patch_add_item<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    pickup: &PickupConfig,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    config: &PatchConfig,
+) -> Result<(), String>
+{
+    // resolve dependencies
+    let location_idx = 0;
+
+    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup.pickup_type);
+
+    let pickup_type = if config.obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_type_maybe_obfuscated)
+    } else {
+        MaybeObfuscatedPickup::Unobfuscated(pickup_type_maybe_obfuscated)
+    };
+
+    let deps_iter = pickup_type.dependencies().iter()
+        .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            });
+
+    let name = CString::new(format!(
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+    area.add_layer(Cow::Owned(name));
+
+    let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+
+    // Add our custom STRG
+    let hudmemo_dep = structs::Dependency {
+        asset_id: if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+                pickup_type.skip_hudmemos_strg().to_u32()
+            } else {
+                pickup_type.hudmemo_strg().to_u32()
+            },
+        asset_type: b"STRG".into(),
+    };
+    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
+    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+
+    // create pickup
+    let pickup_count = pickup.count.unwrap();
+    let pickup_position = pickup.position.unwrap();
+    let mut pickup = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::Pickup(
+            Box::new(structs::Pickup {
+                position: pickup_position.into(),
+                hitbox: [1.0, 1.0, 2.0].into(), // missile hitbox
+                scan_offset: [
+                    0.0,
+                    0.0,
+                    1.0,
+                ].into(),
+                fade_in_timer: 0.0,
+                spawn_delay: 0.0,
+                active: 1,
+                curr_increase: pickup_count,
+                max_increase: pickup_count,
+        
+                ..(pickup_type.pickup_data().into_owned())
+            })
+        )
+    };
+
+    // create hudmemo
+    let hudmemo = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::HudMemo(
+            Box::new(structs::HudMemo {
+                name: b"myhudmemo\0".as_cstr(),
+                first_message_timer: 5.,
+                unknown: 1,
+                memo_type: 0, // not a text box
+                strg: pickup_type.skip_hudmemos_strg(),
+                active: 1,
+            })
+        )
+    };
+
+    // Display hudmemo when item is picked up
+    pickup.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::SET_TO_ZERO,
+            target_object_id: hudmemo.instance_id,
+        }
+    );
+
+    // Create Special Function to disable layer once item is obtained
+    // This is needed because otherwise the item would re-appear every
+    // time the room is loaded
+    let special_function = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::SpecialFunction(
+            Box::new(structs::SpecialFunction {
+                name: b"myspecialfun\0".as_cstr(),
+                position: [0., 0., 0.].into(),
+                rotation: [0., 0., 0.].into(),
+                type_: 16, // layer change
+                unknown0: b"\0".as_cstr(),
+                unknown1: 0.,
+                unknown2: 0.,
+                unknown3: 0.,
+                layer_change_room_id: area.mlvl_area.internal_id,
+                layer_change_layer_id: new_layer_idx as u32,
+                item_id: 0,
+                unknown4: 1, // active
+                unknown5: 0.,
+                unknown6: 0xFFFFFFFF,
+                unknown7: 0xFFFFFFFF,
+                unknown8: 0xFFFFFFFF,
+            })
+        ),
+    };
+
+    // Activate the layer change when item is picked up
+    pickup.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::DECREMENT,
+            target_object_id: special_function.instance_id,
+        }
+    );
+
+    // create attainment audio
+    let attainment_audio = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::Sound(
+            Box::new(structs::Sound { // copied from main plaza half-pipe
+                name: b"mysound\0".as_cstr(),
+                position: pickup_position.into(),
+                rotation: [0.0,0.0,0.0].into(),
+                sound_id: 117,
+                active: 1,
+                max_dist: 50.0,
+                dist_comp: 0.2,
+                start_delay: 0.0,
+                min_volume: 20,
+                volume: 127,
+                priority: 127,
+                pan: 64,
+                loops: 0,
+                non_emitter: 1,
+                auto_start: 0,
+                occlusion_test: 0,
+                acoustics: 0,
+                world_sfx: 0,
+                allow_duplicates: 0,
+                pitch: 0,
+            })
+        )
+    };
+
+    // Play the sound when item is picked up
+    pickup.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::PLAY,
+            target_object_id: attainment_audio.instance_id,
+        }
+    );
+
+    // update MREA layer with new Objects
+    let scly = area.mrea().scly_section_mut();
+    let layers = scly.layers.as_mut_vec();
+
+    // If this is an artifact, create and push change function
+    let pickup_kind = pickup_type.pickup_data().kind;
+    if pickup_kind >= 29 && pickup_kind <= 40 {
+        let instance_id = ps.fresh_instance_id_range.next().unwrap();
+        let function = artifact_layer_change_template(instance_id, pickup_kind);
+        layers[new_layer_idx].objects.as_mut_vec().push(function);
+        pickup.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ARRIVED,
+                message: structs::ConnectionMsg::INCREMENT,
+                target_object_id: instance_id,
+            }
+        );
+    }
+
+    layers[0].objects.as_mut_vec().push(special_function);
+    layers[new_layer_idx].objects.as_mut_vec().push(hudmemo);
+    layers[new_layer_idx].objects.as_mut_vec().push(attainment_audio);
+    layers[new_layer_idx].objects.as_mut_vec().push(pickup);
+
+    Ok(())
+}
+
 fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -2948,7 +3145,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             position: None,
                         } 
                     } else {
-                        pickups[idx].clone() // TODO: bad clone
+                        pickups[idx].clone() // TODO: cloning is suboptimal
                     }
                 };
                 idx = idx + 1;
@@ -2968,7 +3165,21 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             }
 
             // Patch extra item locations
+            while idx < pickups_config_len {
+                let pickup = pickups[idx].clone(); // TODO: cloning is suboptimal
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    move |_ps, area| patch_add_item(
+                        _ps,
+                        area,
+                        &pickup, 
+                        game_resources,
+                        config
+                    ),
+                );
 
+                idx = idx + 1;
+            }
         }
     }
 
