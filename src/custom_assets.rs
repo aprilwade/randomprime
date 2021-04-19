@@ -113,9 +113,9 @@ pub mod custom_asset_ids {
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
 
-        // User-specified hudmemo strings //
-        USER_HUDMEMO_STRG_START: STRG = SKIP_HUDMEMO_STRG_END.to_u32() + 1,
-        USER_HUDMEMO_STRG_END: STRG = USER_HUDMEMO_STRG_START.to_u32() + 600,
+        // User-specified hudmemo and scan strings //
+        EXTRA_IDS_START: STRG = SKIP_HUDMEMO_STRG_END.to_u32() + 1,
+        EXTRA_IDS_END: STRG = EXTRA_IDS_START.to_u32() + 500,
     }
 }
 
@@ -254,8 +254,8 @@ pub fn custom_assets<'r>(
     }
 
     // Create user-defined hudmemo and scan strings and map to locations //
-    let custom_ids_start = custom_asset_ids::USER_HUDMEMO_STRG_START.to_u32();
-    let custom_ids_end = custom_asset_ids::USER_HUDMEMO_STRG_END.to_u32();
+    let custom_ids_start = custom_asset_ids::EXTRA_IDS_START.to_u32();
+    let custom_ids_end = custom_asset_ids::EXTRA_IDS_END.to_u32();
     let mut strg_idx = 0;
     for (level_name, level) in config.level_data.iter() {
         for (room_name, room) in level.rooms.iter() {
