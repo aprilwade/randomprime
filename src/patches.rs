@@ -338,18 +338,21 @@ impl MaybeObfuscatedPickup
     }
 }
 
+// TODO: factor out shared code with modify_pickups_in_mrea
 fn patch_add_item<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
-    pickup: &PickupConfig,
+    pickup_config: &PickupConfig,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    pickup_hudmemos: &HashMap<PickupHashKey, ResId<res_id::STRG>>,
+    pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    pickup_hash_key: PickupHashKey,
     config: &PatchConfig,
 ) -> Result<(), String>
 {
-    // resolve dependencies
     let location_idx = 0;
 
-    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup.pickup_type);
+    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup_config.pickup_type);
 
     let pickup_type = if config.obfuscate_items {
         MaybeObfuscatedPickup::Obfuscated(pickup_type_maybe_obfuscated)
@@ -369,37 +372,68 @@ fn patch_add_item<'r>(
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
-    // Add our custom STRG
-    let hudmemo_dep = structs::Dependency {
-        asset_id: if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
-                pickup_type.skip_hudmemos_strg().to_u32()
-            } else {
-                pickup_type.hudmemo_strg().to_u32()
-            },
-        asset_type: b"STRG".into(),
+    // Add hudmemo string as dependency to room //
+    let hudmemo_strg: ResId<res_id::STRG> = {
+        if pickup_config.hudmemo_text.is_some() {
+            *pickup_hudmemos.get(&pickup_hash_key).unwrap()
+        } else if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+            pickup_type.skip_hudmemos_strg()
+        } else {
+            pickup_type.hudmemo_strg()
+        }
     };
+    let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
+    // If custom scan text, add that to dependencies as well //
+    let scan_id = {
+        if pickup_config.scan_text.is_some() {
+            let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
+            
+            let scan_dep: structs::Dependency = scan.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
+
+            let strg_dep: structs::Dependency = strg.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+            
+            // TODO: should remove now obsolete vanilla scan from dependencies list
+
+            Some(scan)
+        } else {
+            None
+        }
+    };
+
     // create pickup
-    let pickup_count = pickup.count.unwrap();
-    let pickup_position = pickup.position.unwrap();
-    let mut pickup = structs::SclyObject {
+    let pickup_count = pickup_config.count.unwrap();
+    let pickup_position = pickup_config.position.unwrap();
+    if pickup_config.position.is_none() {
+        panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
+    }
+
+    let mut pickup = structs::Pickup {
+        position: pickup_position.into(),
+        hitbox: [1.0, 1.0, 2.0].into(), // missile hitbox
+        scan_offset: [0.0, 0.0, 0.0].into(),
+        fade_in_timer: 0.0,
+        spawn_delay: 0.0,
+        active: 1,
+        curr_increase: pickup_count,
+        max_increase: pickup_count,
+
+        ..(pickup_type.pickup_data().into_owned())
+    };
+
+    if scan_id.is_some() {
+        pickup.actor_params.scan_params.scan = scan_id.unwrap();
+    }
+
+    let mut pickup_obj = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
         connections: vec![].into(),
         property_data: structs::SclyProperty::Pickup(
-            Box::new(structs::Pickup {
-                position: pickup_position.into(),
-                hitbox: [1.0, 1.0, 2.0].into(), // missile hitbox
-                scan_offset: [0.0, 0.0, 0.0].into(),
-                fade_in_timer: 0.0,
-                spawn_delay: 0.0,
-                active: 1,
-                curr_increase: pickup_count,
-                max_increase: pickup_count,
-        
-                ..(pickup_type.pickup_data().into_owned())
-            })
+            Box::new(pickup)
         )
     };
 
@@ -412,15 +446,15 @@ fn patch_add_item<'r>(
                 name: b"myhudmemo\0".as_cstr(),
                 first_message_timer: 5.,
                 unknown: 1,
-                memo_type: 0, // not a text box
-                strg: pickup_type.skip_hudmemos_strg(),
+                memo_type: 0, // nonmodal only
+                strg: hudmemo_strg,
                 active: 1,
             })
         )
     };
 
     // Display hudmemo when item is picked up
-    pickup.connections.as_mut_vec().push(
+    pickup_obj.connections.as_mut_vec().push(
         structs::Connection {
             state: structs::ConnectionState::ARRIVED,
             message: structs::ConnectionMsg::SET_TO_ZERO,
@@ -457,7 +491,7 @@ fn patch_add_item<'r>(
     };
 
     // Activate the layer change when item is picked up
-    pickup.connections.as_mut_vec().push(
+    pickup_obj.connections.as_mut_vec().push(
         structs::Connection {
             state: structs::ConnectionState::ARRIVED,
             message: structs::ConnectionMsg::DECREMENT,
@@ -496,7 +530,7 @@ fn patch_add_item<'r>(
     };
 
     // Play the sound when item is picked up
-    pickup.connections.as_mut_vec().push(
+    pickup_obj.connections.as_mut_vec().push(
         structs::Connection {
             state: structs::ConnectionState::ARRIVED,
             message: structs::ConnectionMsg::PLAY,
@@ -514,7 +548,7 @@ fn patch_add_item<'r>(
         let instance_id = ps.fresh_instance_id_range.next().unwrap();
         let function = artifact_layer_change_template(instance_id, pickup_kind);
         layers[new_layer_idx].objects.as_mut_vec().push(function);
-        pickup.connections.as_mut_vec().push(
+        pickup_obj.connections.as_mut_vec().push(
             structs::Connection {
                 state: structs::ConnectionState::ARRIVED,
                 message: structs::ConnectionMsg::INCREMENT,
@@ -523,10 +557,10 @@ fn patch_add_item<'r>(
         );
     }
 
-    layers[0].objects.as_mut_vec().push(special_function);
+    layers[new_layer_idx].objects.as_mut_vec().push(special_function);
     layers[new_layer_idx].objects.as_mut_vec().push(hudmemo);
     layers[new_layer_idx].objects.as_mut_vec().push(attainment_audio);
-    layers[new_layer_idx].objects.as_mut_vec().push(pickup);
+    layers[new_layer_idx].objects.as_mut_vec().push(pickup_obj);
 
     Ok(())
 }
@@ -591,7 +625,7 @@ fn modify_pickups_in_mrea<'r>(
             area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
             
             // TODO: should remove now obsolete vanilla scan from dependencies list
-            
+
             Some(scan)
         } else {
             None
@@ -3209,6 +3243,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             // Patch extra item locations
             while idx < pickups_config_len {
                 let pickup = pickups[idx].clone(); // TODO: cloning is suboptimal
+
+                let key = PickupHashKey {
+                    level_id: world.mlvl(),
+                    room_id: room_info.room_id.to_u32(),
+                    pickup_idx: idx as u32,
+                };
+
                 patcher.add_scly_patch(
                     (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     move |_ps, area| patch_add_item(
@@ -3216,7 +3257,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         area,
                         &pickup, 
                         game_resources,
-                        config
+                        pickup_hudmemos,
+                        pickup_scans,
+                        key,
+                        config,
                     ),
                 );
 
