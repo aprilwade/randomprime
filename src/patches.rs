@@ -2395,7 +2395,7 @@ fn patch_credits(res: &mut structs::Resource, config: &PatchConfig)
             for (_, level) in config.level_data.iter() {
                 for (room_name, room) in level.rooms.iter() {
                     for pickup_info in room.pickups.iter() {
-                        if pickup_type.name() == pickup_info.pickup_type {
+                        if PickupType::from_str(pickup_type.name()) == PickupType::from_str(&pickup_info.pickup_type) {
                             _room_name = room_name.to_string();
                             break;
                         }
@@ -2404,7 +2404,7 @@ fn patch_credits(res: &mut structs::Resource, config: &PatchConfig)
             }
 
             if _room_name.len() == 0 {
-                _room_name = "<Vanilla Location or Missing>".to_string();
+                _room_name = "<Not Present>".to_string();
             }
 
             _room_name
