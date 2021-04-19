@@ -282,40 +282,12 @@ enum MaybeObfuscatedPickup
 
 impl MaybeObfuscatedPickup
 {
-    fn orig(&self) -> PickupType
-    {
-        match self {
-            MaybeObfuscatedPickup::Unobfuscated(pt) => *pt,
-            MaybeObfuscatedPickup::Obfuscated(pt) => *pt,
-        }
-    }
-
-    // fn name(&self) -> &'static str
-    // {
-    //     self.orig().name()
-    // }
-
     fn dependencies(&self) -> &'static [(u32, FourCC)]
     {
         match self {
             MaybeObfuscatedPickup::Unobfuscated(pt) => pt.dependencies(),
             MaybeObfuscatedPickup::Obfuscated(_) => PickupType::Nothing.dependencies(),
         }
-    }
-
-    fn hudmemo_strg(&self) -> ResId<res_id::STRG>
-    {
-        self.orig().hudmemo_strg()
-    }
-
-    fn skip_hudmemos_strg(&self) -> ResId<res_id::STRG>
-    {
-        self.orig().skip_hudmemos_strg()
-    }
-
-    pub fn attainment_audio_file_name(&self) -> &'static str
-    {
-        self.orig().attainment_audio_file_name()
     }
 
     pub fn pickup_data<'a>(&self) -> LCow<'a, structs::Pickup<'static>>
@@ -352,22 +324,31 @@ fn patch_add_item<'r>(
 {
     let location_idx = 0;
 
-    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup_config.pickup_type);
+    // Pickup to use for game functionality //
+    let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
-    let pickup_type = if config.obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_type_maybe_obfuscated)
+    // Pickup to use for visuals/hitbox //
+    let pickup_model_maybe_obfuscated = {
+        if pickup_config.model.is_some() {
+            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+        } else {
+            pickup_type
+        }
+    };
+    let pickup_model_type = if config.obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
     } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_type_maybe_obfuscated)
+        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
     };
 
-    let deps_iter = pickup_type.dependencies().iter()
+    let deps_iter = pickup_model_type.dependencies().iter()
         .map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
                 asset_type: fourcc,
             });
 
     let name = CString::new(format!(
-            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_model_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
@@ -405,30 +386,36 @@ fn patch_add_item<'r>(
         }
     };
 
-    // create pickup
-    let pickup_count = pickup_config.count.unwrap();
+    // create pickup //
+    let (curr_increase, max_increase) = {
+        if pickup_config.count.is_some() {
+            let pickup_count = pickup_config.count.unwrap();
+            (pickup_count, pickup_count)
+        } else {
+            let data = pickup_type.pickup_data();
+            (data.curr_increase, data.curr_increase)
+        }
+    };
     let pickup_position = pickup_config.position.unwrap();
+    let kind = pickup_type.pickup_data().kind;
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
     }
-
     let mut pickup = structs::Pickup {
         position: pickup_position.into(),
-        hitbox: [1.0, 1.0, 2.0].into(), // missile hitbox
-        scan_offset: [0.0, 0.0, 0.0].into(),
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
         active: 1,
-        curr_increase: pickup_count,
-        max_increase: pickup_count,
+        curr_increase,
+        max_increase,
+        kind,
 
-        ..(pickup_type.pickup_data().into_owned())
+        ..(pickup_model_type.pickup_data().into_owned())
     };
-
     if scan_id.is_some() {
         pickup.actor_params.scan_params.scan = scan_id.unwrap();
     }
-
+    
     let mut pickup_obj = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
         connections: vec![].into(),
@@ -568,7 +555,7 @@ fn patch_add_item<'r>(
 fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
-    pickup: &PickupConfig,
+    pickup_config: &PickupConfig,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     pickup_hudmemos: &HashMap<PickupHashKey, ResId<res_id::STRG>>,
@@ -579,15 +566,24 @@ fn modify_pickups_in_mrea<'r>(
 {
     let location_idx = 0;
 
-    let pickup_type_maybe_obfuscated = PickupType::from_str(&pickup.pickup_type);
+    // Pickup to use for game functionality //
+    let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
-    let pickup_type = if config.obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_type_maybe_obfuscated)
+    // Pickup to use for visuals/hitbox //
+    let pickup_model_maybe_obfuscated = {
+        if pickup_config.model.is_some() {
+            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+        } else {
+            pickup_type
+        }
+    };
+    let pickup_model_type = if config.obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
     } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_type_maybe_obfuscated)
+        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
     };
 
-    let deps_iter = pickup_type.dependencies().iter()
+    let deps_iter = pickup_model_type.dependencies().iter()
         .map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
                 asset_type: fourcc,
@@ -601,7 +597,7 @@ fn modify_pickups_in_mrea<'r>(
 
     // Add hudmemo string as dependency to room //
     let hudmemo_strg: ResId<res_id::STRG> = {
-        if pickup.hudmemo_text.is_some() {
+        if pickup_config.hudmemo_text.is_some() {
             *pickup_hudmemos.get(&pickup_hash_key).unwrap()
         } else if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
             pickup_type.skip_hudmemos_strg()
@@ -615,7 +611,7 @@ fn modify_pickups_in_mrea<'r>(
 
     // If custom scan text, add that to dependencies as well //
     let scan_id = {
-        if pickup.scan_text.is_some() {
+        if pickup_config.scan_text.is_some() {
             let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
             
             let scan_dep: structs::Dependency = scan.into();
@@ -664,7 +660,7 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup_obj, pickup_type, pickup, scan_id);
+    update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
     }
@@ -688,33 +684,35 @@ fn modify_pickups_in_mrea<'r>(
 
 fn update_pickup(
     pickup: &mut structs::SclyObject,
-    pickup_type: MaybeObfuscatedPickup,
-    pickup_data: &PickupConfig,
+    pickup_type: PickupType,
+    pickup_model_type: MaybeObfuscatedPickup,
+    pickup_config: &PickupConfig,
     scan_id: Option<ResId<res_id::SCAN>>,
 )
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
     let mut original_pickup = pickup.clone();
 
-    if pickup_data.position.is_some() {
-        original_pickup.position = pickup_data.position.unwrap().into();
+    if pickup_config.position.is_some() {
+        original_pickup.position = pickup_config.position.unwrap().into();
     }
 
-    if pickup_data.count.is_some() {
-        let count = pickup_data.count.unwrap();
+    if pickup_config.count.is_some() {
+        let count = pickup_config.count.unwrap();
         original_pickup.curr_increase = count;
         original_pickup.max_increase = count;
     }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_type.pickup_data().cmdl).unwrap();
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap();
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
-    let new_center = calculate_center(new_aabb, pickup_type.pickup_data().rotation,
-                                        pickup_type.pickup_data().scale);
+    let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
+                                        pickup_model_type.pickup_data().scale);
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
+    let kind = pickup_type.pickup_data().kind;
     *pickup = structs::Pickup {
         position: [
             original_pickup.position[0] - (new_center[0] - original_center[0]),
@@ -733,8 +731,9 @@ fn update_pickup(
         active: original_pickup.active,
         curr_increase: original_pickup.curr_increase,
         max_increase: original_pickup.curr_increase,
+        kind,
 
-        ..(pickup_type.pickup_data().into_owned())
+        ..(pickup_model_type.pickup_data().into_owned())
     };
 
     if scan_id.is_some() {
@@ -758,7 +757,7 @@ fn update_hudmemo(
 
 fn update_attainment_audio(
     attainment_audio: &mut structs::SclyObject,
-    pickup_type: MaybeObfuscatedPickup,
+    pickup_type: PickupType,
 )
 {
     let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
@@ -3209,6 +3208,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             position: None,
                             hudmemo_text: None,
                             scan_text: None,
+                            model: None,
                         } 
                     } else {
                         pickups[idx].clone() // TODO: cloning is suboptimal

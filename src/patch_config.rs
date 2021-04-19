@@ -69,11 +69,11 @@ pub struct PickupConfig
     #[serde(alias  = "type")]
     pub pickup_type: String,
     pub count: Option<u32>,
-    // pub model: Option<PickupModelType>,
+    pub model: Option<String>,
     pub scan_text: Option<String>,
     pub hudmemo_text: Option<String>,
-    // pub desination: Option<String>,
     pub position: Option<[f32;3]>,
+    // pub desination: Option<String>,
 }
 
 // TODO: defaults
