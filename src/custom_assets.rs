@@ -100,6 +100,43 @@ pub mod custom_asset_ids {
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
 
+        // blast shield assets //
+        POWER_BOMB_BLAST_SHIELD_CMDL: CMDL,
+        SUPER_BLAST_SHIELD_CMDL: CMDL,
+        WAVEBUSTER_BLAST_SHIELD_CMDL: CMDL,
+        ICESPREADER_BLAST_SHIELD_CMDL: CMDL,
+        FLAMETHROWER_BLAST_SHIELD_CMDL: CMDL,
+
+        POWER_BOMB_BLAST_SHIELD_TXTR0: TXTR,
+        SUPER_BLAST_SHIELD_TXTR0: TXTR,
+        WAVEBUSTER_BLAST_SHIELD_TXTR0: TXTR,
+        ICESPREADER_BLAST_SHIELD_TXTR0: TXTR,
+        FLAMETHROWER_BLAST_SHIELD_TXTR0: TXTR,
+
+        POWER_BOMB_BLAST_SHIELD_TXTR1: TXTR,
+        SUPER_BLAST_SHIELD_TXTR1: TXTR,
+        WAVEBUSTER_BLAST_SHIELD_TXTR1: TXTR,
+        ICESPREADER_BLAST_SHIELD_TXTR1: TXTR,
+        FLAMETHROWER_BLAST_SHIELD_TXTR1: TXTR,
+
+        POWER_BOMB_BLAST_SHIELD_TXTR2: TXTR,
+        SUPER_BLAST_SHIELD_TXTR2: TXTR,
+        WAVEBUSTER_BLAST_SHIELD_TXTR2: TXTR,
+        ICESPREADER_BLAST_SHIELD_TXTR2: TXTR,
+        FLAMETHROWER_BLAST_SHIELD_TXTR2: TXTR,
+
+        POWER_BOMB_BLAST_SHIELD_TXTR3: TXTR,
+        SUPER_BLAST_SHIELD_TXTR3: TXTR,
+        WAVEBUSTER_BLAST_SHIELD_TXTR3: TXTR,
+        ICESPREADER_BLAST_SHIELD_TXTR3: TXTR,
+        FLAMETHROWER_BLAST_SHIELD_TXTR3: TXTR,
+
+        POWER_BOMB_BLAST_SHIELD_TXTR4: TXTR,
+        SUPER_BLAST_SHIELD_TXTR4: TXTR,
+        WAVEBUSTER_BLAST_SHIELD_TXTR4: TXTR,
+        ICESPREADER_BLAST_SHIELD_TXTR4: TXTR,
+        FLAMETHROWER_BLAST_SHIELD_TXTR4: TXTR,
+
         // has to be at the end //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
@@ -151,6 +188,33 @@ fn extern_assets<'r>() -> Vec<Resource<'r>>
         (custom_asset_ids::WAVEBUSTER_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_wavebuster.txtr")),
         (custom_asset_ids::ICESPREADER_DOOR_TXTR,     *b"TXTR", include_bytes!("../extra_assets/holorim_icespreader.txtr")),
         (custom_asset_ids::FLAMETHROWER_DOOR_TXTR,    *b"TXTR", include_bytes!("../extra_assets/holorim_flamethrower.txtr")),
+        /*
+        (custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR0,*b"TXTR", include_bytes!("../extra_assets/pb_blast_shield_0.txtr")),
+        (custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR1,*b"TXTR", include_bytes!("../extra_assets/pb_blast_shield_1.txtr")),
+        (custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR2,*b"TXTR", include_bytes!("../extra_assets/pb_blast_shield_2.txtr")),
+        (custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR3,*b"TXTR", include_bytes!("../extra_assets/pb_blast_shield_3.txtr")),
+        (custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR4,*b"TXTR", include_bytes!("../extra_assets/pb_blast_shield_4.txtr")),
+        (custom_asset_ids::SUPER_BLAST_SHIELD_TXTR0,*b"TXTR", include_bytes!("../extra_assets/spr_blast_shield_0.txtr")),
+        (custom_asset_ids::SUPER_BLAST_SHIELD_TXTR1,*b"TXTR", include_bytes!("../extra_assets/spr_blast_shield_1.txtr")),
+        (custom_asset_ids::SUPER_BLAST_SHIELD_TXTR2,*b"TXTR", include_bytes!("../extra_assets/spr_blast_shield_2.txtr")),
+        (custom_asset_ids::SUPER_BLAST_SHIELD_TXTR3,*b"TXTR", include_bytes!("../extra_assets/spr_blast_shield_3.txtr")),
+        (custom_asset_ids::SUPER_BLAST_SHIELD_TXTR4,*b"TXTR", include_bytes!("../extra_assets/spr_blast_shield_4.txtr")),
+        (custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR0,*b"TXTR", include_bytes!("../extra_assets/wvb_blast_shield_0.txtr")),
+        (custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR1,*b"TXTR", include_bytes!("../extra_assets/wvb_blast_shield_1.txtr")),
+        (custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR2,*b"TXTR", include_bytes!("../extra_assets/wvb_blast_shield_2.txtr")),
+        (custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR3,*b"TXTR", include_bytes!("../extra_assets/wvb_blast_shield_3.txtr")),
+        (custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR4,*b"TXTR", include_bytes!("../extra_assets/wvb_blast_shield_4.txtr")),
+        (custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR0,*b"TXTR", include_bytes!("../extra_assets/ice_blast_shield_0.txtr")),
+        (custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR1,*b"TXTR", include_bytes!("../extra_assets/ice_blast_shield_1.txtr")),
+        (custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR2,*b"TXTR", include_bytes!("../extra_assets/ice_blast_shield_2.txtr")),
+        (custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR3,*b"TXTR", include_bytes!("../extra_assets/ice_blast_shield_3.txtr")),
+        (custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR4,*b"TXTR", include_bytes!("../extra_assets/ice_blast_shield_4.txtr")),
+        (custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR0,*b"TXTR", include_bytes!("../extra_assets/flm_blast_shield_0.txtr")),
+        (custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR1,*b"TXTR", include_bytes!("../extra_assets/flm_blast_shield_1.txtr")),
+        (custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR2,*b"TXTR", include_bytes!("../extra_assets/flm_blast_shield_2.txtr")),
+        (custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR3,*b"TXTR", include_bytes!("../extra_assets/flm_blast_shield_3.txtr")),
+        (custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR4,*b"TXTR", include_bytes!("../extra_assets/flm_blast_shield_4.txtr")),
+        */
     ];
 
     extern_assets.iter().map(|&(res, ref fourcc, bytes)| {
@@ -260,6 +324,21 @@ pub fn custom_assets<'r>(
         }
     }
 
+    // Custom blast shield assets
+    for blast_shield in BlastShieldType::iter() {
+        if blast_shield.cmdl().to_u32() >= 0xDEAF0000 { // only if it doesn't exist in-game already
+            assets.push(create_custom_blast_shield_cmdl(resources, blast_shield));
+        } else {
+            // If vanilla CMDL, then it can't depend on custom textures 
+            assert!(
+                blast_shield.dependencies()
+                .iter()
+                .find(|d| d.0 >= 0xDEAF0000)
+                .is_none()
+            );
+        }
+    }
+
     assets
 }
 
@@ -314,6 +393,40 @@ pub fn collect_game_resources<'r>(
     }
 
     found
+}
+
+fn create_custom_blast_shield_cmdl<'r>(
+    resources: &HashMap<(u32, FourCC),
+    structs::Resource<'r>>,
+    blast_shield_type: BlastShieldType,
+) -> structs::Resource<'r>
+{
+    // Find and read the vanilla blast shield cmdl
+    let old_cmdl = ResourceData::new(&resources[&resource_info!("EFDFFB8C.CMDL").into()]);
+
+    // Create a copy 
+    let old_cmdl_bytes = old_cmdl.decompress().into_owned();
+    let mut new_cmdl = Reader::new(&old_cmdl_bytes[..]).read::<structs::Cmdl>(());
+
+    // Modify the new CMDL to use custom textures
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = blast_shield_type.metal_trim_txtr();
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[1] = blast_shield_type.glow_trim_txtr();
+    new_cmdl.material_sets.as_mut_vec()[1].texture_ids.as_mut_vec()[0] = blast_shield_type.glow_border_txtr();
+    new_cmdl.material_sets.as_mut_vec()[1].texture_ids.as_mut_vec()[1] = blast_shield_type.animated_glow_txtr();
+    new_cmdl.material_sets.as_mut_vec()[2].texture_ids.as_mut_vec()[0] = blast_shield_type.metal_body_txtr();
+
+    // Re-serialize the CMDL
+    let mut new_cmdl_bytes = vec![];
+    new_cmdl.write_to(&mut new_cmdl_bytes).unwrap();
+
+    // Pad length to multiple of 32 bytes
+    new_cmdl_bytes.extend(reader_writer::pad_bytes(32, new_cmdl_bytes.len()).iter());
+
+    // Return resource
+    build_resource(
+        blast_shield_type.cmdl(),
+        structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
+    )
 }
 
 fn create_custom_door_cmdl<'r>(

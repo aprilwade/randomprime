@@ -50,7 +50,6 @@ pub enum DoorType {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum BlastShieldType {
-    None,
     Missile,
     PowerBomb,
     Super,
@@ -933,8 +932,8 @@ impl DoorType {
 
 
 impl BlastShieldType {
-    pub fn from_string(string: String) -> Option<Self> {
-        match string.to_lowercase().as_str() {
+    pub fn from_str(string: &str) -> Option<Self> {
+        match string.trim().to_lowercase().as_str() {
             "missile"          => Some(BlastShieldType::Missile      ),
             "missiles"         => Some(BlastShieldType::Missile      ),
             "missile_launcher" => Some(BlastShieldType::Missile      ),
@@ -953,36 +952,78 @@ impl BlastShieldType {
 
     pub const fn cmdl(&self) -> ResId<res_id::CMDL> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_CMDL,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_CMDL,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_CMDL,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_CMDL,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_CMDL,
+            */
             _ => ResId::new(0xEFDFFB8C), // Vanilla missile lock model
         }
     }
 
-    pub const fn sheet_metal_txtr(&self) -> ResId<res_id::TXTR> {
+    pub const fn metal_body_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR0,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR0,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR0,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR0,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR0,
+            */
             _ => ResId::new(0x6E09EA6B), // Vanilla missile lock txtr
         }
     }
 
-    pub const fn glowing_rectangles_txtr(&self) -> ResId<res_id::TXTR> {
+    pub const fn glow_border_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR1,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR1,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR1,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR1,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR1,
+            */
             _ => ResId::new(0x5B97098E), // Vanilla missile lock txtr
         }
     }
 
-    pub const fn misc_rectangles_txtr(&self) -> ResId<res_id::TXTR> {
+    pub const fn glow_trim_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR2,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR2,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR2,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR2,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR2,
+            */
             _ => ResId::new(0x5C7B215C), // Vanilla missile lock txtr
         }
     }
 
-    pub const fn animation_txtr(&self) -> ResId<res_id::TXTR> {
+    pub const fn animated_glow_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR3,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR3,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR3,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR3,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR3,
+            */
             _ => ResId::new(0xFA0C2AE8), // Vanilla missile lock txtr
         }
     }
     
-    pub const fn misc_metal_txtr(&self) -> ResId<res_id::TXTR> {
+    pub const fn metal_trim_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
+            /*
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR4,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR4,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR4,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR4,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR4,
+            */
             _ => ResId::new(0xFDE0023A), // Vanilla missile lock txtr
         }
     }
@@ -990,19 +1031,18 @@ impl BlastShieldType {
     pub fn dependencies(&self) -> Vec<(u32, FourCC)> { // dependencies to add to the area
         
         let mut data: Vec<(u32, FourCC)> = Vec::new();
-        data.push((self.cmdl().to_u32(),                     FourCC::from_bytes(b"CMDL")));
-        data.push((self.sheet_metal_txtr().to_u32(),         FourCC::from_bytes(b"TXTR")));
-        data.push((self.glowing_rectangles_txtr().to_u32(),  FourCC::from_bytes(b"TXTR")));
-        data.push((self.misc_rectangles_txtr().to_u32(),     FourCC::from_bytes(b"TXTR")));
-        data.push((self.animation_txtr().to_u32(),           FourCC::from_bytes(b"TXTR")));
-        data.push((self.misc_metal_txtr().to_u32(),          FourCC::from_bytes(b"TXTR")));
+        data.push((self.cmdl().to_u32(),               FourCC::from_bytes(b"CMDL")));
+        data.push((self.metal_body_txtr().to_u32(),    FourCC::from_bytes(b"TXTR")));
+        data.push((self.glow_border_txtr().to_u32(),   FourCC::from_bytes(b"TXTR")));
+        data.push((self.glow_trim_txtr().to_u32(),     FourCC::from_bytes(b"TXTR")));
+        data.push((self.animated_glow_txtr().to_u32(), FourCC::from_bytes(b"TXTR")));
+        data.push((self.metal_trim_txtr().to_u32(),    FourCC::from_bytes(b"TXTR")));
         data.retain(|i| i.0 != 0xffffffff && i.0 != 0);
         data
     }
 
     pub fn iter() -> impl Iterator<Item = BlastShieldType> {
         [
-            // BlastShieldType::None,
             BlastShieldType::Missile,
             BlastShieldType::PowerBomb,
             BlastShieldType::Super,
@@ -1020,7 +1060,6 @@ impl BlastShieldType {
             BlastShieldType::Wavebuster     => DoorType::Wavebuster.vulnerability(),
             BlastShieldType::Icespreader    => DoorType::Icespreader.vulnerability(),
             BlastShieldType::Flamethrower   => DoorType::Flamethrower.vulnerability(),
-            _ => DoorType::Disabled.vulnerability(),
         }
     }
 }
