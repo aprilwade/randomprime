@@ -374,7 +374,7 @@ pub fn collect_game_resources<'r>(
             // If this resource is a dependency needed by the patcher, add the resource to the output list //
             let key = (res.file_id, res.fourcc());
             if looking_for.remove(&key) {
-                assert!(found.insert(key, res.into_owned()).is_none());
+                found.insert(key, res.into_owned());
             }
         }
     }
@@ -385,7 +385,7 @@ pub fn collect_game_resources<'r>(
     for res in custom_assets(&found, starting_memo) {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
-        assert!(found.insert(key, res).is_none());
+        found.insert(key, res);
     }
 
     if !looking_for.is_empty() {
@@ -409,11 +409,11 @@ fn create_custom_blast_shield_cmdl<'r>(
     let mut new_cmdl = Reader::new(&old_cmdl_bytes[..]).read::<structs::Cmdl>(());
 
     // Modify the new CMDL to use custom textures
-    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = blast_shield_type.metal_trim_txtr();
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = blast_shield_type.glow_border_txtr();
     new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[1] = blast_shield_type.glow_trim_txtr();
-    new_cmdl.material_sets.as_mut_vec()[1].texture_ids.as_mut_vec()[0] = blast_shield_type.glow_border_txtr();
-    new_cmdl.material_sets.as_mut_vec()[1].texture_ids.as_mut_vec()[1] = blast_shield_type.animated_glow_txtr();
-    new_cmdl.material_sets.as_mut_vec()[2].texture_ids.as_mut_vec()[0] = blast_shield_type.metal_body_txtr();
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[2] = blast_shield_type.metal_body_txtr();
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[3] = blast_shield_type.animated_glow_txtr();
+    new_cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[4] = blast_shield_type.metal_trim_txtr();
 
     // Re-serialize the CMDL
     let mut new_cmdl_bytes = vec![];
