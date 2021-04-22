@@ -952,78 +952,61 @@ impl BlastShieldType {
 
     pub const fn cmdl(&self) -> ResId<res_id::CMDL> {
         match self {
-            /*
             BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_CMDL,
             BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_CMDL,
             BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_CMDL,
             BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_CMDL,
             BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_CMDL,
-            */
             _ => ResId::new(0xEFDFFB8C), // Vanilla missile lock model
         }
     }
 
     pub const fn metal_body_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
-            /*
-            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR0,
-            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR0,
-            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR0,
-            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR0,
-            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR0,
-            */
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR,
             _ => ResId::new(0x6E09EA6B), // Vanilla missile lock txtr
         }
     }
 
     pub const fn glow_border_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
-            /*
-            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR1,
-            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR1,
-            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR1,
-            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR1,
-            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR1,
-            */
+            BlastShieldType::PowerBomb    => custom_asset_ids::BLAST_SHIELD_ALT_TXTR0,
+            BlastShieldType::Super        => custom_asset_ids::BLAST_SHIELD_ALT_TXTR0,
+            BlastShieldType::Wavebuster   => custom_asset_ids::BLAST_SHIELD_ALT_TXTR0,
+            BlastShieldType::Icespreader  => custom_asset_ids::BLAST_SHIELD_ALT_TXTR0,
+            BlastShieldType::Flamethrower => custom_asset_ids::BLAST_SHIELD_ALT_TXTR0,
             _ => ResId::new(0x5B97098E), // Vanilla missile lock txtr
         }
     }
 
     pub const fn glow_trim_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
-            /*
-            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR2,
-            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR2,
-            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR2,
-            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR2,
-            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR2,
-            */
+            BlastShieldType::PowerBomb    => custom_asset_ids::BLAST_SHIELD_ALT_TXTR1,
+            BlastShieldType::Super        => custom_asset_ids::BLAST_SHIELD_ALT_TXTR1,
+            BlastShieldType::Wavebuster   => custom_asset_ids::BLAST_SHIELD_ALT_TXTR1,
+            BlastShieldType::Icespreader  => custom_asset_ids::BLAST_SHIELD_ALT_TXTR1,
+            BlastShieldType::Flamethrower => custom_asset_ids::BLAST_SHIELD_ALT_TXTR1,
             _ => ResId::new(0x5C7B215C), // Vanilla missile lock txtr
         }
     }
 
     pub const fn animated_glow_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
-            /*
-            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR3,
-            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR3,
-            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR3,
-            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR3,
-            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR3,
-            */
-            _ => ResId::new(0xFA0C2AE8), // Vanilla missile lock txtr
+            BlastShieldType::PowerBomb    => custom_asset_ids::BLAST_SHIELD_ALT_TXTR2,
+            BlastShieldType::Super        => custom_asset_ids::BLAST_SHIELD_ALT_TXTR2,
+            BlastShieldType::Wavebuster   => custom_asset_ids::BLAST_SHIELD_ALT_TXTR2,
+            BlastShieldType::Icespreader  => custom_asset_ids::BLAST_SHIELD_ALT_TXTR2,
+            BlastShieldType::Flamethrower => custom_asset_ids::BLAST_SHIELD_ALT_TXTR2,
+            _ => ResId::new(0xFA0C2AE8), // Vanilla missile lock txtrw
         }
     }
     
     pub const fn metal_trim_txtr(&self) -> ResId<res_id::TXTR> {
         match self {
-            /*
-            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_TXTR4,
-            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_TXTR4,
-            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_TXTR4,
-            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_TXTR4,
-            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_TXTR4,
-            */
             _ => ResId::new(0xFDE0023A), // Vanilla missile lock txtr
         }
     }
