@@ -1011,6 +1011,54 @@ impl BlastShieldType {
         }
     }
 
+    pub const fn scan(&self) -> ResId<res_id::SCAN> {
+        match self {
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_SCAN,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_SCAN,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_SCAN,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_SCAN,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_SCAN,
+            _ => ResId::invalid(), // Vanilla missile locks do not have scans associated with the actor
+        }
+    }
+
+    pub const fn strg(&self) -> ResId<res_id::STRG> {
+        match self {
+            BlastShieldType::PowerBomb    => custom_asset_ids::POWER_BOMB_BLAST_SHIELD_STRG,
+            BlastShieldType::Super        => custom_asset_ids::SUPER_BLAST_SHIELD_STRG,
+            BlastShieldType::Wavebuster   => custom_asset_ids::WAVEBUSTER_BLAST_SHIELD_STRG,
+            BlastShieldType::Icespreader  => custom_asset_ids::ICESPREADER_BLAST_SHIELD_STRG,
+            BlastShieldType::Flamethrower => custom_asset_ids::FLAMETHROWER_BLAST_SHIELD_STRG,
+            _ => ResId::invalid(), // Vanilla missile locks do not have scans associated with the actor
+        }
+    }
+
+    pub fn scan_text(&self) -> Vec<String> {
+        match self {
+            BlastShieldType::PowerBomb    => vec!["There is an Advanced Blast Shield on the door blocking access. Analysis indicates that the Blast Shield is reinforced\0".to_string(),
+                                                  "\0".to_string(),
+                                                  "with &push;&main-color=#D91818;Bendenzium&pop;, rendering it invulnerable to most weapons.\0".to_string(),
+                                                 ],
+            BlastShieldType::Super        => vec!["There is an Advanced Blast Shield on the door blocking access. Analysis indicates that the Blast Shield is reinforced\0".to_string(),
+                                                  "\0".to_string(),
+                                                  "with &push;&main-color=#D91818;Cordite&pop;, rendering it invulnerable to most weapons.\0".to_string(),
+                                                 ],
+            BlastShieldType::Wavebuster   => vec!["There is an Elemental Blast Shield on the door blocking access. Analysis indicates that the Blast Shield is invulnerable\0".to_string(),
+                                                  "\0".to_string(),
+                                                  "to standard Beam fire. Continuous exposure to &push;&main-color=#D91818;Extreme Amperage&pop; may damage it.\0".to_string(),
+                                                 ],
+            BlastShieldType::Icespreader  => vec!["There is an Elemental Blast Shield on the door blocking access. Analysis indicates that the Blast Shield is invulnerable\0".to_string(),
+                                                  "\0".to_string(),
+                                                  "to standard Beam fire. A concussive blast augmented with &push;&main-color=#D91818;Extreme Cold&pop; may damage it.\0".to_string(),
+                                                 ],
+            BlastShieldType::Flamethrower => vec!["There is an Elemental Blast Shield on the door blocking access. Analysis indicates that the Blast Shield is invulnerable\0".to_string(),
+                                                  "\0".to_string(),
+                                                  "to standard Beam fire. Continuous exposure to &push;&main-color=#D91818;Extreme Heat&pop; may damage it.\0".to_string(),
+                                                 ],
+            _ => vec!["\0".to_string()], // Vanilla missile locks do not have scans associated with the actor
+        }
+    }
+
     pub fn dependencies(&self) -> Vec<(u32, FourCC)> { // dependencies to add to the area
         
         let mut data: Vec<(u32, FourCC)> = Vec::new();
@@ -1020,6 +1068,8 @@ impl BlastShieldType {
         data.push((self.glow_trim_txtr().to_u32(),     FourCC::from_bytes(b"TXTR")));
         data.push((self.animated_glow_txtr().to_u32(), FourCC::from_bytes(b"TXTR")));
         data.push((self.metal_trim_txtr().to_u32(),    FourCC::from_bytes(b"TXTR")));
+        data.push((self.scan().to_u32(),               FourCC::from_bytes(b"SCAN")));
+        data.push((self.strg().to_u32(),               FourCC::from_bytes(b"STRG")));
         data.retain(|i| i.0 != 0xffffffff && i.0 != 0);
         data
     }

@@ -117,6 +117,18 @@ pub mod custom_asset_ids {
         ICESPREADER_BLAST_SHIELD_TXTR: TXTR,
         FLAMETHROWER_BLAST_SHIELD_TXTR: TXTR,
 
+        POWER_BOMB_BLAST_SHIELD_SCAN: SCAN,
+        SUPER_BLAST_SHIELD_SCAN: SCAN,
+        WAVEBUSTER_BLAST_SHIELD_SCAN: SCAN,
+        ICESPREADER_BLAST_SHIELD_SCAN: SCAN,
+        FLAMETHROWER_BLAST_SHIELD_SCAN: SCAN,
+
+        POWER_BOMB_BLAST_SHIELD_STRG: STRG,
+        SUPER_BLAST_SHIELD_STRG: STRG,
+        WAVEBUSTER_BLAST_SHIELD_STRG: STRG,
+        ICESPREADER_BLAST_SHIELD_STRG: STRG,
+        FLAMETHROWER_BLAST_SHIELD_STRG: STRG,
+
         // has to be at the end //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
@@ -213,12 +225,12 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::PHAZON_SUIT_SCAN,
         custom_asset_ids::PHAZON_SUIT_STRG,
-        "Phazon Suit\0",
+        vec!["Phazon Suit\0".to_string()],
     ));
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::NOTHING_SCAN,
         custom_asset_ids::NOTHING_SCAN_STRG,
-        "???\0",
+        vec!["???\0".to_string()],
     ));
     assets.push(build_resource(
         custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
@@ -229,12 +241,12 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::THERMAL_VISOR_SCAN,
         custom_asset_ids::THERMAL_VISOR_STRG,
-        "Thermal Visor\0",
+        vec!["Thermal Visor\0".to_string()],
     ));
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SCAN_VISOR_SCAN,
         custom_asset_ids::SCAN_VISOR_SCAN_STRG,
-        "Scan Visor\0",
+        vec!["Scan Visor\0".to_string()],
     ));
     assets.push(build_resource(
         custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
@@ -245,7 +257,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SHINY_MISSILE_SCAN,
         custom_asset_ids::SHINY_MISSILE_SCAN_STRG,
-        "Shiny Missile\0",
+        vec!["Shiny Missile\0".to_string()],
     ));
     assets.extend_from_slice(&create_shiny_missile_assets(resources));
     assets.push(build_resource(
@@ -291,6 +303,18 @@ pub fn custom_assets<'r>(
     for blast_shield in BlastShieldType::iter() {
         if blast_shield.cmdl().to_u32() >= 0xDEAF0000 && blast_shield.cmdl().to_u32() <= custom_asset_ids::END.to_u32() { // only if it doesn't exist in-game already
             assets.push(create_custom_blast_shield_cmdl(resources, blast_shield));
+
+            if blast_shield.scan() != ResId::invalid() && blast_shield.strg() != ResId::invalid() {
+                let resources = &create_item_scan_strg_pair(
+                    blast_shield.scan(),
+                    blast_shield.strg(),
+                    blast_shield.scan_text(),
+                );
+
+                println!("resources[1] - {:?}", resources[1]);
+
+                assets.extend_from_slice(resources);
+            }
         } else {
             // If vanilla CMDL, then it can't depend on custom textures 
             assert!(
@@ -570,7 +594,7 @@ fn create_shiny_missile_assets<'r>(
 fn create_item_scan_strg_pair<'r>(
     new_scan: ResId<res_id::SCAN>,
     new_strg: ResId<res_id::STRG>,
-    contents: &str,
+    content: Vec<String>
 ) -> [structs::Resource<'r>; 2]
 {
     let scan = build_resource(
@@ -586,9 +610,12 @@ fn create_item_scan_strg_pair<'r>(
             _dummy: std::marker::PhantomData,
         }),
     );
+
+    let _strg = structs::Strg::from_strings(content);
+
     let strg = build_resource(
         new_strg,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![contents.to_owned()])),
+        structs::ResourceKind::Strg(_strg),
     );
     [scan, strg]
 }
