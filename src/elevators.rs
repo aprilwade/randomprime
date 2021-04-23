@@ -78,19 +78,19 @@ impl World {
 
     pub fn to_json_key(&self) -> &'static str {
         match self {
-            World::FrigateOrpheon  => "frigate",
-            World::ChozoRuins      => "chozo",
-            World::PhendranaDrifts => "phendrana",
-            World::TallonOverworld => "tallon",
-            World::PhazonMines     => "mines",
-            World::MagmoorCaverns  => "magmoor",
-            World::ImpactCrater    => "impact",
+            World::FrigateOrpheon  => "Frigate Orpheon",
+            World::ChozoRuins      => "Chozo Ruins",
+            World::PhendranaDrifts => "Phendrana Drifts",
+            World::TallonOverworld => "Tallon Overworld",
+            World::PhazonMines     => "Phazon Mines",
+            World::MagmoorCaverns  => "Magmoor Caverns",
+            World::ImpactCrater    => "Impact Crater",
         }
     }
 
     pub fn from_json_key(string: &str) -> Option<Self> {
         for world in World::iter() {
-            if string.trim().to_lowercase() == world.to_json_key() {
+            if string.trim().to_lowercase() == world.to_json_key().to_lowercase() {
                 return Some(world);
             }
         }
