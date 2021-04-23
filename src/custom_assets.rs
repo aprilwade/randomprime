@@ -305,15 +305,11 @@ pub fn custom_assets<'r>(
             assets.push(create_custom_blast_shield_cmdl(resources, blast_shield));
 
             if blast_shield.scan() != ResId::invalid() && blast_shield.strg() != ResId::invalid() {
-                let resources = &create_item_scan_strg_pair(
+                assets.extend_from_slice(&create_item_scan_strg_pair(
                     blast_shield.scan(),
                     blast_shield.strg(),
                     blast_shield.scan_text(),
-                );
-
-                println!("resources[1] - {:?}", resources[1]);
-
-                assets.extend_from_slice(resources);
+                ));
             }
         } else {
             // If vanilla CMDL, then it can't depend on custom textures 
@@ -611,11 +607,10 @@ fn create_item_scan_strg_pair<'r>(
         }),
     );
 
-    let _strg = structs::Strg::from_strings(content);
-
     let strg = build_resource(
         new_strg,
-        structs::ResourceKind::Strg(_strg),
+        structs::ResourceKind::Strg(structs::Strg::from_strings(content)),
     );
+
     [scan, strg]
 }
