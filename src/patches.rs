@@ -708,7 +708,7 @@ fn update_pickup(
         spawn_delay: original_pickup.spawn_delay,
         active: original_pickup.active,
         curr_increase: original_pickup.curr_increase,
-        max_increase: original_pickup.curr_increase,
+        max_increase: original_pickup.max_increase,
         kind,
 
         ..(pickup_model_type.pickup_data().into_owned())
@@ -994,12 +994,13 @@ fn fix_artifact_of_truth_requirements(
     config: &PatchConfig,
 ) -> Result<(), String>
 {
+    // Create a new layer that will be toggled on when the Artifact of Truth is collected
     let truth_req_layer_id = area.layer_flags.layer_count;
     area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
-
-    // Create a new layer that will be toggled on when the Artifact of Truth is collected
+    
+    // What is the item at artifact temple?
     let at_pickup_kind = {
-        let mut _at_pickup_kind = PickupType::ArtifactOfTruth.pickup_data().kind;
+        let mut _at_pickup_kind = 0; // nothing item if unspecified
         if config.level_data.contains_key(World::TallonOverworld.to_json_key()) {
             let rooms = &config.level_data.get(World::TallonOverworld.to_json_key()).unwrap().rooms;
             if rooms.contains_key("Artifact Temple") {
@@ -1019,8 +1020,7 @@ fn fix_artifact_of_truth_requirements(
             i + 1
         };
         let kind = i + 29;
-        
-        // TODO: suboptimal solution to if exists problem
+
         let exists = {
             let mut _exists = false;
             for (_, level) in config.level_data.iter() {
@@ -1039,7 +1039,7 @@ fn fix_artifact_of_truth_requirements(
         };
 
         if exists && at_pickup_kind != kind {
-            // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
+            // If the artifact exists, but is not the artifact at the Artifact Temple, mark this
             // layer as inactive. It will be activated when the item is collected.
             area.layer_flags.flags &= !(1 << layer_number);
         } else {
