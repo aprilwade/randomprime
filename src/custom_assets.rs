@@ -27,6 +27,18 @@ pub struct PickupHashKey {
     pub pickup_idx: u32,
 }
 
+impl PickupHashKey {
+    fn from_location(level_name: &str, room_name: &str, pickup_idx: u32) -> Self
+    {
+        let level = World::from_json_key(level_name);
+        PickupHashKey {
+            level_id: level.mlvl(),
+            room_id: SpawnRoomData::from_str(&format!("{}:{}", level.to_str(), room_name).as_str()).mrea, // TODO: this is suboptimal
+            pickup_idx,
+        }
+    }
+}
+
 macro_rules! def_asset_ids {
     (@Build { $prev:expr } $id:ident: $fc:ident, $($rest:tt)*) => {
         def_asset_ids!(@Build { $prev } $id: $fc = $prev + 1, $($rest)*);
@@ -284,12 +296,7 @@ pub fn custom_assets<'r>(
                     assets.push(resource);
     
                     // Map for easy lookup when patching //
-                    let key = PickupHashKey {
-                        level_id: World::from_json_key(level_name).unwrap().mlvl(),
-                        room_id: SpawnRoomData::from_str(&format!("{}:{}", level_name, room_name).as_str()).mrea, // TODO: this is suboptimal
-                        pickup_idx,
-                    };
-                    
+                    let key = PickupHashKey::from_location(level_name, room_name, pickup_idx);
                     pickup_hudmemos.insert(key, strg_id);
                 }
 
@@ -312,12 +319,7 @@ pub fn custom_assets<'r>(
                     ));
     
                     // Map for easy lookup when patching //
-                    let key = PickupHashKey {
-                        level_id: World::from_json_key(level_name).unwrap().mlvl(),
-                        room_id: SpawnRoomData::from_str(&format!("{}:{}", level_name, room_name).as_str()).mrea, // TODO: this is suboptimal
-                        pickup_idx,
-                    };
-                    
+                    let key = PickupHashKey::from_location(level_name, room_name, pickup_idx);
                     pickup_scans.insert(key, (scan_id, strg_id));
                 }
 

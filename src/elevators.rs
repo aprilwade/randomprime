@@ -4,7 +4,7 @@ use serde::Deserialize;
 use enum_map::{Enum, EnumMap};
 use crate::{pickup_meta::{self, PickupType}};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum World {
     FrigateOrpheon,
     TallonOverworld,
@@ -88,14 +88,14 @@ impl World {
         }
     }
 
-    pub fn from_json_key(string: &str) -> Option<Self> {
+    pub fn from_json_key(string: &str) -> Self {
         for world in World::iter() {
             if string.trim().to_lowercase() == world.to_json_key().to_lowercase() {
-                return Some(world);
+                return world;
             }
         }
 
-        None
+        panic!("Unknown World - '{}'", string);
     }
 }
 

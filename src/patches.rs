@@ -121,31 +121,9 @@ fn build_artifact_temple_totem_scan_strings<R>(config: &PatchConfig, rng: &mut R
     generic_text_templates.shuffle(rng);
     let mut generic_templates_iter = generic_text_templates.iter();
 
+    // Where are the artifacts?
     let mut artifact_locations = Vec::<(&str, PickupType)>::new();
-    const VANILLA_ARTIFACT_ROOMS: [(&'static str, &'static str, PickupType);12] = [
-        ("tallon",   "Artifact Temple",      PickupType::ArtifactOfTruth),
-        ("tallon",   "Life Grove",           PickupType::ArtifactOfChozo),
-        ("chozo",    "Sunchamber",           PickupType::ArtifactOfWild),
-        ("chozo",    "Hall of the Elders",   PickupType::ArtifactOfWorld),
-        ("chozo",    "Tower Chamber",        PickupType::ArtifactOfLifegiver),
-        ("magmoor",  "Warrior Shrine",        PickupType::ArtifactOfStrength),
-        ("magmoor",  "Lava Lake",             PickupType::ArtifactOfNature),
-        ("phendrana", "Chozo Ice Temple",     PickupType::ArtifactOfSun),
-        ("phendrana", "Control Tower",        PickupType::ArtifactOfElder),
-        ("phendrana", "Phendrana's Edge",     PickupType::ArtifactOfSpirit),
-        ("mines",     "Elite Research",       PickupType::ArtifactOfWarrior),
-        ("mines",     "Phazon Mining Tunnel", PickupType::ArtifactOfNewborn),
-    ];
-
-    for (level_name, level) in config.level_data.iter() {
-        // check for vanilla locations (unshuffled)
-        for (artifact_level_name, artifact_room_name, pickup_type) in VANILLA_ARTIFACT_ROOMS.iter() {
-            if &level_name.as_str() == artifact_level_name && !level.rooms.contains_key(&artifact_room_name.to_string()) {
-                artifact_locations.push((artifact_room_name, *pickup_type));
-            }
-        }
-
-        // check for new locations (shuffled)
+    for (_, level) in config.level_data.iter() {
         for (room_name, room) in level.rooms.iter() {
             for pickup in room.pickups.iter() {
                 let pickup_type = PickupType::from_str(&pickup.pickup_type);
@@ -183,7 +161,7 @@ fn build_artifact_temple_totem_scan_strings<R>(config: &PatchConfig, rng: &mut R
             continue;
         }
 
-        // If there are specific messages for this room, choose one, other wise choose a generic
+        // If there are specific messages for this room, choose one, otherwise choose a generic
         // message.
         let template = specific_room_templates.iter_mut()
             .find(|row| &row.0 == room_name)
