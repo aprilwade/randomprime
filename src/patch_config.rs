@@ -70,6 +70,38 @@ impl fmt::Display for MapState {
     }
 }
 
+
+#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum QolLevel
+{
+    Vanilla,           // Only patch items/elevators/hints and issues affecting photosensitive epileptics
+    SpiritOfVanilla,   // Only patch the game to preserve continuity, prevent softlocks and fix bugs (also hud and main menu)
+    Cutscenes,         // Skip as many cutscenes as possible without affecting gameplay
+    GameplayCutscenes, // Make the player's life as convienient as possible, even if it affects gameplay
+}
+
+impl QolLevel {
+    pub fn from_u32(level: u32) -> Option<Self> {
+        match level {
+            0 => Some(QolLevel::Vanilla),
+            1 => Some(QolLevel::SpiritOfVanilla),
+            2 => Some(QolLevel::Cutscenes),
+            3 => Some(QolLevel::GameplayCutscenes),
+            _ => None,
+        }
+    }
+
+    pub fn as_u32(self) -> u32 {
+        match self {
+            QolLevel::Vanilla           => 0,
+            QolLevel::SpiritOfVanilla   => 1,
+            QolLevel::Cutscenes         => 2,
+            QolLevel::GameplayCutscenes => 3,
+        }
+    }
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -128,6 +160,8 @@ pub struct PatchConfig
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
+    pub qol_level: QolLevel,
+
     pub layout: Layout,
 
     pub level_data: HashMap<String, LevelConfig>,
@@ -135,7 +169,6 @@ pub struct PatchConfig
     pub starting_room: String,
     pub starting_memo: Option<String>,
 
-    pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
     pub etank_capacity: u32,
@@ -207,7 +240,7 @@ impl TryInto<Layout> for LayoutWrapper
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
-    skip_hudmenus: Option<bool>,
+    qol_level: Option<u32>,
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
@@ -290,6 +323,10 @@ impl PatchConfig
                 .long("layout")
                 .takes_value(true)
                 .allow_hyphen_values(true))
+            .arg(Arg::with_name("qol level")
+                .long("qol-level")
+                .help("Set the qol level: 0=vanilla, 1=spirit-of-vanilla, 2=visual-cutscenes, 3=gameplay-cutscenes")
+                .takes_value(true))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
@@ -298,9 +335,6 @@ impl PatchConfig
                 .long("starting-memo")
                 .help("String which is shown to the player after they start a new save file")
                 .takes_value(true))
-            .arg(Arg::with_name("skip hudmenus")
-                .long("non-modal-item-messages")
-                .help("Display a non-modal message when an item is is acquired"))
             .arg(Arg::with_name("etank capacity")
                 .long("etank-capacity")
                 .help("Set the etank capacity and base health")
@@ -402,7 +436,6 @@ impl PatchConfig
 
         // bool
         populate_config_bool!(matches;
-            "skip hudmenus" => patch_config.preferences.skip_hudmenus,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
             "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
@@ -434,6 +467,9 @@ impl PatchConfig
         }
 
         // integer/float
+        if let Some(qol_level) = matches.value_of("qol level") {
+            patch_config.preferences.qol_level = Some(qol_level.parse::<u32>().unwrap());
+        }
         if let Some(damage) = matches.value_of("heat damage per sec") {
             patch_config.game_config.heat_damage_per_sec = Some(damage.parse::<f32>().unwrap());
         }
@@ -544,6 +580,12 @@ impl PatchConfigPrivate
             .map(|path| extract_flaahgra_music_files(path))
             .transpose()?;
 
+        let qol_level = QolLevel::from_u32(
+            self.preferences.qol_level.unwrap_or(
+                QolLevel::GameplayCutscenes.as_u32()
+            )
+        ).unwrap();
+
         Ok(PatchConfig {
             input_iso,
             iso_format,
@@ -551,7 +593,7 @@ impl PatchConfigPrivate
             layout,
             level_data: self.level_data.clone(),
 
-            skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
+            qol_level,
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,

@@ -18,6 +18,7 @@ use crate::patch_config::{
     PatchConfig,
     GameBanner,
     LevelConfig,
+    QolLevel,
 };
 
 use crate::{
@@ -318,12 +319,13 @@ fn modify_pickups_in_mrea<'r>(
     pickup_type: PickupType,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    config: &PatchConfig,
+    obfuscate_items: bool,
+    skip_hudmenus: bool,
 ) -> Result<(), String>
 {
     let location_idx = 0;
 
-    let pickup_type = if config.obfuscate_items {
+    let pickup_type = if obfuscate_items {
         MaybeObfuscatedPickup::Obfuscated(pickup_type)
     } else {
         MaybeObfuscatedPickup::Unobfuscated(pickup_type)
@@ -342,7 +344,7 @@ fn modify_pickups_in_mrea<'r>(
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     // Add our custom STRG
-    let hudmemo_dep = if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+    let hudmemo_dep = if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
         pickup_type.skip_hudmemos_strg().into()
     } else {
         pickup_type.hudmemo_strg().into()
@@ -390,7 +392,7 @@ fn modify_pickups_in_mrea<'r>(
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
         .unwrap();
-    update_hudmemo(hudmemo, pickup_type, location_idx, config.skip_hudmenus);
+    update_hudmemo(hudmemo, pickup_type, location_idx, skip_hudmenus);
 
 
     let location = pickup_location.attainment_audio;
@@ -2636,7 +2638,7 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "layout: {:#?}", config.layout).unwrap();
     writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
-    writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
+    writeln!(ct, "qol level: {:?}", config.qol_level).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
@@ -2726,6 +2728,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
+    let skip_hudmenus = config.qol_level.as_u32() >= QolLevel::Cutscenes.as_u32();
+
     let pickup_layout = &config.layout.pickups[..];
 
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
@@ -2859,7 +2863,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             pickup_type,
                             pickup_location,
                             game_resources,
-                            config
+                            config.obfuscate_items,
+                            skip_hudmenus,
                         )
                 );
             }
