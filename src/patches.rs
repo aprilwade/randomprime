@@ -2629,21 +2629,6 @@ impl fmt::Display for Version
     }
 }
 
-fn patch_qol_0(patcher: &mut PrimePatcher, version: Version) {
-    if version == Version::NtscU0_00 {
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(),
-            patch_essence_cinematic_skip_whitescreen
-        );
-    }
-    if [Version::NtscU0_00, Version::NtscU0_02, Version::Pal].contains(&version) {
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(),
-            patch_essence_cinematic_skip_nomusic
-        );
-    }
-}
-
 fn patch_qol_1(patcher: &mut PrimePatcher, version: Version)
 {
     // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
@@ -2765,7 +2750,6 @@ fn patch_qol_1(patcher: &mut PrimePatcher, version: Version)
 
 fn patch_qol_2(
     patcher: &mut PrimePatcher,
-    version: Version,
     skip_ending_cinematic: bool,
 )
 {
@@ -2851,8 +2835,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
         Version::NtscU0_00    => Some(rel_files::PATCHES_100_REL),
         Version::NtscU0_01    => None,
         Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
-        Version::Pal         => Some(rel_files::PATCHES_PAL_REL),
-        Version::NtscJ    => None,
+        Version::Pal          => Some(rel_files::PATCHES_PAL_REL),
+        Version::NtscJ        => None,
         Version::NtscUTrilogy => None,
         Version::NtscJTrilogy => None,
         Version::PalTrilogy => None,
@@ -3059,12 +3043,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         resource_info!("FRME_NewFileSelect.FRME").into(),
         patch_main_menu
     );
-
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
         |res| patch_credits(res, &pickup_layout)
     );
-
     patcher.add_resource_patch(
         resource_info!("!MinesWorld_Master.SAVW").into(),
         patch_mines_savw_for_phazon_suit_scan
@@ -3136,9 +3118,21 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     
     patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
     
-    patch_qol_0(&mut patcher, version); // auxillary, photosensitive
-    patch_qol_1(&mut patcher, version); // Softlocks, bugs, continuity and HUD/main-menu
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_whitescreen
+        );
+    }
+    if [Version::NtscU0_00, Version::NtscU0_02, Version::Pal].contains(&version) {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_nomusic
+        );
+    }
+
     if config.qol_level.as_u32() >= QolLevel::SpiritOfVanilla.as_u32() {
+        patch_qol_1(&mut patcher, version); // Softlocks, bugs, continuity and HUD/main-menu
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[
             b"Video/02_start_fileselect_A.thp",
@@ -3160,8 +3154,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             });
         }
     }
-    patch_qol_2(&mut patcher, version, skip_ending_cinematic); // Remove timewasters that don't affect gameplay
-    patch_qol_3(&mut patcher, version); // Remove timewasters that slightly affect gameplay
+    
+    if config.qol_level.as_u32() >= QolLevel::Cutscenes.as_u32() {
+        patch_qol_2(&mut patcher, skip_ending_cinematic); // Remove timewasters that don't affect gameplay
+    }
+    
+    if config.qol_level.as_u32() >= QolLevel::GameplayCutscenes.as_u32() {
+        patch_qol_3(&mut patcher, version); // Remove timewasters that slightly affect gameplay
+    }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
         let iter = VARIA_SUIT_TEXTURES.iter()
