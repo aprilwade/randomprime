@@ -2629,6 +2629,173 @@ impl fmt::Display for Version
     }
 }
 
+fn patch_qol_0(patcher: &mut PrimePatcher, version: Version) {
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_whitescreen
+        );
+    }
+    if [Version::NtscU0_00, Version::NtscU0_02, Version::Pal].contains(&version) {
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            patch_essence_cinematic_skip_nomusic
+        );
+    }
+}
+
+fn patch_qol_1(patcher: &mut PrimePatcher, version: Version)
+{
+    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
+    // copy and to make compressed ISOs smaller.
+    const FMV_NAMES: &[&[u8]] = &[
+        b"Video/attract0.thp",
+        b"Video/attract1.thp",
+        b"Video/attract2.thp",
+        b"Video/attract3.thp",
+        b"Video/attract4.thp",
+        b"Video/attract5.thp",
+        b"Video/attract6.thp",
+        b"Video/attract7.thp",
+        b"Video/attract8.thp",
+        b"Video/attract9.thp",
+
+    ];
+    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
+    for name in FMV_NAMES {
+        patcher.add_file_patch(name, |file| {
+            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+            Ok(())
+        });
+    }
+
+    make_elite_research_fight_prereq_patches(patcher);
+
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(),
+        patch_sunchamber_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(),
+        patch_sun_tower_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("08b_under_intro_ventshaft.MREA").into(),
+        patch_main_ventilation_shaft_section_b_door
+    );
+    patcher.add_scly_patch(
+        resource_info!("10_ice_research_a.MREA").into(),
+        patch_research_lab_hydra_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(),
+        patch_research_lab_aether_exploding_wall
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(),
+        patch_observatory_2nd_pass_solvablility
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(),
+        patch_observatory_1st_pass_softlock
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(),
+        patch_mines_security_station_soft_lock
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_ice_gravity_chamber.MREA").into(),
+        patch_gravity_chamber_stalactite_grapple_point
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(),
+        patch_main_quarry_barrier
+    );
+
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("00n_ice_connect.MREA").into(),
+            patch_research_core_access_soft_lock
+        );
+    } else {
+        patcher.add_scly_patch(
+            resource_info!("08_courtyard.MREA").into(),
+            patch_arboretum_invisible_wall
+        );
+        if version != Version::NtscU0_01 {
+            patcher.add_scly_patch(
+                resource_info!("05_ice_shorelines.MREA").into(),
+                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
+            );
+        }
+    }
+
+    if version == Version::NtscU0_02 {
+        patcher.add_scly_patch(
+            resource_info!("01_mines_mainplaza.MREA").into(),
+            patch_main_quarry_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("19_hive_totem.MREA").into(),
+            patch_hive_totem_boss_trigger_0_02
+        );
+    }
+
+    if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+        patcher.add_scly_patch(
+            resource_info!("04_mines_pillar.MREA").into(),
+            patch_ore_processing_destructible_rock_pal
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_destructible_rock_pal
+        );
+        if version == Version::Pal {
+            patcher.add_scly_patch(
+                resource_info!("01_mines_mainplaza.MREA").into(),
+                patch_main_quarry_door_lock_pal
+            );
+        }
+    }
+}
+
+fn patch_qol_2(
+    patcher: &mut PrimePatcher,
+    version: Version,
+    skip_ending_cinematic: bool,
+)
+{
+    if skip_ending_cinematic {
+        patcher.add_scly_patch(
+            resource_info!("01_endcinema.MREA").into(),
+            patch_ending_scene_straight_to_credits
+        );
+    }
+}
+
+fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
+    patcher.add_scly_patch(
+        resource_info!("00j_over_hall.MREA").into(),
+        patch_temple_security_station_cutscene_trigger
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(),
+        patch_ridley_phendrana_shorelines_cinematic
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(),
+        patch_mqa_cinematic
+    );
+    patcher.add_scly_patch(
+        resource_info!("12_ice_research_b.MREA").into(),
+        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
+    );
+}
+
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
@@ -2637,7 +2804,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "layout: {:#?}", config.layout).unwrap();
-    writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
     writeln!(ct, "qol level: {:?}", config.qol_level).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
@@ -2772,31 +2938,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
     let mut patcher = PrimePatcher::new();
-    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
-    if !config.keep_fmvs {
-        // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
-        // copy and to make compressed ISOs smaller.
-        const FMV_NAMES: &[&[u8]] = &[
-            b"Video/attract0.thp",
-            b"Video/attract1.thp",
-            b"Video/attract2.thp",
-            b"Video/attract3.thp",
-            b"Video/attract4.thp",
-            b"Video/attract5.thp",
-            b"Video/attract6.thp",
-            b"Video/attract7.thp",
-            b"Video/attract8.thp",
-            b"Video/attract9.thp",
 
-        ];
-        const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
-        for name in FMV_NAMES {
-            patcher.add_file_patch(name, |file| {
-                *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
-                Ok(())
-            });
-        }
-    }
+    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
 
     if let Some(flaahgra_music_files) = &config.flaahgra_music_files {
         const MUSIC_FILE_NAME: &[&[u8]] = &[
@@ -2811,40 +2954,21 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    // Replace the FMVs that play when you select a file so each ISO always plays the only one.
-    const SELECT_GAMES_FMVS: &[&[u8]] = &[
-        b"Video/02_start_fileselect_A.thp",
-        b"Video/02_start_fileselect_B.thp",
-        b"Video/02_start_fileselect_C.thp",
-        b"Video/04_fileselect_playgame_A.thp",
-        b"Video/04_fileselect_playgame_B.thp",
-        b"Video/04_fileselect_playgame_C.thp",
-    ];
-    for fmv_name in SELECT_GAMES_FMVS {
-        let fmv_ref = if fmv_name[7] == b'2' {
-            &start_file_select_fmv
-        } else {
-            &file_select_play_game_fmv
-        };
-        patcher.add_file_patch(fmv_name, move |file| {
-            *file = fmv_ref.clone();
-            Ok(())
-        });
-    }
-
     // Patch pickups
     let mut layout_iterator = pickup_layout.iter();
     for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
         for room_info in rooms.iter() {
-             patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
-                // Remove objects
-                let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
-                for otr in room_info.objects_to_remove {
-                    layers[otr.layer as usize].objects.as_mut_vec()
-                        .retain(|i| !otr.instance_ids.contains(&i.instance_id));
-                }
-                Ok(())
-            });
+            if config.qol_level.as_u32() > QolLevel::Vanilla.as_u32() {
+                patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
+                    // Remove objects
+                    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+                    for otr in room_info.objects_to_remove {
+                        layers[otr.layer as usize].objects.as_mut_vec()
+                            .retain(|i| !otr.instance_ids.contains(&i.instance_id));
+                    }
+                    Ok(())
+                });
+            }
             let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
             for (&pickup_location, &pickup_type) in iter {
                 // 1 in 1024 chance of a missile being shiny means a player is likely to see a
@@ -2992,120 +3116,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
-
-    make_elite_research_fight_prereq_patches(&mut patcher);
-
-    patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
-
-    patcher.add_scly_patch(
-        resource_info!("22_Flaahgra.MREA").into(),
-        patch_sunchamber_prevent_wild_before_flaahgra
-    );
-    patcher.add_scly_patch(
-        resource_info!("0v_connect_tunnel.MREA").into(),
-        patch_sun_tower_prevent_wild_before_flaahgra
-    );
-    patcher.add_scly_patch(
-        resource_info!("00j_over_hall.MREA").into(),
-        patch_temple_security_station_cutscene_trigger
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(),
-        patch_ridley_phendrana_shorelines_cinematic
-    );
-    patcher.add_scly_patch(
-        resource_info!("08_mines.MREA").into(),
-        patch_mqa_cinematic
-    );
-    patcher.add_scly_patch(
-        resource_info!("08b_under_intro_ventshaft.MREA").into(),
-        patch_main_ventilation_shaft_section_b_door
-    );
-    patcher.add_scly_patch(
-        resource_info!("10_ice_research_a.MREA").into(),
-        patch_research_lab_hydra_barrier
-    );
-    patcher.add_scly_patch(
-        resource_info!("12_ice_research_b.MREA").into(),
-        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
-    );
-    patcher.add_scly_patch(
-        resource_info!("13_ice_vault.MREA").into(),
-        patch_research_lab_aether_exploding_wall
-    );
-    patcher.add_scly_patch(
-        resource_info!("11_ice_observatory.MREA").into(),
-        patch_observatory_2nd_pass_solvablility
-    );
-    patcher.add_scly_patch(
-        resource_info!("11_ice_observatory.MREA").into(),
-        patch_observatory_1st_pass_softlock
-    );
-    patcher.add_scly_patch(
-        resource_info!("02_mines_shotemup.MREA").into(),
-        patch_mines_security_station_soft_lock
-    );
-    patcher.add_scly_patch(
-        resource_info!("18_ice_gravity_chamber.MREA").into(),
-        patch_gravity_chamber_stalactite_grapple_point
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_mines_mainplaza.MREA").into(),
-        patch_main_quarry_barrier
-    );
-
-    if version == Version::NtscU0_00 {
-        patcher.add_scly_patch(
-            resource_info!("00n_ice_connect.MREA").into(),
-            patch_research_core_access_soft_lock
-        );
-    } else {
-        patcher.add_scly_patch(
-            resource_info!("08_courtyard.MREA").into(),
-            patch_arboretum_invisible_wall
-        );
-        if version != Version::NtscU0_01 {
-            patcher.add_scly_patch(
-                resource_info!("05_ice_shorelines.MREA").into(),
-                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
-            );
-        }
-    }
-
-    if version == Version::NtscU0_02 {
-        patcher.add_scly_patch(
-            resource_info!("01_mines_mainplaza.MREA").into(),
-            patch_main_quarry_door_lock_0_02
-        );
-        patcher.add_scly_patch(
-            resource_info!("13_over_burningeffigy.MREA").into(),
-            patch_geothermal_core_door_lock_0_02
-        );
-        patcher.add_scly_patch(
-            resource_info!("19_hive_totem.MREA").into(),
-            patch_hive_totem_boss_trigger_0_02
-        );
-    }
-
-    if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
-        patcher.add_scly_patch(
-            resource_info!("04_mines_pillar.MREA").into(),
-            patch_ore_processing_destructible_rock_pal
-        );
-        patcher.add_scly_patch(
-            resource_info!("13_over_burningeffigy.MREA").into(),
-            patch_geothermal_core_destructible_rock_pal
-        );
-
-        if version == Version::Pal {
-            patcher.add_scly_patch(
-                resource_info!("01_mines_mainplaza.MREA").into(),
-                patch_main_quarry_door_lock_pal
-            );
-        }
-    }
-
     if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
@@ -3115,32 +3125,43 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if skip_ending_cinematic {
-        patcher.add_scly_patch(
-            resource_info!("01_endcinema.MREA").into(),
-            patch_ending_scene_straight_to_credits
-        );
-    }
-
-    if version == Version::NtscU0_00 {
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(),
-            patch_essence_cinematic_skip_whitescreen
-        );
-    }
-    if [Version::NtscU0_00, Version::NtscU0_02, Version::Pal].contains(&version) {
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(),
-            patch_essence_cinematic_skip_nomusic
-        );
-    }
-
     if config.enable_vault_ledge_door {
         patcher.add_scly_patch(
             resource_info!("01_mainplaza.MREA").into(),
             make_main_plaza_locked_door_two_ways
         );
     }
+
+    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
+    
+    patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
+    
+    patch_qol_0(&mut patcher, version); // auxillary, photosensitive
+    patch_qol_1(&mut patcher, version); // Softlocks, bugs, continuity and HUD/main-menu
+    if config.qol_level.as_u32() >= QolLevel::SpiritOfVanilla.as_u32() {
+        // Replace the FMVs that play when you select a file so each ISO always plays the only one.
+        const SELECT_GAMES_FMVS: &[&[u8]] = &[
+            b"Video/02_start_fileselect_A.thp",
+            b"Video/02_start_fileselect_B.thp",
+            b"Video/02_start_fileselect_C.thp",
+            b"Video/04_fileselect_playgame_A.thp",
+            b"Video/04_fileselect_playgame_B.thp",
+            b"Video/04_fileselect_playgame_C.thp",
+        ];
+        for fmv_name in SELECT_GAMES_FMVS {
+            let fmv_ref = if fmv_name[7] == b'2' {
+                &start_file_select_fmv
+            } else {
+                &file_select_play_game_fmv
+            };
+            patcher.add_file_patch(fmv_name, move |file| {
+                *file = fmv_ref.clone();
+                Ok(())
+            });
+        }
+    }
+    patch_qol_2(&mut patcher, version, skip_ending_cinematic); // Remove timewasters that don't affect gameplay
+    patch_qol_3(&mut patcher, version); // Remove timewasters that slightly affect gameplay
 
     if let Some(angle) = config.suit_hue_rotate_angle {
         let iter = VARIA_SUIT_TEXTURES.iter()

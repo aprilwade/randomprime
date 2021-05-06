@@ -169,7 +169,6 @@ pub struct PatchConfig
     pub starting_room: String,
     pub starting_memo: Option<String>,
 
-    pub keep_fmvs: bool,
     pub obfuscate_items: bool,
     pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
@@ -245,7 +244,6 @@ struct Preferences
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
     trilogy_disc_path: Option<String>,
-    keep_fmvs: Option<bool>,
     quickplay: Option<bool>,
     quiet: Option<bool>,
 }
@@ -382,9 +380,6 @@ impl PatchConfig
                 .takes_value(true)
                 .validator(|s| s.parse::<i32>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
-            .arg(Arg::with_name("keep attract mode")
-                .long("keep-attract-mode")
-                .help("Keeps the attract mode FMVs, which are removed by default"))
             .arg(Arg::with_name("obfuscate items")
                 .long("obfuscate-items")
                 .help("Replace all item models with an obfuscated one"))
@@ -437,7 +432,6 @@ impl PatchConfig
         // bool
         populate_config_bool!(matches;
             "obfuscate items" => patch_config.preferences.obfuscate_items,
-            "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
@@ -597,7 +591,6 @@ impl PatchConfigPrivate
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
-            keep_fmvs: self.preferences.keep_fmvs.unwrap_or(false),
             suit_hue_rotate_angle: None,
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
