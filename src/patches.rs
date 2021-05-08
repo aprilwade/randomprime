@@ -1818,6 +1818,7 @@ fn patch_remove_cutscenes(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
     timers_to_zero: Vec<u32>,
+    skip_ids: Vec<u32>,
 )
     -> Result<(), String>
 {
@@ -1830,6 +1831,16 @@ fn patch_remove_cutscenes(
         for obj in layer.objects.iter() {
             if obj.property_data.is_camera() {
                 camera_ids.push(obj.instance_id.clone());
+            }
+        }
+    }
+
+    // Get a list of all spawn point ids
+    let mut spawn_point_ids = Vec::<u32>::new();
+    for layer in scly.layers.iter() {
+        for obj in layer.objects.iter() {
+            if !skip_ids.contains(&obj.instance_id) && obj.property_data.is_spawn_point() {
+                spawn_point_ids.push(obj.instance_id.clone());
             }
         }
     }
@@ -1859,6 +1870,11 @@ fn patch_remove_cutscenes(
                 }
             }
 
+            // remove every connection to a spawn point, effectively removing all repositions
+            {
+                obj.connections.as_mut_vec().retain(|conn| !spawn_point_ids.contains(&conn.target_object_id));
+            }
+
             // if the object is a camera, create a relay with the same id
             if obj.property_data.is_camera() {
                 let mut relay = {
@@ -1882,8 +1898,8 @@ fn patch_remove_cutscenes(
                 }
 
                 objs_to_add.push(relay);
-            } // if camera
-        } // for all obj
+            }
+        }
 
         // add all relays
         for obj in objs_to_add.iter() {
@@ -1892,6 +1908,9 @@ fn patch_remove_cutscenes(
 
         // remove all cameras from the layer
         layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_camera());
+
+        // remove all player actors from the layer
+        layer.objects.as_mut_vec().retain(|obj| skip_ids.contains(&obj.instance_id) || !obj.property_data.is_player_actor());
     }
 
     Ok(())
@@ -2871,13 +2890,31 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
                 0x002C0104, 0x002C00EB, // platform go up delay
                 0x002C0069, // water go down delay
                 0x002C01BC, // unlock door
-            ]
+            ],
+            vec![],
         ),
     );
     patcher.add_scly_patch(
         resource_info!("10_over_1alavaarea.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area,
-            vec![]
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(
+            ps, area,
+            vec![
+                0x00252715, // timer flower base
+                0x00252718, 0x0025271A, 0x00252770, 0x0025271B, 0x00252775, // timer grow plant
+                0x00250065, // Activate Flagghra and First Mirror
+                0x00250075, // Swap Base
+                0x00250092, 0x00250093, 0x00250094, 0x002500A8, // release from bomb slot
+                0x0025276A, // acid --> water
+            ],
+            vec![
+                0x0025000B, // you get put in vines timeout if you skip the first reposition:
+                            // https://cdn.discordapp.com/attachments/761000402182864906/840707140364664842/no-spawnpoints.mp4
+                0x00252FC0, // the last reposition is important for floaty jump
+            ],
         ),
     );
 }
