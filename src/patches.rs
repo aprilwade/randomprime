@@ -1814,6 +1814,89 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+fn patch_remove_cutscenes(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+    timers_to_zero: Vec<u32>,
+)
+    -> Result<(), String>
+{
+    let layer_count = area.layer_flags.layer_count as usize;
+    let scly = area.mrea().scly_section_mut();
+
+    // Get a list of all camera instance ids
+    let mut camera_ids = Vec::<u32>::new();
+    for layer in scly.layers.iter() {
+        for obj in layer.objects.iter() {
+            if obj.property_data.is_camera() {
+                camera_ids.push(obj.instance_id.clone());
+            }
+        }
+    }
+    
+    // for each layer
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        let mut objs_to_add = Vec::<structs::SclyObject>::new();
+
+        // for each object in the layer
+        for obj in layer.objects.as_mut_vec() {
+
+            // If it's a cutscene-related timer, make it take 1 frame
+            if timers_to_zero.contains(&obj.instance_id) {
+                let timer = obj.property_data.as_timer_mut().unwrap();
+                timer.start_time = 0.0001;
+            }
+
+            // for each connection in that object
+            for connection in obj.connections.as_mut_vec().iter_mut() {
+                // if this object sends messages to a camera, change the message to be
+                // appropriate for a relay
+                if camera_ids.contains(&connection.target_object_id) { 
+                    if connection.message == structs::ConnectionMsg::ACTIVATE {
+                        connection.message = structs::ConnectionMsg::SET_TO_ZERO;
+                    }
+                }
+            }
+
+            // if the object is a camera, create a relay with the same id
+            if obj.property_data.is_camera() {
+                let mut relay = {
+                    structs::SclyObject {
+                        instance_id: obj.instance_id,
+                        connections: obj.connections.clone(),
+                        property_data: structs::SclyProperty::Relay(Box::new(
+                            structs::Relay {
+                                name: b"camera-relay\0".as_cstr(),
+                                active: 1,
+                            }
+                        ))
+                    }
+                };
+
+                // relays send messages on ZERO, not ACTIVE/INACTIVE
+                for connection in relay.connections.as_mut_vec().iter_mut() {
+                    if connection.state == structs::ConnectionState::ACTIVE || connection.state == structs::ConnectionState::INACTIVE {
+                        connection.state = structs::ConnectionState::ZERO;
+                    }
+                }
+
+                objs_to_add.push(relay);
+            } // if camera
+        } // for all obj
+
+        // add all relays
+        for obj in objs_to_add.iter() {
+            layer.objects.as_mut_vec().push(obj.clone());
+        }
+
+        // remove all cameras from the layer
+        layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_camera());
+    }
+
+    Ok(())
+}
+
 fn patch_main_quarry_door_lock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2777,6 +2860,19 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
         resource_info!("12_ice_research_b.MREA").into(),
         move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
+    );
+    patcher.add_scly_patch(
+        resource_info!("15_energycores.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![
+                0x002C00E8, 0x002C0101, 0x002C00F5, // activate core delay
+                0x002C0068, 0x002C0055, 0x002C0079, // core energy flow activation delay
+                0x002C0067, 0x002C00E7, 0x002C0102, // jingle finish delay
+                0x002C0104, 0x002C00EB, // platform go up delay
+                0x002C0069, // water go down delay
+                0x002C01BC, // unlock door
+            ]
+        ),
     );
 }
 
