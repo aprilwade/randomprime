@@ -1814,6 +1814,11 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
     Ok(())
 }
 
+// Removes all cameras and spawn point repositions in the area
+// igoring any provided exlcuded script objects.
+// Additionally, shortens any specified timers to 0-ish seconds
+// When deciding which objects to patch, the most significant
+// byte is ignored
 fn patch_remove_cutscenes(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
@@ -1829,8 +1834,8 @@ fn patch_remove_cutscenes(
     let mut camera_ids = Vec::<u32>::new();
     for layer in scly.layers.iter() {
         for obj in layer.objects.iter() {
-            if obj.property_data.is_camera() {
-                camera_ids.push(obj.instance_id.clone());
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_camera() {
+                camera_ids.push(obj.instance_id & 0x00FFFFFF);
             }
         }
     }
@@ -1839,8 +1844,12 @@ fn patch_remove_cutscenes(
     let mut spawn_point_ids = Vec::<u32>::new();
     for layer in scly.layers.iter() {
         for obj in layer.objects.iter() {
-            if !skip_ids.contains(&obj.instance_id) && obj.property_data.is_spawn_point() {
-                spawn_point_ids.push(obj.instance_id.clone());
+            if obj.property_data.is_spawn_point() {
+                println!("Spawn Point - 0x{:X}", obj.instance_id);
+            }
+
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_spawn_point() {
+                spawn_point_ids.push(obj.instance_id & 0x00FFFFFF);
             }
         }
     }
@@ -1852,9 +1861,10 @@ fn patch_remove_cutscenes(
 
         // for each object in the layer
         for obj in layer.objects.as_mut_vec() {
+            let obj_id = obj.instance_id & 0x00FFFFFF; // remove uper encoding byte
 
             // If it's a cutscene-related timer, make it take 1 frame
-            if timers_to_zero.contains(&obj.instance_id) {
+            if timers_to_zero.contains(&obj_id) {
                 let timer = obj.property_data.as_timer_mut().unwrap();
                 timer.start_time = 0.0001;
             }
@@ -1863,7 +1873,7 @@ fn patch_remove_cutscenes(
             for connection in obj.connections.as_mut_vec().iter_mut() {
                 // if this object sends messages to a camera, change the message to be
                 // appropriate for a relay
-                if camera_ids.contains(&connection.target_object_id) { 
+                if camera_ids.contains(&(connection.target_object_id & 0x00FFFFFF)) { 
                     if connection.message == structs::ConnectionMsg::ACTIVATE {
                         connection.message = structs::ConnectionMsg::SET_TO_ZERO;
                     }
@@ -1871,12 +1881,10 @@ fn patch_remove_cutscenes(
             }
 
             // remove every connection to a spawn point, effectively removing all repositions
-            {
-                obj.connections.as_mut_vec().retain(|conn| !spawn_point_ids.contains(&conn.target_object_id));
-            }
+            obj.connections.as_mut_vec().retain(|conn| !spawn_point_ids.contains(&(conn.target_object_id & 0x00FFFFFF)));
 
             // if the object is a camera, create a relay with the same id
-            if obj.property_data.is_camera() {
+            if camera_ids.contains(&obj_id) {
                 let mut relay = {
                     structs::SclyObject {
                         instance_id: obj.instance_id,
@@ -1899,6 +1907,17 @@ fn patch_remove_cutscenes(
 
                 objs_to_add.push(relay);
             }
+
+            // Special handling for specific rooms //
+            if obj_id == 0x00250123 { // death cutscene (first camera)
+                // teleport the player at end of shot (4.0s), this is long enough for
+                // the water to change from acid to water, thus granting pre-floaty
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::INACTIVE,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x04252FC0, // spawn point by item
+                });
+            }
         }
 
         // add all relays
@@ -1907,10 +1926,10 @@ fn patch_remove_cutscenes(
         }
 
         // remove all cameras from the layer
-        layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_camera());
+        layer.objects.as_mut_vec().retain(|obj| !camera_ids.contains(&(&obj.instance_id & 0x00FFFFFF)));
 
         // remove all player actors from the layer
-        layer.objects.as_mut_vec().retain(|obj| skip_ids.contains(&obj.instance_id) || !obj.property_data.is_player_actor());
+        layer.objects.as_mut_vec().retain(|obj| skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || !obj.property_data.is_player_actor());
     }
 
     Ok(())
@@ -2903,16 +2922,14 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(
             ps, area,
             vec![
-                0x00252715, // timer flower base
-                0x00252718, 0x0025271A, 0x00252770, 0x0025271B, 0x00252775, // timer grow plant
-                0x00250065, // Activate Flagghra and First Mirror
-                0x00250075, // Swap Base
                 0x00250092, 0x00250093, 0x00250094, 0x002500A8, // release from bomb slot
-                0x0025276A, // acid --> water
+                0x0025276A, // acid --> water (needed for floaty)
             ],
             vec![
+                0x002500CA, 0x00252FE4, 0x00252727, 0x0025272C, 0x00252741,  // into cinematic works better if skipped normally
                 0x0025000B, // you get put in vines timeout if you skip the first reposition:
                             // https://cdn.discordapp.com/attachments/761000402182864906/840707140364664842/no-spawnpoints.mp4
+                0x00250123, // keep just the first camera angle of the death cutscene to prevent underwater when going for pre-floaty
                 0x00252FC0, // the last reposition is important for floaty jump
             ],
         ),
