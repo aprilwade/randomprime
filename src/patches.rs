@@ -3048,7 +3048,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D]), // keep fight start reposition for wavesun
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B]), // keep fight start reposition for wavesun
     );
     patcher.add_scly_patch(
         resource_info!("04_ice_boost_canyon.MREA").into(), // Phendrana canyon
