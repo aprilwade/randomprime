@@ -1905,7 +1905,7 @@ fn patch_remove_cutscenes(
             }
 
             // Special handling for specific rooms //
-            if obj_id == 0x00250123 { // death cutscene (first camera)
+            if obj_id == 0x00250123 { // flaahgra death cutscene (first camera)
                 // teleport the player at end of shot (4.0s), this is long enough for
                 // the water to change from acid to water, thus granting pre-floaty
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -1913,6 +1913,10 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::SET_TO_ZERO,
                     target_object_id: 0x04252FC0, // spawn point by item
                 });
+            } else if obj_id == 0x00170153 { // magmoor workstation cutscene (power activated)
+                // play this cutscene, but only for a second
+                // this is to allow players to get floaty jump without having red mist
+                obj.property_data.as_camera_mut().unwrap().shot_duration = 4.0;
             }
         }
 
@@ -2916,7 +2920,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("10_over_1alavaarea.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153]),
     );
     patcher.add_scly_patch(
         resource_info!("22_Flaahgra.MREA").into(),
@@ -2935,6 +2939,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
             ],
         ),
     );
+    
 }
 
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
