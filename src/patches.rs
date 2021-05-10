@@ -2920,7 +2920,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("10_over_1alavaarea.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153]), // skip patching 1st cutscene (special floaty case)
     );
     patcher.add_scly_patch(
         resource_info!("22_Flaahgra.MREA").into(),
@@ -2952,16 +2952,16 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
-        resource_info!("06_under_intro_freight.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
         resource_info!("05_under_intro_zoo.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_specimen_chamber.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_over_xray.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4]), // skipping the chozo ghost cutscene somehow sends the ghosts OoB
     );
 }
 
