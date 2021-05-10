@@ -3026,7 +3026,13 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("12_mines_eliteboss.MREA").into(), // elite quarters
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // keep the first cutscene because the normal skip works out better
+                0x001A0282, 0x001A0283, 0x001A02B3, 0x001A02BF, 0x001A0284, 0x001A031A, // cameras
+                0x001A0294, 0x001A02B9, // player actor
+            ],
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("02_mines_shotemup.MREA").into(), // mine security station
@@ -3038,15 +3044,14 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("00h_mines_connect.MREA").into(), // vent shaft
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00120085]), // puffers don't destroy wall if this is skipped TODO: use timer instead of cutscene
     );
     patcher.add_scly_patch(
-        resource_info!("07_mines_electric.MREA").into(), // vent shaft
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
-        resource_info!("07_mines_electric.MREA").into(), // vent shaft
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        resource_info!("07_mines_electric.MREA").into(), // central dynamo
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001B03F8], // activate maze faster
+            vec![0x001B0349, 0x001B0356], // keep item aquisition cutscene (or players can get left down there)
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
@@ -3086,12 +3091,18 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
 
     // Crater
-    patcher.add_scly_patch(
-        resource_info!("03f_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    patcher.add_scly_patch( // phazon infusion chamber
+        resource_info!("03a_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // keep first cutscene because vanilla skip is better
+                0x0005002B, 0x0005002C, 0x0005007D, 0x0005002D, 0x00050032, 0x00050078, 0x00050033, 0x00050034, 0x00050035, 0x00050083, // cameras
+                0x0005002E, 0x0005008B, 0x00050089, // player actors
+            ],
+        ),
     );
     patcher.add_scly_patch(
-        resource_info!("03a_crater.MREA").into(),
+        resource_info!("03f_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
