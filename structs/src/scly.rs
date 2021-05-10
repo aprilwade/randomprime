@@ -216,6 +216,8 @@ macro_rules! build_scly_property {
 }
 
 build_scly_property!(
+    CameraBlurKeyframe,   is_camera_blur_keyframe,   as_camera_blur_keyframe,   as_camera_blur_keyframe_mut,
+    CameraFilterKeyframe, is_camera_filter_keyframe, as_camera_filter_keyframe, as_camera_filter_keyframe_mut,
     Actor,             is_actor,              as_actor,              as_actor_mut,
     Camera,            is_camera,             as_camera,             as_camera_mut,
     DamageableTrigger, is_damageable_trigger, as_damageable_trigger, as_damageable_trigger_mut,

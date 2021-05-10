@@ -1844,10 +1844,6 @@ fn patch_remove_cutscenes(
     let mut spawn_point_ids = Vec::<u32>::new();
     for layer in scly.layers.iter() {
         for obj in layer.objects.iter() {
-            if obj.property_data.is_spawn_point() {
-                println!("Spawn Point - 0x{:X}", obj.instance_id);
-            }
-
             if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_spawn_point() {
                 spawn_point_ids.push(obj.instance_id & 0x00FFFFFF);
             }
@@ -1925,11 +1921,16 @@ fn patch_remove_cutscenes(
             layer.objects.as_mut_vec().push(obj.clone());
         }
 
-        // remove all cameras from the layer
-        layer.objects.as_mut_vec().retain(|obj| !camera_ids.contains(&(&obj.instance_id & 0x00FFFFFF)));
-
-        // remove all player actors from the layer
-        layer.objects.as_mut_vec().retain(|obj| skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || !obj.property_data.is_player_actor());
+        // remove all cutscene related objects from layer
+        layer.objects.as_mut_vec().retain(|obj|
+            skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || // except for exluded objects
+            !(
+                obj.property_data.is_camera() ||
+                obj.property_data.is_camera_filter_keyframe() ||
+                obj.property_data.is_camera_blur_keyframe() ||
+                obj.property_data.is_player_actor()
+            )
+        );
     }
 
     Ok(())
