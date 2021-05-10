@@ -2939,7 +2939,10 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
             ],
         ),
     );
-    
+    patcher.add_scly_patch(
+        resource_info!("03_mines.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
 }
 
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
