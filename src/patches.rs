@@ -938,14 +938,6 @@ fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: 
     Ok(())
 }
 
-fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let scly = area.mrea().scly_section_mut();
-    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-    Ok(())
-}
-
 fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2893,10 +2885,6 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         patch_temple_security_station_cutscene_trigger
     );
     patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(),
-        patch_ridley_phendrana_shorelines_cinematic
-    );
-    patcher.add_scly_patch(
         resource_info!("08_mines.MREA").into(),
         patch_mqa_cinematic
     );
@@ -2962,6 +2950,22 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4]), // skipping the chozo ghost cutscene somehow sends the ghosts OoB
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mainplaza.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_over_muddywaters_b.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
 }
 
