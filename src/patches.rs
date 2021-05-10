@@ -1909,6 +1909,9 @@ fn patch_remove_cutscenes(
                 // play this cutscene, but only for a second
                 // this is to allow players to get floaty jump without having red mist
                 obj.property_data.as_camera_mut().unwrap().shot_duration = 4.0;
+            } else if obj_id == 0x001E027E { // observatory scan
+                // just cut out all the confusion by having the scan always active
+                obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
             }
         }
 
@@ -3067,7 +3070,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("11_ice_observatory.MREA").into(), // Observatory
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E0042, 0x001E000E], vec![]),
     );
     patcher.add_scly_patch(
         resource_info!("08_ice_ridley.MREA").into(), // control tower
