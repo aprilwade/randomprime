@@ -3010,6 +3010,104 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
             vec![], // TODO: if the bowl cutscene is skipped, players can break logic and go in the statue
         ),
     );
+    patcher.add_scly_patch(
+        resource_info!("13_over_burningeffigy.MREA").into(), // geothermal core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("12_mines_eliteboss.MREA").into(), // elite quarters
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_mines_forcefields.MREA").into(), // elite control
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("00h_mines_connect.MREA").into(), // vent shaft
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(), // vent shaft
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(), // vent shaft
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D]), // keep fight start reposition for wavesun
+    );
+    patcher.add_scly_patch(
+        resource_info!("04_ice_boost_canyon.MREA").into(), // Phendrana canyon
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_ice_shorelines.MREA").into(), // ruined courtyard
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("09_ice_lobby.MREA").into(), // research entrance
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(), // Observatory
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_ice_ridley.MREA").into(), // control tower
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(), // research core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+
+    // Crater
+    patcher.add_scly_patch(
+        resource_info!("03f_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03a_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03e_f_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03e_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03b_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03d_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03c_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
 }
 
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
