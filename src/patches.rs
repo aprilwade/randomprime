@@ -1912,6 +1912,27 @@ fn patch_remove_cutscenes(
             } else if obj_id == 0x001E027E { // observatory scan
                 // just cut out all the confusion by having the scan always active
                 obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
+            } else if obj_id == 0x00070062 { // subchamber 2 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id: 0x0007000B, // metroid prime
+                });
+            } else if obj_id == 0x00080058 { // subchamber 3 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id: 0x00080016, // metroid prime
+                });
+            } else if obj_id == 0x0009005A { // subchamber 4 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id: 0x00090013, // metroid prime
+                });
             }
         }
 
@@ -3102,19 +3123,11 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         ),
     );
     patcher.add_scly_patch(
-        resource_info!("03f_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
-        resource_info!("03e_f_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
-        resource_info!("03e_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
         resource_info!("03b_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03c_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
@@ -3122,7 +3135,17 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
-        resource_info!("03c_crater.MREA").into(),
+        resource_info!("03e_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    /*
+    patcher.add_scly_patch(
+        resource_info!("03e_f_crater.MREA").into(), // subchamber 5
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    */
+    patcher.add_scly_patch(
+        resource_info!("03f_crater.MREA").into(), // metroid prime lair
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
 }
