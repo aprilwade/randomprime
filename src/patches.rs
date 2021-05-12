@@ -1919,6 +1919,9 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::START,
                     target_object_id: 0x0007000B, // metroid prime
                 });
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                trigger.scale[2] = 8.0;
+                trigger.position[2] = trigger.position[2] - 11.7;
             } else if obj_id == 0x00080058 { // subchamber 3 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -1926,6 +1929,9 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::START,
                     target_object_id: 0x00080016, // metroid prime
                 });
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                trigger.scale[2] = 8.0;
+                trigger.position[2] = trigger.position[2] - 11.7;
             } else if obj_id == 0x0009005A { // subchamber 4 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -1933,6 +1939,11 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::START,
                     target_object_id: 0x00090013, // metroid prime
                 });
+                if obj.property_data.is_trigger() {
+                    let trigger = obj.property_data.as_trigger_mut().unwrap();
+                    trigger.scale[2] = 8.0;
+                    trigger.position[2] = trigger.position[2] - 11.7;
+                }
             }
         }
 
@@ -3122,6 +3133,9 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
             ],
         ),
     );
+
+    // subchambers
+    // TODO: if the player is standing over the hole as it open, an important trigger can be missed
     patcher.add_scly_patch(
         resource_info!("03b_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
@@ -3138,15 +3152,18 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("03e_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
-    /*
-    patcher.add_scly_patch(
-        resource_info!("03e_f_crater.MREA").into(), // subchamber 5
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    */
+
+    // play subchamber 5 cutscene normally (players can't natrually pass through the ceiling of prime's lair)
     patcher.add_scly_patch(
         resource_info!("03f_crater.MREA").into(), // metroid prime lair
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // play the first cutscene so it can be skipped normally
+                0x000B019D, 0x000B008B, 0x000B008D, 0x000B0093, 0x000B0094, 0x000B00A7,
+                0x000B00AF, 0x000B00E1, 0x000B00DF, 0x000B00B0, 0x000B00D3, 0x000B00E3,
+                0x000B00E6, 0x000B0095, 0x000B00E4,
+            ], 
+        ),
     );
 }
 
