@@ -1615,6 +1615,38 @@ fn patch_arboretum_invisible_wall(
     Ok(())
 }
 
+fn patch_backwards_lower_mines_pca(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    // remove from scripting layers
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_platform());
+        for obj in layer.objects.as_mut_vec() {
+            if obj.property_data.is_trigger()
+            {
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                if trigger.name.to_str().unwrap().contains(&"eliteboss") {
+                    trigger.active = 1;
+                }
+            }
+        }
+    }
+
+    // remove from level/area dependencies (this wasn't a necessary excercise, but it's nice to know how to do)
+    let deps_to_remove: Vec<u32> = vec![
+        0x744572a0, 0xBF19A105, 0x0D3BB9B1, // cmdl
+        0x3cfa9c1c, 0x165B2898, // dcln
+        0x122D9D74, 0x245EEA17, 0x71A63C95, 0x7351A073, 0x8229E1A3, 0xDD3931E2, // txtr
+        0xBA2E99E8, 0xD03D1FF3, 0xE6D3D35E, 0x4185C16A, 0xEFE6629B, // txtr
+    ];
+    for dep_array in area.mlvl_area.dependencies.deps.as_mut_vec() {
+        dep_array.as_mut_vec().retain(|dep| !deps_to_remove.contains(&dep.asset_id));
+    }
+
+    Ok(())
+}
+
 fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2796,6 +2828,10 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
     patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(),
         patch_main_quarry_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("00p_mines_connect.MREA").into(),
+        patch_backwards_lower_mines_pca
     );
     patcher.add_scly_patch(
         resource_info!("01_mainplaza.MREA").into(),
