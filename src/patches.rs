@@ -1983,6 +1983,31 @@ fn patch_remove_cutscenes(
     Ok(())
 }
 
+fn patch_fix_central_dynamo_crash(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        // find quarantine access door damage trigger
+        for obj in layer.objects.as_mut_vec() {
+            if obj.instance_id&0x00FFFFFF == 0x001B0470 {
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001B03FA, // turn off maze relay
+                });
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: 0x001B02F2, // close the hole
+                });
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn patch_main_quarry_door_lock_pal(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2867,6 +2892,10 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
     patcher.add_scly_patch(
         resource_info!("18_ice_gravity_chamber.MREA").into(),
         patch_gravity_chamber_stalactite_grapple_point
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(),
+        patch_fix_central_dynamo_crash
     );
 
     // undo retro "fixes"
