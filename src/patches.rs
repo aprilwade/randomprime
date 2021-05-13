@@ -923,76 +923,6 @@ fn patch_essence_cinematic_skip_nomusic(
     Ok(())
 }
 
-fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let scly = area.mrea().scly_section_mut();
-    let trigger = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
-        .find(|obj| obj.instance_id == 0x70067)
-        .and_then(|obj| obj.property_data.as_trigger_mut())
-        .unwrap();
-    trigger.active = 0;
-
-    Ok(())
-}
-
-fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let flags = &mut area.layer_flags.flags;
-        *flags &= !(1 << 4); // Turn off the "Room unveil cinematic"
-
-    let mut next_object_id = 0;
-    let scly = area.mrea().scly_section_mut();
-
-    for obj in scly.layers.as_mut_vec()[0].objects.iter_mut() {
-        if next_object_id < obj.instance_id {
-            next_object_id = obj.instance_id;
-        }
-    }
-
-    let camera_door_id = 0x2000CF;
-    let memory_relay_id = 0x2006DE;
-    let timer_activate_memory_relay_id = next_object_id + 1;
-
-    scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(
-        structs::SclyObject {
-            instance_id: timer_activate_memory_relay_id,
-            property_data: structs::Timer {
-                name: b"Timer - Activate post cutscene memory relay\0".as_cstr(),
-
-                start_time: 0.001,
-                max_random_add: 0f32,
-                reset_to_zero: 0,
-                start_immediately: 1,
-                active: 1,
-            }.into(),
-            connections: vec![
-                structs::Connection {
-                    state: structs::ConnectionState::ZERO,
-                    message: structs::ConnectionMsg::ACTIVATE,
-                    target_object_id: memory_relay_id,
-                },
-            ].into(),
-        }
-    );
-
-    let memory_relay_obj = scly.layers.as_mut_vec()[0].objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == memory_relay_id)
-        .unwrap();
-    memory_relay_obj.connections.as_mut_vec().push(structs::Connection {
-            state: structs::ConnectionState::ACTIVE,
-            message: structs::ConnectionMsg::DEACTIVATE,
-            target_object_id: timer_activate_memory_relay_id,
-        });
-
-    scly.layers.as_mut_vec()[0].objects.as_mut_vec().retain(|obj| obj.instance_id != camera_door_id);
-    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-
-    Ok(())
-}
-
 fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
 {
     patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |_ps, area| {
@@ -1668,6 +1598,24 @@ fn patch_backwards_lower_mines_mqb(_ps: &mut PatcherState, area: &mut mlvl_wrapp
         .unwrap();
     let actor = obj.property_data.as_actor_mut().unwrap();
     actor.actor_params.visor_params.target_passthrough = 1;
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_mqa(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00200214) // metriod aggro trigger
+        .unwrap();
+    obj.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ENTERED,
+            message: structs::ConnectionMsg::SET_TO_ZERO,
+            target_object_id: 0x00200464, // Relay One Shot In
+        },
+    );
     Ok(())
 }
 
@@ -2866,6 +2814,10 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
         patch_backwards_lower_mines_mqb
     );
     patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(),
+        patch_backwards_lower_mines_mqa
+    );
+    patcher.add_scly_patch(
         resource_info!("01_mainplaza.MREA").into(),
         make_main_plaza_locked_door_two_ways
     );
@@ -2995,16 +2947,16 @@ fn patch_qol_cosmetic(
 
 fn patch_qol_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
-        resource_info!("00j_over_hall.MREA").into(),
-        patch_temple_security_station_cutscene_trigger
-    );
-    patcher.add_scly_patch(
-        resource_info!("08_mines.MREA").into(),
-        patch_mqa_cinematic
-    );
-    patcher.add_scly_patch(
         resource_info!("12_ice_research_b.MREA").into(),
         move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00j_over_hall.MREA").into(), // temple security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(), // MQA
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
         resource_info!("15_energycores.MREA").into(), // energy core
