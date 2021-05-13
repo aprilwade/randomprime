@@ -1658,6 +1658,19 @@ fn patch_backwards_lower_mines_eqa(_ps: &mut PatcherState, area: &mut mlvl_wrapp
     Ok(())
 }
 
+fn patch_backwards_lower_mines_mqb(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[2];
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x001F0018)
+        .unwrap();
+    let actor = obj.property_data.as_actor_mut().unwrap();
+    actor.actor_params.visor_params.target_passthrough = 1;
+    Ok(())
+}
+
 fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2845,8 +2858,12 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
         patch_backwards_lower_mines_pca
     );
     patcher.add_scly_patch(
-        resource_info!("00p_mines_connect.MREA").into(),
+        resource_info!("00o_mines_connect.MREA").into(),
         patch_backwards_lower_mines_eqa
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_mines.MREA").into(),
+        patch_backwards_lower_mines_mqb
     );
     patcher.add_scly_patch(
         resource_info!("01_mainplaza.MREA").into(),
