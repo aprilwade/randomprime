@@ -70,38 +70,6 @@ impl fmt::Display for MapState {
     }
 }
 
-
-#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum QolLevel
-{
-    Vanilla,           // Only patch items/elevators/hints and issues affecting photosensitive epileptics
-    SpiritOfVanilla,   // Only patch the game to preserve continuity, prevent softlocks and fix bugs (also hud and main menu)
-    Cutscenes,         // Skip as many cutscenes as possible without affecting gameplay
-    GameplayCutscenes, // Make the player's life as convienient as possible, even if it affects gameplay
-}
-
-impl QolLevel {
-    pub fn from_u32(level: u32) -> Option<Self> {
-        match level {
-            0 => Some(QolLevel::Vanilla),
-            1 => Some(QolLevel::SpiritOfVanilla),
-            2 => Some(QolLevel::Cutscenes),
-            3 => Some(QolLevel::GameplayCutscenes),
-            _ => None,
-        }
-    }
-
-    pub fn as_u32(self) -> u32 {
-        match self {
-            QolLevel::Vanilla           => 0,
-            QolLevel::SpiritOfVanilla   => 1,
-            QolLevel::Cutscenes         => 2,
-            QolLevel::GameplayCutscenes => 3,
-        }
-    }
-}
-
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -160,7 +128,9 @@ pub struct PatchConfig
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
-    pub qol_level: QolLevel,
+    pub qol_cosmetic: bool,
+    pub qol_logical: bool,
+    pub qol_cutscenes: bool,
 
     pub layout: Layout,
 
@@ -239,7 +209,10 @@ impl TryInto<Layout> for LayoutWrapper
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
-    qol_level: Option<u32>,
+    qol_cosmetic: Option<bool>,
+    qol_logical: Option<bool>,
+    qol_cutscenes: Option<bool>,
+
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
@@ -321,10 +294,15 @@ impl PatchConfig
                 .long("layout")
                 .takes_value(true)
                 .allow_hyphen_values(true))
-            .arg(Arg::with_name("qol level")
-                .long("qol-level")
-                .help("Set the qol level: 0=vanilla, 1=spirit-of-vanilla, 2=visual-cutscenes, 3=gameplay-cutscenes")
-                .takes_value(true))
+            .arg(Arg::with_name("qol cosmetic")
+                .long("qol-cosmetic")
+                .help("Patch cutscenes to fix continuity errors and UI to improve QoL without affecting IGT or the story"))
+            .arg(Arg::with_name("qol logical")
+                .long("qol-logical")
+                .help("Patch the world to be more freely traversible in a randomized setting, including fixing unintuitive softlocks (affects routing)"))
+            .arg(Arg::with_name("qol cutscenes")
+                .long("qol-cutscenes")
+                .help("Remove nearly every cutscene, even if the result affects timing/positioning (affects IGT)"))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
@@ -431,6 +409,9 @@ impl PatchConfig
 
         // bool
         populate_config_bool!(matches;
+            "qol cosmetic" => patch_config.preferences.qol_cosmetic,
+            "qol logical" => patch_config.preferences.qol_logical,
+            "qol cutscenes" => patch_config.preferences.qol_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
@@ -461,9 +442,6 @@ impl PatchConfig
         }
 
         // integer/float
-        if let Some(qol_level) = matches.value_of("qol level") {
-            patch_config.preferences.qol_level = Some(qol_level.parse::<u32>().unwrap());
-        }
         if let Some(damage) = matches.value_of("heat damage per sec") {
             patch_config.game_config.heat_damage_per_sec = Some(damage.parse::<f32>().unwrap());
         }
@@ -574,12 +552,6 @@ impl PatchConfigPrivate
             .map(|path| extract_flaahgra_music_files(path))
             .transpose()?;
 
-        let qol_level = QolLevel::from_u32(
-            self.preferences.qol_level.unwrap_or(
-                QolLevel::GameplayCutscenes.as_u32()
-            )
-        ).unwrap();
-
         Ok(PatchConfig {
             input_iso,
             iso_format,
@@ -587,7 +559,10 @@ impl PatchConfigPrivate
             layout,
             level_data: self.level_data.clone(),
 
-            qol_level,
+            qol_logical: self.preferences.qol_logical.unwrap_or(true),
+            qol_cosmetic: self.preferences.qol_cosmetic.unwrap_or(true),
+            qol_cutscenes: self.preferences.qol_cutscenes.unwrap_or(false),
+            
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,

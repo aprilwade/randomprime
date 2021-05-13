@@ -18,7 +18,6 @@ use crate::patch_config::{
     PatchConfig,
     GameBanner,
     LevelConfig,
-    QolLevel,
 };
 
 use crate::{
@@ -2782,31 +2781,8 @@ impl fmt::Display for Version
     }
 }
 
-fn patch_qol_1(patcher: &mut PrimePatcher, version: Version)
+fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
 {
-    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
-    // copy and to make compressed ISOs smaller.
-    const FMV_NAMES: &[&[u8]] = &[
-        b"Video/attract0.thp",
-        b"Video/attract1.thp",
-        b"Video/attract2.thp",
-        b"Video/attract3.thp",
-        b"Video/attract4.thp",
-        b"Video/attract5.thp",
-        b"Video/attract6.thp",
-        b"Video/attract7.thp",
-        b"Video/attract8.thp",
-        b"Video/attract9.thp",
-
-    ];
-    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
-    for name in FMV_NAMES {
-        patcher.add_file_patch(name, |file| {
-            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
-            Ok(())
-        });
-    }
-
     make_elite_research_fight_prereq_patches(patcher);
 
     patcher.add_scly_patch(
@@ -2901,20 +2877,50 @@ fn patch_qol_1(patcher: &mut PrimePatcher, version: Version)
     }
 }
 
-fn patch_qol_2(
+fn patch_qol_cosmetic(
     patcher: &mut PrimePatcher,
     skip_ending_cinematic: bool,
 )
 {
+    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
+    // copy and to make compressed ISOs smaller.
+    const FMV_NAMES: &[&[u8]] = &[
+        b"Video/attract0.thp",
+        b"Video/attract1.thp",
+        b"Video/attract2.thp",
+        b"Video/attract3.thp",
+        b"Video/attract4.thp",
+        b"Video/attract5.thp",
+        b"Video/attract6.thp",
+        b"Video/attract7.thp",
+        b"Video/attract8.thp",
+        b"Video/attract9.thp",
+
+    ];
+    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
+    for name in FMV_NAMES {
+        patcher.add_file_patch(name, |file| {
+            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+            Ok(())
+        });
+    }
+
+    patcher.add_resource_patch(
+        resource_info!("FRME_BallHud.FRME").into(),
+        patch_morphball_hud,
+    );
+
     if skip_ending_cinematic {
         patcher.add_scly_patch(
             resource_info!("01_endcinema.MREA").into(),
             patch_ending_scene_straight_to_credits
         );
     }
+
+    // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
 }
 
-fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
+fn patch_qol_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
         resource_info!("00j_over_hall.MREA").into(),
         patch_temple_security_station_cutscene_trigger
@@ -3122,7 +3128,6 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
 
-    // Crater
     patcher.add_scly_patch( // phazon infusion chamber
         resource_info!("03a_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(
@@ -3134,8 +3139,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
         ),
     );
 
-    // subchambers
-    // TODO: if the player is standing over the hole as it open, an important trigger can be missed
+    // subchambers 1-4 (see special handling for exo aggro)
     patcher.add_scly_patch(
         resource_info!("03b_crater.MREA").into(),
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
@@ -3154,6 +3158,7 @@ fn patch_qol_3(patcher: &mut PrimePatcher, version: Version) {
     );
 
     // play subchamber 5 cutscene normally (players can't natrually pass through the ceiling of prime's lair)
+
     patcher.add_scly_patch(
         resource_info!("03f_crater.MREA").into(), // metroid prime lair
         move |ps, area| patch_remove_cutscenes(
@@ -3175,7 +3180,9 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "layout: {:#?}", config.layout).unwrap();
-    writeln!(ct, "qol level: {:?}", config.qol_level).unwrap();
+    writeln!(ct, "qol cosmetic: {:?}", config.qol_cosmetic).unwrap();
+    writeln!(ct, "qol logical: {:?}", config.qol_logical).unwrap();
+    writeln!(ct, "qol cutscenes: {:?}", config.qol_cutscenes).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
@@ -3265,8 +3272,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    let skip_hudmenus = config.qol_level.as_u32() >= QolLevel::Cutscenes.as_u32();
-
     let pickup_layout = &config.layout.pickups[..];
 
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
@@ -3329,7 +3334,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let mut layout_iterator = pickup_layout.iter();
     for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
         for room_info in rooms.iter() {
-            if config.qol_level.as_u32() > QolLevel::Vanilla.as_u32() {
+            if config.qol_cosmetic {
                 patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
                     // Remove objects
                     let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
@@ -3359,7 +3364,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             pickup_location,
                             game_resources,
                             config.obfuscate_items,
-                            skip_hudmenus,
+                            config.qol_cosmetic,
                         )
                 );
             }
@@ -3501,10 +3506,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
-    
     patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
     
+    // Always patch out the white flash for photosensitive epileptics
     if version == Version::NtscU0_00 {
         patcher.add_scly_patch(
             resource_info!("03f_crater.MREA").into(),
@@ -3518,8 +3522,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if config.qol_level.as_u32() >= QolLevel::SpiritOfVanilla.as_u32() {
-        patch_qol_1(&mut patcher, version); // Softlocks, bugs, continuity and HUD/main-menu
+    if config.qol_cosmetic {
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic);
+
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[
             b"Video/02_start_fileselect_A.thp",
@@ -3541,13 +3546,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             });
         }
     }
+
     
-    if config.qol_level.as_u32() >= QolLevel::Cutscenes.as_u32() {
-        patch_qol_2(&mut patcher, skip_ending_cinematic); // Remove timewasters that don't affect gameplay
+    if config.qol_logical {
+        patch_qol_logical(&mut patcher, version);
     }
-    
-    if config.qol_level.as_u32() >= QolLevel::GameplayCutscenes.as_u32() {
-        patch_qol_3(&mut patcher, version); // Remove timewasters that slightly affect gameplay
+
+    if config.qol_cutscenes {
+        patch_qol_cutscenes(&mut patcher, version);
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
