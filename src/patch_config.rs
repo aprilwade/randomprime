@@ -153,7 +153,6 @@ pub struct PatchConfig
     pub starting_items: StartingItems,
     pub item_loss_items: StartingItems,
 
-    pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
@@ -232,7 +231,6 @@ struct GameConfig
     staggered_suit_damage: Option<bool>,
     heat_damage_per_sec: Option<f32>,
     auto_enabled_elevators: Option<bool>,
-    enable_vault_ledge_door: Option<bool>, // TODO: remove, calculate automatically once door patching is a thing
 
     starting_items: Option<StartingItems>,
     item_loss_items: Option<StartingItems>,
@@ -345,9 +343,6 @@ impl PatchConfig
                 .long("artifact-hint-behavior")
                 .help("Set the behavior of artifact temple hints. Can be 'all', 'none', or 'default' (vanilla)")
                 .takes_value(true))
-            .arg(Arg::with_name("enable vault ledge door")
-                .long("enable-vault-ledge-door")
-                .help("Enable Chozo Ruins Vault door from Main Plaza"))
             .arg(Arg::with_name("trilogy disc path")
                 .long("flaahgra-music-disc-path")
                 .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
@@ -418,7 +413,6 @@ impl PatchConfig
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
-            "enable vault ledge door" => patch_config.game_config.enable_vault_ledge_door,
         );
 
         // string
@@ -578,7 +572,6 @@ impl PatchConfigPrivate
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
             auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap_or(false),
             map_default_state,
-            enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
             starting_items: self.game_config.starting_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),

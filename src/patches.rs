@@ -2783,16 +2783,8 @@ impl fmt::Display for Version
 
 fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
 {
+    // logical qol
     make_elite_research_fight_prereq_patches(patcher);
-
-    patcher.add_scly_patch(
-        resource_info!("22_Flaahgra.MREA").into(),
-        patch_sunchamber_prevent_wild_before_flaahgra
-    );
-    patcher.add_scly_patch(
-        resource_info!("0v_connect_tunnel.MREA").into(),
-        patch_sun_tower_prevent_wild_before_flaahgra
-    );
     patcher.add_scly_patch(
         resource_info!("08b_under_intro_ventshaft.MREA").into(),
         patch_main_ventilation_shaft_section_b_door
@@ -2800,6 +2792,24 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
     patcher.add_scly_patch(
         resource_info!("10_ice_research_a.MREA").into(),
         patch_research_lab_hydra_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(),
+        patch_main_quarry_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mainplaza.MREA").into(),
+        make_main_plaza_locked_door_two_ways
+    );
+
+    // softlocks
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(),
+        patch_sunchamber_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(),
+        patch_sun_tower_prevent_wild_before_flaahgra
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(),
@@ -2821,11 +2831,8 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
         resource_info!("18_ice_gravity_chamber.MREA").into(),
         patch_gravity_chamber_stalactite_grapple_point
     );
-    patcher.add_scly_patch(
-        resource_info!("01_mines_mainplaza.MREA").into(),
-        patch_main_quarry_barrier
-    );
 
+    // undo retro "fixes"
     if version == Version::NtscU0_00 {
         patcher.add_scly_patch(
             resource_info!("00n_ice_connect.MREA").into(),
@@ -2843,7 +2850,6 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
             );
         }
     }
-
     if version == Version::NtscU0_02 {
         patcher.add_scly_patch(
             resource_info!("01_mines_mainplaza.MREA").into(),
@@ -2858,7 +2864,6 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, version: Version)
             patch_hive_totem_boss_trigger_0_02
         );
     }
-
     if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         patcher.add_scly_patch(
             resource_info!("04_mines_pillar.MREA").into(),
@@ -3496,13 +3501,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patcher.add_scly_patch(
             resource_info!("01_over_mainplaza.MREA").into(),
             patch_landing_site_cutscene_triggers
-        );
-    }
-
-    if config.enable_vault_ledge_door {
-        patcher.add_scly_patch(
-            resource_info!("01_mainplaza.MREA").into(),
-            make_main_plaza_locked_door_two_ways
         );
     }
 
