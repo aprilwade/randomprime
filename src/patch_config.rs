@@ -72,6 +72,7 @@ pub struct PickupConfig
     pub model: Option<String>,
     pub scan_text: Option<String>,
     pub hudmemo_text: Option<String>,
+    pub respawn: Option<bool>,
     pub position: Option<[f32;3]>,
     // pub desination: Option<String>,
 }

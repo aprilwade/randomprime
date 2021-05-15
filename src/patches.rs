@@ -300,6 +300,7 @@ fn patch_add_item<'r>(
     config: &PatchConfig,
 ) -> Result<(), String>
 {
+    let room_id = area.mlvl_area.internal_id;
     let location_idx = 0;
 
     // Pickup to use for game functionality //
@@ -432,43 +433,6 @@ fn patch_add_item<'r>(
         }
     );
 
-    // Create Special Function to disable layer once item is obtained
-    // This is needed because otherwise the item would re-appear every
-    // time the room is loaded
-    let special_function = structs::SclyObject {
-        instance_id: ps.fresh_instance_id_range.next().unwrap(),
-        connections: vec![].into(),
-        property_data: structs::SclyProperty::SpecialFunction(
-            Box::new(structs::SpecialFunction {
-                name: b"myspecialfun\0".as_cstr(),
-                position: [0., 0., 0.].into(),
-                rotation: [0., 0., 0.].into(),
-                type_: 16, // layer change
-                unknown0: b"\0".as_cstr(),
-                unknown1: 0.,
-                unknown2: 0.,
-                unknown3: 0.,
-                layer_change_room_id: area.mlvl_area.internal_id,
-                layer_change_layer_id: new_layer_idx as u32,
-                item_id: 0,
-                unknown4: 1, // active
-                unknown5: 0.,
-                unknown6: 0xFFFFFFFF,
-                unknown7: 0xFFFFFFFF,
-                unknown8: 0xFFFFFFFF,
-            })
-        ),
-    };
-
-    // Activate the layer change when item is picked up
-    pickup_obj.connections.as_mut_vec().push(
-        structs::Connection {
-            state: structs::ConnectionState::ARRIVED,
-            message: structs::ConnectionMsg::DECREMENT,
-            target_object_id: special_function.instance_id,
-        }
-    );
-
     // create attainment audio
     let attainment_audio = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
@@ -527,7 +491,47 @@ fn patch_add_item<'r>(
         );
     }
 
-    layers[new_layer_idx].objects.as_mut_vec().push(special_function);
+    if pickup_config.respawn.unwrap_or(true) {
+        // Create Special Function to disable layer once item is obtained
+        // This is needed because otherwise the item would re-appear every
+        // time the room is loaded
+        let special_function = structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::SpecialFunction(
+                Box::new(structs::SpecialFunction {
+                    name: b"myspecialfun\0".as_cstr(),
+                    position: [0., 0., 0.].into(),
+                    rotation: [0., 0., 0.].into(),
+                    type_: 16, // layer change
+                    unknown0: b"\0".as_cstr(),
+                    unknown1: 0.,
+                    unknown2: 0.,
+                    unknown3: 0.,
+                    layer_change_room_id: room_id,
+                    layer_change_layer_id: new_layer_idx as u32,
+                    item_id: 0,
+                    unknown4: 1, // active
+                    unknown5: 0.,
+                    unknown6: 0xFFFFFFFF,
+                    unknown7: 0xFFFFFFFF,
+                    unknown8: 0xFFFFFFFF,
+                })
+            ),
+        };
+
+        // Activate the layer change when item is picked up
+        pickup_obj.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ARRIVED,
+                message: structs::ConnectionMsg::DECREMENT,
+                target_object_id: special_function.instance_id,
+            }
+        );
+        
+        layers[new_layer_idx].objects.as_mut_vec().push(special_function);
+    }
+
     layers[new_layer_idx].objects.as_mut_vec().push(hudmemo);
     layers[new_layer_idx].objects.as_mut_vec().push(attainment_audio);
     layers[new_layer_idx].objects.as_mut_vec().push(pickup_obj);
@@ -646,6 +650,33 @@ fn modify_pickups_in_mrea<'r>(
     update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
+    }
+
+    // disable the respawn connection if that was specified
+    if !pickup_config.respawn.unwrap_or(true) {
+        let mut memory_relay_ids = Vec::<u32>::new();
+        for layer in layers.iter_mut() {
+            for obj in layer.objects.as_mut_vec().iter_mut() {
+                if obj.property_data.is_memory_relay() {
+                    let connections = obj.connections.as_mut_vec();
+                    for connection in connections.iter_mut() {
+                        if connection.target_object_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
+                            memory_relay_ids.push(obj.instance_id);
+                            connections.retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        for layer in layers.iter_mut() {
+            for obj in layer.objects.as_mut_vec().iter_mut() {
+                if obj.instance_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
+                    obj.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&i.target_object_id));
+                    break;
+                }
+            }
+        }
     }
 
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
@@ -3195,6 +3226,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             count: None,
                             position: None,
                             hudmemo_text: None,
+                            respawn: None,
                             scan_text: None,
                             model: None,
                         } 
