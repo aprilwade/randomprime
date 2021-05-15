@@ -5,6 +5,7 @@ use std::cmp;
 #[serde(rename_all = "camelCase")]
 pub struct StartingItems
 {
+    pub power_beam: bool,
     pub scan_visor: bool,
     pub missiles: u8,
     pub energy_tanks: u8,
@@ -41,6 +42,7 @@ impl StartingItems
         };
 
         StartingItems {
+            power_beam:  true,
             scan_visor:  fetch_bits(1) == 1,
             missiles:  fetch_bits(8),
             energy_tanks:  fetch_bits(4),
@@ -69,6 +71,7 @@ impl StartingItems
 
     pub fn update_spawn_point(&self, spawn_point: &mut structs::SpawnPoint)
     {
+        spawn_point.power = self.power_beam as u32;
         spawn_point.scan_visor = self.scan_visor as u32;
         spawn_point.missiles = self.missiles as u32;
         spawn_point.energy_tanks = self.energy_tanks as u32;
@@ -117,6 +120,7 @@ impl StartingItems
     pub fn merge(manual_starting_items: StartingItems, random_starting_items: StartingItems) -> Self
     {
         StartingItems {
+            power_beam: manual_starting_items.power_beam | random_starting_items.power_beam,
             scan_visor: manual_starting_items.scan_visor | random_starting_items.scan_visor,
             missiles: cmp::min(manual_starting_items.missiles + random_starting_items.missiles, 250),
             energy_tanks: cmp::min(manual_starting_items.energy_tanks + random_starting_items.energy_tanks, 14),
@@ -145,6 +149,7 @@ impl StartingItems
     
     pub fn is_empty(&self) -> bool
     {
+        !self.power_beam &&
         !self.scan_visor &&
         self.missiles == 0 &&
         self.energy_tanks == 0 &&
@@ -176,6 +181,7 @@ impl Default for StartingItems
     fn default() -> Self
     {
         StartingItems {
+            power_beam: true,
             scan_visor: true,
             missiles: 0,
             energy_tanks: 0,
