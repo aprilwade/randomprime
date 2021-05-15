@@ -371,14 +371,19 @@ fn patch_add_item<'r>(
             (pickup_count, pickup_count)
         } else {
             let data = pickup_type.pickup_data();
-            (data.curr_increase, data.curr_increase)
+            (data.curr_increase, data.max_increase)
         }
     };
     let pickup_position = pickup_config.position.unwrap();
-    let kind = pickup_type.pickup_data().kind;
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
     }
+    let kind = match pickup_type {
+        PickupType::PowerBeam => 0,
+        PickupType::UnknownItem1 => 25,
+        PickupType::UnknownItem2 => 27,
+        _ => pickup_type.pickup_data().kind,
+    };
     let mut pickup = structs::Pickup {
         position: pickup_position.into(),
         fade_in_timer: 0.0,
@@ -690,7 +695,12 @@ fn update_pickup(
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
-    let kind = pickup_type.pickup_data().kind;
+    let kind = match pickup_type {
+        PickupType::PowerBeam => 0,
+        PickupType::UnknownItem1 => 25,
+        PickupType::UnknownItem2 => 27,
+        _ => pickup_type.pickup_data().kind,
+    };
     *pickup = structs::Pickup {
         position: [
             original_pickup.position[0] - (new_center[0] - original_center[0]),

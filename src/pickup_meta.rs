@@ -50,6 +50,9 @@ pub enum PickupType
     ScanVisor,
     #[serde(skip)]
     ShinyMissile,
+    PowerBeam,
+    UnknownItem1,
+    UnknownItem2,
 }
 
 impl PickupType
@@ -94,6 +97,9 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  "Artifact of Strength",
             PickupType::Nothing =>             "Nothing",
             PickupType::ScanVisor =>           "Scan Visor",
+            PickupType::PowerBeam =>           "Power Beam",
+            PickupType::UnknownItem1 =>        "Unknown Item 1",
+            PickupType::UnknownItem2 =>        "Unknown Item 2",
             PickupType::ShinyMissile =>        "Shiny Missile",
         }
     }
@@ -139,6 +145,9 @@ impl PickupType
             PickupType::Nothing =>             35,
             PickupType::ScanVisor =>           36,
             PickupType::ShinyMissile =>        37,
+            PickupType::PowerBeam =>           38,
+            PickupType::UnknownItem1 =>        39,
+            PickupType::UnknownItem2 =>        40,
         }
     }
 
@@ -182,6 +191,10 @@ impl PickupType
             34 => Some(PickupType::ArtifactOfStrength),
             35 => Some(PickupType::Nothing),
             36 => Some(PickupType::ScanVisor),
+            // 37 - shiny missile
+            38 => Some(PickupType::PowerBeam),
+            39 => Some(PickupType::UnknownItem1),
+            40 => Some(PickupType::UnknownItem2),
             _ => None,
         }
     }
@@ -209,7 +222,7 @@ impl PickupType
     {
         let start = custom_asset_ids::SKIP_HUDMEMO_STRG_START.to_u32();
         let end = custom_asset_ids::SKIP_HUDMEMO_STRG_END.to_u32();
-        ResId::new((start..end).nth(self.idx()).unwrap())
+        ResId::new((start..end).nth(self.idx()).unwrap_or(0xFFFFFFFF))
     }
 
     pub fn pickup_data<'a>(&self) -> &'a Pickup<'static>
@@ -258,6 +271,9 @@ impl PickupType
             PickupType::Nothing,
             PickupType::ScanVisor,
             PickupType::ShinyMissile,
+            PickupType::PowerBeam,
+            PickupType::UnknownItem1,
+            PickupType::UnknownItem2,
         ].iter().map(|i| *i)
     }
 

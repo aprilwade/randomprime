@@ -407,7 +407,7 @@ pub fn collect_game_resources<'r>(
     for res in custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, config) {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
-        assert!(found.insert(key, res).is_none());
+        found.insert(key, res);
     }
 
     if !looking_for.is_empty() {
