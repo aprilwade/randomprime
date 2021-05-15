@@ -1,5 +1,4 @@
 use serde::{Deserialize};
-use std::cmp;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -114,36 +113,6 @@ impl StartingItems
             Ok(Wrapper::Struct(s)) => Ok(s),
             Ok(Wrapper::Int(i)) => Ok(StartingItems::from_u64(i)),
             Err(e) => Err(e)
-        }
-    }
-    
-    pub fn merge(manual_starting_items: StartingItems, random_starting_items: StartingItems) -> Self
-    {
-        StartingItems {
-            power_beam: manual_starting_items.power_beam | random_starting_items.power_beam,
-            scan_visor: manual_starting_items.scan_visor | random_starting_items.scan_visor,
-            missiles: cmp::min(manual_starting_items.missiles + random_starting_items.missiles, 250),
-            energy_tanks: cmp::min(manual_starting_items.energy_tanks + random_starting_items.energy_tanks, 14),
-            power_bombs: cmp::min(manual_starting_items.power_bombs + random_starting_items.power_bombs, 8),
-            wave: manual_starting_items.wave | random_starting_items.wave,
-            ice: manual_starting_items.ice | random_starting_items.ice,
-            plasma: manual_starting_items.plasma | random_starting_items.plasma,
-            charge: manual_starting_items.charge | random_starting_items.charge,
-            morph_ball: manual_starting_items.morph_ball | random_starting_items.morph_ball,
-            bombs: manual_starting_items.bombs | random_starting_items.bombs,
-            spider_ball: manual_starting_items.spider_ball | random_starting_items.spider_ball,
-            boost_ball: manual_starting_items.boost_ball | random_starting_items.boost_ball,
-            varia_suit: manual_starting_items.varia_suit | random_starting_items.varia_suit,
-            gravity_suit: manual_starting_items.gravity_suit | random_starting_items.gravity_suit,
-            phazon_suit: manual_starting_items.phazon_suit | random_starting_items.phazon_suit,
-            thermal_visor: manual_starting_items.thermal_visor | random_starting_items.thermal_visor,
-            xray: manual_starting_items.xray | random_starting_items.xray,
-            space_jump: manual_starting_items.space_jump | random_starting_items.space_jump,
-            grapple: manual_starting_items.grapple | random_starting_items.grapple,
-            super_missile: manual_starting_items.super_missile | random_starting_items.super_missile,
-            wavebuster: manual_starting_items.wavebuster | random_starting_items.wavebuster,
-            ice_spreader: manual_starting_items.ice_spreader | random_starting_items.ice_spreader,
-            flamethrower: manual_starting_items.flamethrower | random_starting_items.flamethrower,
         }
     }
     
