@@ -68,7 +68,7 @@ pub struct PickupConfig
 {
     #[serde(alias  = "type")]
     pub pickup_type: String,
-    pub count: Option<u32>,
+    pub count: Option<i32>,
     pub model: Option<String>,
     pub scan_text: Option<String>,
     pub hudmemo_text: Option<String>,
@@ -513,7 +513,7 @@ impl PatchConfigPrivate
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             missile_capacity: self.game_config.missile_capacity.unwrap_or(999),
-            power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(8),
+            power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(9),
 
             game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
             comment: self.game_config.comment.clone().unwrap_or(String::new()),
