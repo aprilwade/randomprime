@@ -235,12 +235,10 @@ impl ResourceKey
 
 fn pickup_type_for_pickup(pickup: &structs::Pickup) -> Option<PickupType>
 {
-    if pickup.max_increase == 0 {
-        return None
-    }
     match pickup.kind {
-        4 => Some(PickupType::Missile),
-        24 => Some(PickupType::EnergyTank),
+        4 if pickup.max_increase > 0 => Some(PickupType::Missile),
+        4 if pickup.max_increase == 0 => Some(PickupType::MissileRefill),
+        24 if pickup.max_increase > 0 => Some(PickupType::EnergyTank),
         9 => Some(PickupType::ThermalVisor),
         13 => Some(PickupType::XRayVisor),
         22 => Some(PickupType::VariaSuit),
@@ -253,6 +251,7 @@ fn pickup_type_for_pickup(pickup: &structs::Pickup) -> Option<PickupType>
         6 => Some(PickupType::MorphBallBomb),
         7 if pickup.max_increase == 1 => Some(PickupType::PowerBombExpansion),
         7 if pickup.max_increase == 4 => Some(PickupType::PowerBomb),
+        7 if pickup.max_increase == 0 => Some(PickupType::PowerBombRefill),
         10 => Some(PickupType::ChargeBeam),
         15 => Some(PickupType::SpaceJumpBoots),
         12 => Some(PickupType::GrappleBeam),
@@ -275,6 +274,7 @@ fn pickup_type_for_pickup(pickup: &structs::Pickup) -> Option<PickupType>
         40 => Some(PickupType::ArtifactOfNewborn),
         36 => Some(PickupType::ArtifactOfNature),
         30 => Some(PickupType::ArtifactOfStrength),
+        26 => Some(PickupType::HealthRefill),
         _ => None,
     }
 }
@@ -408,7 +408,7 @@ fn extract_pickup_data<'r>(
     } else {
         // The Phazon Suit is weird: the audio object isn't directly connected to the
         // Pickup. So, hardcode its location.
-        assert_eq!(pickup.kind, 23);
+        // assert_eq!(pickup.kind, 23);
         b"audio/jin_itemattain.dsp\0".to_vec()
     };
 
@@ -549,10 +549,16 @@ fn extract_pickup_location<'r>(
         }
     } else {
         // Phazon suit override
-        assert_eq!(pickup.kind, 23);
-        ScriptObjectLocation {
-            layer: 1,
-            instance_id: 68813644,
+        if pickup.kind ==  23 { // phazon suit
+            ScriptObjectLocation {
+                layer: 1,
+                instance_id: 68813644,
+            }
+        } else {
+            ScriptObjectLocation {
+                layer: 0,
+                instance_id: 0xFFFFFFFF,
+            }
         }
     };
 
@@ -567,10 +573,16 @@ fn extract_pickup_location<'r>(
             instance_id: hudmemo.instance_id,
         }
     } else {
-        // Phazon suit override
-        ScriptObjectLocation {
-            layer: scly_db[&68813640].0 as u32,
-            instance_id: 68813640,
+        if pickup.kind ==  23 { // phazon suit
+            ScriptObjectLocation {
+                layer: scly_db[&68813640].0 as u32,
+                instance_id: 68813640,
+            }
+        } else {
+            ScriptObjectLocation {
+                layer: 0,
+                instance_id: 0xFFFFFFFF,
+            }
         }
     };
 
@@ -1060,23 +1072,25 @@ fn main()
                         continue
                     };
 
-                    let obj_loc = ScriptObjectLocation {
-                        instance_id: obj.instance_id,
-                        layer: layer_num as u32,
-                    };
-                    let (pickup_loc, removals) = extract_pickup_location(
-                        res.file_id,
-                        &scly,
-                        &obj,
-                        obj_loc,
-                    );
-
-                    for loc in removals {
-                        room_removals.entry(loc.layer)
-                            .or_insert_with(Vec::new)
-                            .push(loc.instance_id);
+                    if pickup_type != PickupType::HealthRefill && pickup_type != PickupType::MissileRefill && pickup_type != PickupType::PowerBombRefill {
+                        let obj_loc = ScriptObjectLocation {
+                            instance_id: obj.instance_id,
+                            layer: layer_num as u32,
+                        };
+                        let (pickup_loc, removals) = extract_pickup_location(
+                            res.file_id,
+                            &scly,
+                            &obj,
+                            obj_loc,
+                        );
+    
+                        for loc in removals {
+                            room_removals.entry(loc.layer)
+                                .or_insert_with(Vec::new)
+                                .push(loc.instance_id);
+                        }
+                        room_locations.push(pickup_loc);
                     }
-                    room_locations.push(pickup_loc);
 
                     // XXX There's a couple of pickups where the first occurances don't have scans,
                     // so skip those for the pickup_table
@@ -1141,6 +1155,7 @@ fn main()
     let missile_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_36_0.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::SHINY_MISSILE_CMDL, missile_aabb).is_none());
 
+    // TODO: create power beam, unknown1, unknown2
     create_nothing(&mut pickup_table);
     create_scan_visor(&mut pickup_table);
     create_shiny_missile(&mut pickup_table);
@@ -1226,22 +1241,30 @@ fn main()
     println!("impl PickupType");
     println!("{{");
 
-    println!("    pub fn hudmemo_strg(&self) -> u32");
+    println!("    pub fn hudmemo_strg(&self) -> ResId<res_id::STRG>");
     println!("    {{");
-    println!("        match self {{");
+    println!("        ResId::new(match self {{");
     for pt in PickupType::iter() {
+        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
+            continue; // not found in vanilla game
+        }
         println!("            PickupType::{:?} => 0x{:x},", pt, pickup_table[&pt].hudmemo_strg);
     }
-    println!("        }}");
+    println!("            _ => 0xFFFFFFFF,");
+    println!("        }})");
     println!("    }}");
 
     println!("    pub fn attainment_audio_file_name(&self) -> &'static str");
     println!("    {{");
     println!("        match self {{");
     for pt in PickupType::iter() {
+        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
+            continue; // not found in vanilla game
+        }
         let filename = stdstr::from_utf8(&pickup_table[&pt].attainment_audio_file_name).unwrap();
         println!("            PickupType::{:?} => {:?},", pt, filename);
     }
+    println!("            _ => {:?},", "audio/jin_itemattain.dsp\u{0}");
     println!("        }}");
     println!("    }}");
 
@@ -1249,6 +1272,9 @@ fn main()
     println!("    {{");
     println!("        match self {{");
     for pt in PickupType::iter() {
+        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
+            continue; // not found in vanilla game
+        }
         let mut deps: Vec<_> = pickup_table[&pt].deps.iter().collect();
         deps.sort();
         println!("            PickupType::{:?} => {{", pt);
@@ -1264,6 +1290,60 @@ fn main()
         println!("                DATA");
         println!("            }},");
     }
+    println!("            PickupType::PowerBeam => {{
+        const DATA: &[(u32, FourCC)] = &[
+            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
+            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
+            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
+            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
+            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
+            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
+            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
+            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
+            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
+            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
+            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
+        ];
+        DATA
+    }},
+    PickupType::UnknownItem1 => {{
+        const DATA: &[(u32, FourCC)] = &[
+            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
+            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
+            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
+            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
+            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
+            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
+            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
+            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
+            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
+            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
+            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
+        ];
+        DATA
+    }},
+    PickupType::UnknownItem2 => {{
+        const DATA: &[(u32, FourCC)] = &[
+            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
+            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
+            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
+            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
+            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
+            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
+            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
+            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
+            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
+            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
+            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
+            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
+        ];
+        DATA
+    }},");
     println!("        }}");
     println!("    }}");
 
@@ -1272,6 +1352,9 @@ fn main()
     println!("    {{");
     println!("        match self {{");
     for pt in PickupType::iter() {
+        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
+            continue; // not found in vanilla game
+        }
         println!("            PickupType::{:?} => &[", pt);
         let pickup_bytes = &pickup_table[&pt].bytes;
         for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
@@ -1284,6 +1367,106 @@ fn main()
         }
         println!("            ],");
     }
+    println!("                    // TODO: these are just copies of nothing - the actual data is handled during patching
+    PickupType::UnknownItem1 => &[
+        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
+        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
+        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
+        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
+        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
+        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
+        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
+        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
+    ],
+    PickupType::UnknownItem2 => &[
+        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
+        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
+        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
+        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
+        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
+        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
+        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
+        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
+    ],
+    PickupType::PowerBeam => &[
+        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
+        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
+        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
+        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
+        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
+        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
+        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
+        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
+        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
+    ],");
     println!("        }}");
     println!("    }}");
 

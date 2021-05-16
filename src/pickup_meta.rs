@@ -48,11 +48,14 @@ pub enum PickupType
     ArtifactOfStrength,
     Nothing,
     ScanVisor,
-    #[serde(skip)]
-    ShinyMissile,
     PowerBeam,
     UnknownItem1,
     UnknownItem2,
+    HealthRefill,
+    MissileRefill,
+    PowerBombRefill,
+    #[serde(skip)]
+    ShinyMissile,
 }
 
 impl PickupType
@@ -100,6 +103,9 @@ impl PickupType
             PickupType::PowerBeam =>           "Power Beam",
             PickupType::UnknownItem1 =>        "Unknown Item 1",
             PickupType::UnknownItem2 =>        "Unknown Item 2",
+            PickupType::HealthRefill =>        "Health Refill",
+            PickupType::MissileRefill =>       "Missile Refill",
+            PickupType::PowerBombRefill =>     "Power Bomb Refill",
             PickupType::ShinyMissile =>        "Shiny Missile",
         }
     }
@@ -144,10 +150,13 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  34,
             PickupType::Nothing =>             35,
             PickupType::ScanVisor =>           36,
-            PickupType::ShinyMissile =>        37,
+            PickupType::HealthRefill =>        37,
             PickupType::PowerBeam =>           38,
             PickupType::UnknownItem1 =>        39,
             PickupType::UnknownItem2 =>        40,
+            PickupType::MissileRefill =>       41,
+            PickupType::PowerBombRefill =>     42,
+            PickupType::ShinyMissile =>        43,
         }
     }
 
@@ -191,10 +200,12 @@ impl PickupType
             34 => Some(PickupType::ArtifactOfStrength),
             35 => Some(PickupType::Nothing),
             36 => Some(PickupType::ScanVisor),
-            // 37 - shiny missile
+            37 => Some(PickupType::HealthRefill),
             38 => Some(PickupType::PowerBeam),
             39 => Some(PickupType::UnknownItem1),
             40 => Some(PickupType::UnknownItem2),
+            41 => Some(PickupType::MissileRefill),
+            42 => Some(PickupType::PowerBombRefill),
             _ => None,
         }
     }
@@ -274,6 +285,9 @@ impl PickupType
             PickupType::PowerBeam,
             PickupType::UnknownItem1,
             PickupType::UnknownItem2,
+            PickupType::HealthRefill,
+            PickupType::MissileRefill,
+            PickupType::PowerBombRefill,
         ].iter().map(|i| *i)
     }
 

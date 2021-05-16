@@ -369,10 +369,22 @@ fn patch_add_item<'r>(
     let (curr_increase, max_increase) = {
         if pickup_config.count.is_some() {
             let pickup_count = pickup_config.count.unwrap();
-            (pickup_count, pickup_count)
+            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
+                (pickup_count, 0)
+            } else {
+                (pickup_count, pickup_count)
+            }
         } else {
             let data = pickup_type.pickup_data();
-            (data.curr_increase, data.max_increase)
+            if pickup_type == PickupType::HealthRefill {
+                (10, 0)
+            } else if pickup_type == PickupType::MissileRefill  {
+                (5, 0)
+            } else if pickup_type == PickupType::PowerBombRefill {
+                (1, 0)
+            } else {
+                (data.curr_increase, data.max_increase)
+            }
         }
     };
     let pickup_position = pickup_config.position.unwrap();
@@ -383,6 +395,9 @@ fn patch_add_item<'r>(
         PickupType::PowerBeam => 0,
         PickupType::UnknownItem1 => 25,
         PickupType::UnknownItem2 => 27,
+        PickupType::PowerBombRefill => 7,
+        PickupType::MissileRefill => 4,
+        PickupType::HealthRefill => 26,
         _ => pickup_type.pickup_data().kind,
     };
     let mut pickup = structs::Pickup {
@@ -390,6 +405,7 @@ fn patch_add_item<'r>(
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
         active: 1,
+        disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
         curr_increase,
         max_increase,
         kind,
@@ -711,12 +727,6 @@ fn update_pickup(
         original_pickup.position = pickup_config.position.unwrap().into();
     }
 
-    if pickup_config.count.is_some() {
-        let count = pickup_config.count.unwrap();
-        original_pickup.curr_increase = count;
-        original_pickup.max_increase = count;
-    }
-
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
     let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap();
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
@@ -724,14 +734,40 @@ fn update_pickup(
     let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
                                         pickup_model_type.pickup_data().scale);
 
-    // The pickup needs to be repositioned so that the center of its model
-    // matches the center of the original.
+    let (curr_increase, max_increase) = {
+        if pickup_config.count.is_some() {
+            let pickup_count = pickup_config.count.unwrap();
+            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
+                (pickup_count, 0)
+            } else {
+                (pickup_count, pickup_count)
+            }
+        } else {
+            let data = pickup_type.pickup_data();
+            if pickup_type == PickupType::HealthRefill {
+                (10, 0)
+            } else if pickup_type == PickupType::MissileRefill  {
+                (5, 0)
+            } else if pickup_type == PickupType::PowerBombRefill {
+                (1, 0)
+            } else {
+                (data.curr_increase, data.max_increase)
+            }
+        }
+    };
+
     let kind = match pickup_type {
         PickupType::PowerBeam => 0,
         PickupType::UnknownItem1 => 25,
         PickupType::UnknownItem2 => 27,
+        PickupType::PowerBombRefill => 7,
+        PickupType::MissileRefill => 4,
+        PickupType::HealthRefill => 26,
         _ => pickup_type.pickup_data().kind,
     };
+
+    // The pickup needs to be repositioned so that the center of its model
+    // matches the center of the original.
     *pickup = structs::Pickup {
         position: [
             original_pickup.position[0] - (new_center[0] - original_center[0]),
@@ -745,11 +781,12 @@ fn update_pickup(
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
         ].into(),
 
-        fade_in_timer: original_pickup.fade_in_timer,
-        spawn_delay: original_pickup.spawn_delay,
-        active: original_pickup.active,
-        curr_increase: original_pickup.curr_increase,
-        max_increase: original_pickup.max_increase,
+        fade_in_timer: 0.0,
+        spawn_delay: 0.0,
+        disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
+        active: 1,
+        curr_increase,
+        max_increase,
         kind,
 
         ..(pickup_model_type.pickup_data().into_owned())
