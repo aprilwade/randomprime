@@ -1938,6 +1938,7 @@ fn patch_remove_cutscenes(
                 let trigger = obj.property_data.as_trigger_mut().unwrap();
                 trigger.scale[2] = 8.0;
                 trigger.position[2] = trigger.position[2] - 11.7;
+                trigger.deactivate_on_enter = 1; // don't re-use this trigger for subchamber 3
             } else if obj_id == 0x00080058 { // subchamber 3 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -1948,6 +1949,7 @@ fn patch_remove_cutscenes(
                 let trigger = obj.property_data.as_trigger_mut().unwrap();
                 trigger.scale[2] = 8.0;
                 trigger.position[2] = trigger.position[2] - 11.7;
+                trigger.deactivate_on_enter = 1; // don't re-use this trigger for subchamber 4
             } else if obj_id == 0x0009005A { // subchamber 4 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
