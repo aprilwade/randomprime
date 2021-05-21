@@ -593,7 +593,6 @@ impl PatchConfigPrivate
             
             credits_string: self.game_config.credits_string.clone(),
             artifact_hints: self.game_config.artifact_hints.clone(),
-
         })
     }
 }
