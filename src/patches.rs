@@ -2025,55 +2025,71 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
 }
 
 
-fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
+fn patch_credits(
+    res: &mut structs::Resource,
+    pickup_layout: &[PickupType],
+    credits_string: Option<String>,
+)
     -> Result<(), String>
 {
-    use std::fmt::Write;
-    const PICKUPS_TO_PRINT: &[PickupType] = &[
-        PickupType::ScanVisor,
-        PickupType::ThermalVisor,
-        PickupType::XRayVisor,
-        PickupType::VariaSuit,
-        PickupType::GravitySuit,
-        PickupType::PhazonSuit,
-        PickupType::MorphBall,
-        PickupType::BoostBall,
-        PickupType::SpiderBall,
-        PickupType::MorphBallBomb,
-        PickupType::PowerBomb,
-        PickupType::ChargeBeam,
-        PickupType::SpaceJumpBoots,
-        PickupType::GrappleBeam,
-        PickupType::SuperMissile,
-        PickupType::Wavebuster,
-        PickupType::IceSpreader,
-        PickupType::Flamethrower,
-        PickupType::WaveBeam,
-        PickupType::IceBeam,
-        PickupType::PlasmaBeam
-    ];
+    let mut output = "\n\n\n\n\n\n\n".to_string();
 
-    let mut output = concat!(
-        "\n\n\n\n\n\n\n",
-        "&push;&font=C29C51F1;&main-color=#89D6FF;",
-        "Major Item Locations",
-        "&pop;",
-    ).to_owned();
-    for pickup_type in PICKUPS_TO_PRINT {
-        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_type) {
-            i
-        } else {
-            continue
-        };
-        let room_name = pickup_meta::ROOM_INFO.iter()
-            .flat_map(|pak_locs| pak_locs.1.iter())
-            .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
-            .nth(room_idx)
-            .unwrap();
-        let pickup_name = pickup_type.name();
-        write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+    if credits_string.is_some() {
+        output = format!("{}{}", output, credits_string.unwrap());
+    } else {
+        output = format!(
+            "{}{}",
+            output,
+            concat!(
+                "&push;&font=C29C51F1;&main-color=#89D6FF;",
+                "Major Item Locations",
+                "&pop;",
+            ).to_owned()
+        );
+
+        use std::fmt::Write;
+        const PICKUPS_TO_PRINT: &[PickupType] = &[
+            PickupType::ScanVisor,
+            PickupType::ThermalVisor,
+            PickupType::XRayVisor,
+            PickupType::VariaSuit,
+            PickupType::GravitySuit,
+            PickupType::PhazonSuit,
+            PickupType::MorphBall,
+            PickupType::BoostBall,
+            PickupType::SpiderBall,
+            PickupType::MorphBallBomb,
+            PickupType::PowerBomb,
+            PickupType::ChargeBeam,
+            PickupType::SpaceJumpBoots,
+            PickupType::GrappleBeam,
+            PickupType::SuperMissile,
+            PickupType::Wavebuster,
+            PickupType::IceSpreader,
+            PickupType::Flamethrower,
+            PickupType::WaveBeam,
+            PickupType::IceBeam,
+            PickupType::PlasmaBeam
+        ];
+
+        for pickup_type in PICKUPS_TO_PRINT {
+            let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_type) {
+                i
+            } else {
+                continue
+            };
+            let room_name = pickup_meta::ROOM_INFO.iter()
+                .flat_map(|pak_locs| pak_locs.1.iter())
+                .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
+                .nth(room_idx)
+                .unwrap();
+            let pickup_name = pickup_type.name();
+            write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+        }
     }
-    output += "\n\n\n\n\0";
+
+    output = format!("{}{}", output, "\n\n\n\n\0");
+
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
@@ -2933,7 +2949,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
-        |res| patch_credits(res, &pickup_layout)
+        |res| patch_credits(res, &pickup_layout, config.credits_string.clone())
     );
 
     patcher.add_resource_patch(
