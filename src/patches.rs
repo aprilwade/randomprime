@@ -3004,7 +3004,6 @@ fn patch_qol_cosmetic(
         b"Video/attract7.thp",
         b"Video/attract8.thp",
         b"Video/attract9.thp",
-
     ];
     const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
     for name in FMV_NAMES {
@@ -3081,6 +3080,13 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![],
+            vec![0x000202A9, 0x000202A8, 0x000202B7], // keep the ridley cutscene (it's a major cutscene)
+        ),
+    );
+    patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
@@ -3127,10 +3133,6 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
-        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
         resource_info!("00h_mines_connect.MREA").into(), // vent shaft
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00120085]), // puffers don't destroy wall if this is skipped TODO: use timer instead of cutscene
     );
@@ -3161,10 +3163,6 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
-    patcher.add_scly_patch(
-        resource_info!("09_ice_lobby.MREA").into(), // research entrance
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
     patcher.add_scly_patch(
         resource_info!("19_hive_totem.MREA").into(), // hive totem
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
@@ -3203,7 +3201,15 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B]), // keep fight start reposition for wavesun
     );
     patcher.add_scly_patch(
+        resource_info!("09_ice_lobby.MREA").into(), // research entrance
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
         resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
@@ -3607,7 +3613,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea {
+    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_major_cutscenes {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(
@@ -3637,7 +3643,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if config.qol_cosmetic {
-        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic);
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic || config.qol_major_cutscenes);
 
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[
