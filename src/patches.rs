@@ -3223,7 +3223,15 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     );
     patcher.add_scly_patch(
         resource_info!("08_mines.MREA").into(), // MQA
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![
+                0x002000D7, // Timer_pikeend
+                0x002000DE, // Timer_coverstart
+                0x002000E0, // Timer_steamshutoff
+                0x00200708, // Timer - Shield Off, Play Battle Music
+            ],
+            vec![],
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("12_mines_eliteboss.MREA").into(), // elite quarters
