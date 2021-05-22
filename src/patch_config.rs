@@ -128,9 +128,11 @@ pub struct PatchConfig
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
+    pub qol_game_breaking: bool,
     pub qol_cosmetic: bool,
     pub qol_logical: bool,
-    pub qol_cutscenes: bool,
+    pub qol_minor_cutscenes: bool,
+    pub qol_major_cutscenes: bool,
 
     pub layout: Layout,
 
@@ -208,9 +210,11 @@ impl TryInto<Layout> for LayoutWrapper
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
+    qol_game_breaking: Option<bool>,
     qol_cosmetic: Option<bool>,
     qol_logical: Option<bool>,
-    qol_cutscenes: Option<bool>,
+    qol_minor_cutscenes: Option<bool>,
+    qol_major_cutscenes: Option<bool>,
 
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
@@ -292,14 +296,20 @@ impl PatchConfig
                 .long("layout")
                 .takes_value(true)
                 .allow_hyphen_values(true))
+            .arg(Arg::with_name("qol game breaking")
+                .long("qol-game-breaking")
+                .help("Fix soft locks and crashes that retro didn't bother addressing"))
             .arg(Arg::with_name("qol cosmetic")
                 .long("qol-cosmetic")
                 .help("Patch cutscenes to fix continuity errors and UI to improve QoL without affecting IGT or the story"))
             .arg(Arg::with_name("qol logical")
                 .long("qol-logical")
-                .help("Patch the world to be more freely traversible in a randomized setting, including fixing unintuitive softlocks (affects routing)"))
-            .arg(Arg::with_name("qol cutscenes")
-                .long("qol-cutscenes")
+                .help("Patch the world to be more freely traversible in a randomized setting (affects routing)"))
+            .arg(Arg::with_name("qol minor cutscenes")
+                .long("qol-minor-cutscenes")
+                .help("Remove cutscenes which do not drastically affect gameplay"))
+            .arg(Arg::with_name("qol major cutscenes")
+                .long("qol-major-cutscenes")
                 .help("Remove nearly every cutscene, even if the result affects timing/positioning (affects IGT)"))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
@@ -404,9 +414,11 @@ impl PatchConfig
 
         // bool
         populate_config_bool!(matches;
+            "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
             "qol logical" => patch_config.preferences.qol_logical,
-            "qol cutscenes" => patch_config.preferences.qol_cutscenes,
+            "qol minor cutscenes" => patch_config.preferences.qol_minor_cutscenes,
+            "qol major cutscenes" => patch_config.preferences.qol_major_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
@@ -553,10 +565,12 @@ impl PatchConfigPrivate
             layout,
             level_data: self.level_data.clone(),
 
+            qol_game_breaking: self.preferences.qol_game_breaking.unwrap_or(true),
             qol_logical: self.preferences.qol_logical.unwrap_or(true),
             qol_cosmetic: self.preferences.qol_cosmetic.unwrap_or(true),
-            qol_cutscenes: self.preferences.qol_cutscenes.unwrap_or(false),
-            
+            qol_minor_cutscenes: self.preferences.qol_minor_cutscenes.unwrap_or(false),
+            qol_major_cutscenes: self.preferences.qol_major_cutscenes.unwrap_or(false),
+
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
