@@ -1828,13 +1828,14 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
 // When deciding which objects to patch, the most significant
 // byte is ignored
 fn patch_remove_cutscenes(
-    _ps: &mut PatcherState,
+    ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
     timers_to_zero: Vec<u32>,
     skip_ids: Vec<u32>,
 )
     -> Result<(), String>
 {
+    let room_id = area.mlvl_area.mrea;
     let layer_count = area.layer_flags.layer_count as usize;
     let scly = area.mrea().scly_section_mut();
 
@@ -1856,6 +1857,39 @@ fn patch_remove_cutscenes(
                 spawn_point_ids.push(obj.instance_id & 0x00FFFFFF);
             }
         }
+    }
+
+    let mut id0 = 0xFFFFFFFF;
+    if room_id == 0x0749DF46 || room_id == 0x7A3AD91E {
+        id0 = ps.fresh_instance_id_range.next().unwrap();
+
+        let target_object_id = {
+            if room_id == 0x0749DF46 { // subchamber 2
+                0x0007000B
+            } else { // subchamber 3
+                0x00080016
+            }
+        };
+
+        // add a timer to turn activate prime
+        scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: id0,
+            property_data: structs::Timer {
+                name: b"activate-prime\0".as_cstr(),
+                start_time: 1.0,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 0,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id,
+                },
+            ].into(),
+        },);
     }
     
     // for each layer
@@ -1932,34 +1966,34 @@ fn patch_remove_cutscenes(
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
                     state: structs::ConnectionState::ENTERED,
-                    message: structs::ConnectionMsg::START,
-                    target_object_id: 0x0007000B, // metroid prime
+                    message: structs::ConnectionMsg::RESET_AND_START,
+                    target_object_id: id0, // timer
                 });
                 let trigger = obj.property_data.as_trigger_mut().unwrap();
                 trigger.scale[2] = 8.0;
                 trigger.position[2] = trigger.position[2] - 11.7;
-                trigger.deactivate_on_enter = 1; // don't re-use this trigger for subchamber 3
+                trigger.deactivate_on_enter = 1;
             } else if obj_id == 0x00080058 { // subchamber 3 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
                     state: structs::ConnectionState::ENTERED,
-                    message: structs::ConnectionMsg::START,
-                    target_object_id: 0x00080016, // metroid prime
+                    message: structs::ConnectionMsg::RESET_AND_START,
+                    target_object_id: id0, // timer
                 });
                 let trigger = obj.property_data.as_trigger_mut().unwrap();
                 trigger.scale[2] = 8.0;
                 trigger.position[2] = trigger.position[2] - 11.7;
-                trigger.deactivate_on_enter = 1; // don't re-use this trigger for subchamber 4
+                trigger.deactivate_on_enter = 1;
             } else if obj_id == 0x0009005A { // subchamber 4 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
-                    state: structs::ConnectionState::ENTERED,
+                    state: structs::ConnectionState::INSIDE, // inside, because it's possible to beat exo to this trigger
                     message: structs::ConnectionMsg::START,
                     target_object_id: 0x00090013, // metroid prime
                 });
                 if obj.property_data.is_trigger() {
                     let trigger = obj.property_data.as_trigger_mut().unwrap();
-                    trigger.scale[2] = 8.0;
+                    trigger.scale[2] = 5.0;
                     trigger.position[2] = trigger.position[2] - 11.7;
                 }
             }
