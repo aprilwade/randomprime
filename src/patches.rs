@@ -507,7 +507,7 @@ fn patch_add_item<'r>(
         );
     }
 
-    if pickup_config.respawn.unwrap_or(true) {
+    if !pickup_config.respawn.unwrap_or(false) {
         // Create Special Function to disable layer once item is obtained
         // This is needed because otherwise the item would re-appear every
         // time the room is loaded
@@ -669,7 +669,7 @@ fn modify_pickups_in_mrea<'r>(
     }
 
     // disable the respawn connection if that was specified
-    if !pickup_config.respawn.unwrap_or(true) {
+    if pickup_config.respawn.unwrap_or(false) {
         let mut memory_relay_ids = Vec::<u32>::new();
         for layer in layers.iter_mut() {
             for obj in layer.objects.as_mut_vec().iter_mut() {
