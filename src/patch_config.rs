@@ -106,19 +106,23 @@ pub struct LevelConfig
 #[derive(Debug)]
 pub struct PatchConfig
 {
+    pub seed: u64,
+
     pub input_iso: memmap::Mmap,
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
-    pub seed: u64,
+    pub qol_game_breaking: bool,
+    pub qol_cosmetic: bool,
+    pub qol_logical: bool,
+    pub qol_minor_cutscenes: bool,
+    pub qol_major_cutscenes: bool,
 
     pub level_data: HashMap<String, LevelConfig>,
 
     pub starting_room: String,
     pub starting_memo: Option<String>,
 
-    pub skip_hudmenus: bool,
-    pub keep_fmvs: bool,
     pub obfuscate_items: bool,
     pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
@@ -133,7 +137,6 @@ pub struct PatchConfig
     pub starting_items: StartingItems,
     pub item_loss_items: StartingItems,
 
-    pub enable_vault_ledge_door: bool,
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
@@ -154,12 +157,16 @@ pub struct PatchConfig
 #[serde(rename_all = "camelCase")]
 struct Preferences
 {
-    skip_hudmenus: Option<bool>,
+    qol_game_breaking: Option<bool>,
+    qol_cosmetic: Option<bool>,
+    qol_logical: Option<bool>,
+    qol_minor_cutscenes: Option<bool>,
+    qol_major_cutscenes: Option<bool>,
+
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
     trilogy_disc_path: Option<String>,
-    keep_fmvs: Option<bool>,
     quickplay: Option<bool>,
     quiet: Option<bool>,
 }
@@ -175,7 +182,6 @@ struct GameConfig
     staggered_suit_damage: Option<bool>,
     heat_damage_per_sec: Option<f32>,
     auto_enabled_elevators: Option<bool>,
-    enable_vault_ledge_door: Option<bool>, // TODO: remove, calculate automatically once door patching is a thing
 
     starting_items: Option<StartingItems>,
     item_loss_items: Option<StartingItems>,
@@ -232,6 +238,21 @@ impl PatchConfig
                 .long("profile")
                 .help("Path to JSON file with patch configuration (cli config takes priority). See documentation for details.")
                 .takes_value(true))
+            .arg(Arg::with_name("qol game breaking")
+                .long("qol-game-breaking")
+                .help("Fix soft locks and crashes that retro didn't bother addressing"))
+            .arg(Arg::with_name("qol cosmetic")
+                .long("qol-cosmetic")
+                .help("Patch cutscenes to fix continuity errors and UI to improve QoL without affecting IGT or the story"))
+            .arg(Arg::with_name("qol logical")
+                .long("qol-logical")
+                .help("Patch the world to be more freely traversible in a randomized setting (affects routing)"))
+            .arg(Arg::with_name("qol minor cutscenes")
+                .long("qol-minor-cutscenes")
+                .help("Remove cutscenes which do not drastically affect gameplay"))
+            .arg(Arg::with_name("qol major cutscenes")
+                .long("qol-major-cutscenes")
+                .help("Remove nearly every cutscene, even if the result affects timing/positioning (affects IGT)"))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
@@ -240,9 +261,6 @@ impl PatchConfig
                 .long("starting-memo")
                 .help("String which is shown to the player after they start a new save file")
                 .takes_value(true))
-            .arg(Arg::with_name("skip hudmenus")
-                .long("non-modal-item-messages")
-                .help("Display a non-modal message when an item is is acquired"))
             .arg(Arg::with_name("etank capacity")
                 .long("etank-capacity")
                 .help("Set the etank capacity and base health")
@@ -277,9 +295,6 @@ impl PatchConfig
                 .long("artifact-hint-behavior")
                 .help("Set the behavior of artifact temple hints. Can be 'all', 'none', or 'default' (vanilla)")
                 .takes_value(true))
-            .arg(Arg::with_name("enable vault ledge door")
-                .long("enable-vault-ledge-door")
-                .help("Enable Chozo Ruins Vault door from Main Plaza"))
             .arg(Arg::with_name("trilogy disc path")
                 .long("flaahgra-music-disc-path")
                 .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
@@ -290,9 +305,6 @@ impl PatchConfig
                 .takes_value(true)
                 .validator(|s| s.parse::<i32>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
-            .arg(Arg::with_name("keep attract mode")
-                .long("keep-attract-mode")
-                .help("Keeps the attract mode FMVs, which are removed by default"))
             .arg(Arg::with_name("obfuscate items")
                 .long("obfuscate-items")
                 .help("Replace all item models with an obfuscated one"))
@@ -344,15 +356,17 @@ impl PatchConfig
 
         // bool
         populate_config_bool!(matches;
-            "skip hudmenus" => patch_config.preferences.skip_hudmenus,
+            "qol game breaking" => patch_config.preferences.qol_game_breaking,
+            "qol cosmetic" => patch_config.preferences.qol_cosmetic,
+            "qol logical" => patch_config.preferences.qol_logical,
+            "qol minor cutscenes" => patch_config.preferences.qol_minor_cutscenes,
+            "qol major cutscenes" => patch_config.preferences.qol_major_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
-            "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
-            "enable vault ledge door" => patch_config.game_config.enable_vault_ledge_door,
         );
 
         // string
@@ -487,11 +501,15 @@ impl PatchConfigPrivate
 
             level_data: self.level_data.clone(),
 
-            skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
+            qol_game_breaking: self.preferences.qol_game_breaking.unwrap_or(true),
+            qol_logical: self.preferences.qol_logical.unwrap_or(true),
+            qol_cosmetic: self.preferences.qol_cosmetic.unwrap_or(true),
+            qol_minor_cutscenes: self.preferences.qol_minor_cutscenes.unwrap_or(false),
+            qol_major_cutscenes: self.preferences.qol_major_cutscenes.unwrap_or(false),
+
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
-            keep_fmvs: self.preferences.keep_fmvs.unwrap_or(false),
             suit_hue_rotate_angle: None,
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
@@ -504,7 +522,6 @@ impl PatchConfigPrivate
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
             auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap_or(false),
             map_default_state,
-            enable_vault_ledge_door: self.game_config.enable_vault_ledge_door.unwrap_or(false),
 
             starting_items: self.game_config.starting_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
