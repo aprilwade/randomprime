@@ -148,6 +148,10 @@ pub struct PatchConfig
     pub game_banner: GameBanner,
     pub comment: String,
     pub main_menu_message: String,
+
+    pub credits_string: Option<String>,
+    pub artifact_hints: Option<HashMap<String,String>>, // e.g. "Strength":"This item can be found in Ruined Fountain"
+
 }
 
 
@@ -193,6 +197,9 @@ struct GameConfig
     game_banner: Option<GameBanner>,
     comment: Option<String>,
     main_menu_message: Option<String>,
+
+    credits_string: Option<String>,
+    artifact_hints: Option<HashMap<String,String>>, // e.g. "Strength":"This item can be found in Ruined Fountain"
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -536,6 +543,9 @@ impl PatchConfigPrivate
             comment: self.game_config.comment.clone().unwrap_or(String::new()),
             main_menu_message: self.game_config.main_menu_message.clone()
                 .unwrap_or_else(|| "randomprime".to_string()),
+            
+            credits_string: self.game_config.credits_string.clone(),
+            artifact_hints: self.game_config.artifact_hints.clone(),
         })
     }
 }

@@ -100,7 +100,12 @@ fn post_pickup_relay_template<'r>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(config: &PatchConfig, rng: &mut R)
+fn build_artifact_temple_totem_scan_strings<R>(
+    config: &PatchConfig,
+    rng: &mut R,
+    artifact_hints: Option<HashMap<String,String>>,
+    
+)
     -> [String; 12]
     where R: Rng
 {
@@ -177,6 +182,28 @@ fn build_artifact_temple_totem_scan_strings<R>(config: &PatchConfig, rng: &mut R
             scan_text[i] = "Artifact not present. This layout may not be completable.\0".to_owned();
         }
     }
+
+    if artifact_hints.is_some() {
+        for (artifact_name, hint) in artifact_hints.unwrap() {
+            let idx = match artifact_name.trim().to_lowercase().as_str() {
+                "lifegiver" => 0,
+                "wild"      => 1,
+                "world"     => 2,
+                "sun"       => 3,
+                "elder"     => 4,
+                "spirit"    => 5,
+                "truth"     => 6,
+                "chozo"     => 7,
+                "warrior"   => 8,
+                "newborn"   => 9,
+                "nature"    => 10,
+                "strength"  => 11,
+                _ => panic!("Error - Unknown artifact - '{}'", artifact_name)
+            };
+            scan_text[idx] = format!("{}\0",hint.to_owned());
+        }
+    }
+
     scan_text
 }
 
@@ -2643,65 +2670,77 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
     Ok(())
 }
 
-
-fn patch_credits(res: &mut structs::Resource, config: &PatchConfig)
+fn patch_credits(
+    res: &mut structs::Resource,
+    config: &PatchConfig,
+)
     -> Result<(), String>
 {
-    use std::fmt::Write;
-    const PICKUPS_TO_PRINT: &[PickupType] = &[
-        PickupType::ScanVisor,
-        PickupType::ThermalVisor,
-        PickupType::XRayVisor,
-        PickupType::VariaSuit,
-        PickupType::GravitySuit,
-        PickupType::PhazonSuit,
-        PickupType::MorphBall,
-        PickupType::BoostBall,
-        PickupType::SpiderBall,
-        PickupType::MorphBallBomb,
-        PickupType::PowerBomb,
-        PickupType::ChargeBeam,
-        PickupType::SpaceJumpBoots,
-        PickupType::GrappleBeam,
-        PickupType::SuperMissile,
-        PickupType::Wavebuster,
-        PickupType::IceSpreader,
-        PickupType::Flamethrower,
-        PickupType::WaveBeam,
-        PickupType::IceBeam,
-        PickupType::PlasmaBeam
-    ];
+    let mut output = "\n\n\n\n\n\n\n".to_string();
 
-    let mut output = concat!(
-        "\n\n\n\n\n\n\n",
-        "&push;&font=C29C51F1;&main-color=#89D6FF;",
-        "Major Item Locations",
-        "&pop;",
-    ).to_owned();
-    for pickup_type in PICKUPS_TO_PRINT {
-        let room_name = {
-            let mut _room_name = String::new();
-            for (_, level) in config.level_data.iter() {
-                for (room_name, room) in level.rooms.iter() {
-                    for pickup_info in room.pickups.iter() {
-                        if PickupType::from_str(pickup_type.name()) == PickupType::from_str(&pickup_info.pickup_type) {
-                            _room_name = room_name.to_string();
-                            break;
+    if config.credits_string.is_some() {
+        output = format!("{}{}", output, config.credits_string.as_ref().unwrap());
+    } else {
+        output = format!(
+            "{}{}",
+            output,
+            concat!(
+                "&push;&font=C29C51F1;&main-color=#89D6FF;",
+                "Major Item Locations",
+                "&pop;",
+            ).to_owned()
+        );
+
+        use std::fmt::Write;
+        const PICKUPS_TO_PRINT: &[PickupType] = &[
+            PickupType::ScanVisor,
+            PickupType::ThermalVisor,
+            PickupType::XRayVisor,
+            PickupType::VariaSuit,
+            PickupType::GravitySuit,
+            PickupType::PhazonSuit,
+            PickupType::MorphBall,
+            PickupType::BoostBall,
+            PickupType::SpiderBall,
+            PickupType::MorphBallBomb,
+            PickupType::PowerBomb,
+            PickupType::ChargeBeam,
+            PickupType::SpaceJumpBoots,
+            PickupType::GrappleBeam,
+            PickupType::SuperMissile,
+            PickupType::Wavebuster,
+            PickupType::IceSpreader,
+            PickupType::Flamethrower,
+            PickupType::WaveBeam,
+            PickupType::IceBeam,
+            PickupType::PlasmaBeam
+        ];
+
+        for pickup_type in PICKUPS_TO_PRINT {
+            let room_name = {
+                let mut _room_name = String::new();
+                for (_, level) in config.level_data.iter() {
+                    for (room_name, room) in level.rooms.iter() {
+                        for pickup_info in room.pickups.iter() {
+                            if PickupType::from_str(pickup_type.name()) == PickupType::from_str(&pickup_info.pickup_type) {
+                                _room_name = room_name.to_string();
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            if _room_name.len() == 0 {
-                _room_name = "<Not Present>".to_string();
-            }
-
-            _room_name
-        };
-        let pickup_name = pickup_type.name();
-        write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+                if _room_name.len() == 0 {
+                    _room_name = "<Not Present>".to_string();
+                }
+    
+                _room_name
+            };
+            let pickup_name = pickup_type.name();
+            write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+        }
     }
-    output += "\n\n\n\n\0";
+    output = format!("{}{}", output, "\n\n\n\n\0");
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
@@ -3807,7 +3846,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
     let mut rng = StdRng::seed_from_u64(config.seed);
-    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(config, &mut rng);
+    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(config, &mut rng, config.artifact_hints.clone());
 
     let show_starting_memo = config.starting_memo.is_some();
 
