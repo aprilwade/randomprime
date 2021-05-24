@@ -640,7 +640,7 @@ fn modify_pickups_in_mrea<'r>(
     let instance_id = ps.fresh_instance_id_range.next().unwrap();
     let relay = post_pickup_relay_template(instance_id,
                                             pickup_location.post_pickup_relay_connections);
-    layers[new_layer_idx].objects.as_mut_vec().push(relay);
+    
     additional_connections.push(structs::Connection {
         state: structs::ConnectionState::ARRIVED,
         message: structs::ConnectionMsg::SET_TO_ZERO,
@@ -661,7 +661,7 @@ fn modify_pickups_in_mrea<'r>(
     }
 
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
-        .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
+        .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
     update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
     if additional_connections.len() > 0 {
@@ -670,30 +670,16 @@ fn modify_pickups_in_mrea<'r>(
 
     // disable the respawn connection if that was specified
     if pickup_config.respawn.unwrap_or(false) {
-        let mut memory_relay_ids = Vec::<u32>::new();
         for layer in layers.iter_mut() {
             for obj in layer.objects.as_mut_vec().iter_mut() {
                 if obj.property_data.is_memory_relay() {
-                    let connections = obj.connections.as_mut_vec();
-                    for connection in connections.iter_mut() {
-                        if connection.target_object_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
-                            memory_relay_ids.push(obj.instance_id);
-                            connections.retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        for layer in layers.iter_mut() {
-            for obj in layer.objects.as_mut_vec().iter_mut() {
-                if obj.instance_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
-                    obj.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&i.target_object_id));
-                    break;
+                    obj.connections.as_mut_vec().retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
                 }
             }
         }
     }
+
+    layers[new_layer_idx].objects.as_mut_vec().push(relay);
 
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
@@ -781,10 +767,10 @@ fn update_pickup(
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
         ].into(),
 
-        fade_in_timer: 0.0,
-        spawn_delay: 0.0,
-        disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
-        active: 1,
+        fade_in_timer:  original_pickup.fade_in_timer,
+        spawn_delay: original_pickup.spawn_delay,
+        disappear_timer: original_pickup.disappear_timer,
+        active: original_pickup.active,
         curr_increase,
         max_increase,
         kind,
