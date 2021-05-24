@@ -638,7 +638,7 @@ fn modify_pickups_in_mrea<'r>(
 
     // Add a post-pickup relay. This is used to support cutscene-skipping
     let instance_id = ps.fresh_instance_id_range.next().unwrap();
-    let relay = post_pickup_relay_template(instance_id,
+    let mut relay = post_pickup_relay_template(instance_id,
                                             pickup_location.post_pickup_relay_connections);
     
     additional_connections.push(structs::Connection {
@@ -670,10 +670,26 @@ fn modify_pickups_in_mrea<'r>(
 
     // disable the respawn connection if that was specified
     if pickup_config.respawn.unwrap_or(false) {
+        let mut memory_relay_ids = Vec::<u32>::new();
         for layer in layers.iter_mut() {
             for obj in layer.objects.as_mut_vec().iter_mut() {
                 if obj.property_data.is_memory_relay() {
-                    obj.connections.as_mut_vec().retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
+                    let connections = obj.connections.as_mut_vec();
+                    for connection in connections.iter_mut() {
+                        if connection.target_object_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
+                            memory_relay_ids.push(obj.instance_id&0x00FFFFFF);
+                        }
+                    }
+                    connections.retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
+                }
+            }
+        }
+        for layer in layers.iter_mut() {
+            for obj in layer.objects.as_mut_vec().iter_mut() {
+                if obj.instance_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
+                    obj.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&(i.target_object_id&0x00FFFFFF)));
+                    relay.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&(i.target_object_id&0x00FFFFFF)));
+                    break;
                 }
             }
         }
