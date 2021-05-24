@@ -595,8 +595,15 @@ fn modify_pickups_in_mrea<'r>(
     let name = CString::new(format!(
             "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
-
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+
+    let new_layer_2_idx = new_layer_idx + 1;
+    if pickup_config.respawn.unwrap_or(false) {
+        let name2 = CString::new(format!(
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+        area.add_layer(Cow::Owned(name2));
+        area.layer_flags.flags &= !(1 << new_layer_2_idx); // layer disabled by default
+    }
 
     // Add hudmemo string as dependency to room //
     let hudmemo_strg: ResId<res_id::STRG> = {
@@ -631,6 +638,7 @@ fn modify_pickups_in_mrea<'r>(
         }
     };
 
+    let room_id = area.mlvl_area.internal_id;
     let scly = area.mrea().scly_section_mut();
     let layers = scly.layers.as_mut_vec();
 
@@ -660,39 +668,50 @@ fn modify_pickups_in_mrea<'r>(
         });
     }
 
+    if pickup_config.respawn.unwrap_or(false) {
+        // add a special function that activates this pickup
+        let special_function_id = ps.fresh_instance_id_range.next().unwrap();
+        layers[new_layer_idx].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: special_function_id,
+            connections: vec![].into(),
+            property_data: structs::SpecialFunction::layer_change_fn(
+                b"Enable pickup\0".as_cstr(),
+                room_id,
+                new_layer_2_idx as u32,
+            ).into(),
+        });
+        layers[new_layer_2_idx].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            property_data: structs::Timer {
+                name: b"auto-spawn pickup\0".as_cstr(),
+                start_time: 0.001,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 1,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: pickup_location.location.instance_id,
+                },
+            ].into(),
+        });
+        additional_connections.push(structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::INCREMENT,
+            target_object_id: special_function_id
+        });
+    }
+
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
     update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
+
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
-    }
-
-    // disable the respawn connection if that was specified
-    if pickup_config.respawn.unwrap_or(false) {
-        let mut memory_relay_ids = Vec::<u32>::new();
-        for layer in layers.iter_mut() {
-            for obj in layer.objects.as_mut_vec().iter_mut() {
-                if obj.property_data.is_memory_relay() {
-                    let connections = obj.connections.as_mut_vec();
-                    for connection in connections.iter_mut() {
-                        if connection.target_object_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
-                            memory_relay_ids.push(obj.instance_id&0x00FFFFFF);
-                        }
-                    }
-                    connections.retain(|i| i.target_object_id&0x00FFFFFF != pickup_location.location.instance_id&0x00FFFFFF);
-                }
-            }
-        }
-        for layer in layers.iter_mut() {
-            for obj in layer.objects.as_mut_vec().iter_mut() {
-                if obj.instance_id&0x00FFFFFF == pickup_location.location.instance_id&0x00FFFFFF {
-                    obj.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&(i.target_object_id&0x00FFFFFF)));
-                    relay.connections.as_mut_vec().retain(|i| !memory_relay_ids.contains(&(i.target_object_id&0x00FFFFFF)));
-                    break;
-                }
-            }
-        }
     }
 
     layers[new_layer_idx].objects.as_mut_vec().push(relay);
