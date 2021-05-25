@@ -90,7 +90,7 @@ impl World {
 
     pub fn from_json_key(string: &str) -> Self {
         for world in World::iter() {
-            if string.trim().to_lowercase() == world.to_json_key().to_lowercase() {
+            if string.trim().to_lowercase() == world.to_json_key().to_lowercase() || world.to_str().to_lowercase().starts_with(&string.trim().to_lowercase()) {
                 return world;
             }
         }
@@ -611,7 +611,7 @@ impl SpawnRoomData
         for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
             let world = World::from_pak(pak_name).unwrap();
 
-            if !world.to_str().to_lowercase().starts_with(&world_name) {
+            if world != World::from_json_key(world_name) {
                 continue;
             }
 

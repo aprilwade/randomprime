@@ -675,7 +675,7 @@ fn modify_pickups_in_mrea<'r>(
 
     // Add a post-pickup relay. This is used to support cutscene-skipping
     let instance_id = ps.fresh_instance_id_range.next().unwrap();
-    let mut relay = post_pickup_relay_template(instance_id,
+    let relay = post_pickup_relay_template(instance_id,
                                             pickup_location.post_pickup_relay_connections);
     
     additional_connections.push(structs::Connection {
