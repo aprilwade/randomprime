@@ -739,13 +739,28 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
+    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
 
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
     }
 
     layers[new_layer_idx].objects.as_mut_vec().push(relay);
+
+    // find any overlapping POI that give "helpful" hints to the player and replace their scan text with the items //
+    for layer in layers.iter_mut() {
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if obj.property_data.is_point_of_interest() {
+                let poi = obj.property_data.as_point_of_interest_mut().unwrap();
+                if f32::abs(poi.position[0] - position[0]) < 3.0 &&
+                   f32::abs(poi.position[1] - position[1]) < 3.0 &&
+                   f32::abs(poi.position[2] - position[2]) < 3.0
+                {
+                    poi.scan_param.scan = scan_id_out;
+                }
+            }
+        }
+    }
 
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
@@ -770,7 +785,7 @@ fn update_pickup(
     pickup_model_type: MaybeObfuscatedPickup,
     pickup_config: &PickupConfig,
     scan_id: Option<ResId<res_id::SCAN>>,
-)
+) -> ([f32; 3], ResId<res_id::SCAN>)
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
     let mut original_pickup = pickup.clone();
@@ -818,14 +833,16 @@ fn update_pickup(
         _ => pickup_type.pickup_data().kind,
     };
 
+    let position = [
+        original_pickup.position[0] - (new_center[0] - original_center[0]),
+        original_pickup.position[1] - (new_center[1] - original_center[1]),
+        original_pickup.position[2] - (new_center[2] - original_center[2]),
+    ];
+
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
     *pickup = structs::Pickup {
-        position: [
-            original_pickup.position[0] - (new_center[0] - original_center[0]),
-            original_pickup.position[1] - (new_center[1] - original_center[1]),
-            original_pickup.position[2] - (new_center[2] - original_center[2]),
-        ].into(),
+        position: position.into(),
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
@@ -847,6 +864,8 @@ fn update_pickup(
     if scan_id.is_some() {
         pickup.actor_params.scan_params.scan = scan_id.unwrap();
     }
+
+    (position, pickup.actor_params.scan_params.scan)
 }
 
 fn update_hudmemo(
