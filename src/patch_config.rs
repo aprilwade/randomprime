@@ -151,9 +151,8 @@ pub struct PatchConfig
 
     pub credits_string: Option<String>,
     pub artifact_hints: Option<HashMap<String,String>>, // e.g. "Strength":"This item can be found in Ruined Fountain"
-
+    pub artifact_temple_layer_overrides: Option<HashMap<String,bool>>,
 }
-
 
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
 
@@ -200,6 +199,7 @@ struct GameConfig
 
     credits_string: Option<String>,
     artifact_hints: Option<HashMap<String,String>>, // e.g. "Strength":"This item can be found in Ruined Fountain"
+    artifact_temple_layer_overrides: Option<HashMap<String,bool>>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -528,6 +528,7 @@ impl PatchConfigPrivate
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
             heat_damage_per_sec: self.game_config.heat_damage_per_sec.unwrap_or(10.0),
             auto_enabled_elevators: self.game_config.auto_enabled_elevators.unwrap_or(false),
+            artifact_temple_layer_overrides: self.game_config.artifact_temple_layer_overrides.clone(),
             map_default_state,
 
             starting_items: self.game_config.starting_items.clone()

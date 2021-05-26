@@ -185,7 +185,9 @@ fn build_artifact_temple_totem_scan_strings<R>(
 
     if artifact_hints.is_some() {
         for (artifact_name, hint) in artifact_hints.unwrap() {
-            let idx = match artifact_name.trim().to_lowercase().as_str() {
+            let words: Vec<&str> = artifact_name.split(" ").collect();
+            let lastword = words[words.len() - 1];
+            let idx = match lastword.trim().to_lowercase().as_str() {
                 "lifegiver" => 0,
                 "wild"      => 1,
                 "world"     => 2,
@@ -1122,6 +1124,8 @@ fn fix_artifact_of_truth_requirements(
     config: &PatchConfig,
 ) -> Result<(), String>
 {
+    let artifact_temple_layer_overrides = config.artifact_temple_layer_overrides.clone().unwrap_or(HashMap::new());
+
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
     let truth_req_layer_id = area.layer_flags.layer_count;
     area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
@@ -1156,19 +1160,45 @@ fn fix_artifact_of_truth_requirements(
                 for (_, room) in level.rooms.iter() {
                     if _exists {break;}
                     for pickup in room.pickups.iter() {
-                        if PickupType::from_str(&pickup.pickup_type).pickup_data().kind == kind {
-                            _exists = true;
+                        let pickup = PickupType::from_str(&pickup.pickup_type);
+                        if pickup.pickup_data().kind == kind {
+                            _exists = true; // this artifact is placed somewhere in this world
                             break;
                         }
                     }
+                }
+            }
+
+            for (key, value) in &artifact_temple_layer_overrides {
+                let artifact_name = match kind {
+                    33 => "lifegiver",
+                    32 => "wild",
+                    38 => "world",
+                    37 => "sun",
+                    31 => "elder",
+                    39 => "spirit",
+                    29 => "truth",
+                    35 => "chozo",
+                    34 => "warrior",
+                    40 => "newborn",
+                    36 => "nature",
+                    30 => "strength",
+                    _ => panic!("Unhandled artifact idx - '{}'", i),
+                };
+
+                if key.to_lowercase().contains(&artifact_name) {
+                    _exists = _exists || *value; // if value is true, override
+                    break;
                 }
             }
             _exists
         };
 
         if exists && at_pickup_kind != kind {
-            // If the artifact exists, but is not the artifact at the Artifact Temple, mark this
-            // layer as inactive. It will be activated when the item is collected.
+            // If the artifact exists,
+            // and it is not the artifact at the Artifact Temple
+            // or it's placed in another player's game (multi-world)
+            // THEN mark this layer as inactive. It will be activated when the item is collected.
             area.layer_flags.flags &= !(1 << layer_number);
         } else {
             // Either the artifact doesn't exist or it does and it is in the Artifact Temple, so
