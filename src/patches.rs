@@ -3065,22 +3065,24 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&missile_hud_formating_patch)?;
     }
 
-    let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
-            b skip;
-        fmt:
-            .asciiz b"%d/%d";// %d";
-            nop;
-        skip:
-            mr         r6, r27;
-            mr         r5, r28;
-            lis        r4, fmt@h;
-            addi       r4, r4, fmt@l;
-            addi       r3, r1, 12;// arg_C;
-            nop; // crclr      cr6;
-            bl         { symbol_addr!("sprintf", version) };
+    if config.qol_cosmetic {
+        let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
+                b skip;
+            fmt:
+                .asciiz b"%d/%d";// %d";
+                nop;
+            skip:
+                mr         r6, r27;
+                mr         r5, r28;
+                lis        r4, fmt@h;
+                addi       r4, r4, fmt@l;
+                addi       r3, r1, 12;// arg_C;
+                nop; // crclr      cr6;
+                bl         { symbol_addr!("sprintf", version) };
 
-    });
-    dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
+        });
+        dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
+    }
 
     if version == Version::Pal {
         let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x0c, {
@@ -3124,7 +3126,6 @@ fn patch_dol<'r>(
         });
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
     }
-
 
     if config.staggered_suit_damage {
         let (patch_offset, jump_offset) = if version == Version::Pal {
