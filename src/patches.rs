@@ -3156,25 +3156,17 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if config.missile_capacity > 999 {
-        Err("The max amount of missiles you can carry has exceeded the limit (>999)!".to_string())?;
+    for (pickup_type, value) in &config.item_max_capacity {
+        match pickup_type.kind() {
+            Some(index) => {
+                let capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + index * 4, {
+                    .long *value;
+                });
+                dol_patcher.ppcasm_patch(&capacity_patch)?;
+            }
+            None => {}
+        }
     }
-
-    if config.power_bomb_capacity > 9 {
-        Err("The max amount of power bombs you can carry has exceeded the limit (>9)!".to_string())?;
-    }
-
-    // CPlayerState_PowerUpMaxValues[4]
-    let missile_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
-        .long config.missile_capacity;
-    });
-    dol_patcher.ppcasm_patch(&missile_capacity_patch)?;
-
-    // CPlayerState_PowerUpMaxValues[7]
-    let power_bomb_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
-        .long config.power_bomb_capacity;
-    });
-    dol_patcher.ppcasm_patch(&power_bomb_capacity_patch)?;
 
     // set etank capacity and base health
     let etank_capacity = config.etank_capacity as f32;
@@ -3798,8 +3790,9 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "etank capacity: {}", config.etank_capacity).unwrap();
     writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
-    writeln!(ct, "missile capacity: {}", config.missile_capacity).unwrap();
-    writeln!(ct, "power bomb capacity: {}", config.power_bomb_capacity).unwrap();
+    for (pickup_type, value) in &config.item_max_capacity {
+        writeln!(ct, "{} capacity: {}", pickup_type.name(), value).unwrap();
+    }
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);

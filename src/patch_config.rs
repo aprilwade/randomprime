@@ -14,7 +14,10 @@ use clap::{
 
 use serde::Deserialize;
 
-use crate::starting_items::StartingItems;
+use crate::{
+    starting_items::StartingItems,
+    pickup_meta::PickupType,
+};
 
 /*** Parsed Config (fn patch_iso) ***/
 
@@ -128,8 +131,7 @@ pub struct PatchConfig
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
     pub staggered_suit_damage: bool,
-    pub missile_capacity: u32,
-    pub power_bomb_capacity: u32,
+    pub item_max_capacity: HashMap<PickupType, u32>,
     pub map_default_state: MapState,
     pub auto_enabled_elevators: bool,
     pub quiet: bool,
@@ -190,8 +192,7 @@ struct GameConfig
     item_loss_items: Option<StartingItems>,
 
     etank_capacity: Option<u32>,
-    missile_capacity: Option<u32>,
-    power_bomb_capacity: Option<u32>,
+    item_max_capacity: Option<HashMap<String,u32>>,
 
     game_banner: Option<GameBanner>,
     comment: Option<String>,
@@ -283,14 +284,6 @@ impl PatchConfig
                 .long("staggered-suit-damage")
                 .help(concat!("The suit damage reduction is determinted by the number of suits ",
                                 "collected rather than the most powerful one collected.")))
-            .arg(Arg::with_name("missile capacity")
-                .long("missile-capacity")
-                .help("Set the max amount of Missiles you can carry")
-                .takes_value(true))
-            .arg(Arg::with_name("power bomb capacity")
-                .long("power-bomb-capacity")
-                .help("Set the max amount of Power Bombs you can carry")
-                .takes_value(true))
             .arg(Arg::with_name("map default state")
                 .long("map-default-state")
                 .help("Change the default state of map for each world (Either default, visible or visited)")
@@ -406,13 +399,7 @@ impl PatchConfig
         if let Some(etank_capacity) = matches.value_of("etank capacity") {
             patch_config.game_config.etank_capacity = Some(etank_capacity.parse::<u32>().unwrap());
         }
-        if let Some(s) = matches.value_of("missile capacity") {
-            patch_config.game_config.missile_capacity= Some(s.parse::<u32>().unwrap());
-        }
-        if let Some(s) = matches.value_of("power bomb capacity") {
-            patch_config.game_config.power_bomb_capacity = Some(s.parse::<u32>().unwrap());
-        }
-
+        
         // custom
         if let Some(starting_items_str) = matches.value_of("starting items") {
             patch_config.game_config.starting_items = Some(
@@ -500,6 +487,15 @@ impl PatchConfigPrivate
             .map(|path| extract_flaahgra_music_files(path))
             .transpose()?;
 
+        let item_max_capacity = match &self.game_config.item_max_capacity {
+            Some(max_capacity) => {
+                max_capacity.iter()
+                    .map(|(name, capacity) | (PickupType::from_str(name), *capacity))
+                    .collect()
+            },
+            None => HashMap::new(),
+        };
+
         Ok(PatchConfig {
             input_iso,
             iso_format,
@@ -537,8 +533,7 @@ impl PatchConfigPrivate
             .unwrap_or_else(|| StartingItems::from_u64(1)),
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
-            missile_capacity: self.game_config.missile_capacity.unwrap_or(999),
-            power_bomb_capacity: self.game_config.power_bomb_capacity.unwrap_or(9),
+            item_max_capacity: item_max_capacity,
 
             game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
             comment: self.game_config.comment.clone().unwrap_or(String::new()),

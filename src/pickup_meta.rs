@@ -241,6 +241,54 @@ impl PickupType
         &PickupTable::get()[*self]
     }
 
+    pub fn kind(&self) -> Option<u32>
+    {
+        match self {
+            PickupType::PowerBeam =>           Some(0),
+            PickupType::IceBeam =>             Some(1),
+            PickupType::WaveBeam =>            Some(2),
+            PickupType::PlasmaBeam =>          Some(3),
+            PickupType::Missile =>             Some(4),
+            PickupType::ScanVisor =>           Some(5),
+            PickupType::MorphBallBomb =>       Some(6),
+            PickupType::PowerBomb =>           Some(7),
+            PickupType::Flamethrower =>        Some(8),
+            PickupType::ThermalVisor =>        Some(9),
+            PickupType::ChargeBeam =>          Some(10),
+            PickupType::SuperMissile =>        Some(11),
+            PickupType::GrappleBeam =>         Some(12),
+            PickupType::XRayVisor =>           Some(13),
+            PickupType::IceSpreader =>         Some(14),
+            PickupType::SpaceJumpBoots =>      Some(15),
+            PickupType::MorphBall =>           Some(16),
+            // PickupType::CombatVisor =>         Some(17),
+            PickupType::BoostBall =>           Some(18),
+            PickupType::SpiderBall =>          Some(19),
+            // PickupType::PowerSuit =>           Some(20),
+            PickupType::GravitySuit =>         Some(21),
+            PickupType::VariaSuit =>           Some(22),
+            PickupType::PhazonSuit =>          Some(23),
+            PickupType::EnergyTank =>          Some(24),
+            PickupType::UnknownItem1 =>        Some(25),
+            PickupType::HealthRefill =>        Some(26),
+            PickupType::UnknownItem2 =>        Some(27),
+            PickupType::Wavebuster =>          Some(28),
+            PickupType::ArtifactOfTruth =>     Some(29),
+            PickupType::ArtifactOfStrength =>  Some(30),
+            PickupType::ArtifactOfElder =>     Some(31),
+            PickupType::ArtifactOfWild =>      Some(32),
+            PickupType::ArtifactOfLifegiver => Some(33),
+            PickupType::ArtifactOfWarrior =>   Some(34),
+            PickupType::ArtifactOfChozo =>     Some(35),
+            PickupType::ArtifactOfNature =>    Some(36),
+            PickupType::ArtifactOfSun =>       Some(37),
+            PickupType::ArtifactOfWorld =>     Some(38),
+            PickupType::ArtifactOfSpirit =>    Some(39),
+            PickupType::ArtifactOfNewborn =>   Some(40),
+            _ => None,
+        }
+    }
+
     pub fn iter() -> impl Iterator<Item = PickupType>
     {
         [
