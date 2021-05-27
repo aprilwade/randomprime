@@ -2029,6 +2029,32 @@ fn patch_arboretum_invisible_wall(
     Ok(())
 }
 
+fn patch_spawn_point_position<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    new_position: [f32; 3],
+    force_default: bool,
+)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer_count = scly.layers.len();
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if !obj.property_data.is_spawn_point() {continue;}
+
+            let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
+            spawn_point.position = new_position.into();
+            if force_default {
+                spawn_point.default_spawn = 1;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn patch_backwards_lower_mines_pca(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -3440,6 +3466,20 @@ fn patch_qol_game_breaking(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("07_mines_electric.MREA").into(),
         patch_fix_central_dynamo_crash
     );
+
+    // randomizer-induced bugfixes
+    patcher.add_scly_patch(
+        resource_info!("1a_morphballtunnel.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_bathhall.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00_mines_savestation_b.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], true)
+    );
 }
 
 fn patch_qol_logical(patcher: &mut PrimePatcher)
@@ -3897,7 +3937,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let frigate_done_room = {
         let mut destination_name = "Tallon:Landing Site";
-        let frigate_level = config.level_data.get(&"frigate".to_string());
+        let frigate_level = config.level_data.get(World::FrigateOrpheon.to_json_key());
         if frigate_level.is_some() {
             let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
             if x.is_some() {
