@@ -343,7 +343,6 @@ fn patch_add_item<'r>(
         panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
     }
 
-     
     // Pickup to use for visuals/hitbox //
     let pickup_model_maybe_obfuscated = {
         if pickup_config.model.is_some() {
@@ -986,6 +985,8 @@ fn make_elevators_patch<'a>(
                         let wt = obj.property_data.as_world_transporter_mut().unwrap();
                         wt.mrea = ResId::new(dest.mrea);
                         wt.mlvl = ResId::new(dest.mlvl);
+                        wt.volume = 0; // Turning off the wooshing sound
+                                       // todo: only turn off if non-transporter destination
                     }
                 }
 
