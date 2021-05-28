@@ -7,6 +7,8 @@ use reader_writer::{
 use structs::{res_id, ResId, Resource, ResourceKind};
 
 use crate::{
+    patch_config::PatchConfig,
+    elevators::{World, SpawnRoomData},
     pickup_meta::{self, PickupType},
     door_meta::{DoorType, BlastShieldType},
     ResourceData,
@@ -17,6 +19,25 @@ use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
 };
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct PickupHashKey {
+    pub level_id: u32,
+    pub room_id: u32,
+    pub pickup_idx: u32,
+}
+
+impl PickupHashKey {
+    fn from_location(level_name: &str, room_name: &str, pickup_idx: u32) -> Self
+    {
+        let level = World::from_json_key(level_name);
+        PickupHashKey {
+            level_id: level.mlvl(),
+            room_id: SpawnRoomData::from_str(&format!("{}:{}", level.to_str(), room_name).as_str()).mrea, // TODO: this is suboptimal
+            pickup_idx,
+        }
+    }
+}
 
 macro_rules! def_asset_ids {
     (@Build { $prev:expr } $id:ident: $fc:ident, $($rest:tt)*) => {
@@ -99,10 +120,14 @@ pub mod custom_asset_ids {
         FLAMETHROWER_DOOR_TXTR: TXTR,
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
-
-        // has to be at the end //
+        
+        // Hudmemos derrived from pickup names //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
+
+        // User-specified hudmemo and scan strings //
+        EXTRA_IDS_START: STRG = SKIP_HUDMEMO_STRG_END.to_u32() + 1,
+        EXTRA_IDS_END: STRG = EXTRA_IDS_START.to_u32() + 500,
     }
 }
 
@@ -163,6 +188,9 @@ pub fn custom_assets<'r>(
     resources: &HashMap<(u32, FourCC),
     structs::Resource<'r>>,
     starting_memo: Option<&str>,
+    pickup_hudmemos: &mut HashMap::<PickupHashKey, ResId<res_id::STRG>>,
+    pickup_scans: &mut HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    config: &PatchConfig,
 ) -> Vec<Resource<'r>>
 {
     // External assets
@@ -237,6 +265,70 @@ pub fn custom_assets<'r>(
         ));
     }
 
+    // Create user-defined hudmemo and scan strings and map to locations //
+    let custom_ids_start = custom_asset_ids::EXTRA_IDS_START.to_u32();
+    let custom_ids_end = custom_asset_ids::EXTRA_IDS_END.to_u32();
+    let mut strg_idx = 0;
+    for (level_name, level) in config.level_data.iter() {
+        for (room_name, room) in level.rooms.iter() {
+            let mut pickup_idx = 0;
+            for pickup in room.pickups.iter() {
+                // custom hudmemo string
+                if pickup.hudmemo_text.is_some()
+                {
+                    let hudmemo_text = pickup.hudmemo_text.as_ref().unwrap();
+
+                    // Get next ID //
+                    let strg_id = ResId::<res_id::STRG>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
+                    strg_idx = strg_idx + 1;
+                    
+                    // Build resource //
+                    let strg = structs::ResourceKind::Strg(structs::Strg {
+                        string_tables: vec![
+                            structs::StrgStringTable {
+                                lang: b"ENGL".into(),
+                                strings: vec![format!("&just=center;{}\u{0}",
+                                                      hudmemo_text).into()].into(),
+                            },
+                        ].into(),
+                    });
+                    let resource = build_resource(strg_id, strg);
+                    assets.push(resource);
+    
+                    // Map for easy lookup when patching //
+                    let key = PickupHashKey::from_location(level_name, room_name, pickup_idx);
+                    pickup_hudmemos.insert(key, strg_id);
+                }
+
+                // Custom scan string
+                if pickup.scan_text.is_some()
+                {
+                    let scan_text = pickup.scan_text.as_ref().unwrap();
+
+                    // Get next 2 IDs //
+                    let strg_id = ResId::<res_id::STRG>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
+                    strg_idx = strg_idx + 1;
+                    let scan_id = ResId::<res_id::SCAN>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
+                    strg_idx = strg_idx + 1;
+
+                    // Build resource //
+                    assets.extend_from_slice(&create_item_scan_strg_pair(
+                        scan_id,
+                        strg_id,
+                        format!("{}\0", scan_text).as_str(),
+                    ));
+    
+                    // Map for easy lookup when patching //
+                    let key = PickupHashKey::from_location(level_name, room_name, pickup_idx);
+                    pickup_scans.insert(key, (scan_id, strg_id));
+                }
+
+                pickup_idx = pickup_idx + 1;
+            }
+        }
+    }
+
+    // Create fallback pickup hudmemo strings //
     for pt in PickupType::iter() {
         let id = pt.skip_hudmemos_strg();
         assets.push(build_resource(
@@ -268,8 +360,13 @@ pub fn custom_assets<'r>(
 pub fn collect_game_resources<'r>(
     gc_disc: &structs::GcDisc<'r>,
     starting_memo: Option<&str>,
+    config: &PatchConfig,
 )
-    -> HashMap<(u32, FourCC), structs::Resource<'r>>
+    -> (
+        HashMap<(u32, FourCC), structs::Resource<'r>>,
+        HashMap<PickupHashKey, ResId<res_id::STRG>>,
+        HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    )
 {
     // Get list of all dependencies patcher needs //
     let mut looking_for = HashSet::<_>::new();
@@ -300,20 +397,24 @@ pub fn collect_game_resources<'r>(
         }
     }
 
+    // Maps pickup location to STRG to use
+    let mut pickup_hudmemos = HashMap::<PickupHashKey, ResId<res_id::STRG>>::new();
+    let mut pickup_scans = HashMap::<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>::new();
+
     // Remove extra assets from dependency search since they won't appear     //
     // in any pak. Instead add them to the output resource pool. These assets //
     // are provided as external files checked into the repository.            //
-    for res in custom_assets(&found, starting_memo) {
+    for res in custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, config) {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
-        assert!(found.insert(key, res).is_none());
+        found.insert(key, res);
     }
 
     if !looking_for.is_empty() {
         panic!("error - still looking for {:?}", looking_for);
     }
 
-    found
+    (found, pickup_hudmemos, pickup_scans)
 }
 
 fn create_custom_door_cmdl<'r>(

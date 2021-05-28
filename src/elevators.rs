@@ -4,7 +4,7 @@ use serde::Deserialize;
 use enum_map::{Enum, EnumMap};
 use crate::{pickup_meta::{self, PickupType}};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum World {
     FrigateOrpheon,
     TallonOverworld,
@@ -29,17 +29,27 @@ impl World {
         ].iter().map(|i| *i)
     }
 
-    pub fn from_pak(pak_str: &str) -> Option<Self> {
-        match pak_str {
-            "Metroid1.pak" => Some(World::FrigateOrpheon),
-            "Metroid2.pak" => Some(World::ChozoRuins),
-            "Metroid3.pak" => Some(World::PhendranaDrifts),
-            "Metroid4.pak" => Some(World::TallonOverworld),
-            "metroid5.pak" => Some(World::PhazonMines),
-            "Metroid6.pak" => Some(World::MagmoorCaverns),
-            "Metroid7.pak" => Some(World::ImpactCrater),
-            _ => None
+    pub fn to_pak_str(&self) -> &'static str
+    {
+        match self {
+            World::FrigateOrpheon  => "Metroid1.pak",
+            World::ChozoRuins      => "Metroid2.pak",
+            World::PhendranaDrifts => "Metroid3.pak",
+            World::TallonOverworld => "Metroid4.pak",
+            World::PhazonMines     => "metroid5.pak",
+            World::MagmoorCaverns  => "Metroid6.pak",
+            World::ImpactCrater    => "Metroid7.pak",
         }
+    }
+
+    pub fn from_pak(pak_str: &str) -> Option<Self> {
+        for world in World::iter() {
+            if pak_str == world.to_pak_str() {
+                return Some(world);
+            }
+        }
+
+        None
     }
 
     pub fn mlvl(&self) -> u32 {
@@ -68,14 +78,24 @@ impl World {
 
     pub fn to_json_key(&self) -> &'static str {
         match self {
-            World::FrigateOrpheon  => "frigate",
-            World::ChozoRuins      => "chozo",
-            World::PhendranaDrifts => "phendrana",
-            World::TallonOverworld => "tallon",
-            World::PhazonMines     => "mines",
-            World::MagmoorCaverns  => "magmoor",
-            World::ImpactCrater    => "impact",
+            World::FrigateOrpheon  => "Frigate Orpheon",
+            World::ChozoRuins      => "Chozo Ruins",
+            World::PhendranaDrifts => "Phendrana Drifts",
+            World::TallonOverworld => "Tallon Overworld",
+            World::PhazonMines     => "Phazon Mines",
+            World::MagmoorCaverns  => "Magmoor Caverns",
+            World::ImpactCrater    => "Impact Crater",
         }
+    }
+
+    pub fn from_json_key(string: &str) -> Self {
+        for world in World::iter() {
+            if string.trim().to_lowercase() == world.to_json_key().to_lowercase() || world.to_str().to_lowercase().starts_with(&string.trim().to_lowercase()) {
+                return world;
+            }
+        }
+
+        panic!("Unknown World - '{}'", string);
     }
 }
 
@@ -591,7 +611,7 @@ impl SpawnRoomData
         for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() { // for each pak
             let world = World::from_pak(pak_name).unwrap();
 
-            if !world.to_str().to_lowercase().starts_with(&world_name) {
+            if world != World::from_json_key(world_name) {
                 continue;
             }
 

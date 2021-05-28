@@ -48,6 +48,12 @@ pub enum PickupType
     ArtifactOfStrength,
     Nothing,
     ScanVisor,
+    PowerBeam,
+    UnknownItem1,
+    UnknownItem2,
+    HealthRefill,
+    MissileRefill,
+    PowerBombRefill,
     #[serde(skip)]
     ShinyMissile,
 }
@@ -94,6 +100,12 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  "Artifact of Strength",
             PickupType::Nothing =>             "Nothing",
             PickupType::ScanVisor =>           "Scan Visor",
+            PickupType::PowerBeam =>           "Power Beam",
+            PickupType::UnknownItem1 =>        "Unknown Item 1",
+            PickupType::UnknownItem2 =>        "Unknown Item 2",
+            PickupType::HealthRefill =>        "Health Refill",
+            PickupType::MissileRefill =>       "Missile Refill",
+            PickupType::PowerBombRefill =>     "Power Bomb Refill",
             PickupType::ShinyMissile =>        "Shiny Missile",
         }
     }
@@ -138,7 +150,13 @@ impl PickupType
             PickupType::ArtifactOfStrength =>  34,
             PickupType::Nothing =>             35,
             PickupType::ScanVisor =>           36,
-            PickupType::ShinyMissile =>        37,
+            PickupType::HealthRefill =>        37,
+            PickupType::PowerBeam =>           38,
+            PickupType::UnknownItem1 =>        39,
+            PickupType::UnknownItem2 =>        40,
+            PickupType::MissileRefill =>       41,
+            PickupType::PowerBombRefill =>     42,
+            PickupType::ShinyMissile =>        43,
         }
     }
 
@@ -182,6 +200,12 @@ impl PickupType
             34 => Some(PickupType::ArtifactOfStrength),
             35 => Some(PickupType::Nothing),
             36 => Some(PickupType::ScanVisor),
+            37 => Some(PickupType::HealthRefill),
+            38 => Some(PickupType::PowerBeam),
+            39 => Some(PickupType::UnknownItem1),
+            40 => Some(PickupType::UnknownItem2),
+            41 => Some(PickupType::MissileRefill),
+            42 => Some(PickupType::PowerBombRefill),
             _ => None,
         }
     }
@@ -209,12 +233,60 @@ impl PickupType
     {
         let start = custom_asset_ids::SKIP_HUDMEMO_STRG_START.to_u32();
         let end = custom_asset_ids::SKIP_HUDMEMO_STRG_END.to_u32();
-        ResId::new((start..end).nth(self.idx()).unwrap())
+        ResId::new((start..end).nth(self.idx()).unwrap_or(0xFFFFFFFF))
     }
 
     pub fn pickup_data<'a>(&self) -> &'a Pickup<'static>
     {
         &PickupTable::get()[*self]
+    }
+
+    pub fn kind(&self) -> Option<u32>
+    {
+        match self {
+            PickupType::PowerBeam =>           Some(0),
+            PickupType::IceBeam =>             Some(1),
+            PickupType::WaveBeam =>            Some(2),
+            PickupType::PlasmaBeam =>          Some(3),
+            PickupType::Missile =>             Some(4),
+            PickupType::ScanVisor =>           Some(5),
+            PickupType::MorphBallBomb =>       Some(6),
+            PickupType::PowerBomb =>           Some(7),
+            PickupType::Flamethrower =>        Some(8),
+            PickupType::ThermalVisor =>        Some(9),
+            PickupType::ChargeBeam =>          Some(10),
+            PickupType::SuperMissile =>        Some(11),
+            PickupType::GrappleBeam =>         Some(12),
+            PickupType::XRayVisor =>           Some(13),
+            PickupType::IceSpreader =>         Some(14),
+            PickupType::SpaceJumpBoots =>      Some(15),
+            PickupType::MorphBall =>           Some(16),
+            // PickupType::CombatVisor =>         Some(17),
+            PickupType::BoostBall =>           Some(18),
+            PickupType::SpiderBall =>          Some(19),
+            // PickupType::PowerSuit =>           Some(20),
+            PickupType::GravitySuit =>         Some(21),
+            PickupType::VariaSuit =>           Some(22),
+            PickupType::PhazonSuit =>          Some(23),
+            PickupType::EnergyTank =>          Some(24),
+            PickupType::UnknownItem1 =>        Some(25),
+            PickupType::HealthRefill =>        Some(26),
+            PickupType::UnknownItem2 =>        Some(27),
+            PickupType::Wavebuster =>          Some(28),
+            PickupType::ArtifactOfTruth =>     Some(29),
+            PickupType::ArtifactOfStrength =>  Some(30),
+            PickupType::ArtifactOfElder =>     Some(31),
+            PickupType::ArtifactOfWild =>      Some(32),
+            PickupType::ArtifactOfLifegiver => Some(33),
+            PickupType::ArtifactOfWarrior =>   Some(34),
+            PickupType::ArtifactOfChozo =>     Some(35),
+            PickupType::ArtifactOfNature =>    Some(36),
+            PickupType::ArtifactOfSun =>       Some(37),
+            PickupType::ArtifactOfWorld =>     Some(38),
+            PickupType::ArtifactOfSpirit =>    Some(39),
+            PickupType::ArtifactOfNewborn =>   Some(40),
+            _ => None,
+        }
     }
 
     pub fn iter() -> impl Iterator<Item = PickupType>
@@ -258,10 +330,16 @@ impl PickupType
             PickupType::Nothing,
             PickupType::ScanVisor,
             PickupType::ShinyMissile,
+            PickupType::PowerBeam,
+            PickupType::UnknownItem1,
+            PickupType::UnknownItem2,
+            PickupType::HealthRefill,
+            PickupType::MissileRefill,
+            PickupType::PowerBombRefill,
         ].iter().map(|i| *i)
     }
 
-    pub fn from_string(string: String) -> Self {
+    pub fn from_str(string: &str) -> Self {
         for i in PickupType::iter() {
             if i.name().to_string().to_lowercase().trim() == string.to_lowercase().trim() {
                 return i;
@@ -360,6 +438,22 @@ pub struct ObjectsToRemove
 {
     pub layer: u32,
     pub instance_ids: &'static [u32],
+}
+
+impl RoomInfo
+{
+    pub fn from_str(string: &str) -> Self
+    {
+        for (_, rooms) in ROOM_INFO.iter() {
+            for room_info in rooms.iter() {
+                if room_info.name == string {
+                    return *room_info;
+                }
+            }
+        }
+
+        panic!("Could not find room {}", string)
+    }
 }
 
 include!("pickup_meta.rs.in");

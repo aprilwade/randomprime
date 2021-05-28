@@ -15,13 +15,14 @@ use crate::patch_config::{
     ArtifactHintBehavior,
     MapState,
     IsoFormat,
+    PickupConfig,
     PatchConfig,
     GameBanner,
     LevelConfig,
 };
 
 use crate::{
-    custom_assets::{custom_asset_ids, collect_game_resources},
+    custom_assets::{custom_asset_ids, collect_game_resources, PickupHashKey},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
@@ -99,26 +100,44 @@ fn post_pickup_relay_template<'r>(instance_id: u32, connections: &'static [struc
     }
 }
 
-fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng: &mut R)
+fn build_artifact_temple_totem_scan_strings<R>(
+    config: &PatchConfig,
+    rng: &mut R,
+    artifact_hints: Option<HashMap<String,String>>,
+    
+)
     -> [String; 12]
     where R: Rng
 {
     let mut generic_text_templates = [
-        "I mean, maybe it'll be in the &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
-        "I'm not sure where the artifact exactly is, but like, you can try the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "Hey man, so some of the Chozo dudes are telling me that they're might be a thing in the &push;&main-color=#43CD80;{room}&pop;. Just sayin'.\0",
-        "Uhh umm... Where was it...? Uhhh, errr, it's definitely in the &push;&main-color=#43CD80;{room}&pop;! I am 100% not totally making it up...\0",
-        "Some say it may be in the &push;&main-color=#43CD80;{room}&pop;. Others say that you have no business here. Please leave me alone.\0",
-        "So a buddy of mine and I were drinking one night and we thought 'Hey, wouldn't be crazy if we put it at the &push;&main-color=#43CD80;{room}&pop;?' So we did and it took both of us just to get it there!\0",
-        "So, uhhh, I kind of got a little lazy and I might have just dropped mine somewhere... Maybe it's in the &push;&main-color=#43CD80;{room}&pop;? Who knows.\0",
-        "I uhhh... was a little late to the party and someone had to run out and hide both mine and hers. I owe her one. She told me it might be in the &push;&main-color=#43CD80;{room}&pop;, so you're going to have to trust her on this one.\0",
-        "Okay, so this jerk forgets to hide his and I had to hide it for him too. So, I just tossed his somewhere and made up a name for the room. This is literally saving the planet - how can anyone forget that? Anyway, mine is in the &push;&main-color=#43CD80;{room}&pop;, so go check it out. I'm never doing this again...\0",
-        "To be honest, I don't know if it was a Missile Expansion or not. Maybe it was... We'll just go with that: There's a Missile Expansion at the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you well, that you may find a key lost to our cause... Alright, whatever. It's at the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "I kind of just played Frisbee with mine. It flew and landed too far so I didn't want to walk over and grab it because I was lazy. It's in the &push;&main-color=#43CD80;{room}&pop; if you want to find it.\0",
+        "I mean, maybe it'll be in &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
+        "I'm not sure where the artifact exactly is, but like, you can try &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hey man, some of the Chozo are telling me that there might be a thing in &push;&main-color=#43CD80;{room}&pop;. Just sayin'.\0",
+        "Uhh umm... Where was it...? Uhhh, errr, it's definitely in &push;&main-color=#43CD80;{room}&pop;! I am 100% not totally making it up...\0",
+        "Some say it may be in &push;&main-color=#43CD80;{room}&pop;. Others say that you have no business here. Please leave me alone.\0",
+        "A buddy and I were drinking and thought 'Hey, wouldn't be crazy if we put it in &push;&main-color=#43CD80;{room}&pop;?' It took both of us just to put it there!\0",
+        "So, uhhh, I kind of got lazy and just dropped mine somewhere... Maybe it's in the &push;&main-color=#43CD80;{room}&pop;? Who knows.\0",
+        "I was super late and someone had to cover for me. She said she put it in &push;&main-color=#43CD80;{room}&pop;, so you'll just have to trust her.\0",
+        "Okay, so this jerk forgets to hide his so I had to hide two. This is literally saving the planet. Anyways, mine is in &push;&main-color=#43CD80;{room}&pop;.\0",
+        "To be honest, I don't really remember. I think it was... um... yeah we'll just go with that: It was &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you... Alright, whatever. It's in &push;&main-color=#43CD80;{room}&pop;.\0",
+        "I kind of just played Frisbee with mine. It flew too far and I didn't see where it landed. Somewhere in &push;&main-color=#43CD80;{room}&pop;.\0",
     ];
     generic_text_templates.shuffle(rng);
     let mut generic_templates_iter = generic_text_templates.iter();
+
+    // Where are the artifacts?
+    let mut artifact_locations = Vec::<(&str, PickupType)>::new();
+    for (_, level) in config.level_data.iter() {
+        for (room_name, room) in level.rooms.iter() {
+            for pickup in room.pickups.iter() {
+                let pickup_type = PickupType::from_str(&pickup.pickup_type);
+                if pickup_type.idx() >= PickupType::ArtifactOfLifegiver.idx() && pickup_type.idx() <= PickupType::ArtifactOfStrength.idx() {
+                    artifact_locations.push((&room_name.as_str(), pickup_type));
+                }
+            }
+        }
+    }
 
     // TODO: If there end up being a large number of these, we could use a binary search
     //       instead of searching linearly.
@@ -126,13 +145,11 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
     //     instead, but there doesn't seem to be a way to do it that isn't extremely painful or
     //     relies on unsafe code.
     let mut specific_room_templates = [
-        // Artifact Temple
-        (0x2398E906, vec!["{pickup} awaits those who truly seek it.\0"]),
+        ("Artifact Temple", vec!["{pickup} awaits those who truly seek it.\0"]),
     ];
     for rt in &mut specific_room_templates {
         rt.1.shuffle(rng);
     }
-
 
     let mut scan_text = [
         String::new(), String::new(), String::new(), String::new(),
@@ -140,16 +157,8 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
         String::new(), String::new(), String::new(), String::new(),
     ];
 
-    let names_iter = pickup_meta::ROOM_INFO.iter()
-        .flat_map(|i| i.1.iter()) // Flatten out the rooms of the paks
-        .flat_map(|l| iter::repeat((l.room_id, l.name)).take(l.pickup_locations.len()));
-    let iter = pickup_layout.iter()
-        .zip(names_iter)
-        // ▼▼▼▼ Only yield artifacts ▼▼▼▼
-        .filter(|&(pt, _)| pt.is_artifact());
-
     // Shame there isn't a way to flatten tuples automatically
-    for (pt, (room_id, name)) in iter {
+    for (room_name, pt) in artifact_locations.iter() {
         let artifact_id = pt.idx() - PickupType::ArtifactOfLifegiver.idx();
         if scan_text[artifact_id].len() != 0 {
             // If there are multiple of this particular artifact, then we use the first instance
@@ -157,14 +166,14 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
             continue;
         }
 
-        // If there are specific messages for this room, choose one, other wise choose a generic
+        // If there are specific messages for this room, choose one, otherwise choose a generic
         // message.
         let template = specific_room_templates.iter_mut()
-            .find(|row| row.0 == room_id.to_u32())
+            .find(|row| &row.0 == room_name)
             .and_then(|row| row.1.pop())
             .unwrap_or_else(|| generic_templates_iter.next().unwrap());
         let pickup_name = pt.name();
-        scan_text[artifact_id] = template.replace("{room}", name).replace("{pickup}", pickup_name);
+        scan_text[artifact_id] = template.replace("{room}", room_name).replace("{pickup}", pickup_name);
     }
 
     // Set a default value for any artifacts that we didn't find.
@@ -173,6 +182,30 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
             scan_text[i] = "Artifact not present. This layout may not be completable.\0".to_owned();
         }
     }
+
+    if artifact_hints.is_some() {
+        for (artifact_name, hint) in artifact_hints.unwrap() {
+            let words: Vec<&str> = artifact_name.split(" ").collect();
+            let lastword = words[words.len() - 1];
+            let idx = match lastword.trim().to_lowercase().as_str() {
+                "lifegiver" => 0,
+                "wild"      => 1,
+                "world"     => 2,
+                "sun"       => 3,
+                "elder"     => 4,
+                "spirit"    => 5,
+                "truth"     => 6,
+                "chozo"     => 7,
+                "warrior"   => 8,
+                "newborn"   => 9,
+                "nature"    => 10,
+                "strength"  => 11,
+                _ => panic!("Error - Unknown artifact - '{}'", artifact_name)
+            };
+            scan_text[idx] = format!("{}\0",hint.to_owned());
+        }
+    }
+
     scan_text
 }
 
@@ -256,40 +289,12 @@ enum MaybeObfuscatedPickup
 
 impl MaybeObfuscatedPickup
 {
-    fn orig(&self) -> PickupType
-    {
-        match self {
-            MaybeObfuscatedPickup::Unobfuscated(pt) => *pt,
-            MaybeObfuscatedPickup::Obfuscated(pt) => *pt,
-        }
-    }
-
-    // fn name(&self) -> &'static str
-    // {
-    //     self.orig().name()
-    // }
-
     fn dependencies(&self) -> &'static [(u32, FourCC)]
     {
         match self {
             MaybeObfuscatedPickup::Unobfuscated(pt) => pt.dependencies(),
             MaybeObfuscatedPickup::Obfuscated(_) => PickupType::Nothing.dependencies(),
         }
-    }
-
-    fn hudmemo_strg(&self) -> ResId<res_id::STRG>
-    {
-        self.orig().hudmemo_strg()
-    }
-
-    fn skip_hudmemos_strg(&self) -> ResId<res_id::STRG>
-    {
-        self.orig().skip_hudmemos_strg()
-    }
-
-    pub fn attainment_audio_file_name(&self) -> &'static str
-    {
-        self.orig().attainment_audio_file_name()
     }
 
     pub fn pickup_data<'a>(&self) -> LCow<'a, structs::Pickup<'static>>
@@ -312,24 +317,321 @@ impl MaybeObfuscatedPickup
     }
 }
 
+// TODO: factor out shared code with modify_pickups_in_mrea
+fn patch_add_item<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    pickup_config: &PickupConfig,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    pickup_hudmemos: &HashMap<PickupHashKey, ResId<res_id::STRG>>,
+    pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    pickup_hash_key: PickupHashKey,
+    skip_hudmemos: bool,
+    obfuscate_items: bool,
+) -> Result<(), String>
+{
+    let room_id = area.mlvl_area.internal_id;
+    let location_idx = 0;
+
+    // Pickup to use for game functionality //
+    let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
+
+    // panic if undefined game behavior //
+    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
+       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
+    {
+        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
+    }
+
+    // Pickup to use for visuals/hitbox //
+    let pickup_model_maybe_obfuscated = {
+        if pickup_config.model.is_some() {
+            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+        } else {
+            pickup_type
+        }
+    };
+    let pickup_model_type = if obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
+    } else {
+        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
+    };
+
+    let deps_iter = pickup_model_type.dependencies().iter()
+        .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            });
+
+    let name = CString::new(format!(
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_model_type.pickup_data().name)).unwrap();
+    area.add_layer(Cow::Owned(name));
+
+    let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+
+    // Add hudmemo string as dependency to room //
+    let hudmemo_strg: ResId<res_id::STRG> = {
+        if pickup_config.hudmemo_text.is_some() {
+            *pickup_hudmemos.get(&pickup_hash_key).unwrap()
+        } else if skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+            pickup_type.skip_hudmemos_strg()
+        } else {
+            pickup_type.hudmemo_strg()
+        }
+    };
+    let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
+    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
+    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+
+    // If custom scan text, add that to dependencies as well //
+    let scan_id = {
+        if pickup_config.scan_text.is_some() {
+            let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
+            
+            let scan_dep: structs::Dependency = scan.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
+
+            let strg_dep: structs::Dependency = strg.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+            
+            // TODO: should remove now obsolete vanilla scan from dependencies list
+
+            Some(scan)
+        } else {
+            None
+        }
+    };
+
+    // create pickup //
+    let (curr_increase, max_increase) = {
+        if pickup_config.count.is_some() {
+            let pickup_count = pickup_config.count.unwrap();
+            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
+                (pickup_count, 0)
+            } else {
+                (pickup_count, pickup_count)
+            }
+        } else {
+            let data = pickup_type.pickup_data();
+            if pickup_type == PickupType::HealthRefill {
+                (10, 0)
+            } else if pickup_type == PickupType::MissileRefill  {
+                (5, 0)
+            } else if pickup_type == PickupType::PowerBombRefill {
+                (1, 0)
+            } else {
+                (data.curr_increase, data.max_increase)
+            }
+        }
+    };
+    let pickup_position = pickup_config.position.unwrap();
+    if pickup_config.position.is_none() {
+        panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
+    }
+    let kind = match pickup_type {
+        PickupType::PowerBeam => 0,
+        PickupType::UnknownItem1 => 25,
+        PickupType::UnknownItem2 => 27,
+        PickupType::PowerBombRefill => 7,
+        PickupType::MissileRefill => 4,
+        PickupType::HealthRefill => 26,
+        _ => pickup_type.pickup_data().kind,
+    };
+    let mut pickup = structs::Pickup {
+        position: pickup_position.into(),
+        fade_in_timer: 0.0,
+        spawn_delay: 0.0,
+        active: 1,
+        disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
+        curr_increase,
+        max_increase,
+        kind,
+
+        ..(pickup_model_type.pickup_data().into_owned())
+    };
+    if scan_id.is_some() {
+        pickup.actor_params.scan_params.scan = scan_id.unwrap();
+    }
+    
+    let mut pickup_obj = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::Pickup(
+            Box::new(pickup)
+        )
+    };
+
+    // create hudmemo
+    let hudmemo = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::HudMemo(
+            Box::new(structs::HudMemo {
+                name: b"myhudmemo\0".as_cstr(),
+                first_message_timer: 5.,
+                unknown: 1,
+                memo_type: 0, // nonmodal only
+                strg: hudmemo_strg,
+                active: 1,
+            })
+        )
+    };
+
+    // Display hudmemo when item is picked up
+    pickup_obj.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::SET_TO_ZERO,
+            target_object_id: hudmemo.instance_id,
+        }
+    );
+
+    // create attainment audio
+    let attainment_audio = structs::SclyObject {
+        instance_id: ps.fresh_instance_id_range.next().unwrap(),
+        connections: vec![].into(),
+        property_data: structs::SclyProperty::Sound(
+            Box::new(structs::Sound { // copied from main plaza half-pipe
+                name: b"mysound\0".as_cstr(),
+                position: pickup_position.into(),
+                rotation: [0.0,0.0,0.0].into(),
+                sound_id: 117,
+                active: 1,
+                max_dist: 50.0,
+                dist_comp: 0.2,
+                start_delay: 0.0,
+                min_volume: 20,
+                volume: 127,
+                priority: 127,
+                pan: 64,
+                loops: 0,
+                non_emitter: 1,
+                auto_start: 0,
+                occlusion_test: 0,
+                acoustics: 0,
+                world_sfx: 0,
+                allow_duplicates: 0,
+                pitch: 0,
+            })
+        )
+    };
+
+    // Play the sound when item is picked up
+    pickup_obj.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::PLAY,
+            target_object_id: attainment_audio.instance_id,
+        }
+    );
+
+    // update MREA layer with new Objects
+    let scly = area.mrea().scly_section_mut();
+    let layers = scly.layers.as_mut_vec();
+
+    // If this is an artifact, create and push change function
+    let pickup_kind = pickup_type.pickup_data().kind;
+    if pickup_kind >= 29 && pickup_kind <= 40 {
+        let instance_id = ps.fresh_instance_id_range.next().unwrap();
+        let function = artifact_layer_change_template(instance_id, pickup_kind);
+        layers[new_layer_idx].objects.as_mut_vec().push(function);
+        pickup_obj.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ARRIVED,
+                message: structs::ConnectionMsg::INCREMENT,
+                target_object_id: instance_id,
+            }
+        );
+    }
+
+    if !pickup_config.respawn.unwrap_or(false) {
+        // Create Special Function to disable layer once item is obtained
+        // This is needed because otherwise the item would re-appear every
+        // time the room is loaded
+        let special_function = structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::SpecialFunction(
+                Box::new(structs::SpecialFunction {
+                    name: b"myspecialfun\0".as_cstr(),
+                    position: [0., 0., 0.].into(),
+                    rotation: [0., 0., 0.].into(),
+                    type_: 16, // layer change
+                    unknown0: b"\0".as_cstr(),
+                    unknown1: 0.,
+                    unknown2: 0.,
+                    unknown3: 0.,
+                    layer_change_room_id: room_id,
+                    layer_change_layer_id: new_layer_idx as u32,
+                    item_id: 0,
+                    unknown4: 1, // active
+                    unknown5: 0.,
+                    unknown6: 0xFFFFFFFF,
+                    unknown7: 0xFFFFFFFF,
+                    unknown8: 0xFFFFFFFF,
+                })
+            ),
+        };
+
+        // Activate the layer change when item is picked up
+        pickup_obj.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ARRIVED,
+                message: structs::ConnectionMsg::DECREMENT,
+                target_object_id: special_function.instance_id,
+            }
+        );
+        
+        layers[new_layer_idx].objects.as_mut_vec().push(special_function);
+    }
+
+    layers[new_layer_idx].objects.as_mut_vec().push(hudmemo);
+    layers[new_layer_idx].objects.as_mut_vec().push(attainment_audio);
+    layers[new_layer_idx].objects.as_mut_vec().push(pickup_obj);
+
+    Ok(())
+}
+
 fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
-    pickup_type: PickupType,
+    pickup_config: &PickupConfig,
     pickup_location: pickup_meta::PickupLocation,
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
-    config: &PatchConfig,
+    pickup_hudmemos: &HashMap<PickupHashKey, ResId<res_id::STRG>>,
+    pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+    pickup_hash_key: PickupHashKey,
+    skip_hudmemos: bool,
+    obfuscate_items: bool,
 ) -> Result<(), String>
 {
     let location_idx = 0;
 
-    let pickup_type = if config.obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_type)
+    // Pickup to use for game functionality //
+    let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
+    
+    // panic if undefined game behavior //
+    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
+       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
+    {
+        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
+    }
+
+    // Pickup to use for visuals/hitbox //
+    let pickup_model_maybe_obfuscated = {
+        if pickup_config.model.is_some() {
+            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+        } else {
+            pickup_type
+        }
+    };
+    let pickup_model_type = if obfuscate_items {
+        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
     } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_type)
+        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
     };
 
-    let deps_iter = pickup_type.dependencies().iter()
+    let deps_iter = pickup_model_type.dependencies().iter()
         .map(|&(file_id, fourcc)| structs::Dependency {
                 asset_id: file_id,
                 asset_type: fourcc,
@@ -338,18 +640,50 @@ fn modify_pickups_in_mrea<'r>(
     let name = CString::new(format!(
             "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
-
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
-    // Add our custom STRG
-    let hudmemo_dep = if config.skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
-        pickup_type.skip_hudmemos_strg().into()
-    } else {
-        pickup_type.hudmemo_strg().into()
+    let new_layer_2_idx = new_layer_idx + 1;
+    if pickup_config.respawn.unwrap_or(false) {
+        let name2 = CString::new(format!(
+            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+        area.add_layer(Cow::Owned(name2));
+        area.layer_flags.flags &= !(1 << new_layer_2_idx); // layer disabled by default
+    }
+
+    // Add hudmemo string as dependency to room //
+    let hudmemo_strg: ResId<res_id::STRG> = {
+        if pickup_config.hudmemo_text.is_some() {
+            *pickup_hudmemos.get(&pickup_hash_key).unwrap()
+        } else if skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+            pickup_type.skip_hudmemos_strg()
+        } else {
+            pickup_type.hudmemo_strg()
+        }
     };
+    let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
+    // If custom scan text, add that to dependencies as well //
+    let scan_id = {
+        if pickup_config.scan_text.is_some() {
+            let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
+            
+            let scan_dep: structs::Dependency = scan.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
+
+            let strg_dep: structs::Dependency = strg.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+            
+            // TODO: should remove now obsolete vanilla scan from dependencies list
+
+            Some(scan)
+        } else {
+            None
+        }
+    };
+
+    let room_id = area.mlvl_area.internal_id;
     let scly = area.mrea().scly_section_mut();
     let layers = scly.layers.as_mut_vec();
 
@@ -359,7 +693,7 @@ fn modify_pickups_in_mrea<'r>(
     let instance_id = ps.fresh_instance_id_range.next().unwrap();
     let relay = post_pickup_relay_template(instance_id,
                                             pickup_location.post_pickup_relay_connections);
-    layers[new_layer_idx].objects.as_mut_vec().push(relay);
+    
     additional_connections.push(structs::Connection {
         state: structs::ConnectionState::ARRIVED,
         message: structs::ConnectionMsg::SET_TO_ZERO,
@@ -379,19 +713,77 @@ fn modify_pickups_in_mrea<'r>(
         });
     }
 
-    let pickup = layers[pickup_location.location.layer as usize].objects.iter_mut()
-        .find(|obj| obj.instance_id ==  pickup_location.location.instance_id)
+    if pickup_config.respawn.unwrap_or(false) {
+        // add a special function that activates this pickup
+        let special_function_id = ps.fresh_instance_id_range.next().unwrap();
+        layers[new_layer_idx].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: special_function_id,
+            connections: vec![].into(),
+            property_data: structs::SpecialFunction::layer_change_fn(
+                b"Enable pickup\0".as_cstr(),
+                room_id,
+                new_layer_2_idx as u32,
+            ).into(),
+        });
+        layers[new_layer_2_idx].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            property_data: structs::Timer {
+                name: b"auto-spawn pickup\0".as_cstr(),
+                start_time: 0.001,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 1,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: pickup_location.location.instance_id,
+                },
+            ].into(),
+        });
+        additional_connections.push(structs::Connection {
+            state: structs::ConnectionState::ARRIVED,
+            message: structs::ConnectionMsg::INCREMENT,
+            target_object_id: special_function_id
+        });
+    }
+
+    let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
+        .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
-    update_pickup(pickup, pickup_type);
+    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
+
     if additional_connections.len() > 0 {
-        pickup.connections.as_mut_vec().extend_from_slice(&additional_connections);
+        pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
+    }
+
+    layers[new_layer_idx].objects.as_mut_vec().push(relay);
+
+    // find any overlapping POI that give "helpful" hints to the player and replace their scan text with the items //
+    for layer in layers.iter_mut() {
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if obj.property_data.is_point_of_interest() {
+                let poi = obj.property_data.as_point_of_interest_mut().unwrap();
+                if f32::abs(poi.position[0] - position[0]) < 3.0 &&
+                   f32::abs(poi.position[1] - position[1]) < 3.0 &&
+                   f32::abs(poi.position[2] - position[2]) < 3.0
+                {
+                    poi.scan_param.scan = scan_id_out;
+                }
+            }
+        }
     }
 
     let hudmemo = layers[pickup_location.hudmemo.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
         .unwrap();
-    update_hudmemo(hudmemo, pickup_type, location_idx, config.skip_hudmenus);
-
+    // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
+    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
+    // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
+    // TODO: location_idx is always 0?
+    update_hudmemo(hudmemo, hudmemo_strg, skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx));
 
     let location = pickup_location.attainment_audio;
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
@@ -401,26 +793,70 @@ fn modify_pickups_in_mrea<'r>(
     Ok(())
 }
 
-fn update_pickup(pickup: &mut structs::SclyObject, pickup_type: MaybeObfuscatedPickup)
+fn update_pickup(
+    pickup: &mut structs::SclyObject,
+    pickup_type: PickupType,
+    pickup_model_type: MaybeObfuscatedPickup,
+    pickup_config: &PickupConfig,
+    scan_id: Option<ResId<res_id::SCAN>>,
+) -> ([f32; 3], ResId<res_id::SCAN>)
 {
     let pickup = pickup.property_data.as_pickup_mut().unwrap();
-    let original_pickup = pickup.clone();
+    let mut original_pickup = pickup.clone();
+
+    if pickup_config.position.is_some() {
+        original_pickup.position = pickup_config.position.unwrap().into();
+    }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_type.pickup_data().cmdl).unwrap();
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap();
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
-    let new_center = calculate_center(new_aabb, pickup_type.pickup_data().rotation,
-                                        pickup_type.pickup_data().scale);
+    let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
+                                        pickup_model_type.pickup_data().scale);
+
+    let (curr_increase, max_increase) = {
+        if pickup_config.count.is_some() {
+            let pickup_count = pickup_config.count.unwrap();
+            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
+                (pickup_count, 0)
+            } else {
+                (pickup_count, pickup_count)
+            }
+        } else {
+            let data = pickup_type.pickup_data();
+            if pickup_type == PickupType::HealthRefill {
+                (10, 0)
+            } else if pickup_type == PickupType::MissileRefill  {
+                (5, 0)
+            } else if pickup_type == PickupType::PowerBombRefill {
+                (1, 0)
+            } else {
+                (data.curr_increase, data.max_increase)
+            }
+        }
+    };
+
+    let kind = match pickup_type {
+        PickupType::PowerBeam => 0,
+        PickupType::UnknownItem1 => 25,
+        PickupType::UnknownItem2 => 27,
+        PickupType::PowerBombRefill => 7,
+        PickupType::MissileRefill => 4,
+        PickupType::HealthRefill => 26,
+        _ => pickup_type.pickup_data().kind,
+    };
+
+    let position = [
+        original_pickup.position[0] - (new_center[0] - original_center[0]),
+        original_pickup.position[1] - (new_center[1] - original_center[1]),
+        original_pickup.position[2] - (new_center[2] - original_center[2]),
+    ];
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
     *pickup = structs::Pickup {
-        position: [
-            original_pickup.position[0] - (new_center[0] - original_center[0]),
-            original_pickup.position[1] - (new_center[1] - original_center[1]),
-            original_pickup.position[2] - (new_center[2] - original_center[2]),
-        ].into(),
+        position: position.into(),
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
@@ -428,35 +864,42 @@ fn update_pickup(pickup: &mut structs::SclyObject, pickup_type: MaybeObfuscatedP
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
         ].into(),
 
-        fade_in_timer: original_pickup.fade_in_timer,
+        fade_in_timer:  original_pickup.fade_in_timer,
         spawn_delay: original_pickup.spawn_delay,
+        disappear_timer: original_pickup.disappear_timer,
         active: original_pickup.active,
+        curr_increase,
+        max_increase,
+        kind,
 
-        ..(pickup_type.pickup_data().into_owned())
+        ..(pickup_model_type.pickup_data().into_owned())
     };
+
+    if scan_id.is_some() {
+        pickup.actor_params.scan_params.scan = scan_id.unwrap();
+    }
+
+    (position, pickup.actor_params.scan_params.scan)
 }
 
 fn update_hudmemo(
     hudmemo: &mut structs::SclyObject,
-    pickup_type: MaybeObfuscatedPickup,
-    location_idx: usize,
-    skip_hudmenus: bool)
+    hudmemo_strg: ResId<res_id::STRG>,
+    skip_hudmemos: bool,
+)
 {
-    // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
-    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
-    // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
-    if skip_hudmenus && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+    hudmemo.strg = hudmemo_strg;
+    if skip_hudmemos {
         hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
-        hudmemo.strg = pickup_type.skip_hudmemos_strg();
-    } else {
-        hudmemo.strg = pickup_type.hudmemo_strg();
     }
 }
 
-fn update_attainment_audio(attainment_audio: &mut structs::SclyObject,
-                           pickup_type: MaybeObfuscatedPickup)
+fn update_attainment_audio(
+    attainment_audio: &mut structs::SclyObject,
+    pickup_type: PickupType,
+)
 {
     let attainment_audio = attainment_audio.property_data.as_streamed_audio_mut().unwrap();
     let bytes = pickup_type.attainment_audio_file_name().as_bytes();
@@ -542,6 +985,8 @@ fn make_elevators_patch<'a>(
                         let wt = obj.property_data.as_world_transporter_mut().unwrap();
                         wt.mrea = ResId::new(dest.mrea);
                         wt.mlvl = ResId::new(dest.mlvl);
+                        wt.volume = 0; // Turning off the wooshing sound
+                                       // todo: only turn off if non-transporter destination
                     }
                 }
 
@@ -711,16 +1156,30 @@ fn patch_frigate_teleporter<'r>(
 fn fix_artifact_of_truth_requirements(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
-    pickup_layout: &[PickupType],
+    config: &PatchConfig,
 ) -> Result<(), String>
 {
-    let truth_req_layer_id = area.layer_flags.layer_count;
-    assert_eq!(truth_req_layer_id, ARTIFACT_OF_TRUTH_REQ_LAYER);
+    let artifact_temple_layer_overrides = config.artifact_temple_layer_overrides.clone().unwrap_or(HashMap::new());
 
     // Create a new layer that will be toggled on when the Artifact of Truth is collected
+    let truth_req_layer_id = area.layer_flags.layer_count;
     area.add_layer(b"Randomizer - Got Artifact 1\0".as_cstr());
+    
+    // What is the item at artifact temple?
+    let at_pickup_kind = {
+        let mut _at_pickup_kind = 0; // nothing item if unspecified
+        if config.level_data.contains_key(World::TallonOverworld.to_json_key()) {
+            let rooms = &config.level_data.get(World::TallonOverworld.to_json_key()).unwrap().rooms;
+            if rooms.contains_key("Artifact Temple") {
+                let artifact_temple_pickups = &rooms.get("Artifact Temple").unwrap().pickups;
+                if artifact_temple_pickups.len() != 0 {
+                    _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).pickup_data().kind;
+                }
+            }
+        }
+        _at_pickup_kind
+    };
 
-    let at_pickup_kind = pickup_layout[63].pickup_data().kind;
     for i in 0..12 {
         let layer_number = if i == 0 {
             truth_req_layer_id
@@ -728,11 +1187,53 @@ fn fix_artifact_of_truth_requirements(
             i + 1
         };
         let kind = i + 29;
-        let exists = pickup_layout.iter()
-            .any(|pt| kind == pt.pickup_data().kind);
+
+        let exists = {
+            let mut _exists = false;
+            for (_, level) in config.level_data.iter() {
+                if _exists {break;}
+                for (_, room) in level.rooms.iter() {
+                    if _exists {break;}
+                    for pickup in room.pickups.iter() {
+                        let pickup = PickupType::from_str(&pickup.pickup_type);
+                        if pickup.pickup_data().kind == kind {
+                            _exists = true; // this artifact is placed somewhere in this world
+                            break;
+                        }
+                    }
+                }
+            }
+
+            for (key, value) in &artifact_temple_layer_overrides {
+                let artifact_name = match kind {
+                    33 => "lifegiver",
+                    32 => "wild",
+                    38 => "world",
+                    37 => "sun",
+                    31 => "elder",
+                    39 => "spirit",
+                    29 => "truth",
+                    35 => "chozo",
+                    34 => "warrior",
+                    40 => "newborn",
+                    36 => "nature",
+                    30 => "strength",
+                    _ => panic!("Unhandled artifact idx - '{}'", i),
+                };
+
+                if key.to_lowercase().contains(&artifact_name) {
+                    _exists = _exists || *value; // if value is true, override
+                    break;
+                }
+            }
+            _exists
+        };
+
         if exists && at_pickup_kind != kind {
-            // If the artifact exsts, but is not the artifact at the Artifact Temple, mark this
-            // layer as inactive. It will be activated when the item is collected.
+            // If the artifact exists,
+            // and it is not the artifact at the Artifact Temple
+            // or it's placed in another player's game (multi-world)
+            // THEN mark this layer as inactive. It will be activated when the item is collected.
             area.layer_flags.flags &= !(1 << layer_number);
         } else {
             // Either the artifact doesn't exist or it does and it is in the Artifact Temple, so
@@ -919,84 +1420,6 @@ fn patch_essence_cinematic_skip_nomusic(
                 message: structs::ConnectionMsg::PLAY,
                 target_object_id: streamed_audio_essence_battle_theme_id, // "StreamedAudio Crater Metroid Prime Stage 2 SW"
             });
-    Ok(())
-}
-
-fn patch_temple_security_station_cutscene_trigger(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let scly = area.mrea().scly_section_mut();
-    let trigger = scly.layers.iter_mut()
-        .flat_map(|layer| layer.objects.iter_mut())
-        .find(|obj| obj.instance_id == 0x70067)
-        .and_then(|obj| obj.property_data.as_trigger_mut())
-        .unwrap();
-    trigger.active = 0;
-
-    Ok(())
-}
-
-fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let scly = area.mrea().scly_section_mut();
-    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-    Ok(())
-}
-
-fn patch_mqa_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let flags = &mut area.layer_flags.flags;
-        *flags &= !(1 << 4); // Turn off the "Room unveil cinematic"
-
-    let mut next_object_id = 0;
-    let scly = area.mrea().scly_section_mut();
-
-    for obj in scly.layers.as_mut_vec()[0].objects.iter_mut() {
-        if next_object_id < obj.instance_id {
-            next_object_id = obj.instance_id;
-        }
-    }
-
-    let camera_door_id = 0x2000CF;
-    let memory_relay_id = 0x2006DE;
-    let timer_activate_memory_relay_id = next_object_id + 1;
-
-    scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(
-        structs::SclyObject {
-            instance_id: timer_activate_memory_relay_id,
-            property_data: structs::Timer {
-                name: b"Timer - Activate post cutscene memory relay\0".as_cstr(),
-
-                start_time: 0.001,
-                max_random_add: 0f32,
-                reset_to_zero: 0,
-                start_immediately: 1,
-                active: 1,
-            }.into(),
-            connections: vec![
-                structs::Connection {
-                    state: structs::ConnectionState::ZERO,
-                    message: structs::ConnectionMsg::ACTIVATE,
-                    target_object_id: memory_relay_id,
-                },
-            ].into(),
-        }
-    );
-
-    let memory_relay_obj = scly.layers.as_mut_vec()[0].objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == memory_relay_id)
-        .unwrap();
-    memory_relay_obj.connections.as_mut_vec().push(structs::Connection {
-            state: structs::ConnectionState::ACTIVE,
-            message: structs::ConnectionMsg::DEACTIVATE,
-            target_object_id: timer_activate_memory_relay_id,
-        });
-
-    scly.layers.as_mut_vec()[0].objects.as_mut_vec().retain(|obj| obj.instance_id != camera_door_id);
-    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-
     Ok(())
 }
 
@@ -1622,6 +2045,119 @@ fn patch_arboretum_invisible_wall(
     Ok(())
 }
 
+fn patch_spawn_point_position<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    new_position: [f32; 3],
+    force_default: bool,
+)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer_count = scly.layers.len();
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if !obj.property_data.is_spawn_point() {continue;}
+
+            let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
+            spawn_point.position = new_position.into();
+            if force_default {
+                spawn_point.default_spawn = 1;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_pca(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    // remove from scripting layers
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_platform());
+        for obj in layer.objects.as_mut_vec() {
+            if obj.property_data.is_trigger()
+            {
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                if trigger.name.to_str().unwrap().contains(&"eliteboss") {
+                    trigger.active = 1;
+                }
+            }
+        }
+    }
+
+    // remove from level/area dependencies (this wasn't a necessary excercise, but it's nice to know how to do)
+    let deps_to_remove: Vec<u32> = vec![
+        0x744572a0, 0xBF19A105, 0x0D3BB9B1, // cmdl
+        0x3cfa9c1c, 0x165B2898, // dcln
+        0x122D9D74, 0x245EEA17, 0x71A63C95, 0x7351A073, 0x8229E1A3, 0xDD3931E2, // txtr
+        0xBA2E99E8, 0xD03D1FF3, 0xE6D3D35E, 0x4185C16A, 0xEFE6629B, // txtr
+    ];
+    for dep_array in area.mlvl_area.dependencies.deps.as_mut_vec() {
+        dep_array.as_mut_vec().retain(|dep| !deps_to_remove.contains(&dep.asset_id));
+    }
+
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_eqa(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_platform());
+    }
+
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_mqb(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[2];
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x001F0018)
+        .unwrap();
+    let actor = obj.property_data.as_actor_mut().unwrap();
+    actor.actor_params.visor_params.target_passthrough = 1;
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_mqa(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00200214) // metriod aggro trigger
+        .unwrap();
+    obj.connections.as_mut_vec().push(
+        structs::Connection {
+            state: structs::ConnectionState::ENTERED,
+            message: structs::ConnectionMsg::SET_TO_ZERO,
+            target_object_id: 0x00200464, // Relay One Shot In
+        },
+    );
+    Ok(())
+}
+
+fn patch_backwards_lower_mines_elite_control(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[1];
+    let obj = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00100086)
+        .unwrap();
+    let actor = obj.property_data.as_actor_mut().unwrap();
+    actor.actor_params.visor_params.target_passthrough = 1;
+    Ok(())
+}
+
 fn patch_main_quarry_barrier(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -1808,6 +2344,228 @@ fn patch_ore_processing_destructible_rock_pal(_ps: &mut PatcherState, area: &mut
         .and_then(|obj| obj.property_data.as_actor_mut())
         .unwrap();
     actor_blocker_collision_obj.active = 0;
+
+    Ok(())
+}
+
+// Removes all cameras and spawn point repositions in the area
+// igoring any provided exlcuded script objects.
+// Additionally, shortens any specified timers to 0-ish seconds
+// When deciding which objects to patch, the most significant
+// byte is ignored
+fn patch_remove_cutscenes(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+    timers_to_zero: Vec<u32>,
+    skip_ids: Vec<u32>,
+)
+    -> Result<(), String>
+{
+    let room_id = area.mlvl_area.mrea;
+    let layer_count = area.layer_flags.layer_count as usize;
+    let scly = area.mrea().scly_section_mut();
+
+    // Get a list of all camera instance ids
+    let mut camera_ids = Vec::<u32>::new();
+    for layer in scly.layers.iter() {
+        for obj in layer.objects.iter() {
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_camera() {
+                camera_ids.push(obj.instance_id & 0x00FFFFFF);
+            }
+        }
+    }
+
+    // Get a list of all spawn point ids
+    let mut spawn_point_ids = Vec::<u32>::new();
+    for layer in scly.layers.iter() {
+        for obj in layer.objects.iter() {
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_spawn_point() {
+                spawn_point_ids.push(obj.instance_id & 0x00FFFFFF);
+            }
+        }
+    }
+
+    let mut id0 = 0xFFFFFFFF;
+    if room_id == 0x0749DF46 || room_id == 0x7A3AD91E {
+        id0 = ps.fresh_instance_id_range.next().unwrap();
+
+        let target_object_id = {
+            if room_id == 0x0749DF46 { // subchamber 2
+                0x0007000B
+            } else { // subchamber 3
+                0x00080016
+            }
+        };
+
+        // add a timer to turn activate prime
+        scly.layers.as_mut_vec()[0].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: id0,
+            property_data: structs::Timer {
+                name: b"activate-prime\0".as_cstr(),
+                start_time: 1.0,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 0,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::START,
+                    target_object_id,
+                },
+            ].into(),
+        },);
+    }
+    
+    // for each layer
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        let mut objs_to_add = Vec::<structs::SclyObject>::new();
+
+        // for each object in the layer
+        for obj in layer.objects.as_mut_vec() {
+            let obj_id = obj.instance_id & 0x00FFFFFF; // remove uper encoding byte
+
+            // If it's a cutscene-related timer, make it take 1 frame
+            if timers_to_zero.contains(&obj_id) {
+                let timer = obj.property_data.as_timer_mut().unwrap();
+                timer.start_time = 0.0001;
+            }
+
+            // for each connection in that object
+            for connection in obj.connections.as_mut_vec().iter_mut() {
+                // if this object sends messages to a camera, change the message to be
+                // appropriate for a relay
+                if camera_ids.contains(&(connection.target_object_id & 0x00FFFFFF)) { 
+                    if connection.message == structs::ConnectionMsg::ACTIVATE {
+                        connection.message = structs::ConnectionMsg::SET_TO_ZERO;
+                    }
+                }
+            }
+
+            // remove every connection to a spawn point, effectively removing all repositions
+            obj.connections.as_mut_vec().retain(|conn| !spawn_point_ids.contains(&(conn.target_object_id & 0x00FFFFFF)));
+
+            // if the object is a camera, create a relay with the same id
+            if camera_ids.contains(&obj_id) {
+                let mut relay = {
+                    structs::SclyObject {
+                        instance_id: obj.instance_id,
+                        connections: obj.connections.clone(),
+                        property_data: structs::SclyProperty::Relay(Box::new(
+                            structs::Relay {
+                                name: b"camera-relay\0".as_cstr(),
+                                active: 1,
+                            }
+                        ))
+                    }
+                };
+
+                // relays send messages on ZERO, not ACTIVE/INACTIVE
+                for connection in relay.connections.as_mut_vec().iter_mut() {
+                    if connection.state == structs::ConnectionState::ACTIVE || connection.state == structs::ConnectionState::INACTIVE {
+                        connection.state = structs::ConnectionState::ZERO;
+                    }
+                }
+
+                objs_to_add.push(relay);
+            }
+
+            // Special handling for specific rooms //
+            if obj_id == 0x00250123 { // flaahgra death cutscene (first camera)
+                // teleport the player at end of shot (4.0s), this is long enough for
+                // the water to change from acid to water, thus granting pre-floaty
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::INACTIVE,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x04252FC0, // spawn point by item
+                });
+            } else if obj_id == 0x00170153 { // magmoor workstation cutscene (power activated)
+                // play this cutscene, but only for a second
+                // this is to allow players to get floaty jump without having red mist
+                obj.property_data.as_camera_mut().unwrap().shot_duration = 4.0;
+            } else if obj_id == 0x001E027E { // observatory scan
+                // just cut out all the confusion by having the scan always active
+                obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
+            } else if obj_id == 0x00070062 { // subchamber 2 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::RESET_AND_START,
+                    target_object_id: id0, // timer
+                });
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                trigger.scale[2] = 8.0;
+                trigger.position[2] = trigger.position[2] - 11.7;
+                trigger.deactivate_on_enter = 1;
+            } else if obj_id == 0x00080058 { // subchamber 3 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::RESET_AND_START,
+                    target_object_id: id0, // timer
+                });
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                trigger.scale[2] = 8.0;
+                trigger.position[2] = trigger.position[2] - 11.7;
+                trigger.deactivate_on_enter = 1;
+            } else if obj_id == 0x0009005A { // subchamber 4 trigger
+                // When the player enters the room (properly), start the fight
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::INSIDE, // inside, because it's possible to beat exo to this trigger
+                    message: structs::ConnectionMsg::START,
+                    target_object_id: 0x00090013, // metroid prime
+                });
+                if obj.property_data.is_trigger() {
+                    let trigger = obj.property_data.as_trigger_mut().unwrap();
+                    trigger.scale[2] = 5.0;
+                    trigger.position[2] = trigger.position[2] - 11.7;
+                }
+            }
+        }
+
+        // add all relays
+        for obj in objs_to_add.iter() {
+            layer.objects.as_mut_vec().push(obj.clone());
+        }
+
+        // remove all cutscene related objects from layer
+        layer.objects.as_mut_vec().retain(|obj|
+            skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || // except for exluded objects
+            !(
+                obj.property_data.is_camera() ||
+                obj.property_data.is_camera_filter_keyframe() ||
+                obj.property_data.is_camera_blur_keyframe() ||
+                obj.property_data.is_player_actor()
+            )
+        );
+    }
+
+    Ok(())
+}
+
+fn patch_fix_central_dynamo_crash(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        // find quarantine access door damage trigger
+        for obj in layer.objects.as_mut_vec() {
+            if obj.instance_id&0x00FFFFFF == 0x001B0470 {
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001B03FA, // turn off maze relay
+                });
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: 0x001B02F2, // close the hole
+                });
+            }
+        }
+    }
 
     Ok(())
 }
@@ -2024,56 +2782,77 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
     Ok(())
 }
 
-
-fn patch_credits(res: &mut structs::Resource, pickup_layout: &[PickupType])
+fn patch_credits(
+    res: &mut structs::Resource,
+    config: &PatchConfig,
+)
     -> Result<(), String>
 {
-    use std::fmt::Write;
-    const PICKUPS_TO_PRINT: &[PickupType] = &[
-        PickupType::ScanVisor,
-        PickupType::ThermalVisor,
-        PickupType::XRayVisor,
-        PickupType::VariaSuit,
-        PickupType::GravitySuit,
-        PickupType::PhazonSuit,
-        PickupType::MorphBall,
-        PickupType::BoostBall,
-        PickupType::SpiderBall,
-        PickupType::MorphBallBomb,
-        PickupType::PowerBomb,
-        PickupType::ChargeBeam,
-        PickupType::SpaceJumpBoots,
-        PickupType::GrappleBeam,
-        PickupType::SuperMissile,
-        PickupType::Wavebuster,
-        PickupType::IceSpreader,
-        PickupType::Flamethrower,
-        PickupType::WaveBeam,
-        PickupType::IceBeam,
-        PickupType::PlasmaBeam
-    ];
+    let mut output = "\n\n\n\n\n\n\n".to_string();
 
-    let mut output = concat!(
-        "\n\n\n\n\n\n\n",
-        "&push;&font=C29C51F1;&main-color=#89D6FF;",
-        "Major Item Locations",
-        "&pop;",
-    ).to_owned();
-    for pickup_type in PICKUPS_TO_PRINT {
-        let room_idx = if let Some(i) = pickup_layout.iter().position(|i| i == pickup_type) {
-            i
-        } else {
-            continue
-        };
-        let room_name = pickup_meta::ROOM_INFO.iter()
-            .flat_map(|pak_locs| pak_locs.1.iter())
-            .flat_map(|loc| iter::repeat(loc.name).take(loc.pickup_locations.len()))
-            .nth(room_idx)
-            .unwrap();
-        let pickup_name = pickup_type.name();
-        write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+    if config.credits_string.is_some() {
+        output = format!("{}{}", output, config.credits_string.as_ref().unwrap());
+    } else {
+        output = format!(
+            "{}{}",
+            output,
+            concat!(
+                "&push;&font=C29C51F1;&main-color=#89D6FF;",
+                "Major Item Locations",
+                "&pop;",
+            ).to_owned()
+        );
+
+        use std::fmt::Write;
+        const PICKUPS_TO_PRINT: &[PickupType] = &[
+            PickupType::ScanVisor,
+            PickupType::ThermalVisor,
+            PickupType::XRayVisor,
+            PickupType::VariaSuit,
+            PickupType::GravitySuit,
+            PickupType::PhazonSuit,
+            PickupType::MorphBall,
+            PickupType::BoostBall,
+            PickupType::SpiderBall,
+            PickupType::MorphBallBomb,
+            PickupType::PowerBomb,
+            PickupType::ChargeBeam,
+            PickupType::SpaceJumpBoots,
+            PickupType::GrappleBeam,
+            PickupType::SuperMissile,
+            PickupType::Wavebuster,
+            PickupType::IceSpreader,
+            PickupType::Flamethrower,
+            PickupType::WaveBeam,
+            PickupType::IceBeam,
+            PickupType::PlasmaBeam
+        ];
+
+        for pickup_type in PICKUPS_TO_PRINT {
+            let room_name = {
+                let mut _room_name = String::new();
+                for (_, level) in config.level_data.iter() {
+                    for (room_name, room) in level.rooms.iter() {
+                        for pickup_info in room.pickups.iter() {
+                            if PickupType::from_str(pickup_type.name()) == PickupType::from_str(&pickup_info.pickup_type) {
+                                _room_name = room_name.to_string();
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if _room_name.len() == 0 {
+                    _room_name = "<Not Present>".to_string();
+                }
+    
+                _room_name
+            };
+            let pickup_name = pickup_type.name();
+            write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
+        }
     }
-    output += "\n\n\n\n\0";
+    output = format!("{}{}", output, "\n\n\n\n\0");
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
@@ -2347,22 +3126,24 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&missile_hud_formating_patch)?;
     }
 
-    let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
-            b skip;
-        fmt:
-            .asciiz b"%d/%d";// %d";
-            nop;
-        skip:
-            mr         r6, r27;
-            mr         r5, r28;
-            lis        r4, fmt@h;
-            addi       r4, r4, fmt@l;
-            addi       r3, r1, 12;// arg_C;
-            nop; // crclr      cr6;
-            bl         { symbol_addr!("sprintf", version) };
+    if config.qol_cosmetic {
+        let powerbomb_hud_formating_patch = ppcasm!(symbol_addr!("SetBombParams__17CHudBallInterfaceFiiibbb", version) + 0x2c, {
+                b skip;
+            fmt:
+                .asciiz b"%d/%d";// %d";
+                nop;
+            skip:
+                mr         r6, r27;
+                mr         r5, r28;
+                lis        r4, fmt@h;
+                addi       r4, r4, fmt@l;
+                addi       r3, r1, 12;// arg_C;
+                nop; // crclr      cr6;
+                bl         { symbol_addr!("sprintf", version) };
 
-    });
-    dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
+        });
+        dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
+    }
 
     if version == Version::Pal {
         let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x0c, {
@@ -2407,7 +3188,6 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&heat_damage_patch)?;
     }
 
-
     if config.staggered_suit_damage {
         let (patch_offset, jump_offset) = if version == Version::Pal {
             (0x11c, 0x1b8)
@@ -2437,25 +3217,17 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&staggered_suit_damage_patch)?;
     }
 
-    if config.missile_capacity > 999 {
-        Err("The max amount of missiles you can carry has exceeded the limit (>999)!".to_string())?;
+    for (pickup_type, value) in &config.item_max_capacity {
+        match pickup_type.kind() {
+            Some(index) => {
+                let capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + index * 4, {
+                    .long *value;
+                });
+                dol_patcher.ppcasm_patch(&capacity_patch)?;
+            }
+            None => {}
+        }
     }
-
-    if config.power_bomb_capacity > 9 {
-        Err("The max amount of power bombs you can carry has exceeded the limit (>9)!".to_string())?;
-    }
-
-    // CPlayerState_PowerUpMaxValues[4]
-    let missile_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x10, {
-        .long config.missile_capacity;
-    });
-    dol_patcher.ppcasm_patch(&missile_capacity_patch)?;
-
-    // CPlayerState_PowerUpMaxValues[7]
-    let power_bomb_capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + 0x1c, {
-        .long config.power_bomb_capacity;
-    });
-    dol_patcher.ppcasm_patch(&power_bomb_capacity_patch)?;
 
     // set etank capacity and base health
     let etank_capacity = config.etank_capacity as f32;
@@ -2639,6 +3411,454 @@ impl fmt::Display for Version
     }
 }
 
+fn patch_qol_game_breaking(patcher: &mut PrimePatcher, version: Version) {
+    // undo retro "fixes"
+    if version == Version::NtscU0_00 {
+        patcher.add_scly_patch(
+            resource_info!("00n_ice_connect.MREA").into(),
+            patch_research_core_access_soft_lock
+        );
+    } else {
+        patcher.add_scly_patch(
+            resource_info!("08_courtyard.MREA").into(),
+            patch_arboretum_invisible_wall
+        );
+        if version != Version::NtscU0_01 {
+            patcher.add_scly_patch(
+                resource_info!("05_ice_shorelines.MREA").into(),
+                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
+            );
+        }
+    }
+    if version == Version::NtscU0_02 {
+        patcher.add_scly_patch(
+            resource_info!("01_mines_mainplaza.MREA").into(),
+            patch_main_quarry_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_door_lock_0_02
+        );
+        patcher.add_scly_patch(
+            resource_info!("19_hive_totem.MREA").into(),
+            patch_hive_totem_boss_trigger_0_02
+        );
+    }
+    if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+        patcher.add_scly_patch(
+            resource_info!("04_mines_pillar.MREA").into(),
+            patch_ore_processing_destructible_rock_pal
+        );
+        patcher.add_scly_patch(
+            resource_info!("13_over_burningeffigy.MREA").into(),
+            patch_geothermal_core_destructible_rock_pal
+        );
+        if version == Version::Pal {
+            patcher.add_scly_patch(
+                resource_info!("01_mines_mainplaza.MREA").into(),
+                patch_main_quarry_door_lock_pal
+            );
+        }
+    }
+
+    // softlocks
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(),
+        patch_sunchamber_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(),
+        patch_sun_tower_prevent_wild_before_flaahgra
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(),
+        patch_research_lab_aether_exploding_wall
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(),
+        patch_observatory_2nd_pass_solvablility
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(),
+        patch_observatory_1st_pass_softlock
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(),
+        patch_mines_security_station_soft_lock
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_ice_gravity_chamber.MREA").into(),
+        patch_gravity_chamber_stalactite_grapple_point
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(),
+        patch_fix_central_dynamo_crash
+    );
+
+    // randomizer-induced bugfixes
+    patcher.add_scly_patch(
+        resource_info!("1a_morphballtunnel.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_bathhall.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00_mines_savestation_b.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], true)
+    );
+}
+
+fn patch_qol_logical(patcher: &mut PrimePatcher)
+{
+    // logical qol
+    make_elite_research_fight_prereq_patches(patcher);
+    patcher.add_scly_patch(
+        resource_info!("08b_under_intro_ventshaft.MREA").into(),
+        patch_main_ventilation_shaft_section_b_door
+    );
+    patcher.add_scly_patch(
+        resource_info!("10_ice_research_a.MREA").into(),
+        patch_research_lab_hydra_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(),
+        patch_main_quarry_barrier
+    );
+    patcher.add_scly_patch(
+        resource_info!("00p_mines_connect.MREA").into(),
+        patch_backwards_lower_mines_pca
+    );
+    patcher.add_scly_patch(
+        resource_info!("00o_mines_connect.MREA").into(),
+        patch_backwards_lower_mines_eqa
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_mines.MREA").into(),
+        patch_backwards_lower_mines_mqb
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(),
+        patch_backwards_lower_mines_mqa
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_mines_forcefields.MREA").into(),
+        patch_backwards_lower_mines_elite_control
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mainplaza.MREA").into(),
+        make_main_plaza_locked_door_two_ways
+    );
+}
+
+fn patch_qol_cosmetic(
+    patcher: &mut PrimePatcher,
+    skip_ending_cinematic: bool,
+)
+{
+    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
+    // copy and to make compressed ISOs smaller.
+    const FMV_NAMES: &[&[u8]] = &[
+        b"Video/attract0.thp",
+        b"Video/attract1.thp",
+        b"Video/attract2.thp",
+        b"Video/attract3.thp",
+        b"Video/attract4.thp",
+        b"Video/attract5.thp",
+        b"Video/attract6.thp",
+        b"Video/attract7.thp",
+        b"Video/attract8.thp",
+        b"Video/attract9.thp",
+    ];
+    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
+    for name in FMV_NAMES {
+        patcher.add_file_patch(name, |file| {
+            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+            Ok(())
+        });
+    }
+
+    patcher.add_resource_patch(
+        resource_info!("FRME_BallHud.FRME").into(),
+        patch_morphball_hud,
+    );
+
+    if skip_ending_cinematic {
+        patcher.add_scly_patch(
+            resource_info!("01_endcinema.MREA").into(),
+            patch_ending_scene_straight_to_credits
+        );
+    }
+
+    // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
+}
+
+fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
+    patcher.add_scly_patch(
+        resource_info!("12_ice_research_b.MREA").into(),
+        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00j_over_hall.MREA").into(), // temple security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("15_energycores.MREA").into(), // energy core
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![
+                0x002C00E8, 0x002C0101, 0x002C00F5, // activate core delay
+                0x002C0068, 0x002C0055, 0x002C0079, // core energy flow activation delay
+                0x002C0067, 0x002C00E7, 0x002C0102, // jingle finish delay
+                0x002C0104, 0x002C00EB, // platform go up delay
+                0x002C0069, // water go down delay
+                0x002C01BC, // unlock door
+            ],
+            vec![],
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("10_over_1alavaarea.MREA").into(), // magmoor workstation
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153]), // skip patching 1st cutscene (special floaty case)
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_under_intro_reactor.MREA").into(), // reactor core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_over_xray.MREA").into(), // life grove
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4]), // skipping the chozo ghost cutscene somehow sends the ghosts OoB
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mainplaza.MREA").into(), // main plaza
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![],
+            vec![0x000202A9, 0x000202A8, 0x000202B7], // keep the ridley cutscene (it's a major cutscene)
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_over_muddywaters_b.MREA").into(), // lava lake
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("14_tl_base01.MREA").into(), // tower of light
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("04_maproom_d.MREA").into(), // vault
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(), // sun tower
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_ruinedroof.MREA").into(), // training chamber
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_wateryhall.MREA").into(), // watery hall
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_halfpipe.MREA").into(), // crossway
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("17_chozo_bowling.MREA").into(), // hall of the elders
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x003400F4, 0x003400F8, 0x003400F9, 0x0034018C], // speed up release from bomb slots
+            vec![
+                0x003400F5, 0x00340046, 0x0034004A, 0x003400EA, 0x0034004F, // leave chozo bowling cutscenes to avoid getting stuck
+                0x0034025C, 0x00340264, 0x00340268, 0x0034025B, // leave missile station cutsene
+            ],
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_over_burningeffigy.MREA").into(), // geothermal core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("00h_mines_connect.MREA").into(), // vent shaft
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00120085]), // puffers don't destroy wall if this is skipped TODO: use timer instead of cutscene
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("04_ice_boost_canyon.MREA").into(), // Phendrana canyon
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_ice_shorelines.MREA").into(), // ruined courtyard
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_ice_observatory.MREA").into(), // Observatory
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E0042, 0x001E000E], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_ice_ridley.MREA").into(), // control tower
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(), // research core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+}
+
+pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
+    patcher.add_scly_patch(
+        resource_info!("19_hive_totem.MREA").into(), // hive totem
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("1a_morphball_shrine.MREA").into(), // ruined shrine
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03_monkey_lower.MREA").into(), // burn dome
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("22_Flaahgra.MREA").into(), // sunchamber
+        move |ps, area| patch_remove_cutscenes(
+            ps, area,
+            vec![
+                0x00250092, 0x00250093, 0x00250094, 0x002500A8, // release from bomb slot
+                0x0025276A, // acid --> water (needed for floaty)
+            ],
+            vec![
+                0x002500CA, 0x00252FE4, 0x00252727, 0x0025272C, 0x00252741,  // into cinematic works better if skipped normally
+                0x0025000B, // you get put in vines timeout if you skip the first reposition:
+                            // https://cdn.discordapp.com/attachments/761000402182864906/840707140364664842/no-spawnpoints.mp4
+                0x00250123, // keep just the first camera angle of the death cutscene to prevent underwater when going for pre-floaty
+                0x00252FC0, // the last reposition is important for floaty jump
+            ],
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B]), // keep fight start reposition for wavesun
+    );
+    patcher.add_scly_patch(
+        resource_info!("09_ice_lobby.MREA").into(), // research entrance
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_mines_forcefields.MREA").into(), // elite control
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03_mines.MREA").into(), // elite research
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(), // central dynamo
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001B03F8], // activate maze faster
+            vec![0x001B0349, 0x001B0356], // keep item aquisition cutscene (or players can get left down there)
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(), // MQA
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![
+                0x002000D7, // Timer_pikeend
+                0x002000DE, // Timer_coverstart
+                0x002000E0, // Timer_steamshutoff
+                0x00200708, // Timer - Shield Off, Play Battle Music
+            ],
+            vec![],
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("12_mines_eliteboss.MREA").into(), // elite quarters
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // keep the first cutscene because the normal skip works out better
+                0x001A0282, 0x001A0283, 0x001A02B3, 0x001A02BF, 0x001A0284, 0x001A031A, // cameras
+                0x001A0294, 0x001A02B9, // player actor
+            ],
+        ),
+    );
+    patcher.add_scly_patch( // phazon infusion chamber
+        resource_info!("03a_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // keep first cutscene because vanilla skip is better
+                0x0005002B, 0x0005002C, 0x0005007D, 0x0005002D, 0x00050032, 0x00050078, 0x00050033, 0x00050034, 0x00050035, 0x00050083, // cameras
+                0x0005002E, 0x0005008B, 0x00050089, // player actors
+            ],
+        ),
+    );
+
+    // subchambers 1-4 (see special handling for exo aggro)
+    patcher.add_scly_patch(
+        resource_info!("03b_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03c_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03d_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03e_crater.MREA").into(),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+
+    // play subchamber 5 cutscene normally (players can't natrually pass through the ceiling of prime's lair)
+
+    patcher.add_scly_patch(
+        resource_info!("03f_crater.MREA").into(), // metroid prime lair
+        move |ps, area| patch_remove_cutscenes(
+            ps, area, vec![],
+            vec![ // play the first cutscene so it can be skipped normally
+                0x000B019D, 0x000B008B, 0x000B008D, 0x000B0093, 0x000B0094, 0x000B00A7,
+                0x000B00AF, 0x000B00E1, 0x000B00DF, 0x000B00B0, 0x000B00D3, 0x000B00E3,
+                0x000B00E6, 0x000B0095, 0x000B00E4,
+            ], 
+        ),
+    );
+}
+
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
@@ -2646,17 +3866,20 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Created by randomprime version {}", env!("CARGO_PKG_VERSION")).unwrap();
     writeln!(ct).unwrap();
     writeln!(ct, "Options used:").unwrap();
-    writeln!(ct, "layout: {:#?}", config.layout).unwrap();
-    writeln!(ct, "keep fmvs: {}", config.keep_fmvs).unwrap();
-    writeln!(ct, "nonmodal hudmemos: {}", config.skip_hudmenus).unwrap();
+    writeln!(ct, "qol game breaking: {:?}", config.qol_game_breaking).unwrap();
+    writeln!(ct, "qol cosmetic: {:?}", config.qol_cosmetic).unwrap();
+    writeln!(ct, "qol logical: {:?}", config.qol_logical).unwrap();
+    writeln!(ct, "qol minor cutscenes: {:?}", config.qol_minor_cutscenes).unwrap();
+    writeln!(ct, "qol major cutscenes: {:?}", config.qol_major_cutscenes).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
     writeln!(ct, "etank capacity: {}", config.etank_capacity).unwrap();
     writeln!(ct, "map default state: {}", config.map_default_state.to_string().to_lowercase()).unwrap();
-    writeln!(ct, "missile capacity: {}", config.missile_capacity).unwrap();
-    writeln!(ct, "power bomb capacity: {}", config.power_bomb_capacity).unwrap();
+    for (pickup_type, value) in &config.item_max_capacity {
+        writeln!(ct, "{} capacity: {}", pickup_type.name(), value).unwrap();
+    }
     writeln!(ct, "{}", config.comment).unwrap();
 
     let mut reader = Reader::new(&config.input_iso[..]);
@@ -2695,8 +3918,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
         Version::NtscU0_00    => Some(rel_files::PATCHES_100_REL),
         Version::NtscU0_01    => None,
         Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
-        Version::Pal         => Some(rel_files::PATCHES_PAL_REL),
-        Version::NtscJ    => None,
+        Version::Pal          => Some(rel_files::PATCHES_PAL_REL),
+        Version::NtscJ        => None,
         Version::NtscUTrilogy => None,
         Version::NtscJTrilogy => None,
         Version::PalTrilogy => None,
@@ -2738,13 +3961,11 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    let pickup_layout = &config.layout.pickups[..];
-
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
 
     let frigate_done_room = {
         let mut destination_name = "Tallon:Landing Site";
-        let frigate_level = config.level_data.get(&"frigate".to_string());
+        let frigate_level = config.level_data.get(World::FrigateOrpheon.to_json_key());
         if frigate_level.is_some() {
             let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
             if x.is_some() {
@@ -2756,8 +3977,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     };
     assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
 
-    let mut rng = StdRng::seed_from_u64(config.layout.seed);
-    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(pickup_layout, &mut rng);
+    let mut rng = StdRng::seed_from_u64(config.seed);
+    let artifact_totem_strings = build_artifact_temple_totem_scan_strings(config, &mut rng, config.artifact_hints.clone());
 
     let show_starting_memo = config.starting_memo.is_some();
 
@@ -2769,8 +3990,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let game_resources = collect_game_resources(gc_disc, starting_memo);
+    let (game_resources, pickup_hudmemos, pickup_scans) = collect_game_resources(gc_disc, starting_memo, &config);
     let game_resources = &game_resources;
+    let pickup_hudmemos = &pickup_hudmemos;
+    let pickup_scans = &pickup_scans;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -2780,31 +4003,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let file_select_play_game_fmv = gc_disc.find_file(&n).unwrap().file().unwrap().clone();
 
     let mut patcher = PrimePatcher::new();
-    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
-    if !config.keep_fmvs {
-        // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
-        // copy and to make compressed ISOs smaller.
-        const FMV_NAMES: &[&[u8]] = &[
-            b"Video/attract0.thp",
-            b"Video/attract1.thp",
-            b"Video/attract2.thp",
-            b"Video/attract3.thp",
-            b"Video/attract4.thp",
-            b"Video/attract5.thp",
-            b"Video/attract6.thp",
-            b"Video/attract7.thp",
-            b"Video/attract8.thp",
-            b"Video/attract9.thp",
 
-        ];
-        const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
-        for name in FMV_NAMES {
-            patcher.add_file_patch(name, |file| {
-                *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
-                Ok(())
-            });
-        }
-    }
+    patcher.add_file_patch(b"opening.bnr", |file| patch_bnr(file, &config.game_banner));
 
     if let Some(flaahgra_music_files) = &config.flaahgra_music_files {
         const MUSIC_FILE_NAME: &[&[u8]] = &[
@@ -2819,61 +4019,110 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    // Replace the FMVs that play when you select a file so each ISO always plays the only one.
-    const SELECT_GAMES_FMVS: &[&[u8]] = &[
-        b"Video/02_start_fileselect_A.thp",
-        b"Video/02_start_fileselect_B.thp",
-        b"Video/02_start_fileselect_C.thp",
-        b"Video/04_fileselect_playgame_A.thp",
-        b"Video/04_fileselect_playgame_B.thp",
-        b"Video/04_fileselect_playgame_C.thp",
-    ];
-    for fmv_name in SELECT_GAMES_FMVS {
-        let fmv_ref = if fmv_name[7] == b'2' {
-            &start_file_select_fmv
-        } else {
-            &file_select_play_game_fmv
-        };
-        patcher.add_file_patch(fmv_name, move |file| {
-            *file = fmv_ref.clone();
-            Ok(())
-        });
-    }
-
     // Patch pickups
-    let mut layout_iterator = pickup_layout.iter();
-    for (name, rooms) in pickup_meta::ROOM_INFO.iter() {
+    for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
+        let world = World::from_pak(pak_name).unwrap();
+        
         for room_info in rooms.iter() {
-             patcher.add_scly_patch((name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
-                // Remove objects
-                let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
-                for otr in room_info.objects_to_remove {
-                    layers[otr.layer as usize].objects.as_mut_vec()
-                        .retain(|i| !otr.instance_ids.contains(&i.instance_id));
+
+            // Remove objects patch
+            if config.qol_cosmetic {
+                patcher.add_scly_patch((pak_name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
+                    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+                    for otr in room_info.objects_to_remove {
+                        layers[otr.layer as usize].objects.as_mut_vec()
+                            .retain(|i| !otr.instance_ids.contains(&i.instance_id));
+                    }
+                    Ok(())
+                });
+            }
+
+            // Get list of pickups specified for this room
+            let pickups = {
+                let mut _pickups = Vec::new();
+                
+                let level = config.level_data.get(world.to_json_key());
+                if level.is_some() {
+                    let room = level.unwrap().rooms.get(room_info.name);
+                    if room.is_some() {
+                        _pickups = room.unwrap().pickups.clone();
+                    }
                 }
-                Ok(())
-            });
-            let iter = room_info.pickup_locations.iter().zip(&mut layout_iterator);
-            for (&pickup_location, &pickup_type) in iter {
-                // 1 in 1024 chance of a missile being shiny means a player is likely to see a
-                // shiny missile every 40ish games (assuming most players collect about half of the
-                // missiles)
-                let pickup_type = if pickup_type == PickupType::Missile && rng.gen_ratio(1, 1024) {
-                    PickupType::ShinyMissile
-                } else {
-                    pickup_type
+                _pickups
+            };
+
+            // Patch existing item locations
+            let mut idx = 0;
+            let pickups_config_len = pickups.len();
+            for pickup_location in room_info.pickup_locations.iter() {
+                let pickup = {
+                    if idx >= pickups_config_len {
+                        PickupConfig {
+                            pickup_type: "Nothing".to_string(), // TODO: Could figure out the vanilla item instead
+                            count: None,
+                            position: None,
+                            hudmemo_text: None,
+                            scan_text: None,
+                            model: None,
+                            respawn: None,
+                        } 
+                    } else {
+                        pickups[idx].clone() // TODO: cloning is suboptimal
+                    }
                 };
+                
+                let key = PickupHashKey {
+                    level_id: world.mlvl(),
+                    room_id: room_info.room_id.to_u32(),
+                    pickup_idx: idx as u32,
+                };
+
+                // modify pickup, connections, hudmemo etc.
                 patcher.add_scly_patch(
-                    (name.as_bytes(), room_info.room_id.to_u32()),
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     move |ps, area| modify_pickups_in_mrea(
                             ps,
                             area,
-                            pickup_type,
-                            pickup_location,
+                            &pickup,
+                            *pickup_location,
                             game_resources,
-                            config
+                            pickup_hudmemos,
+                            pickup_scans,
+                            key,
+                            config.qol_cosmetic,
+                            config.obfuscate_items,
                         )
                 );
+
+                idx = idx + 1;
+            }
+
+            // Patch extra item locations
+            while idx < pickups_config_len {
+                let pickup = pickups[idx].clone(); // TODO: cloning is suboptimal
+
+                let key = PickupHashKey {
+                    level_id: world.mlvl(),
+                    room_id: room_info.room_id.to_u32(),
+                    pickup_idx: idx as u32,
+                };
+
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    move |_ps, area| patch_add_item(
+                        _ps,
+                        area,
+                        &pickup, 
+                        game_resources,
+                        pickup_hudmemos,
+                        pickup_scans,
+                        key,
+                        config.qol_cosmetic,
+                        config.obfuscate_items,
+                    ),
+                );
+
+                idx = idx + 1;
             }
         }
     }
@@ -2942,19 +4191,17 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         resource_info!("FRME_NewFileSelect.FRME").into(),
         patch_main_menu
     );
-
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
-        |res| patch_credits(res, &pickup_layout)
+        |res| patch_credits(res, config)
     );
-
     patcher.add_resource_patch(
         resource_info!("!MinesWorld_Master.SAVW").into(),
         patch_mines_savw_for_phazon_suit_scan
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
-        |ps, area| fix_artifact_of_truth_requirements(ps, area, &pickup_layout)
+        |ps, area| fix_artifact_of_truth_requirements(ps, area, config)
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
@@ -2999,121 +4246,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    patcher.add_resource_patch(resource_info!("FRME_BallHud.FRME").into(), patch_morphball_hud);
-
-    make_elite_research_fight_prereq_patches(&mut patcher);
-
-    patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
-
-    patcher.add_scly_patch(
-        resource_info!("22_Flaahgra.MREA").into(),
-        patch_sunchamber_prevent_wild_before_flaahgra
-    );
-    patcher.add_scly_patch(
-        resource_info!("0v_connect_tunnel.MREA").into(),
-        patch_sun_tower_prevent_wild_before_flaahgra
-    );
-    patcher.add_scly_patch(
-        resource_info!("00j_over_hall.MREA").into(),
-        patch_temple_security_station_cutscene_trigger
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(),
-        patch_ridley_phendrana_shorelines_cinematic
-    );
-    patcher.add_scly_patch(
-        resource_info!("08_mines.MREA").into(),
-        patch_mqa_cinematic
-    );
-    patcher.add_scly_patch(
-        resource_info!("08b_under_intro_ventshaft.MREA").into(),
-        patch_main_ventilation_shaft_section_b_door
-    );
-    patcher.add_scly_patch(
-        resource_info!("10_ice_research_a.MREA").into(),
-        patch_research_lab_hydra_barrier
-    );
-    patcher.add_scly_patch(
-        resource_info!("12_ice_research_b.MREA").into(),
-        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
-    );
-    patcher.add_scly_patch(
-        resource_info!("13_ice_vault.MREA").into(),
-        patch_research_lab_aether_exploding_wall
-    );
-    patcher.add_scly_patch(
-        resource_info!("11_ice_observatory.MREA").into(),
-        patch_observatory_2nd_pass_solvablility
-    );
-    patcher.add_scly_patch(
-        resource_info!("11_ice_observatory.MREA").into(),
-        patch_observatory_1st_pass_softlock
-    );
-    patcher.add_scly_patch(
-        resource_info!("02_mines_shotemup.MREA").into(),
-        patch_mines_security_station_soft_lock
-    );
-    patcher.add_scly_patch(
-        resource_info!("18_ice_gravity_chamber.MREA").into(),
-        patch_gravity_chamber_stalactite_grapple_point
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_mines_mainplaza.MREA").into(),
-        patch_main_quarry_barrier
-    );
-
-    if version == Version::NtscU0_00 {
-        patcher.add_scly_patch(
-            resource_info!("00n_ice_connect.MREA").into(),
-            patch_research_core_access_soft_lock
-        );
-    } else {
-        patcher.add_scly_patch(
-            resource_info!("08_courtyard.MREA").into(),
-            patch_arboretum_invisible_wall
-        );
-        if version != Version::NtscU0_01 {
-            patcher.add_scly_patch(
-                resource_info!("05_ice_shorelines.MREA").into(),
-                move |ps, area| patch_ruined_courtyard_thermal_conduits(ps, area, version)
-            );
-        }
-    }
-
-    if version == Version::NtscU0_02 {
-        patcher.add_scly_patch(
-            resource_info!("01_mines_mainplaza.MREA").into(),
-            patch_main_quarry_door_lock_0_02
-        );
-        patcher.add_scly_patch(
-            resource_info!("13_over_burningeffigy.MREA").into(),
-            patch_geothermal_core_door_lock_0_02
-        );
-        patcher.add_scly_patch(
-            resource_info!("19_hive_totem.MREA").into(),
-            patch_hive_totem_boss_trigger_0_02
-        );
-    }
-
-    if version == Version::Pal || version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
-        patcher.add_scly_patch(
-            resource_info!("04_mines_pillar.MREA").into(),
-            patch_ore_processing_destructible_rock_pal
-        );
-        patcher.add_scly_patch(
-            resource_info!("13_over_burningeffigy.MREA").into(),
-            patch_geothermal_core_destructible_rock_pal
-        );
-
-        if version == Version::Pal {
-            patcher.add_scly_patch(
-                resource_info!("01_mines_mainplaza.MREA").into(),
-                patch_main_quarry_door_lock_pal
-            );
-        }
-    }
-
-    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea {
+    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_major_cutscenes {
         // If we have a non-default start point, patch the landing site to avoid
         // weirdness with cutscene triggers and the ship spawning.
         patcher.add_scly_patch(
@@ -3122,13 +4255,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if skip_ending_cinematic {
-        patcher.add_scly_patch(
-            resource_info!("01_endcinema.MREA").into(),
-            patch_ending_scene_straight_to_credits
-        );
-    }
-
+    patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);
+    
+    // Always patch out the white flash for photosensitive epileptics
     if version == Version::NtscU0_00 {
         patcher.add_scly_patch(
             resource_info!("03f_crater.MREA").into(),
@@ -3142,11 +4271,45 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if config.enable_vault_ledge_door {
-        patcher.add_scly_patch(
-            resource_info!("01_mainplaza.MREA").into(),
-            make_main_plaza_locked_door_two_ways
-        );
+    if config.qol_game_breaking {
+        patch_qol_game_breaking(&mut patcher, version);
+    }
+
+    if config.qol_cosmetic {
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic || config.qol_major_cutscenes);
+
+        // Replace the FMVs that play when you select a file so each ISO always plays the only one.
+        const SELECT_GAMES_FMVS: &[&[u8]] = &[
+            b"Video/02_start_fileselect_A.thp",
+            b"Video/02_start_fileselect_B.thp",
+            b"Video/02_start_fileselect_C.thp",
+            b"Video/04_fileselect_playgame_A.thp",
+            b"Video/04_fileselect_playgame_B.thp",
+            b"Video/04_fileselect_playgame_C.thp",
+        ];
+        for fmv_name in SELECT_GAMES_FMVS {
+            let fmv_ref = if fmv_name[7] == b'2' {
+                &start_file_select_fmv
+            } else {
+                &file_select_play_game_fmv
+            };
+            patcher.add_file_patch(fmv_name, move |file| {
+                *file = fmv_ref.clone();
+                Ok(())
+            });
+        }
+    }
+
+    if config.qol_logical {
+        patch_qol_logical(&mut patcher);
+    }
+
+    if config.qol_minor_cutscenes || config.qol_major_cutscenes {
+        patch_qol_minor_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_major_cutscenes {
+        patch_qol_major_cutscenes(&mut patcher);
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
@@ -3183,4 +4346,3 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.run(gc_disc)?;
     Ok(())
 }
-

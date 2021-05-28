@@ -25,8 +25,8 @@ pub struct Pickup<'r>
 
     pub kind: u32,
 
-    pub max_increase: u32,
-    pub curr_increase: u32,
+    pub max_increase: i32,
+    pub curr_increase: i32,
 
     pub drop_rate: f32,
     pub disappear_timer: f32,

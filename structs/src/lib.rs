@@ -28,6 +28,9 @@ pub mod scly_props
 {
     // http://www.metroid2002.com/retromodding/wiki/User:Parax0/Sandbox
     pub mod actor;
+    pub mod camera;
+    pub mod camera_blur_keyframe;
+    pub mod camera_filter_keyframe;
     pub mod damageable_trigger;
     pub mod dock;
     pub mod door;
@@ -52,6 +55,9 @@ pub mod scly_props
     pub mod structs;
 
     pub use self::actor::*;
+    pub use self::camera::*;
+    pub use self::camera_blur_keyframe::*;
+    pub use self::camera_filter_keyframe::*;
     pub use self::damageable_trigger::*;
     pub use self::dock::*;
     pub use self::door::*;
@@ -76,6 +82,9 @@ pub mod scly_props
 
 pub use scly_props::structs as scly_structs;
 pub use scly_props::actor::*;
+pub use scly_props::camera::*;
+pub use scly_props::camera_blur_keyframe::*;
+pub use scly_props::camera_filter_keyframe::*;
 pub use scly_props::damageable_trigger::*;
 pub use scly_props::dock::*;
 pub use scly_props::door::*;

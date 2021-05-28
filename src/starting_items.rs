@@ -1,13 +1,14 @@
 use serde::{Deserialize};
-use std::cmp;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StartingItems
 {
+    pub power_beam: bool,
     pub scan_visor: bool,
-    pub missiles: u8,
-    pub energy_tanks: u8,
-    pub power_bombs: u8,
+    pub missiles: i32,
+    pub energy_tanks: i8,
+    pub power_bombs: i8,
     pub wave: bool,
     pub ice: bool,
     pub plasma: bool,
@@ -40,10 +41,11 @@ impl StartingItems
         };
 
         StartingItems {
+            power_beam:  true,
             scan_visor:  fetch_bits(1) == 1,
-            missiles:  fetch_bits(8),
-            energy_tanks:  fetch_bits(4),
-            power_bombs:  fetch_bits(4),
+            missiles:  fetch_bits(8) as i32,
+            energy_tanks:  fetch_bits(4) as i8,
+            power_bombs:  fetch_bits(4) as i8,
             wave:  fetch_bits(1) == 1,
             ice:  fetch_bits(1) == 1,
             plasma:  fetch_bits(1) == 1,
@@ -68,6 +70,7 @@ impl StartingItems
 
     pub fn update_spawn_point(&self, spawn_point: &mut structs::SpawnPoint)
     {
+        spawn_point.power = self.power_beam as u32;
         spawn_point.scan_visor = self.scan_visor as u32;
         spawn_point.missiles = self.missiles as u32;
         spawn_point.energy_tanks = self.energy_tanks as u32;
@@ -113,37 +116,9 @@ impl StartingItems
         }
     }
     
-    pub fn merge(manual_starting_items: StartingItems, random_starting_items: StartingItems) -> Self
-    {
-        StartingItems {
-            scan_visor: manual_starting_items.scan_visor | random_starting_items.scan_visor,
-            missiles: cmp::min(manual_starting_items.missiles + random_starting_items.missiles, 250),
-            energy_tanks: cmp::min(manual_starting_items.energy_tanks + random_starting_items.energy_tanks, 14),
-            power_bombs: cmp::min(manual_starting_items.power_bombs + random_starting_items.power_bombs, 8),
-            wave: manual_starting_items.wave | random_starting_items.wave,
-            ice: manual_starting_items.ice | random_starting_items.ice,
-            plasma: manual_starting_items.plasma | random_starting_items.plasma,
-            charge: manual_starting_items.charge | random_starting_items.charge,
-            morph_ball: manual_starting_items.morph_ball | random_starting_items.morph_ball,
-            bombs: manual_starting_items.bombs | random_starting_items.bombs,
-            spider_ball: manual_starting_items.spider_ball | random_starting_items.spider_ball,
-            boost_ball: manual_starting_items.boost_ball | random_starting_items.boost_ball,
-            varia_suit: manual_starting_items.varia_suit | random_starting_items.varia_suit,
-            gravity_suit: manual_starting_items.gravity_suit | random_starting_items.gravity_suit,
-            phazon_suit: manual_starting_items.phazon_suit | random_starting_items.phazon_suit,
-            thermal_visor: manual_starting_items.thermal_visor | random_starting_items.thermal_visor,
-            xray: manual_starting_items.xray | random_starting_items.xray,
-            space_jump: manual_starting_items.space_jump | random_starting_items.space_jump,
-            grapple: manual_starting_items.grapple | random_starting_items.grapple,
-            super_missile: manual_starting_items.super_missile | random_starting_items.super_missile,
-            wavebuster: manual_starting_items.wavebuster | random_starting_items.wavebuster,
-            ice_spreader: manual_starting_items.ice_spreader | random_starting_items.ice_spreader,
-            flamethrower: manual_starting_items.flamethrower | random_starting_items.flamethrower,
-        }
-    }
-    
     pub fn is_empty(&self) -> bool
     {
+        !self.power_beam &&
         !self.scan_visor &&
         self.missiles == 0 &&
         self.energy_tanks == 0 &&
@@ -175,6 +150,7 @@ impl Default for StartingItems
     fn default() -> Self
     {
         StartingItems {
+            power_beam: true,
             scan_visor: true,
             missiles: 0,
             energy_tanks: 0,
