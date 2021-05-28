@@ -336,6 +336,14 @@ fn patch_add_item<'r>(
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
+    // panic if undefined game behavior //
+    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
+       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
+    {
+        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
+    }
+
+     
     // Pickup to use for visuals/hitbox //
     let pickup_model_maybe_obfuscated = {
         if pickup_config.model.is_some() {
@@ -602,6 +610,13 @@ fn modify_pickups_in_mrea<'r>(
 
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
+    
+    // panic if undefined game behavior //
+    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
+       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
+    {
+        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
+    }
 
     // Pickup to use for visuals/hitbox //
     let pickup_model_maybe_obfuscated = {
