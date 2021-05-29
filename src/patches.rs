@@ -1904,7 +1904,7 @@ fn patch_remove_cutscenes(
             // If it's a cutscene-related timer, make it take 1 frame
             if timers_to_zero.contains(&obj_id) {
                 let timer = obj.property_data.as_timer_mut().unwrap();
-                timer.start_time = 0.75;
+                timer.start_time = 0.1;
             }
 
             // for each connection in that object
@@ -3090,7 +3090,11 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x00020443], // turn the forcefield off faster
+            vec![0x00020021, 0x00020253, // play crane cutscene normally as there is no benefit to skipping it
+            ],
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("11_over_muddywaters_b.MREA").into(), // lava lake
@@ -3176,6 +3180,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
     patcher.add_scly_patch(
         resource_info!("19_hive_totem.MREA").into(), // hive totem
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
