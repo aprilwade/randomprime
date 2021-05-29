@@ -767,8 +767,8 @@ fn modify_pickups_in_mrea<'r>(
         for obj in layer.objects.as_mut_vec().iter_mut() {
             if obj.property_data.is_point_of_interest() {
                 let poi = obj.property_data.as_point_of_interest_mut().unwrap();
-                if f32::abs(poi.position[0] - position[0]) < 3.0 &&
-                   f32::abs(poi.position[1] - position[1]) < 3.0 &&
+                if f32::abs(poi.position[0] - position[0]) < 6.0 &&
+                   f32::abs(poi.position[1] - position[1]) < 6.0 &&
                    f32::abs(poi.position[2] - position[2]) < 3.0
                 {
                     poi.scan_param.scan = scan_id_out;
@@ -790,7 +790,7 @@ fn modify_pickups_in_mrea<'r>(
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  location.instance_id)
         .unwrap();
-    update_attainment_audio(attainment_audio, pickup_type);
+    update_attainment_audio(attainment_audio, pickup_model_maybe_obfuscated);
     Ok(())
 }
 
