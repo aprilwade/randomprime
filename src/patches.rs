@@ -2011,7 +2011,8 @@ fn patch_remove_cutscenes(
                 obj.property_data.is_camera() ||
                 obj.property_data.is_camera_filter_keyframe() ||
                 obj.property_data.is_camera_blur_keyframe() ||
-                obj.property_data.is_player_actor()
+                obj.property_data.is_player_actor() ||
+                (obj.property_data.is_special_function() && obj.property_data.as_special_function().unwrap().type_ == 0x18) // "show billboard"
             )
         );
     }
