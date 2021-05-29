@@ -1904,7 +1904,7 @@ fn patch_remove_cutscenes(
             // If it's a cutscene-related timer, make it take 1 frame
             if timers_to_zero.contains(&obj_id) {
                 let timer = obj.property_data.as_timer_mut().unwrap();
-                timer.start_time = 0.0001;
+                timer.start_time = 0.75;
             }
 
             // for each connection in that object
@@ -3161,6 +3161,17 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("13_ice_vault.MREA").into(), // research core
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
+    patcher.add_scly_patch(
+        resource_info!("03_mines.MREA").into(), // elite research
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(), // central dynamo
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001B03F8], // activate maze faster
+            vec![0x001B0349, 0x001B0356], // keep item aquisition cutscene (or players can get left down there)
+        ),
+    );
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
@@ -3216,17 +3227,6 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     patcher.add_scly_patch(
         resource_info!("05_mines_forcefields.MREA").into(), // elite control
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
-        resource_info!("03_mines.MREA").into(), // elite research
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
-    );
-    patcher.add_scly_patch(
-        resource_info!("07_mines_electric.MREA").into(), // central dynamo
-        move |ps, area| patch_remove_cutscenes(ps, area,
-            vec![0x001B03F8], // activate maze faster
-            vec![0x001B0349, 0x001B0356], // keep item aquisition cutscene (or players can get left down there)
-        ),
     );
     patcher.add_scly_patch(
         resource_info!("08_mines.MREA").into(), // MQA
