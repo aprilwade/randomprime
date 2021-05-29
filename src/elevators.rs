@@ -44,7 +44,7 @@ impl World {
 
     pub fn from_pak(pak_str: &str) -> Option<Self> {
         for world in World::iter() {
-            if pak_str == world.to_pak_str() {
+            if pak_str.to_lowercase() == world.to_pak_str().to_lowercase() {
                 return Some(world);
             }
         }

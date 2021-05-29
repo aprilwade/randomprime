@@ -106,6 +106,45 @@ pub struct LevelConfig
     pub rooms: HashMap<String, RoomConfig>,
 }
 
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CtwkConfig
+{
+    pub fov: Option<f32>,
+    pub player_size: Option<f32>,
+    pub morph_ball_size: Option<f32>,
+    pub easy_lava_escape: Option<bool>,
+    pub move_while_scan: Option<bool>,
+    pub scan_range: Option<f32>,
+    pub bomb_jump_height: Option<f32>,
+    pub bomb_jump_radius: Option<f32>,
+    pub grapple_beam_speed: Option<f32>,
+    pub aim_assist_angle: Option<f32>,
+    pub gravity: Option<f32>,
+    pub ice_break_timeout: Option<f32>,
+    pub ice_break_jump_count: Option<u32>,
+    pub ground_friction: Option<f32>,
+    pub coyote_frames: Option<u32>,
+    pub move_during_free_look: Option<bool>,
+    pub recenter_after_freelook: Option<bool>,
+    pub max_speed: Option<f32>,
+    pub max_acceleration: Option<f32>,
+    pub space_jump_impulse: Option<f32>,
+    pub eye_offset: Option<f32>,
+    pub toggle_free_look: Option<bool>,
+    pub two_buttons_for_free_look: Option<bool>,
+    pub disable_dash: Option<bool>,
+    pub varia_damage_reduction: Option<f32>,
+    pub gravity_damage_reduction: Option<f32>,
+    pub phazon_damage_reduction: Option<f32>,
+    pub hardmode_damage_mult: Option<f32>,
+    pub hardmode_weapon_mult: Option<f32>,
+    pub turn_speed: Option<f32>,
+    pub underwater_fog_distance: Option<f32>,
+    pub gun_position: Option<[f32;3]>,
+}
+
 #[derive(Debug)]
 pub struct PatchConfig
 {
@@ -154,6 +193,7 @@ pub struct PatchConfig
     pub credits_string: Option<String>,
     pub artifact_hints: Option<HashMap<String,String>>, // e.g. "Strength":"This item can be found in Ruined Fountain"
     pub artifact_temple_layer_overrides: Option<HashMap<String,bool>>,
+    pub ctwk_config: CtwkConfig,
 }
 
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
@@ -216,6 +256,9 @@ struct PatchConfigPrivate
 
     #[serde(default)]
     game_config: GameConfig,
+
+    #[serde(default)]
+    tweaks: CtwkConfig,
 
     #[serde(default)]
     level_data: HashMap<String, LevelConfig>,
@@ -542,6 +585,8 @@ impl PatchConfigPrivate
             
             credits_string: self.game_config.credits_string.clone(),
             artifact_hints: self.game_config.artifact_hints.clone(),
+
+            ctwk_config: self.tweaks.clone(),
         })
     }
 }

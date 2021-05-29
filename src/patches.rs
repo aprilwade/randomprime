@@ -19,6 +19,7 @@ use crate::patch_config::{
     PatchConfig,
     GameBanner,
     LevelConfig,
+    CtwkConfig,
 };
 
 use crate::{
@@ -2049,6 +2050,7 @@ fn patch_spawn_point_position<'r>(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     new_position: [f32; 3],
+    relative_position: bool,
     force_default: bool,
 )
 -> Result<(), String>
@@ -2061,7 +2063,14 @@ fn patch_spawn_point_position<'r>(
             if !obj.property_data.is_spawn_point() {continue;}
 
             let spawn_point = obj.property_data.as_spawn_point_mut().unwrap();
-            spawn_point.position = new_position.into();
+            if relative_position {
+                spawn_point.position[0] = spawn_point.position[0] + new_position[0];
+                spawn_point.position[1] = spawn_point.position[1] + new_position[1];
+                spawn_point.position[2] = spawn_point.position[2] + new_position[2];
+            } else {
+                spawn_point.position = new_position.into();
+            }
+
             if force_default {
                 spawn_point.default_spawn = 1;
             }
@@ -2983,6 +2992,7 @@ fn patch_dol<'r>(
     spawn_room: SpawnRoomData,
     version: Version,
     config: &PatchConfig,
+    remove_ball_color: bool,
 ) -> Result<(), String>
 {
     if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
@@ -3022,34 +3032,37 @@ fn patch_dol<'r>(
             .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
     }
 
-    // let ball_color_patch = ppcasm!(symbol_addr!("skBallInnerGlowColors", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallAuxGlowColors", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallTransFlashColors", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColors", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsJaggy", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsCharged", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
-    // let ball_color_patch = ppcasm!(symbol_addr!("BallGlowColors", version), {
-    //     .asciiz b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    // });
-    // dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    // TODO: missing 1 color (boost ball related)
+    if remove_ball_color {
+        let ball_color_patch = ppcasm!(symbol_addr!("skBallInnerGlowColors", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallAuxGlowColors", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallTransFlashColors", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColors", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsJaggy", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsCharged", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let ball_color_patch = ppcasm!(symbol_addr!("BallGlowColors", version), {
+            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        });
+        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+    }
 
     let cinematic_skip_patch = ppcasm!(symbol_addr!("ShouldSkipCinematic__22CScriptSpecialFunctionFR13CStateManager", version), {
             li      r3, 0x1;
@@ -3324,17 +3337,268 @@ fn empty_frigate_pak<'r>(file: &mut structs::FstEntryFile)
     Ok(())
 }
 
-fn patch_ctwk_player_gun(res: &mut structs::Resource)
+fn patch_ctwk_game(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     -> Result<(), String>
 {
     let mut ctwk = res.kind.as_ctwk_mut().unwrap();
-    let mut ctwk_player_gun = match &mut ctwk {
+    let mut ctwk_game = match &mut ctwk {
+        structs::Ctwk::CtwkGame(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkGame", res.file_id),
+    };
+
+    // println!("before - {:?}", ctwk_game);
+    ctwk_game.press_start_delay = 0.001;
+
+    if ctwk_config.fov.is_some() {
+        ctwk_game.fov = ctwk_config.fov.unwrap();
+    }
+
+    if ctwk_config.hardmode_damage_mult.is_some() {
+        ctwk_game.hardmode_damage_mult = ctwk_config.hardmode_damage_mult.unwrap();
+    }
+
+    if ctwk_config.hardmode_weapon_mult.is_some() {
+        ctwk_game.hardmode_weapon_mult = ctwk_config.hardmode_weapon_mult.unwrap();
+    }
+
+    if ctwk_config.underwater_fog_distance.is_some() {
+        let underwater_fog_distance = ctwk_config.underwater_fog_distance.unwrap();
+        ctwk_game.water_fog_distance_base = ctwk_game.water_fog_distance_base*underwater_fog_distance;
+        ctwk_game.water_fog_distance_range = ctwk_game.water_fog_distance_range*underwater_fog_distance;
+        ctwk_game.gravity_water_fog_distance_base = ctwk_game.gravity_water_fog_distance_base*underwater_fog_distance;
+        ctwk_game.gravity_water_fog_distance_range = ctwk_game.gravity_water_fog_distance_range*underwater_fog_distance;
+    }
+
+    Ok(())
+}
+
+fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let mut ctwk_player = match &mut ctwk {
+        structs::Ctwk::CtwkPlayer(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkPlayer", res.file_id),
+    };
+
+    if ctwk_config.player_size.is_some() {
+        let player_size = ctwk_config.player_size.unwrap();
+        ctwk_player.player_height = ctwk_player.player_height*player_size;
+        ctwk_player.player_xy_half_extent = ctwk_player.player_xy_half_extent*player_size;
+        ctwk_player.step_up_height = ctwk_player.step_up_height*player_size;
+        ctwk_player.step_down_height = ctwk_player.step_down_height*player_size;
+    }
+
+    if ctwk_config.morph_ball_size.is_some() {
+        ctwk_player.player_ball_half_extent = ctwk_player.player_ball_half_extent*ctwk_config.morph_ball_size.unwrap();
+    }
+
+    if ctwk_config.easy_lava_escape.unwrap_or(false) {
+        ctwk_player.lava_jump_factor = 100.0;
+        ctwk_player.lava_ball_jump_factor = 100.0;
+    }
+
+    // println!("before - {:?}", ctwk_player);
+    if ctwk_config.move_while_scan.unwrap_or(false) {
+        ctwk_player.scan_freezes_game = 0;
+    }
+
+    if ctwk_config.scan_range.is_some() {
+        let scan_range = ctwk_config.scan_range.unwrap();
+
+        ctwk_player.scanning_range = scan_range;
+
+        if scan_range > ctwk_player.scan_max_lock_distance {
+            ctwk_player.scan_max_lock_distance = scan_range;
+        }
+
+        if scan_range > ctwk_player.scan_max_target_distance {
+            ctwk_player.scan_max_target_distance = scan_range;
+        }        
+    }
+
+    if ctwk_config.bomb_jump_height.is_some() {
+        ctwk_player.bomb_jump_height = ctwk_player.bomb_jump_height*ctwk_config.bomb_jump_height.unwrap();
+    }
+
+    if ctwk_config.bomb_jump_radius.is_some() {
+        ctwk_player.bomb_jump_radius = ctwk_player.bomb_jump_radius*ctwk_config.bomb_jump_radius.unwrap();
+    }
+
+    if ctwk_config.grapple_beam_speed.is_some() {
+        ctwk_player.grapple_beam_speed = ctwk_player.grapple_beam_speed*ctwk_config.grapple_beam_speed.unwrap();
+    }
+
+    if ctwk_config.aim_assist_angle.is_some() {
+        let aim_assist_angle = ctwk_config.aim_assist_angle.unwrap();
+        ctwk_player.aim_assist_vertical_angle = aim_assist_angle;
+        ctwk_player.aim_assist_horizontal_angle = aim_assist_angle;
+    }
+
+    if ctwk_config.gravity.is_some() {
+        ctwk_player.normal_grav_accel = ctwk_player.normal_grav_accel*ctwk_config.gravity.unwrap();
+    }
+
+    if ctwk_config.ice_break_timeout.is_some() {
+        ctwk_player.frozen_timeout = ctwk_config.ice_break_timeout.unwrap();
+    }
+
+    if ctwk_config.ice_break_jump_count.is_some() {
+        ctwk_player.ice_break_jump_count = ctwk_config.ice_break_jump_count.unwrap();
+    }
+
+    if ctwk_config.ice_break_jump_count.is_some() {
+        ctwk_player.ice_break_jump_count = ctwk_config.ice_break_jump_count.unwrap();
+    }
+
+    if ctwk_config.ground_friction.is_some() {
+        ctwk_player.translation_friction[0] = ctwk_player.translation_friction[0]*ctwk_config.ground_friction.unwrap();
+    }
+
+    if ctwk_config.coyote_frames.is_some() {
+        ctwk_player.allowed_ledge_time = (ctwk_config.coyote_frames.unwrap() as f32)*(1.0/60.0);
+    }
+
+    if ctwk_config.move_during_free_look.unwrap_or(false) {
+        ctwk_player.move_during_free_look = 1;
+    }
+
+    if ctwk_config.recenter_after_freelook.unwrap_or(false) {
+        ctwk_player.freelook_turns_player = 0;
+    }
+    
+    if ctwk_config.toggle_free_look.unwrap_or(false) {
+        ctwk_player.hold_buttons_for_free_look = 0;
+    }
+
+    if ctwk_config.two_buttons_for_free_look.unwrap_or(false) {
+        ctwk_player.two_buttons_for_free_look = 1;
+    }
+
+    if ctwk_config.disable_dash.unwrap_or(false) {
+        ctwk_player.dash_enabled = 0;
+    }
+    
+    if ctwk_config.varia_damage_reduction.is_some() {
+        ctwk_player.varia_damage_reduction = ctwk_player.varia_damage_reduction*ctwk_config.varia_damage_reduction.unwrap();
+    }
+    
+    if ctwk_config.gravity_damage_reduction.is_some() {
+        ctwk_player.gravity_damage_reduction = ctwk_player.gravity_damage_reduction*ctwk_config.gravity_damage_reduction.unwrap();
+    }
+
+    if ctwk_config.phazon_damage_reduction.is_some() {
+        ctwk_player.phazon_damage_reduction = ctwk_player.phazon_damage_reduction*ctwk_config.phazon_damage_reduction.unwrap();
+    }
+
+    if ctwk_config.max_speed.is_some() {
+        let max_speed = ctwk_config.max_speed.unwrap();
+        ctwk_player.translation_max_speed[0] = ctwk_player.translation_max_speed[0]*max_speed;
+        ctwk_player.translation_max_speed[1] = ctwk_player.translation_max_speed[1]*max_speed;
+        ctwk_player.translation_max_speed[2] = ctwk_player.translation_max_speed[2]*max_speed;
+        ctwk_player.translation_max_speed[3] = ctwk_player.translation_max_speed[3]*max_speed;
+        ctwk_player.translation_max_speed[4] = ctwk_player.translation_max_speed[4]*max_speed;
+        ctwk_player.translation_max_speed[5] = ctwk_player.translation_max_speed[5]*max_speed;
+        ctwk_player.translation_max_speed[6] = ctwk_player.translation_max_speed[6]*max_speed;
+        ctwk_player.translation_max_speed[7] = ctwk_player.translation_max_speed[7]*max_speed;
+    }
+
+    if ctwk_config.max_acceleration.is_some() {
+        let max_acceleration = ctwk_config.max_acceleration.unwrap();
+        ctwk_player.translation_max_speed[0] = ctwk_player.translation_max_speed[0]*max_acceleration;
+        ctwk_player.translation_max_speed[1] = ctwk_player.translation_max_speed[1]*max_acceleration;
+        ctwk_player.translation_max_speed[2] = ctwk_player.translation_max_speed[2]*max_acceleration;
+        ctwk_player.translation_max_speed[3] = ctwk_player.translation_max_speed[3]*max_acceleration;
+        ctwk_player.translation_max_speed[4] = ctwk_player.translation_max_speed[4]*max_acceleration;
+        ctwk_player.translation_max_speed[5] = ctwk_player.translation_max_speed[5]*max_acceleration;
+        ctwk_player.translation_max_speed[6] = ctwk_player.translation_max_speed[6]*max_acceleration;
+        ctwk_player.translation_max_speed[7] = ctwk_player.translation_max_speed[7]*max_acceleration;
+    }
+
+    if ctwk_config.space_jump_impulse.is_some() {
+        ctwk_player.double_jump_impulse = ctwk_player.double_jump_impulse*ctwk_config.space_jump_impulse.unwrap();
+    }
+
+    if ctwk_config.eye_offset.is_some() {
+        ctwk_player.eye_offset = ctwk_player.eye_offset*ctwk_config.eye_offset.unwrap();
+    }
+
+    if ctwk_config.turn_speed.is_some() {
+        let turn_speed = ctwk_config.turn_speed.unwrap();
+        ctwk_player.turn_speed_multiplier = ctwk_player.turn_speed_multiplier*turn_speed;
+        ctwk_player.free_look_turn_speed_multiplier = ctwk_player.free_look_turn_speed_multiplier*turn_speed;
+        // there might be others
+    }
+
+    Ok(())
+}
+
+fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let ctwk_player_gun = match &mut ctwk {
         structs::Ctwk::CtwkPlayerGun(i) => i,
         _ => panic!("Failed to map res=0x{:X} as CtwkPlayerGun", res.file_id),
     };
-    println!("before - {:?}", ctwk_player_gun);
+
+    if ctwk_config.gun_position.is_some() {
+        let gun_position = ctwk_config.gun_position.unwrap();
+        ctwk_player_gun.gun_position[0] = ctwk_player_gun.gun_position[0] + gun_position[0];
+        ctwk_player_gun.gun_position[1] = ctwk_player_gun.gun_position[1] + gun_position[1];
+        ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
+    }
+
     Ok(())
 }
+
+fn patch_move_item_loss_scan<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer_count = scly.layers.len();
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        for obj in layer.objects.as_mut_vec() {
+            let mut _poi = obj.property_data.as_point_of_interest_mut();
+            if _poi.is_some() {
+                let poi = _poi.unwrap();
+                poi.position[1] = poi.position[1] + 2.0;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn patch_remove_control_disabler<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+)
+-> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer_count = scly.layers.len();
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        for obj in layer.objects.as_mut_vec() {
+            let mut _player_hint = obj.property_data.as_player_hint_mut();
+            if _player_hint.is_some() {
+                let player_hint = _player_hint.unwrap();
+                player_hint.inner_struct.unknowns[5] = 0; // always enable unmorphing
+                player_hint.inner_struct.unknowns[6] = 0; // always enable morphing
+                player_hint.inner_struct.unknowns[7] = 0; // always enable controls
+                player_hint.inner_struct.unknowns[8] = 0; // always enable boost
+            }
+        }
+    }
+
+    Ok(())
+}
+
 
 fn patch_bnr(
     file: &mut structs::FstEntryFile,
@@ -3498,16 +3762,24 @@ fn patch_qol_game_breaking(patcher: &mut PrimePatcher, version: Version) {
     // randomizer-induced bugfixes
     patcher.add_scly_patch(
         resource_info!("1a_morphballtunnel.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false)
+        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false, false)
     );
     patcher.add_scly_patch(
         resource_info!("05_bathhall.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false)
+        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false, false)
     );
     patcher.add_scly_patch(
         resource_info!("00_mines_savestation_b.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], true)
+        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
     );
+    patcher.add_scly_patch(
+        resource_info!("01_over_mainplaza.MREA").into(),
+        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.5], true, false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("0_elev_lava_b.MREA").into(),
+        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 1.0], true, false)
+    )
 }
 
 fn patch_qol_logical(patcher: &mut PrimePatcher)
@@ -3961,6 +4233,10 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
+    let remove_ball_color = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
+    let remove_control_disabler = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
+    let move_item_loss_scan = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) > 1.001;
+
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
 
     let frigate_done_room = {
@@ -4019,11 +4295,50 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
+    // Patch Tweaks.pak
+    patcher.add_resource_patch(
+        resource_info!("Game.CTWK").into(),
+        |res| patch_ctwk_game(res, &config.ctwk_config),
+    );
+    patcher.add_resource_patch(
+        resource_info!("Player.CTWK").into(),
+        |res| patch_ctwk_player(res, &config.ctwk_config),
+    );
+    patcher.add_resource_patch(
+        resource_info!("PlayerGun.CTWK").into(),
+        |res| patch_ctwk_player_gun(res, &config.ctwk_config),
+    );
+
+    /* TODO: add more tweaks
+    953a7c63.CTWK -> Game.CTWK
+    264a4972.CTWK -> Player.CTWK
+    f1ed8fd7.CTWK -> PlayerControls.CTWK
+    3faec012.CTWK -> PlayerControls2.CTWK
+    85ca11e9.CTWK -> PlayerRes.CTWK
+    6907a32d.CTWK -> PlayerGun.CTWK
+    33b3323a.CTWK -> GunRes.CTWK
+    5ed56350.CTWK -> Ball.CTWK
+    94c76ecd.CTWK -> Targeting.CTWK
+    39ad28d3.CTWK -> CameraBob.CTWK
+    5f24eff8.CTWK -> SlideShow.CTWK
+    ed2e48a9.CTWK -> Gui.CTWK
+    c9954e56.CTWK -> GuiColors.CTWK
+    e66a4f86.CTWK -> AutoMapper.CTWK
+    1d180d7c.CTWK -> Particle.CTWK
+    */
+
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
         let world = World::from_pak(pak_name).unwrap();
         
         for room_info in rooms.iter() {
+
+            if remove_control_disabler {
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    patch_remove_control_disabler,
+                );
+            }
 
             // Remove objects patch
             if config.qol_cosmetic {
@@ -4141,6 +4456,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             starting_room,
             version,
             config,
+            remove_ball_color,
         )
     );
 
@@ -4155,6 +4471,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             resource_info!("01_intro_hanger.MREA").into(),
             move |_ps, area| patch_frigate_teleporter(area, frigate_done_room),
         );
+
+        if move_item_loss_scan {
+            patcher.add_scly_patch(
+                resource_info!("02_intro_elevator.MREA").into(),
+                patch_move_item_loss_scan,
+            );
+        }
     }
 
     gc_disc.add_file(
