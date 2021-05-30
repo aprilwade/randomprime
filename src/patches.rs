@@ -3143,7 +3143,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("13_over_burningeffigy.MREA").into(), // geothermal core
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001401DD, 0x001401E3], // immediately move parts
+            vec![],
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("00h_mines_connect.MREA").into(), // vent shaft
