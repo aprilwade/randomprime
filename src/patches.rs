@@ -1996,6 +1996,13 @@ fn patch_remove_cutscenes(
                     trigger.scale[2] = 5.0;
                     trigger.position[2] = trigger.position[2] - 11.7;
                 }
+            } else if obj_id == 0x001201AB { // ventillation shaft end timer
+                // Disable gas at end of cutscene, not beggining
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::DEACTIVATE,
+                    target_object_id: 0x001200C2, // gas damage trigger
+                });
             }
         }
 
@@ -3140,7 +3147,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("00h_mines_connect.MREA").into(), // vent shaft
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00120085]), // puffers don't destroy wall if this is skipped TODO: use timer instead of cutscene
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001200C3, 0x001200DE], // activate gas faster
+            vec![0x00120085], // puffers don't destroy wall if this is skipped TODO: use timer instead of counter
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
