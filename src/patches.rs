@@ -1836,7 +1836,7 @@ fn patch_remove_cutscenes(
 )
     -> Result<(), String>
 {
-    // let room_id = area.mlvl_area.mrea;
+    let room_id = area.mlvl_area.mrea;
     let layer_count = area.layer_flags.layer_count as usize;
     let scly = area.mrea().scly_section_mut();
 
@@ -1890,7 +1890,7 @@ fn patch_remove_cutscenes(
                     target_object_id,
                 },
             ].into(),
-        },);
+        });
     }
 
     // for each layer
@@ -1941,7 +1941,8 @@ fn patch_remove_cutscenes(
                     if timers_to_zero.contains(&obj_id) {
                         0.1
                     } else {
-                        obj.property_data.as_camera().unwrap().shot_duration
+                        // obj.property_data.as_camera().unwrap().shot_duration
+                        0.1
                     }
                 };
 
@@ -3248,7 +3249,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 // progress cutscene
                 // 0x00100463, 0x0010046F,
                 // ridley intro cutscene
-                // 0x0010036F, 0x0010026C, 0x00100202, 0x00100207, 0x00100373, 0x001003C4, 0x001003D9, 0x001003DC, 0x001003E6, 0x001003CE, 0x0010020C, 0x0010021A, 0x001003EF, 0x001003E9, 0x0010021A, 0x00100491, 0x001003EE, 0x001003F0, 0x001003FE, 0x0010021F,
+                0x0010036F, 0x0010026C, 0x00100202, 0x00100207, 0x00100373, 0x001003C4, 0x001003D9, 0x001003DC, 0x001003E6, 0x001003CE, 0x0010020C, 0x0010021A, 0x001003EF, 0x001003E9, 0x0010021A, 0x00100491, 0x001003EE, 0x001003F0, 0x001003FE, 0x0010021F,
                 // crater entry/exit cutscene
                 0x001002C8, 0x001002B8, 0x001002C2,
             ],
@@ -3303,7 +3304,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     );
     patcher.add_scly_patch(
         resource_info!("09_ice_lobby.MREA").into(), // research entrance
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
@@ -3327,7 +3328,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x00200708, // Timer - Shield Off, Play Battle Music
             ],
             vec![],
-            true,
+            false,
         ),
     );
     patcher.add_scly_patch(
