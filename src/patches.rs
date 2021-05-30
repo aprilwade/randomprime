@@ -3180,8 +3180,8 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
     );
     patcher.add_scly_patch(
-        resource_info!("03_mines.MREA").into(), // elite research
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        resource_info!("03_mines.MREA").into(), // elite research (keep phazon elite cutscene)
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF]),
     );
     patcher.add_scly_patch(
         resource_info!("07_mines_electric.MREA").into(), // central dynamo
@@ -3193,6 +3193,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
+    patcher.add_scly_patch(
+        resource_info!("03_mines.MREA").into(), // elite research
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000D01A9], vec![]),
+    );
     patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
