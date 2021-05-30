@@ -1832,10 +1832,11 @@ fn patch_remove_cutscenes(
     area: &mut mlvl_wrapper::MlvlArea,
     timers_to_zero: Vec<u32>,
     skip_ids: Vec<u32>,
+    use_timers_instead_of_relay: bool,
 )
     -> Result<(), String>
 {
-    let room_id = area.mlvl_area.mrea;
+    // let room_id = area.mlvl_area.mrea;
     let layer_count = area.layer_flags.layer_count as usize;
     let scly = area.mrea().scly_section_mut();
 
@@ -1891,7 +1892,7 @@ fn patch_remove_cutscenes(
             ].into(),
         },);
     }
-    
+
     // for each layer
     for i in 0..layer_count {
         let layer = &mut scly.layers.as_mut_vec()[i];
@@ -1902,7 +1903,7 @@ fn patch_remove_cutscenes(
             let obj_id = obj.instance_id & 0x00FFFFFF; // remove uper encoding byte
 
             // If it's a cutscene-related timer, make it take 1 frame
-            if timers_to_zero.contains(&obj_id) {
+            if obj.property_data.is_timer() && timers_to_zero.contains(&obj_id) {
                 let timer = obj.property_data.as_timer_mut().unwrap();
                 timer.start_time = 0.1;
             }
@@ -1936,11 +1937,50 @@ fn patch_remove_cutscenes(
                     }
                 };
 
-                // relays send messages on ZERO, not ACTIVE/INACTIVE
-                for connection in relay.connections.as_mut_vec().iter_mut() {
-                    if connection.state == structs::ConnectionState::ACTIVE || connection.state == structs::ConnectionState::INACTIVE {
+                let shot_duration = {
+                    if timers_to_zero.contains(&obj_id) {
+                        0.1
+                    } else {
+                        obj.property_data.as_camera().unwrap().shot_duration
+                    }
+                };
+
+                let timer_id = ps.fresh_instance_id_range.next().unwrap();
+                let mut timer = structs::SclyObject {
+                    instance_id: timer_id,
+                    property_data: structs::Timer {
+                        name: b"cutscene-replacement\0".as_cstr(),
+                        start_time: shot_duration,
+                        max_random_add: 0.0,
+                        reset_to_zero: 0,
+                        start_immediately: 0,
+                        active: 1,
+                    }.into(),
+                    connections: vec![].into(),
+                };
+
+                let relay_connections = relay.connections.as_mut_vec();
+                for connection in relay_connections.iter_mut() {
+                    if connection.state == structs::ConnectionState::INACTIVE && use_timers_instead_of_relay {
+                        timer.connections.as_mut_vec().push(structs::Connection {
+                            state: structs::ConnectionState::ZERO,
+                            message: connection.message,
+                            target_object_id: connection.target_object_id,
+                        });
+                    } else if connection.state == structs::ConnectionState::ACTIVE || (connection.state == structs::ConnectionState::INACTIVE && !use_timers_instead_of_relay) {
                         connection.state = structs::ConnectionState::ZERO;
                     }
+                }
+
+                if use_timers_instead_of_relay {
+                    relay_connections.push(structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message:  structs::ConnectionMsg::RESET_AND_START,
+                        target_object_id: timer_id,
+                    });
+
+                    relay_connections.retain(|conn| conn.state != structs::ConnectionState::INACTIVE);
+                    objs_to_add.push(timer);
                 }
 
                 objs_to_add.push(relay);
@@ -1955,13 +1995,13 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::SET_TO_ZERO,
                     target_object_id: 0x04252FC0, // spawn point by item
                 });
+            } else if obj_id == 0x001E027E { // observatory scan
+                // just cut out all the confusion by having the scan always active
+                obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
             } else if obj_id == 0x00170153 { // magmoor workstation cutscene (power activated)
                 // play this cutscene, but only for a second
                 // this is to allow players to get floaty jump without having red mist
                 obj.property_data.as_camera_mut().unwrap().shot_duration = 4.0;
-            } else if obj_id == 0x001E027E { // observatory scan
-                // just cut out all the confusion by having the scan always active
-                obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
             } else if obj_id == 0x00070062 { // subchamber 2 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -3044,7 +3084,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("00j_over_hall.MREA").into(), // temple security station
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("15_energycores.MREA").into(), // energy core
@@ -3058,41 +3098,43 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
                 0x002C01BC, // unlock door
             ],
             vec![],
+            false,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("10_over_1alavaarea.MREA").into(), // magmoor workstation
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153]), // skip patching 1st cutscene (special floaty case)
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153], false), // skip patching 1st cutscene (special floaty case)
     );
     patcher.add_scly_patch(
         resource_info!("07_under_intro_reactor.MREA").into(), // reactor core
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(), // life grove
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4]), // skipping the chozo ghost cutscene somehow sends the ghosts OoB
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("01_mainplaza.MREA").into(), // main plaza
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![],
             vec![0x000202A9, 0x000202A8, 0x000202B7], // keep the ridley cutscene (it's a major cutscene)
+            false,
         ),
     );
     patcher.add_scly_patch(
@@ -3101,35 +3143,36 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
             vec![0x00020443], // turn the forcefield off faster
             vec![0x00020021, 0x00020253, // play crane cutscene normally as there is no benefit to skipping it
             ],
+            false,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("11_over_muddywaters_b.MREA").into(), // lava lake
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("14_tl_base01.MREA").into(), // tower of light
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("04_maproom_d.MREA").into(), // vault
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("0v_connect_tunnel.MREA").into(), // sun tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("07_ruinedroof.MREA").into(), // training chamber
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("11_wateryhall.MREA").into(), // watery hall
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("18_halfpipe.MREA").into(), // crossway
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("17_chozo_bowling.MREA").into(), // hall of the elders
@@ -3139,6 +3182,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
                 0x003400F5, 0x00340046, 0x0034004A, 0x003400EA, 0x0034004F, // leave chozo bowling cutscenes to avoid getting stuck
                 0x0034025C, 0x00340264, 0x00340268, 0x0034025B, // leave missile station cutsene
             ],
+            false,
         ),
     );
     patcher.add_scly_patch(
@@ -3146,72 +3190,90 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x001401DD, 0x001401E3], // immediately move parts
             vec![],
+            false,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("00h_mines_connect.MREA").into(), // vent shaft
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x001200C3, 0x001200DE], // activate gas faster
-            vec![0x00120085], // puffers don't destroy wall if this is skipped TODO: use timer instead of counter
+            vec![],
+            true,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("04_ice_boost_canyon.MREA").into(), // Phendrana canyon
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_ice_shorelines.MREA").into(), // ruined courtyard
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("11_ice_observatory.MREA").into(), // Observatory
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E0042, 0x001E000E], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E0042, 0x001E000E], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("08_ice_ridley.MREA").into(), // control tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(), // research core
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("03_mines.MREA").into(), // elite research (keep phazon elite cutscene)
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF], false),
     );
     patcher.add_scly_patch(
         resource_info!("07_mines_electric.MREA").into(), // central dynamo
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x001B03F8], // activate maze faster
             vec![0x001B0349, 0x001B0356], // keep item aquisition cutscene (or players can get left down there)
+            true,
         ),
     );
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     patcher.add_scly_patch(
+        resource_info!("07_stonehenge.MREA").into(), // artifact temple
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![],
+            vec![
+                // progress cutscene
+                // 0x00100463, 0x0010046F,
+                // ridley intro cutscene
+                // 0x0010036F, 0x0010026C, 0x00100202, 0x00100207, 0x00100373, 0x001003C4, 0x001003D9, 0x001003DC, 0x001003E6, 0x001003CE, 0x0010020C, 0x0010021A, 0x001003EF, 0x001003E9, 0x0010021A, 0x00100491, 0x001003EE, 0x001003F0, 0x001003FE, 0x0010021F,
+                // crater entry/exit cutscene
+                0x001002C8, 0x001002B8, 0x001002C2,
+            ],
+            true,
+        ),
+    );
+    patcher.add_scly_patch(
         resource_info!("03_mines.MREA").into(), // elite research
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000D01A9], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000D01A9], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("19_hive_totem.MREA").into(), // hive totem
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("1a_morphball_shrine.MREA").into(), // ruined shrine
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("03_monkey_lower.MREA").into(), // burn dome
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("22_Flaahgra.MREA").into(), // sunchamber
@@ -3228,31 +3290,32 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x00250123, // keep just the first camera angle of the death cutscene to prevent underwater when going for pre-floaty
                 0x00252FC0, // the last reposition is important for floaty jump
             ],
+            false,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B]), // keep fight start reposition for wavesun
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B], true), // keep fight start reposition for wavesun
     );
     patcher.add_scly_patch(
         resource_info!("09_ice_lobby.MREA").into(), // research entrance
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("02_mines_shotemup.MREA").into(), // mine security station
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("05_mines_forcefields.MREA").into(), // elite control
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("08_mines.MREA").into(), // MQA
@@ -3264,6 +3327,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x00200708, // Timer - Shield Off, Play Battle Music
             ],
             vec![],
+            true,
         ),
     );
     patcher.add_scly_patch(
@@ -3274,6 +3338,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x001A0282, 0x001A0283, 0x001A02B3, 0x001A02BF, 0x001A0284, 0x001A031A, // cameras
                 0x001A0294, 0x001A02B9, // player actor
             ],
+            true,
         ),
     );
     patcher.add_scly_patch( // phazon infusion chamber
@@ -3284,25 +3349,26 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x0005002B, 0x0005002C, 0x0005007D, 0x0005002D, 0x00050032, 0x00050078, 0x00050033, 0x00050034, 0x00050035, 0x00050083, // cameras
                 0x0005002E, 0x0005008B, 0x00050089, // player actors
             ],
+            false,
         ),
     );
 
     // subchambers 1-4 (see special handling for exo aggro)
     patcher.add_scly_patch(
         resource_info!("03b_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("03c_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("03d_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("03e_crater.MREA").into(),
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![]),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
 
     // play subchamber 5 cutscene normally (players can't natrually pass through the ceiling of prime's lair)
@@ -3315,7 +3381,8 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
                 0x000B019D, 0x000B008B, 0x000B008D, 0x000B0093, 0x000B0094, 0x000B00A7,
                 0x000B00AF, 0x000B00E1, 0x000B00DF, 0x000B00B0, 0x000B00D3, 0x000B00E3,
                 0x000B00E6, 0x000B0095, 0x000B00E4,
-            ], 
+            ],
+            true,
         ),
     );
 }
