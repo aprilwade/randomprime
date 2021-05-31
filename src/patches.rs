@@ -945,10 +945,32 @@ fn rotate(mut coordinate: [f32; 3], mut rotation: [f32; 3], center: [f32; 3])
     coordinate
 }
 
+fn patch_samus_actor_size<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    player_size: f32,
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        for obj in layer.objects.as_mut_vec() {
+            if obj.property_data.is_player_actor() {
+                let player_actor = obj.property_data.as_player_actor_mut().unwrap();
+                player_actor.scale[0] = player_actor.scale[0]*player_size;
+                player_actor.scale[1] = player_actor.scale[1]*player_size;
+                player_actor.scale[2] = player_actor.scale[2]*player_size;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
     level_data: &HashMap<String, LevelConfig>,
     auto_enabled_elevators: bool,
+    player_size: f32,
 )
 -> (bool, bool)
 {
@@ -988,6 +1010,10 @@ fn make_elevators_patch<'a>(
                         wt.mlvl = ResId::new(dest.mlvl);
                         wt.volume = 0; // Turning off the wooshing sound
                                        // todo: only turn off if non-transporter destination
+
+                        wt.player_scale[0] = wt.player_scale[0]*player_size;
+                        wt.player_scale[1] = wt.player_scale[1]*player_size;
+                        wt.player_scale[2] = wt.player_scale[2]*player_size;
                     }
                 }
 
@@ -4354,8 +4380,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     -> Result<(), String>
 {
     let remove_ball_color = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
-    let remove_control_disabler = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
-    let move_item_loss_scan = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) > 1.001;
+    let remove_control_disabler = config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
+    let move_item_loss_scan = config.ctwk_config.player_size.clone().unwrap_or(1.0) > 1.001;
 
     let starting_room = SpawnRoomData::from_str(&config.starting_room);
 
@@ -4457,6 +4483,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 patcher.add_scly_patch(
                     (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     patch_remove_control_disabler,
+                );
+            }
+
+            if config.ctwk_config.player_size.is_some() {
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    move |ps, area| patch_samus_actor_size(ps, area, config.ctwk_config.player_size.clone().unwrap()),
                 );
             }
 
@@ -4566,6 +4599,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         &mut patcher,
         &config.level_data,
         config.auto_enabled_elevators,
+        config.ctwk_config.player_size.clone().unwrap_or(1.0),
     );
 
     // set save spawn room

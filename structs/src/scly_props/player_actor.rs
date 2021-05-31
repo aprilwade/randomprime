@@ -6,9 +6,8 @@ use reader_writer::generic_array::GenericArray;
 use crate::{ResId, SclyPropertyData};
 use crate::res_id::*;
 use crate::scly_props::structs::{
-    ActorParameters, AncsProp, DamageVulnerability, HealthInfo, PlayerActorParams
+    ActorParameters, AncsProp, DamageVulnerability, HealthInfo
 };
-
 
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
@@ -41,6 +40,22 @@ pub struct PlayerActor<'r>
     pub active: u8,
     pub player_actor_params: PlayerActorParams,
     pub unknown8: u32,
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Debug, Clone)]
+pub struct PlayerActorParams
+{
+    #[auto_struct(derive = 5 + unknown5.is_some() as u32)]
+    prop_count: u32,
+
+    pub unknown0: u8,
+    pub unknown1: u8,
+    pub unknown2: u8,
+    pub unknown3: u8,
+    pub unknown4: u8,
+    #[auto_struct(init = if prop_count == 6 { Some(()) } else { None })]
+    pub unknown5: Option<u8>,
 }
 
 impl<'r> SclyPropertyData for PlayerActor<'r>
