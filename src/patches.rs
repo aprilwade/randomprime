@@ -2044,6 +2044,16 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::DEACTIVATE,
                     target_object_id: 0x001200C2, // gas damage trigger
                 });
+            } else if vec![0x001200B8, 0x001200B7, 0x001200B6, 0x001200B5, 0x001200B4, 0x001200B2].contains(&obj_id) { // vent shaft puffer
+                // increment the dead puffer counter if killed by anything
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::DEAD,
+                    message: structs::ConnectionMsg::INCREMENT,
+                    target_object_id: 0x00120094, // dead puffer counter
+                });
+            } else if obj_id == 0x00120060 { // kill puffer trigger
+                // the puffers will increment the counter instead of me, the kill trigger
+                obj.connections.as_mut_vec().retain(|_conn| false);
             }
         }
 
@@ -3080,6 +3090,14 @@ fn patch_qol_cosmetic(
 
 fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(), // MQA (just first cutscene)
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![],
+            vec![0x002000CF], // 2nd cutscene
+            false,
+        ),
+    );
+    patcher.add_scly_patch(
         resource_info!("12_ice_research_b.MREA").into(),
         move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
     );
@@ -3135,7 +3153,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![],
             vec![0x000202A9, 0x000202A8, 0x000202B7], // keep the ridley cutscene (it's a major cutscene)
-            false,
+            true,
         ),
     );
     patcher.add_scly_patch(
@@ -3300,11 +3318,19 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     );
     patcher.add_scly_patch(
         resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000E019D, 0x000E019B], true), // keep fight start reposition for wavesun
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x000E0057], // Faster adult breakout
+            vec![0x000E019D, 0x000E019B], // keep fight start reposition for wavesun
+            true,
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("09_ice_lobby.MREA").into(), // research entrance
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001402F7, 0x00140243, 0x001402D6, 0x001402D0, 0x001402B3], // start fight faster
+            vec![],
+            false
+        ),
     );
     patcher.add_scly_patch(
         resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
