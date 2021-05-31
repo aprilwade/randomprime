@@ -1941,8 +1941,11 @@ fn patch_remove_cutscenes(
                     if timers_to_zero.contains(&obj_id) {
                         0.1
                     } else {
-                        // obj.property_data.as_camera().unwrap().shot_duration
-                        0.1
+                        if room_id == 0x2398E906 {
+                            obj.property_data.as_camera().unwrap().shot_duration
+                        } else {
+                            0.1
+                        }
                     }
                 };
 
