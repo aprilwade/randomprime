@@ -3149,14 +3149,6 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
-        move |ps, area| patch_remove_cutscenes(ps, area,
-            vec![],
-            vec![0x000202A9, 0x000202A8, 0x000202B7], // keep the ridley cutscene (it's a major cutscene)
-            true,
-        ),
-    );
-    patcher.add_scly_patch(
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x00020443], // turn the forcefield off faster
@@ -3258,7 +3250,19 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
 }
 
+fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
+    Ok(())
+}
+
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(),
+        patch_ridley_phendrana_shorelines_cinematic
+    );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(), // artifact temple
         move |ps, area| patch_remove_cutscenes(ps, area,
@@ -3311,10 +3315,6 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
             ],
             false,
         ),
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(), // phen shorelines
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("07_ice_chapel.MREA").into(), // chapel of the elders
