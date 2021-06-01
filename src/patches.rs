@@ -2949,7 +2949,7 @@ fn patch_credits(
             write!(output, "\n\n{}: {}", pickup_name, room_name).unwrap();
         }
     }
-    output = format!("{}{}", output, "\n\n\n\n\0");
+    output = format!("{}{}", output, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0");
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
