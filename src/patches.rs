@@ -2058,6 +2058,12 @@ fn patch_remove_cutscenes(
                 // the puffers will increment the counter instead of me, the kill trigger
                 obj.connections.as_mut_vec().retain(|_conn| false);
             }
+
+            // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
+            if obj.property_data.is_ball_trigger() {
+                let ball_trigger = obj.property_data.as_ball_trigger_mut().unwrap();
+                ball_trigger.force = 10.0;
+            }
         }
 
         // add all relays
