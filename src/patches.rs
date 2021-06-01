@@ -3247,6 +3247,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF], false),
     );
     patcher.add_scly_patch(
+        resource_info!("06_mines_elitebustout.MREA").into(), // omega reserach
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+    );
+    patcher.add_scly_patch(
         resource_info!("07_mines_electric.MREA").into(), // central dynamo
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x001B03F8], // activate maze faster
