@@ -4499,6 +4499,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 );
             }
 
+            if config.force_vanilla_layout {continue;}
+
             // Remove objects patch
             if config.qol_cosmetic {
                 patcher.add_scly_patch((pak_name.as_bytes(), room_info.room_id.to_u32()), move |_, area| {
@@ -4608,7 +4610,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         config.ctwk_config.player_size.clone().unwrap_or(1.0),
     );
 
-    // set save spawn room
     patcher.add_file_patch(
         b"default.dol",
         |file| patch_dol(
@@ -4645,25 +4646,27 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         structs::FstEntryFile::ExternalFile(Box::new(rel_config)),
     )?;
 
-    const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
-        resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
-        resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
-        resource_info!("07_Over_Stonehenge Totem 10.STRG"), // World
-        resource_info!("07_Over_Stonehenge Totem 9.STRG"), // Sun
-        resource_info!("07_Over_Stonehenge Totem 3.STRG"), // Elder
-        resource_info!("07_Over_Stonehenge Totem 11.STRG"), // Spirit
-        resource_info!("07_Over_Stonehenge Totem 1.STRG"), // Truth
-        resource_info!("07_Over_Stonehenge Totem 7.STRG"), // Chozo
-        resource_info!("07_Over_Stonehenge Totem 6.STRG"), // Warrior
-        resource_info!("07_Over_Stonehenge Totem 12.STRG"), // Newborn
-        resource_info!("07_Over_Stonehenge Totem 8.STRG"), // Nature
-        resource_info!("07_Over_Stonehenge Totem 2.STRG"), // Strength
-    ];
-    for (res_info, strg_text) in ARTIFACT_TOTEM_SCAN_STRGS.iter().zip(artifact_totem_strings.iter()) {
-        patcher.add_resource_patch(
-            (*res_info).into(),
-            move |res| patch_artifact_totem_scan_strg(res, &strg_text),
-        );
+    if !config.force_vanilla_layout {
+        const ARTIFACT_TOTEM_SCAN_STRGS: &[ResourceInfo] = &[
+            resource_info!("07_Over_Stonehenge Totem 5.STRG"), // Lifegiver
+            resource_info!("07_Over_Stonehenge Totem 4.STRG"), // Wild
+            resource_info!("07_Over_Stonehenge Totem 10.STRG"), // World
+            resource_info!("07_Over_Stonehenge Totem 9.STRG"), // Sun
+            resource_info!("07_Over_Stonehenge Totem 3.STRG"), // Elder
+            resource_info!("07_Over_Stonehenge Totem 11.STRG"), // Spirit
+            resource_info!("07_Over_Stonehenge Totem 1.STRG"), // Truth
+            resource_info!("07_Over_Stonehenge Totem 7.STRG"), // Chozo
+            resource_info!("07_Over_Stonehenge Totem 6.STRG"), // Warrior
+            resource_info!("07_Over_Stonehenge Totem 12.STRG"), // Newborn
+            resource_info!("07_Over_Stonehenge Totem 8.STRG"), // Nature
+            resource_info!("07_Over_Stonehenge Totem 2.STRG"), // Strength
+        ];
+        for (res_info, strg_text) in ARTIFACT_TOTEM_SCAN_STRGS.iter().zip(artifact_totem_strings.iter()) {
+            patcher.add_resource_patch(
+                (*res_info).into(),
+                move |res| patch_artifact_totem_scan_strg(res, &strg_text),
+            );
+        }
     }
 
     patcher.add_resource_patch(
@@ -4729,13 +4732,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
-    if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_major_cutscenes {
-        // If we have a non-default start point, patch the landing site to avoid
-        // weirdness with cutscene triggers and the ship spawning.
-        patcher.add_scly_patch(
-            resource_info!("01_over_mainplaza.MREA").into(),
-            patch_landing_site_cutscene_triggers
-        );
+    if !config.force_vanilla_layout {
+        if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_major_cutscenes {
+            // If we have a non-default start point, patch the landing site to avoid
+            // weirdness with cutscene triggers and the ship spawning.
+            patcher.add_scly_patch(
+                resource_info!("01_over_mainplaza.MREA").into(),
+                patch_landing_site_cutscene_triggers
+            );
+        }
     }
 
     patch_heat_damage_per_sec(&mut patcher, config.heat_damage_per_sec);

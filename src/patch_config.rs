@@ -150,6 +150,8 @@ pub struct PatchConfig
 {
     pub seed: u64,
 
+    pub force_vanilla_layout: bool,
+
     pub input_iso: memmap::Mmap,
     pub iso_format: IsoFormat,
     pub output_iso: File,
@@ -249,6 +251,7 @@ struct PatchConfigPrivate
 {
     input_iso: Option<String>,
     output_iso: Option<String>,
+    force_vanilla_layout: Option<bool>,
     seed: Option<u64>,
 
     #[serde(default)]
@@ -289,6 +292,9 @@ impl PatchConfig
                 .long("profile")
                 .help("Path to JSON file with patch configuration (cli config takes priority). See documentation for details.")
                 .takes_value(true))
+            .arg(Arg::with_name("force vanilla layout")
+                .long("force-vanilla-layout")
+                .help("use this to play the vanilla game, but with a custom size factor"))
             .arg(Arg::with_name("qol game breaking")
                 .long("qol-game-breaking")
                 .help("Fix soft locks and crashes that retro didn't bother addressing"))
@@ -399,6 +405,7 @@ impl PatchConfig
 
         // bool
         populate_config_bool!(matches;
+            "force vanilla layout" => patch_config.force_vanilla_layout,
             "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
             "qol logical" => patch_config.preferences.qol_logical,
@@ -488,6 +495,8 @@ impl PatchConfigPrivate
             IsoFormat::Iso
         };
 
+        let force_vanilla_layout = self.force_vanilla_layout.unwrap_or(false);
+
         let artifact_hint_behavior = {
             let artifact_hint_behavior_string = self.preferences.artifact_hint_behavior
                 .as_deref()
@@ -510,20 +519,20 @@ impl PatchConfigPrivate
         };
 
         let map_default_state = {
-            let map_default_state_string = self.preferences.map_default_state
-                                               .as_deref()
-                                               .unwrap_or("default")
-                                               .trim()
-                                               .to_lowercase();
-            match &map_default_state_string[..] {
-                "default" => MapState::Default,
-                "visited" => MapState::Visited,
-                "visible" => MapState::Visible,
-                _ => Err(format!(
-                    "Unhandled map default state - '{}'",
-                    map_default_state_string
-                ))?,
-            }
+                let map_default_state_string = self.preferences.map_default_state
+                                                .as_deref()
+                                                .unwrap_or("default")
+                                                .trim()
+                                                .to_lowercase();
+                match &map_default_state_string[..] {
+                    "default" => MapState::Default,
+                    "visited" => MapState::Visited,
+                    "visible" => MapState::Visible,
+                    _ => Err(format!(
+                        "Unhandled map default state - '{}'",
+                        map_default_state_string
+                    ))?,
+                }
         };
 
         let flaahgra_music_files = self.preferences.trilogy_disc_path.as_ref()
@@ -539,19 +548,89 @@ impl PatchConfigPrivate
             None => HashMap::new(),
         };
 
+        let qol_game_breaking   = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_game_breaking.unwrap_or(true)
+            }
+        };
+        let qol_logical         = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_logical.unwrap_or(true)
+            }
+        };
+        let qol_cosmetic        = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_cosmetic.unwrap_or(true)
+            }
+        };
+        let qol_minor_cutscenes = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_minor_cutscenes.unwrap_or(false)
+            }
+        };
+        let qol_major_cutscenes = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_major_cutscenes.unwrap_or(false)
+            }
+        };
+
+        let starting_room = {
+            if force_vanilla_layout {
+                "Frigate:Exterior Docking Hangar".to_string()
+            } else {
+                self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string())
+            }
+        };
+
+        let starting_items = {
+            if force_vanilla_layout {
+                StartingItems::from_u64(2188378143)
+            } else {
+                self.game_config.starting_items.clone().unwrap_or_else(|| StartingItems::from_u64(1))
+            }
+        };
+
+        let main_menu_message = {
+            if force_vanilla_layout {
+                "".to_string()
+            } else {
+                self.game_config.main_menu_message.clone().unwrap_or_else(|| "randomprime".to_string())
+            }
+        };
+
+        let credits_string = {
+            if force_vanilla_layout {
+                Some("".to_string())
+            } else {
+                self.game_config.credits_string.clone()
+            }
+        };
+
         Ok(PatchConfig {
             input_iso,
             iso_format,
             output_iso,
+            force_vanilla_layout,
+
             seed: self.seed.unwrap_or(123),
 
             level_data: self.level_data.clone(),
 
-            qol_game_breaking: self.preferences.qol_game_breaking.unwrap_or(true),
-            qol_logical: self.preferences.qol_logical.unwrap_or(true),
-            qol_cosmetic: self.preferences.qol_cosmetic.unwrap_or(true),
-            qol_minor_cutscenes: self.preferences.qol_minor_cutscenes.unwrap_or(false),
-            qol_major_cutscenes: self.preferences.qol_major_cutscenes.unwrap_or(false),
+            qol_game_breaking,
+            qol_logical,
+            qol_cosmetic,
+            qol_minor_cutscenes,
+            qol_major_cutscenes,
 
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,
@@ -560,7 +639,7 @@ impl PatchConfigPrivate
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
 
-            starting_room: self.game_config.starting_room.clone().unwrap_or("Tallon:Landing Site".to_string()),
+            starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
 
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
@@ -570,8 +649,7 @@ impl PatchConfigPrivate
             artifact_temple_layer_overrides: self.game_config.artifact_temple_layer_overrides.clone(),
             map_default_state,
 
-            starting_items: self.game_config.starting_items.clone()
-            .unwrap_or_else(|| StartingItems::from_u64(1)),
+            starting_items,
             item_loss_items: self.game_config.item_loss_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
 
@@ -580,10 +658,9 @@ impl PatchConfigPrivate
 
             game_banner: self.game_config.game_banner.clone().unwrap_or_default(),
             comment: self.game_config.comment.clone().unwrap_or(String::new()),
-            main_menu_message: self.game_config.main_menu_message.clone()
-                .unwrap_or_else(|| "randomprime".to_string()),
-            
-            credits_string: self.game_config.credits_string.clone(),
+            main_menu_message,
+
+            credits_string,
             artifact_hints: self.game_config.artifact_hints.clone(),
 
             ctwk_config: self.tweaks.clone(),
