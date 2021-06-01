@@ -3763,7 +3763,36 @@ impl fmt::Display for Version
     }
 }
 
-fn patch_qol_game_breaking(patcher: &mut PrimePatcher, version: Version) {
+fn patch_qol_game_breaking(
+    patcher: &mut PrimePatcher,
+    version: Version,
+    force_vanilla_layout: bool)
+{
+    
+    // randomizer-induced bugfixes
+    patcher.add_scly_patch(
+        resource_info!("1a_morphballtunnel.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false, false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_bathhall.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false, false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00_mines_savestation_b.MREA").into(),
+        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_over_mainplaza.MREA").into(),
+        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.5], true, false)
+    );
+    patcher.add_scly_patch(
+        resource_info!("0_elev_lava_b.MREA").into(),
+        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 1.0], true, false)
+    );
+
+    if force_vanilla_layout { return; }
+
     // undo retro "fixes"
     if version == Version::NtscU0_00 {
         patcher.add_scly_patch(
@@ -3846,28 +3875,6 @@ fn patch_qol_game_breaking(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("07_mines_electric.MREA").into(),
         patch_fix_central_dynamo_crash
     );
-
-    // randomizer-induced bugfixes
-    patcher.add_scly_patch(
-        resource_info!("1a_morphballtunnel.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [124.53, -79.78, 22.84], false, false)
-    );
-    patcher.add_scly_patch(
-        resource_info!("05_bathhall.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [210.512, -82.424, 19.2174], false, false)
-    );
-    patcher.add_scly_patch(
-        resource_info!("00_mines_savestation_b.MREA").into(),
-        move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_over_mainplaza.MREA").into(),
-        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.5], true, false)
-    );
-    patcher.add_scly_patch(
-        resource_info!("0_elev_lava_b.MREA").into(),
-        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 1.0], true, false)
-    )
 }
 
 fn patch_qol_logical(patcher: &mut PrimePatcher)
@@ -4760,7 +4767,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if config.qol_game_breaking {
-        patch_qol_game_breaking(&mut patcher, version);
+        patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout);
     }
 
     if config.qol_cosmetic {

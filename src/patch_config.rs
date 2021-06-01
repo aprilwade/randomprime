@@ -550,7 +550,7 @@ impl PatchConfigPrivate
 
         let qol_game_breaking   = {
             if force_vanilla_layout {
-                false
+                true
             } else {
                 self.preferences.qol_game_breaking.unwrap_or(true)
             }
