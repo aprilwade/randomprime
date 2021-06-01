@@ -966,14 +966,48 @@ fn patch_samus_actor_size<'r>(
     Ok(())
 }
 
+fn patch_elevator_actor_size<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    player_size: f32,
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec().iter_mut() {
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if !obj.property_data.is_world_transporter() { continue; }
+            let wt = obj.property_data.as_world_transporter_mut().unwrap();
+            wt.player_scale[0] = wt.player_scale[0]*player_size;
+            wt.player_scale[1] = wt.player_scale[1]*player_size;
+            wt.player_scale[2] = wt.player_scale[2]*player_size;
+        }
+    }
+
+    Ok(())
+}
+
 fn make_elevators_patch<'a>(
     patcher: &mut PrimePatcher<'_, 'a>,
     level_data: &HashMap<String, LevelConfig>,
     auto_enabled_elevators: bool,
     player_size: f32,
+    force_vanilla_layout: bool,
 )
 -> (bool, bool)
 {
+    for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
+        for room_info in rooms.iter() {
+            patcher.add_scly_patch(
+                (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                move |ps, area| patch_elevator_actor_size(ps, area, player_size),
+            );
+        }
+    }
+
+    if force_vanilla_layout {
+        return (false, false);
+    }
+
     let mut skip_frigate = true;
     let mut skip_ending_cinematic = false;
     for (_, level) in level_data.iter() {
@@ -1010,10 +1044,6 @@ fn make_elevators_patch<'a>(
                         wt.mlvl = ResId::new(dest.mlvl);
                         wt.volume = 0; // Turning off the wooshing sound
                                        // todo: only turn off if non-transporter destination
-
-                        wt.player_scale[0] = wt.player_scale[0]*player_size;
-                        wt.player_scale[1] = wt.player_scale[1]*player_size;
-                        wt.player_scale[2] = wt.player_scale[2]*player_size;
                     }
                 }
 
@@ -4615,6 +4645,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         &config.level_data,
         config.auto_enabled_elevators,
         config.ctwk_config.player_size.clone().unwrap_or(1.0),
+        config.force_vanilla_layout,
     );
 
     patcher.add_file_patch(
