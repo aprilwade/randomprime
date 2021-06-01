@@ -3236,7 +3236,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("08_ice_ridley.MREA").into(), // control tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002702DD], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(), // research core
