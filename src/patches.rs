@@ -4041,7 +4041,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("07_ruinedroof.MREA").into(), // training chamber
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000C0153, 0x000C0154, 0x000C015B], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("11_wateryhall.MREA").into(), // watery hall
