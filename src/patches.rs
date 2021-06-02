@@ -2648,6 +2648,17 @@ fn patch_remove_cutscenes(
             } else if obj_id == 0x00120060 { // kill puffer trigger
                 // the puffers will increment the counter instead of me, the kill trigger
                 obj.connections.as_mut_vec().retain(|_conn| false);
+            } else if obj_id == 0x001B065F { // central dynamo collision blocker
+                // the power bomb rock collision should not extend beyond the door                
+                let actor = obj.property_data.as_actor_mut().unwrap();
+                actor.hitbox[1] = 0.4;
+                actor.position[1] = actor.position[1] - 0.8;
+            }
+
+            // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
+            if obj.property_data.is_ball_trigger() {
+                let ball_trigger = obj.property_data.as_ball_trigger_mut().unwrap();
+                ball_trigger.force = 10.0;
             }
         }
 
@@ -4033,15 +4044,15 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001B0100], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E028A], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002000DB], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(), // life grove
@@ -4136,7 +4147,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("08_ice_ridley.MREA").into(), // control tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002702DD], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(), // research core
@@ -4145,6 +4156,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
         resource_info!("03_mines.MREA").into(), // elite research (keep phazon elite cutscene)
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_mines_elitebustout.MREA").into(), // omega reserach
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
         resource_info!("07_mines_electric.MREA").into(), // central dynamo
