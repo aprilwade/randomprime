@@ -763,13 +763,20 @@ fn modify_pickups_in_mrea<'r>(
     layers[new_layer_idx].objects.as_mut_vec().push(relay);
 
     // find any overlapping POI that give "helpful" hints to the player and replace their scan text with the items //
+    const EXCLUDE_POI: &[u32] = &[
+        0x000200AF, // main plaza tree    
+        0x00190584, 0x0019039C, // research lab hydra
+        0x001F025C, // mqb tank
+    ];
     for layer in layers.iter_mut() {
         for obj in layer.objects.as_mut_vec().iter_mut() {
             if obj.property_data.is_point_of_interest() {
                 let poi = obj.property_data.as_point_of_interest_mut().unwrap();
                 if f32::abs(poi.position[0] - position[0]) < 6.0 &&
                    f32::abs(poi.position[1] - position[1]) < 6.0 &&
-                   f32::abs(poi.position[2] - position[2]) < 3.0
+                   f32::abs(poi.position[2] - position[2]) < 3.0 &&
+                   !EXCLUDE_POI.contains(&(obj.instance_id&0x00FFFFFF)) ||
+                   (pickup_location.location.instance_id == 0x428011c && vec![0x002803D0, 0x002803CF, 0x002803CE].contains(&(obj.instance_id&0x00FFFFFF)))  // research core scans
                 {
                     poi.scan_param.scan = scan_id_out;
                 }
