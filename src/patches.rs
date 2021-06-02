@@ -2057,6 +2057,11 @@ fn patch_remove_cutscenes(
             } else if obj_id == 0x00120060 { // kill puffer trigger
                 // the puffers will increment the counter instead of me, the kill trigger
                 obj.connections.as_mut_vec().retain(|_conn| false);
+            } else if obj_id == 0x001B065F { // central dynamo collision blocker
+                // the power bomb rock collision should not extend beyond the door                
+                let actor = obj.property_data.as_actor_mut().unwrap();
+                actor.hitbox[1] = 0.4;
+                actor.position[1] = actor.position[1] - 0.8;
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
