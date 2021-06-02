@@ -158,9 +158,15 @@ pub struct PatchConfig
 
     pub qol_game_breaking: bool,
     pub qol_cosmetic: bool,
-    pub qol_logical: bool,
     pub qol_minor_cutscenes: bool,
     pub qol_major_cutscenes: bool,
+
+    pub phazon_elite_without_dynamo: bool,
+    pub main_plaza_door: bool,
+    pub backwards_labs: bool,
+    pub backwards_frigate: bool,
+    pub backwards_upper_mines: bool,
+    pub backwards_lower_mines: bool,
 
     pub level_data: HashMap<String, LevelConfig>,
 
@@ -236,6 +242,13 @@ struct GameConfig
     etank_capacity: Option<u32>,
     item_max_capacity: Option<HashMap<String,u32>>,
 
+    phazon_elite_without_dynamo: Option<bool>,
+    main_plaza_door: Option<bool>,
+    backwards_labs: Option<bool>,
+    backwards_frigate: Option<bool>,
+    backwards_upper_mines: Option<bool>,
+    backwards_lower_mines: Option<bool>,
+
     game_banner: Option<GameBanner>,
     comment: Option<String>,
     main_menu_message: Option<String>,
@@ -301,9 +314,6 @@ impl PatchConfig
             .arg(Arg::with_name("qol cosmetic")
                 .long("qol-cosmetic")
                 .help("Patch cutscenes to fix continuity errors and UI to improve QoL without affecting IGT or the story"))
-            .arg(Arg::with_name("qol logical")
-                .long("qol-logical")
-                .help("Patch the world to be more freely traversible in a randomized setting (affects routing)"))
             .arg(Arg::with_name("qol minor cutscenes")
                 .long("qol-minor-cutscenes")
                 .help("Remove cutscenes which do not drastically affect gameplay"))
@@ -408,7 +418,6 @@ impl PatchConfig
             "force vanilla layout" => patch_config.force_vanilla_layout,
             "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
-            "qol logical" => patch_config.preferences.qol_logical,
             "qol minor cutscenes" => patch_config.preferences.qol_minor_cutscenes,
             "qol major cutscenes" => patch_config.preferences.qol_major_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
@@ -555,13 +564,6 @@ impl PatchConfigPrivate
                 self.preferences.qol_game_breaking.unwrap_or(true)
             }
         };
-        let qol_logical         = {
-            if force_vanilla_layout {
-                false
-            } else {
-                self.preferences.qol_logical.unwrap_or(true)
-            }
-        };
         let qol_cosmetic        = {
             if force_vanilla_layout {
                 false
@@ -627,10 +629,16 @@ impl PatchConfigPrivate
             level_data: self.level_data.clone(),
 
             qol_game_breaking,
-            qol_logical,
             qol_cosmetic,
             qol_minor_cutscenes,
             qol_major_cutscenes,
+
+            phazon_elite_without_dynamo: self.game_config.phazon_elite_without_dynamo.unwrap_or(true), 
+            main_plaza_door: self.game_config.main_plaza_door.unwrap_or(true),
+            backwards_labs: self.game_config.backwards_labs.unwrap_or(true),
+            backwards_frigate: self.game_config.backwards_frigate.unwrap_or(true),
+            backwards_upper_mines: self.game_config.backwards_upper_mines.unwrap_or(true),
+            backwards_lower_mines: self.game_config.backwards_lower_mines.unwrap_or(true),
 
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             artifact_hint_behavior,

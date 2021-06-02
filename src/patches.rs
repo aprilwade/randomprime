@@ -3925,46 +3925,62 @@ fn patch_qol_game_breaking(
     );
 }
 
-fn patch_qol_logical(patcher: &mut PrimePatcher)
+fn patch_qol_logical(patcher: &mut PrimePatcher, config: &PatchConfig)
 {
-    // logical qol
-    make_elite_research_fight_prereq_patches(patcher);
-    patcher.add_scly_patch(
-        resource_info!("08b_under_intro_ventshaft.MREA").into(),
-        patch_main_ventilation_shaft_section_b_door
-    );
-    patcher.add_scly_patch(
-        resource_info!("10_ice_research_a.MREA").into(),
-        patch_research_lab_hydra_barrier
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_mines_mainplaza.MREA").into(),
-        patch_main_quarry_barrier
-    );
-    patcher.add_scly_patch(
-        resource_info!("00p_mines_connect.MREA").into(),
-        patch_backwards_lower_mines_pca
-    );
-    patcher.add_scly_patch(
-        resource_info!("00o_mines_connect.MREA").into(),
-        patch_backwards_lower_mines_eqa
-    );
-    patcher.add_scly_patch(
-        resource_info!("11_mines.MREA").into(),
-        patch_backwards_lower_mines_mqb
-    );
-    patcher.add_scly_patch(
-        resource_info!("08_mines.MREA").into(),
-        patch_backwards_lower_mines_mqa
-    );
-    patcher.add_scly_patch(
-        resource_info!("05_mines_forcefields.MREA").into(),
-        patch_backwards_lower_mines_elite_control
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_mainplaza.MREA").into(),
-        make_main_plaza_locked_door_two_ways
-    );
+    if config.main_plaza_door {      
+        patcher.add_scly_patch(
+            resource_info!("01_mainplaza.MREA").into(),
+            make_main_plaza_locked_door_two_ways
+        );
+    }
+
+    if config.phazon_elite_without_dynamo {
+        make_elite_research_fight_prereq_patches(patcher);
+    }
+
+    if config.backwards_frigate {
+        patcher.add_scly_patch(
+            resource_info!("08b_under_intro_ventshaft.MREA").into(),
+            patch_main_ventilation_shaft_section_b_door
+        );
+    }
+
+    if config.backwards_labs {        
+        patcher.add_scly_patch(
+            resource_info!("10_ice_research_a.MREA").into(),
+            patch_research_lab_hydra_barrier
+        );
+    }
+    
+    if config.backwards_upper_mines {
+        patcher.add_scly_patch(
+            resource_info!("01_mines_mainplaza.MREA").into(),
+            patch_main_quarry_barrier
+        );
+    }
+
+    if config.backwards_lower_mines {
+        patcher.add_scly_patch(
+            resource_info!("00p_mines_connect.MREA").into(),
+            patch_backwards_lower_mines_pca
+        );
+        patcher.add_scly_patch(
+            resource_info!("00o_mines_connect.MREA").into(),
+            patch_backwards_lower_mines_eqa
+        );
+        patcher.add_scly_patch(
+            resource_info!("11_mines.MREA").into(),
+            patch_backwards_lower_mines_mqb
+        );
+        patcher.add_scly_patch(
+            resource_info!("08_mines.MREA").into(),
+            patch_backwards_lower_mines_mqa
+        );
+        patcher.add_scly_patch(
+            resource_info!("05_mines_forcefields.MREA").into(),
+            patch_backwards_lower_mines_elite_control
+        );
+    }
 }
 
 fn patch_qol_cosmetic(
@@ -4351,7 +4367,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "qol game breaking: {:?}", config.qol_game_breaking).unwrap();
     writeln!(ct, "qol cosmetic: {:?}", config.qol_cosmetic).unwrap();
-    writeln!(ct, "qol logical: {:?}", config.qol_logical).unwrap();
     writeln!(ct, "qol minor cutscenes: {:?}", config.qol_minor_cutscenes).unwrap();
     writeln!(ct, "qol major cutscenes: {:?}", config.qol_major_cutscenes).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
@@ -4848,8 +4863,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     }
 
-    if config.qol_logical {
-        patch_qol_logical(&mut patcher);
+    if !config.force_vanilla_layout {
+        patch_qol_logical(&mut patcher, config);
     }
 
     if config.qol_minor_cutscenes || config.qol_major_cutscenes {
