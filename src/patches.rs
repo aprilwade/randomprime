@@ -3144,15 +3144,15 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001B0100], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E028A], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002000DB], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(), // life grove
