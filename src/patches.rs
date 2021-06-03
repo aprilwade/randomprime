@@ -104,18 +104,18 @@ fn build_artifact_temple_totem_scan_strings<R>(pickup_layout: &[PickupType], rng
     where R: Rng
 {
     let mut generic_text_templates = [
-        "I mean, maybe it'll be in the &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
-        "I'm not sure where the artifact exactly is, but like, you can try the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "Hey man, so some of the Chozo dudes are telling me that they're might be a thing in the &push;&main-color=#43CD80;{room}&pop;. Just sayin'.\0",
-        "Uhh umm... Where was it...? Uhhh, errr, it's definitely in the &push;&main-color=#43CD80;{room}&pop;! I am 100% not totally making it up...\0",
-        "Some say it may be in the &push;&main-color=#43CD80;{room}&pop;. Others say that you have no business here. Please leave me alone.\0",
-        "So a buddy of mine and I were drinking one night and we thought 'Hey, wouldn't be crazy if we put it at the &push;&main-color=#43CD80;{room}&pop;?' So we did and it took both of us just to get it there!\0",
-        "So, uhhh, I kind of got a little lazy and I might have just dropped mine somewhere... Maybe it's in the &push;&main-color=#43CD80;{room}&pop;? Who knows.\0",
-        "I uhhh... was a little late to the party and someone had to run out and hide both mine and hers. I owe her one. She told me it might be in the &push;&main-color=#43CD80;{room}&pop;, so you're going to have to trust her on this one.\0",
-        "Okay, so this jerk forgets to hide his and I had to hide it for him too. So, I just tossed his somewhere and made up a name for the room. This is literally saving the planet - how can anyone forget that? Anyway, mine is in the &push;&main-color=#43CD80;{room}&pop;, so go check it out. I'm never doing this again...\0",
-        "To be honest, I don't know if it was a Missile Expansion or not. Maybe it was... We'll just go with that: There's a Missile Expansion at the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you well, that you may find a key lost to our cause... Alright, whatever. It's at the &push;&main-color=#43CD80;{room}&pop;.\0",
-        "I kind of just played Frisbee with mine. It flew and landed too far so I didn't want to walk over and grab it because I was lazy. It's in the &push;&main-color=#43CD80;{room}&pop; if you want to find it.\0",
+        "I mean, maybe it'll be in &push;&main-color=#43CD80;{room}&pop;. I forgot, to be honest.\0",
+        "I'm not sure where the artifact exactly is, but like, you can try &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hey man, some of the Chozo are telling me that there might be a thing in &push;&main-color=#43CD80;{room}&pop;. Just sayin'.\0",
+        "Uhh umm... Where was it...? Uhhh, errr, it's definitely in &push;&main-color=#43CD80;{room}&pop;! I am 100% not totally making it up...\0",
+        "Some say it may be in &push;&main-color=#43CD80;{room}&pop;. Others say that you have no business here. Please leave me alone.\0",
+        "A buddy and I were drinking and thought 'Hey, wouldn't be crazy if we put it in &push;&main-color=#43CD80;{room}&pop;?' It took both of us just to put it there!\0",
+        "So, uhhh, I kind of got lazy and just dropped mine somewhere... Maybe it's in the &push;&main-color=#43CD80;{room}&pop;? Who knows.\0",
+        "I was super late and someone had to cover for me. She said she put it in &push;&main-color=#43CD80;{room}&pop;, so you'll just have to trust her.\0",
+        "Okay, so this jerk forgets to hide his so I had to hide two. This is literally saving the planet. Anyways, mine is in &push;&main-color=#43CD80;{room}&pop;.\0",
+        "To be honest, I don't really remember. I think it was... um... yeah we'll just go with that: It was &push;&main-color=#43CD80;{room}&pop;.\0",
+        "Hear the words of Oh Leer, last Chozo of the Artifact Temple. May they serve you... Alright, whatever. It's in &push;&main-color=#43CD80;{room}&pop;.\0",
+        "I kind of just played Frisbee with mine. It flew too far and I didn't see where it landed. Somewhere in &push;&main-color=#43CD80;{room}&pop;.\0",
     ];
     generic_text_templates.shuffle(rng);
     let mut generic_templates_iter = generic_text_templates.iter();
