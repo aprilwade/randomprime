@@ -59,6 +59,26 @@ pub enum MapaObjectType
     DoorIceFloor2      = 13,
     DoorWaveFloor2     = 14,
     DoorPlasmaFloor2   = 15,
+    DownArrowYellow    = 27, // Maintenance Tunnel
+    UpArrowYellow      = 28, // Phazon Processing Center
+    DownArrowGreen     = 29, // Elevator A
+    UpArrowGreen       = 30, // Elite Control Access
+    DownArrowRed       = 31, // Elevator B
+    UpArrowRed         = 32, // Fungal Hall Access
+    Elevator           = 33,
+    SaveStation        = 34,
+    Pickup             = 35, // Reserved for pickup dots
+    MissileStation     = 37,
+}
+
+#[derive(Debug, Clone)]
+pub enum MapaObjectVisibilityMode
+{
+    Always             = 0,
+    MapStationOrVisit  = 1,
+    Visit              = 2,
+    Never              = 3,
+    MapStationOrVisit2 = 4,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
