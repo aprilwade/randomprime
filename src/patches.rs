@@ -1089,10 +1089,43 @@ fn make_elevators_patch<'a>(
 
                 Ok(())
             });
+    
+            let dest_world_name = {
+                if dest.mlvl == World::FrigateOrpheon.mlvl() {
+                    "Frigate"
+                } else if dest.mlvl == World::TallonOverworld.mlvl() {
+                    "Tallon Overworld"
+                } else if dest.mlvl == World::ChozoRuins.mlvl() {
+                    "Chozo Ruins"
+                } else if dest.mlvl == World::MagmoorCaverns.mlvl() {
+                    "Magmoor Caverns"
+                } else if dest.mlvl == World::PhazonMines.mlvl() {
+                    "Phazon Mines"
+                } else if dest.mlvl == World::ImpactCrater.mlvl() {
+                    "Impact Crater"
+                } else if dest.mlvl == 0x13d79165 {
+                    "Credits"
+                } else {
+                    panic!("unhandled mlvl destination - {}", dest.mlvl)
+                }
+            };
 
-            let room_dest_name = dest.name.replace('\0', "\n");
-            let hologram_name = dest.name.replace('\0', " ");
-            let control_name = dest.name.replace('\0', " ");
+            let room_dest_name = {
+                if dest.mlvl == 0x13d79165 {
+                    "End of the Game".to_string()
+                } else {
+                    format!("{} - {}", dest_world_name, dest.name.replace('\0', "\n"))
+                }
+            };
+            let hologram_name = {
+                if dest.mlvl == 0x13d79165 {
+                    "End of the Game".to_string()
+                } else {
+                    format!("{} - {}", dest_world_name, dest.name.replace('\0', " "))
+                }
+            };
+            let control_name = hologram_name.clone();
+
             patcher.add_resource_patch((&[elv.pak_name.as_bytes()], elv.room_strg, b"STRG".into()), move |res| {
                 let string = format!("Transport to {}\u{0}", room_dest_name);
                 let strg = structs::Strg::from_strings(vec![string]);
