@@ -2,6 +2,7 @@ use serde::{Deserialize};
 use std::cmp;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StartingItems
 {
     pub scan_visor: bool,
