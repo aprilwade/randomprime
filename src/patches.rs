@@ -1099,6 +1099,8 @@ fn make_elevators_patch<'a>(
                     "Chozo Ruins"
                 } else if dest.mlvl == World::MagmoorCaverns.mlvl() {
                     "Magmoor Caverns"
+                } else if dest.mlvl == World::PhendranaDrifts.mlvl() {
+                    "Phendrana Drifts"
                 } else if dest.mlvl == World::PhazonMines.mlvl() {
                     "Phazon Mines"
                 } else if dest.mlvl == World::ImpactCrater.mlvl() {
