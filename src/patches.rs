@@ -4078,6 +4078,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
+        resource_info!("15_ice_cave_a.MREA").into(), // frost cave
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0029006C, 0x0029006B], vec![], true),
+    );
+    patcher.add_scly_patch(
         resource_info!("15_energycores.MREA").into(), // energy core
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![
@@ -4227,6 +4231,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
             true,
         ),
     );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+    );
 }
 
 fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
@@ -4313,10 +4321,6 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     );
     patcher.add_scly_patch(
         resource_info!("19_ice_thardus.MREA").into(), // Quarantine Cave
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
-    );
-    patcher.add_scly_patch(
-        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
     patcher.add_scly_patch(
