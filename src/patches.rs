@@ -1112,16 +1112,28 @@ fn make_elevators_patch<'a>(
                 }
             };
 
+            let mut is_dest_elev = false;
+            for elv in Elevator::iter() {
+                if elv.elevator_data().mrea == dest.mrea {
+                    is_dest_elev = true;
+                    break;
+                }
+            }
+
             let room_dest_name = {
                 if dest.mlvl == 0x13d79165 {
-                    "End of the Game".to_string()
+                    "End of Game".to_string()
+                } else if is_dest_elev {
+                    dest.name.replace('\0', "\n")
                 } else {
                     format!("{} - {}", dest_world_name, dest.name.replace('\0', "\n"))
                 }
             };
             let hologram_name = {
                 if dest.mlvl == 0x13d79165 {
-                    "End of the Game".to_string()
+                    "End of Game".to_string()
+                } else if is_dest_elev {
+                    dest.name.replace('\0', " ")
                 } else {
                     format!("{} - {}", dest_world_name, dest.name.replace('\0', " "))
                 }
