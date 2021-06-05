@@ -3456,6 +3456,32 @@ fn patch_dol<'r>(
         }
     }
 
+    // Multiworld focused patches
+    if config.multiworld_dol_patches {
+        // IncrPickUp's switch array for UnknownItem1 to actually give stuff
+        let incr_pickup_switch_patch = ppcasm!(symbol_addr!("IncrPickUpSwitchCaseData", version) + 21 * 4, {
+            .long symbol_addr!("IncrPickUp__12CPlayerStateFQ212CPlayerState9EItemTypei", version) + 25 * 4;
+        });
+        dol_patcher.ppcasm_patch(&incr_pickup_switch_patch)?;
+
+        // Remove DecrPickUp checks for the correct item types
+        let decr_pickup_patch = ppcasm!(symbol_addr!("DecrPickUp__12CPlayerStateFQ212CPlayerState9EItemTypei", version) + 5 * 4, {
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+        });
+        dol_patcher.ppcasm_patch(&decr_pickup_patch)?;
+    }
+
+    if let Some(update_hint_state_replacement) = &config.update_hint_state_replacement {
+        dol_patcher.patch(symbol_addr!("UpdateHintState__13CStateManagerFf", version), Cow::from(update_hint_state_replacement.clone()))?;
+    }
+
+    // Add rel loader to the binary
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::NtscU0_00 => {
             let loader_bytes = rel_files::REL_LOADER_100;

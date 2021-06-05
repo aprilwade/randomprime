@@ -14337,3 +14337,4 @@
 0x805a8c34 g_MainStringTable
 0x805a8c40 g_GameState
 0x805aa82c g_EtankCapacity
+0x803dad40 IncrPickUpSwitchCaseData
