@@ -172,6 +172,7 @@ pub struct PatchConfig
 
     pub starting_room: String,
     pub starting_memo: Option<String>,
+    pub warp_to_start: bool,
 
     pub obfuscate_items: bool,
     pub etank_capacity: u32,
@@ -232,6 +233,7 @@ struct GameConfig
 {
     starting_room: Option<String>,
     starting_memo: Option<String>,
+    warp_to_start: Option<bool>,
 
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
@@ -332,6 +334,9 @@ impl PatchConfig
                 .long("starting-memo")
                 .help("String which is shown to the player after they start a new save file")
                 .takes_value(true))
+            .arg(Arg::with_name("warp to start")
+                .long("warp-to-start")
+                .help("Allows player to warp to start from any save station"))
             .arg(Arg::with_name("etank capacity")
                 .long("etank-capacity")
                 .help("Set the etank capacity and base health")
@@ -430,6 +435,7 @@ impl PatchConfig
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
+            "warp to start" => patch_config.game_config.warp_to_start,
         );
 
         // string
@@ -605,6 +611,14 @@ impl PatchConfigPrivate
                 self.game_config.starting_items.clone().unwrap_or_else(|| StartingItems::from_u64(1))
             }
         };
+        
+        let warp_to_start   = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.game_config.warp_to_start.unwrap_or(false)
+            }
+        };
 
         let main_menu_message = {
             if force_vanilla_layout {
@@ -653,6 +667,7 @@ impl PatchConfigPrivate
 
             starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
+            warp_to_start,
 
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),

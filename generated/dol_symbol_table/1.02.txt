@@ -3858,6 +3858,7 @@
 0x8024fa1c IsCardBusy__17CMemoryCardDriverF6EState
 0x8024fa44 SetUIColors__15CSaveGameScreenFv
 0x8024fa90 DoSelectionChange__15CSaveGameScreenFP14CGuiTableGroup
+0x8024fae4 DoAdvance__15CSaveGameScreenFP14CGuiTableGroup
 0x8024feb0 StartGame__15CSaveGameScreenFi
 0x8024ff2c SaveNESState__15CSaveGameScreenFv
 0x8024ff78 EraseGame__15CSaveGameScreenFi
@@ -7000,6 +7001,8 @@
 0x803d588c aMetroidprimeA
 0x803d589b aMetroidprimeB
 0x803dbe00 IncrPickUpSwitchCaseData
+0x8045b208 g_StateManager
 0x805a9cd4 g_MainStringTable
+0x805a9cd8 g_Main
 0x805a9ce0 g_GameState
 0x805ab8ec g_EtankCapacity

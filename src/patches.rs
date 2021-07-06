@@ -2885,6 +2885,72 @@ fn patch_heat_damage_per_sec<'a>(patcher: &mut PrimePatcher<'_, 'a>, heat_damage
     }
 }
 
+fn patch_save_station_for_warp_to_start<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    spawn_room: SpawnRoomData,
+    version: Version,
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    let world_transporter_id = ps.fresh_instance_id_range.next().unwrap();
+    
+    layer.objects
+         .as_mut_vec()
+         .push(structs::SclyObject {
+            instance_id: world_transporter_id,
+            property_data: structs::WorldTransporter::warp(
+                spawn_room.mlvl,
+                spawn_room.mrea,
+                spawn_room.name,
+                resource_info!("Deface14B_O.FONT").try_into().unwrap(),
+                ResId::new(custom_asset_ids::WARPING_TO_START_STRG.to_u32()),
+                version == Version::Pal
+            ).into(),
+            connections: vec![].into(),
+        });
+    for obj in layer.objects.iter_mut() {
+        if let Some(sp_function) = obj.property_data.as_special_function_mut() {
+            if sp_function.type_ == 7 { // Is Save Station function
+                obj.connections
+                   .as_mut_vec()
+                   .push(structs::Connection {
+                        target_object_id: world_transporter_id,
+                        state: structs::ConnectionState::RETREAT,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                    });
+            }
+        }
+    }
+    area.add_dependencies(
+        &game_resources,
+        0,
+        iter::once(custom_asset_ids::WARPING_TO_START_STRG.into())
+    );
+    Ok(())
+}
+
+fn patch_memorycard_strg(res: &mut structs::Resource) -> Result<(), String>
+{
+    let strings = res.kind.as_strg_mut().unwrap()
+        .string_tables
+        .as_mut_vec()
+        .iter_mut()
+        .find(|table| table.lang == b"ENGL".into())
+        .unwrap()
+        .strings
+        .as_mut_vec();
+
+    let s = strings.iter_mut()
+        .find(|s| *s == "Save progress to Memory Card in Slot A?\u{0}")
+        .unwrap();
+    *s = "Save progress to Memory Card in Slot A?\nHold &image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; while choosing No to warp to starting area.\u{0}".to_string().into();
+
+    Ok(())
+}
+
 fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
 {
     let strings = res.kind.as_strg_mut().unwrap()
@@ -3479,6 +3545,34 @@ fn patch_dol<'r>(
 
     if let Some(update_hint_state_replacement) = &config.update_hint_state_replacement {
         dol_patcher.patch(symbol_addr!("UpdateHintState__13CStateManagerFf", version), Cow::from(update_hint_state_replacement.clone()))?;
+    }
+    
+    if config.warp_to_start
+    {
+        let handle_no_to_save_msg_patch = ppcasm!(symbol_addr!("ThinkSaveStation__22CScriptSpecialFunctionFfR13CStateManager", version) + 0x54, {
+                b         0x80002200;
+        });
+        dol_patcher.ppcasm_patch(&handle_no_to_save_msg_patch)?;
+
+        let warp_to_start_patch = ppcasm!(0x80002200, {
+                lis       r14, {symbol_addr!("g_Main", version)}@h;
+                addi      r14, r14, {symbol_addr!("g_Main", version)}@l;
+                lwz       r14, 0x0(r14);
+                lwz       r14, 0x164(r14);
+                lwz       r14, 0x34(r14);
+                lbz       r0, 0x86(r14);
+                cmpwi     r0, 0;
+                beq       0x80002234;
+                lbz       r0, 0x89(r14);
+                cmpwi     r0, 0;
+                beq       0x80002234;
+                li        r4, 12;
+                b         0x80002238;
+                li        r4, 9;
+                andi      r14, r14, 0;
+                b         { symbol_addr!("ThinkSaveStation__22CScriptSpecialFunctionFfR13CStateManager", version) + 0x58 };
+        });
+        dol_patcher.add_text_segment(0x80002200, Cow::Owned(warp_to_start_patch.encoded_bytes()))?;
     }
 
     // Add rel loader to the binary
@@ -4981,6 +5075,53 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 Ok(())
             })
         }
+    }
+    
+    if config.warp_to_start
+    {
+        const SAVE_STATIONS_ROOMS: &[ResourceInfo] = &[
+            // Space Pirate Frigate
+            resource_info!("06_intro_to_reactor.MREA"),
+            // Chozo Ruins
+            resource_info!("1_savestation.MREA"),
+            resource_info!("2_savestation.MREA"),
+            resource_info!("3_savestation.MREA"),
+            // Phendrana Drifts
+            resource_info!("mapstation_ice.MREA"),
+            resource_info!("savestation_ice_b.MREA"),
+            resource_info!("savestation_ice_c.MREA"),
+            resource_info!("pickup01.MREA"),
+            // Tallon Overworld
+            resource_info!("01_over_mainplaza.MREA"),
+            resource_info!("06_under_intro_save.MREA"),
+            // Phazon Mines
+            resource_info!("savestation_mines_a.MREA"),
+            resource_info!("00_mines_savestation_c.MREA"),
+            resource_info!("00_mines_savestation_d.MREA"),
+            // Magmoor Caverns
+            resource_info!("lava_savestation_a.MREA"),
+            resource_info!("lava_savestation_b.MREA"),
+            // Impact Crater
+            resource_info!("00_crater_over_elev_j.MREA"),
+        ];
+
+        for save_station_room in SAVE_STATIONS_ROOMS.iter() {
+            patcher.add_scly_patch(
+                (*save_station_room).into(),
+                move |ps, area| patch_save_station_for_warp_to_start(
+                    ps,
+                    area,
+                    &game_resources,
+                    starting_room,
+                    version,
+                )
+            );
+        }
+
+        patcher.add_resource_patch(
+            resource_info!("STRG_MemoryCard.STRG").into(),// 0x19C3F7F7
+            |res| patch_memorycard_strg(res)
+        );
     }
 
     patcher.run(gc_disc)?;

@@ -84,7 +84,12 @@ pub mod custom_asset_ids {
         SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG: STRG,
         SHINY_MISSILE_SCAN_STRG: STRG,
         SHINY_MISSILE_SCAN: SCAN,
+        
+        // Starting items memo
         STARTING_ITEMS_HUDMEMO_STRG: STRG,
+        
+        // Warping to start transition message
+        WARPING_TO_START_STRG: STRG,
 
         // Door Assets //
         MORPH_BALL_BOMB_DOOR_CMDL: CMDL,
@@ -344,6 +349,14 @@ pub fn custom_assets<'r>(
             })
         ));
     }
+    
+    // Warping to starting area
+    assets.push(build_resource(
+        custom_asset_ids::WARPING_TO_START_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            "&just=center;Returning to starting room...\0".to_owned(),
+        ])),
+    ));
 
     // Custom door assets
     for door_type in DoorType::iter() {
