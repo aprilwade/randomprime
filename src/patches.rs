@@ -269,15 +269,18 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     Ok(())
 }
 
-fn patch_mines_savw_for_phazon_suit_scan(res: &mut structs::Resource)
+fn patch_add_scans_to_savw(res: &mut structs::Resource, savw_scans_to_add: &Vec<ResId<res_id::SCAN>>)
     -> Result<(), String>
 {
-    // Add a scan for the Phazon suit.
     let savw = res.kind.as_savw_mut().unwrap();
-    savw.scan_array.as_mut_vec().push(structs::ScannableObject {
-        scan: custom_asset_ids::PHAZON_SUIT_SCAN.into(),
-        logbook_category: 0,
-    });
+    let scan_array = savw.scan_array.as_mut_vec();
+    for scan_id in savw_scans_to_add {
+        scan_array.push(structs::ScannableObject {
+            scan: ResId::<res_id::SCAN>::new(scan_id.to_u32()),
+            logbook_category: 0,
+        });
+    }
+
     Ok(())
 }
 
@@ -388,12 +391,16 @@ fn patch_add_item<'r>(
     let scan_id = {
         if pickup_config.scan_text.is_some() {
             let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
-            
+            let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
+
             let scan_dep: structs::Dependency = scan.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
 
             let strg_dep: structs::Dependency = strg.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+
+            let frme_dep: structs::Dependency = frme.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));
             
             // TODO: should remove now obsolete vanilla scan from dependencies list
 
@@ -438,21 +445,44 @@ fn patch_add_item<'r>(
         PickupType::HealthRefill => 26,
         _ => pickup_type.pickup_data().kind,
     };
+
     let mut pickup = structs::Pickup {
+        // Location Pickup Data
+        // "How is this pickup integrated into the room?"
+        name: b"customItem\0".as_cstr(),
         position: pickup_position.into(),
+        rotation: [0.0, 0.0, 0.0].into(),
+        hitbox: pickup_model_type.pickup_data().hitbox.clone(),
+        scan_offset: pickup_model_type.pickup_data().scan_offset.clone(),
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
-        active: 1,
         disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
+        active: 1,
+        drop_rate: PickupType::Missile.pickup_data().drop_rate,
+
+        // Type Pickup Data
+        // "What does this pickup do?"
         curr_increase,
         max_increase,
         kind,
 
-        ..(pickup_model_type.pickup_data().into_owned())
+        // Model Pickup Data
+        // "What does this pickup look like?"
+        scale: pickup_model_type.pickup_data().scale.clone(),
+        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
+        ancs: pickup_model_type.pickup_data().ancs.clone(),
+        part: pickup_model_type.pickup_data().part.clone(),
+        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
     };
-    if scan_id.is_some() {
-        pickup.actor_params.scan_params.scan = scan_id.unwrap();
-    }
+
+    // Should we use non-default scan id? //
+    pickup.actor_params.scan_params.scan = {
+        if scan_id.is_some() {
+            scan_id.unwrap()
+       } else {
+            pickup_type.pickup_data().actor_params.scan_params.scan.clone()
+       }
+    };
     
     let mut pickup_obj = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
@@ -669,12 +699,16 @@ fn modify_pickups_in_mrea<'r>(
     let scan_id = {
         if pickup_config.scan_text.is_some() {
             let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
-            
+            let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
+
             let scan_dep: structs::Dependency = scan.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
 
             let strg_dep: structs::Dependency = strg.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+
+            let frme_dep: structs::Dependency = frme.into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));
             
             // TODO: should remove now obsolete vanilla scan from dependencies list
 
@@ -771,12 +805,13 @@ fn modify_pickups_in_mrea<'r>(
     for layer in layers.iter_mut() {
         for obj in layer.objects.as_mut_vec().iter_mut() {
             if obj.property_data.is_point_of_interest() {
+                let obj_id = obj.instance_id&0x00FFFFFF;
                 let poi = obj.property_data.as_point_of_interest_mut().unwrap();
                 if f32::abs(poi.position[0] - position[0]) < 6.0 &&
                    f32::abs(poi.position[1] - position[1]) < 6.0 &&
                    f32::abs(poi.position[2] - position[2]) < 3.0 &&
-                   !EXCLUDE_POI.contains(&(obj.instance_id&0x00FFFFFF)) ||
-                   (pickup_location.location.instance_id == 0x428011c && vec![0x002803D0, 0x002803CF, 0x002803CE].contains(&(obj.instance_id&0x00FFFFFF)))  // research core scans
+                   !EXCLUDE_POI.contains(&obj_id) ||
+                   (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
                 {
                     poi.scan_param.scan = scan_id_out;
                 }
@@ -802,14 +837,14 @@ fn modify_pickups_in_mrea<'r>(
 }
 
 fn update_pickup(
-    pickup: &mut structs::SclyObject,
+    pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
     pickup_model_type: MaybeObfuscatedPickup,
     pickup_config: &PickupConfig,
     scan_id: Option<ResId<res_id::SCAN>>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
 {
-    let pickup = pickup.property_data.as_pickup_mut().unwrap();
+    let pickup = pickup_obj.property_data.as_pickup_mut().unwrap();
     let mut original_pickup = pickup.clone();
 
     if pickup_config.position.is_some() {
@@ -855,37 +890,55 @@ fn update_pickup(
         _ => pickup_type.pickup_data().kind,
     };
 
+    // The pickup needs to be repositioned so that the center of its model
+    // matches the center of the original.
     let position = [
         original_pickup.position[0] - (new_center[0] - original_center[0]),
         original_pickup.position[1] - (new_center[1] - original_center[1]),
         original_pickup.position[2] - (new_center[2] - original_center[2]),
     ];
 
-    // The pickup needs to be repositioned so that the center of its model
-    // matches the center of the original.
     *pickup = structs::Pickup {
+        // Location Pickup Data
+        // "How is this pickup integrated into the room?"
+        name: original_pickup.name,
         position: position.into(),
+        rotation: original_pickup.rotation,
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
             original_pickup.scan_offset[1] + (new_center[1] - original_center[1]),
             original_pickup.scan_offset[2] + (new_center[2] - original_center[2]),
         ].into(),
-
         fade_in_timer:  original_pickup.fade_in_timer,
         spawn_delay: original_pickup.spawn_delay,
         disappear_timer: original_pickup.disappear_timer,
         active: original_pickup.active,
+        drop_rate: original_pickup.drop_rate,
+
+        // Type Pickup Data
+        // "What does this pickup do?"
         curr_increase,
         max_increase,
         kind,
 
-        ..(pickup_model_type.pickup_data().into_owned())
+        // Model Pickup Data
+        // "What does this pickup look like?"
+        scale: pickup_model_type.pickup_data().scale,
+        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
+        ancs: pickup_model_type.pickup_data().ancs.clone(),
+        part: pickup_model_type.pickup_data().part.clone(),
+        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
     };
 
-    if scan_id.is_some() {
-        pickup.actor_params.scan_params.scan = scan_id.unwrap();
-    }
+    // Should we use non-default scan id? //
+    pickup.actor_params.scan_params.scan = {
+        if scan_id.is_some() {
+            scan_id.unwrap()
+       } else {
+            pickup_type.pickup_data().actor_params.scan_params.scan.clone()
+       }
+    };
 
     (position, pickup.actor_params.scan_params.scan)
 }
@@ -4250,7 +4303,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(), // life grove
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4], false), // don't skip ghosts cutscene or ghosts will leave forever
     );
     patcher.add_scly_patch(
         resource_info!("01_mainplaza.MREA").into(), // main plaza
@@ -4663,10 +4716,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos, pickup_scans) = collect_game_resources(gc_disc, starting_memo, &config);
+    let (game_resources, pickup_hudmemos, pickup_scans, savw_scans_to_add) = collect_game_resources(gc_disc, starting_memo, &config);
     let game_resources = &game_resources;
     let pickup_hudmemos = &pickup_hudmemos;
     let pickup_scans = &pickup_scans;
+    let savw_scans_to_add = &savw_scans_to_add;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -4764,7 +4818,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 
                 let level = config.level_data.get(world.to_json_key());
                 if level.is_some() {
-                    let room = level.unwrap().rooms.get(room_info.name);
+                    let room = level.unwrap().rooms.get(room_info.name.trim());
                     if room.is_some() {
                         _pickups = room.unwrap().pickups.clone();
                     }
@@ -4927,10 +4981,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         resource_info!("STRG_Credits.STRG").into(),
         |res| patch_credits(res, config)
     );
-    patcher.add_resource_patch(
-        resource_info!("!MinesWorld_Master.SAVW").into(),
-        patch_mines_savw_for_phazon_suit_scan
-    );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
         |ps, area| fix_artifact_of_truth_requirements(ps, area, config)
@@ -4943,6 +4993,55 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.add_resource_patch(
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
+    );
+
+    // TODO: only patch what we need
+    patcher.add_resource_patch(
+        resource_info!("!TalonOverworld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
+    );
+
+    patcher.add_resource_patch(
+        resource_info!("!RuinsWorld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
+    );
+
+    patcher.add_resource_patch(
+        resource_info!("!LavaWorld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
+    );
+
+    patcher.add_resource_patch(
+        resource_info!("!IceWorld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
+    );
+
+    patcher.add_resource_patch(
+        resource_info!("!MinesWorld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
+    );
+
+    patcher.add_resource_patch(
+        resource_info!("!CraterWorld_Master.SAVW").into(),
+        move |res| patch_add_scans_to_savw(
+            res,
+            &savw_scans_to_add,
+        ),
     );
 
     patcher.add_scly_patch(
@@ -4964,6 +5063,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 false,
                 &game_resources,
             )
+        );
+
+        patcher.add_resource_patch(
+            resource_info!("!Intro_Master.SAVW").into(),
+            move |res| patch_add_scans_to_savw(
+                res,
+                &savw_scans_to_add,
+            ),
         );
 
         // TODO: only works for landing site

@@ -617,7 +617,7 @@ impl SpawnRoomData
 
             let mut idx: u32 = 0;
             for room_info in rooms.iter() { // for each room in the pak
-                if room_info.name.to_lowercase() == room_name {
+                if room_info.name.to_lowercase().trim() == room_name { // trim both because "west tower " has an extra space in it
 
                     return SpawnRoomData {
                         pak_name,

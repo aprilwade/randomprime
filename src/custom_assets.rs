@@ -125,14 +125,10 @@ pub mod custom_asset_ids {
         FLAMETHROWER_DOOR_TXTR: TXTR,
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
-        
-        // Hudmemos derrived from pickup names //
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
 
-        // User-specified hudmemo and scan strings //
-        EXTRA_IDS_START: STRG = SKIP_HUDMEMO_STRG_END.to_u32() + 1,
-        EXTRA_IDS_END: STRG = EXTRA_IDS_START.to_u32() + 500,
+        EXTRA_IDS_START: STRG,
     }
 }
 
@@ -196,8 +192,14 @@ pub fn custom_assets<'r>(
     pickup_hudmemos: &mut HashMap::<PickupHashKey, ResId<res_id::STRG>>,
     pickup_scans: &mut HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     config: &PatchConfig,
-) -> Vec<Resource<'r>>
+) -> (Vec<Resource<'r>>, Vec<ResId<res_id::SCAN>>)
 {
+    /*  This is a list of all custom SCAN IDs which might be used throughout the game.
+        We need to patch these into a SAVW file so that the game engine allocates enough space
+        on initialization to store each individual scan's completion %.
+    */
+    let mut savw_scans_to_add: Vec<ResId<res_id::SCAN>> = Vec::new();
+
     // External assets
     let mut assets = extern_assets();
 
@@ -221,11 +223,13 @@ pub fn custom_assets<'r>(
         custom_asset_ids::PHAZON_SUIT_STRG,
         "Phazon Suit\0",
     ));
+    savw_scans_to_add.push(custom_asset_ids::PHAZON_SUIT_SCAN);
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::NOTHING_SCAN,
         custom_asset_ids::NOTHING_SCAN_STRG,
         "???\0",
     ));
+    savw_scans_to_add.push(custom_asset_ids::NOTHING_SCAN);
     assets.push(build_resource(
         custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
         structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
@@ -237,11 +241,13 @@ pub fn custom_assets<'r>(
         custom_asset_ids::THERMAL_VISOR_STRG,
         "Thermal Visor\0",
     ));
+    savw_scans_to_add.push(custom_asset_ids::THERMAL_VISOR_SCAN);
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SCAN_VISOR_SCAN,
         custom_asset_ids::SCAN_VISOR_SCAN_STRG,
         "Scan Visor\0",
     ));
+    savw_scans_to_add.push(custom_asset_ids::SCAN_VISOR_SCAN);
     assets.push(build_resource(
         custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
         structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
@@ -253,6 +259,7 @@ pub fn custom_assets<'r>(
         custom_asset_ids::SHINY_MISSILE_SCAN_STRG,
         "Shiny Missile\0",
     ));
+    savw_scans_to_add.push(custom_asset_ids::SHINY_MISSILE_SCAN);
     assets.extend_from_slice(&create_shiny_missile_assets(resources));
     assets.push(build_resource(
         custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
@@ -271,9 +278,7 @@ pub fn custom_assets<'r>(
     }
 
     // Create user-defined hudmemo and scan strings and map to locations //
-    let custom_ids_start = custom_asset_ids::EXTRA_IDS_START.to_u32();
-    let custom_ids_end = custom_asset_ids::EXTRA_IDS_END.to_u32();
-    let mut strg_idx = 0;
+    let mut custom_asset_offset = 0;
     for (level_name, level) in config.level_data.iter() {
         for (room_name, room) in level.rooms.iter() {
             let mut pickup_idx = 0;
@@ -284,9 +289,9 @@ pub fn custom_assets<'r>(
                     let hudmemo_text = pickup.hudmemo_text.as_ref().unwrap();
 
                     // Get next ID //
-                    let strg_id = ResId::<res_id::STRG>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
-                    strg_idx = strg_idx + 1;
-                    
+                    let strg_id = ResId::<res_id::STRG>::new(custom_asset_ids::EXTRA_IDS_START.to_u32() + custom_asset_offset);
+                    custom_asset_offset = custom_asset_offset + 1;
+
                     // Build resource //
                     let strg = structs::ResourceKind::Strg(structs::Strg {
                         string_tables: vec![
@@ -311,21 +316,34 @@ pub fn custom_assets<'r>(
                     let scan_text = pickup.scan_text.as_ref().unwrap();
 
                     // Get next 2 IDs //
-                    let strg_id = ResId::<res_id::STRG>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
-                    strg_idx = strg_idx + 1;
-                    let scan_id = ResId::<res_id::SCAN>::new((custom_ids_start..custom_ids_end).nth(strg_idx).unwrap());
-                    strg_idx = strg_idx + 1;
+                    let scan_id = ResId::<res_id::SCAN>::new(custom_asset_ids::EXTRA_IDS_START.to_u32() + custom_asset_offset);
+                    custom_asset_offset = custom_asset_offset + 1;
+                    let strg_id = ResId::<res_id::STRG>::new(custom_asset_ids::EXTRA_IDS_START.to_u32() + custom_asset_offset);
+                    custom_asset_offset = custom_asset_offset + 1;
 
                     // Build resource //
-                    assets.extend_from_slice(&create_item_scan_strg_pair(
-                        scan_id,
-                        strg_id,
-                        format!("{}\0", scan_text).as_str(),
-                    ));
-    
+                    if room_name.trim().to_lowercase() == "research core" // make the research core scan red because it goes on the terminal
+                    {
+                        assets.extend_from_slice(&create_item_scan_strg_pair_2(
+                            scan_id,
+                            strg_id,
+                            format!("{}\0", scan_text).as_str(),
+                            1,
+                        ));
+                    }
+                    else
+                    {
+                        assets.extend_from_slice(&create_item_scan_strg_pair(
+                            scan_id,
+                            strg_id,
+                            format!("{}\0", scan_text).as_str(),
+                        ));
+                    }
+
                     // Map for easy lookup when patching //
                     let key = PickupHashKey::from_location(level_name, room_name, pickup_idx);
                     pickup_scans.insert(key, (scan_id, strg_id));
+                    savw_scans_to_add.push(scan_id);
                 }
 
                 pickup_idx = pickup_idx + 1;
@@ -365,7 +383,7 @@ pub fn custom_assets<'r>(
         }
     }
 
-    assets
+    (assets, savw_scans_to_add)
 }
 
 // When modifying resources in an MREA, we need to give the room a copy of the resources/
@@ -379,6 +397,7 @@ pub fn collect_game_resources<'r>(
         HashMap<(u32, FourCC), structs::Resource<'r>>,
         HashMap<PickupHashKey, ResId<res_id::STRG>>,
         HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
+        Vec<ResId<res_id::SCAN>>,
     )
 {
     // Get list of all dependencies patcher needs //
@@ -387,6 +406,10 @@ pub fn collect_game_resources<'r>(
     looking_for.extend(PickupType::iter().map(|x| -> (_, _) { x.hudmemo_strg().into() }));
     looking_for.extend(DoorType::iter().flat_map(|x| x.dependencies()));
     looking_for.extend(BlastShieldType::iter().flat_map(|x| x.dependencies()));
+    
+    let mut deps: Vec<(u32, FourCC)> = Vec::new();
+    deps.push((0xDCEC3E77,FourCC::from_bytes(b"FRME")));
+    looking_for.extend(deps);
 
     // Dependencies read from paks and custom assets will go here //
     let mut found = HashMap::with_capacity(looking_for.len());
@@ -417,7 +440,8 @@ pub fn collect_game_resources<'r>(
     // Remove extra assets from dependency search since they won't appear     //
     // in any pak. Instead add them to the output resource pool. These assets //
     // are provided as external files checked into the repository.            //
-    for res in custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, config) {
+    let (custom_assets, savw_scans_to_add) = custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, config);
+    for res in custom_assets {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
         found.insert(key, res);
@@ -427,7 +451,7 @@ pub fn collect_game_resources<'r>(
         panic!("error - still looking for {:?}", looking_for);
     }
 
-    (found, pickup_hudmemos, pickup_scans)
+    (found, pickup_hudmemos, pickup_scans, savw_scans_to_add)
 }
 
 fn create_custom_door_cmdl<'r>(
@@ -531,7 +555,6 @@ fn create_shiny_missile_assets<'r>(
         let cmdl_bytes = shiny_missile_cmdl.decompress().into_owned();
         let mut cmdl = Reader::new(&cmdl_bytes[..]).read::<structs::Cmdl>(());
 
-        // println!("{:#?}", cmdl);
         cmdl.material_sets.as_mut_vec()[0].texture_ids = vec![
             custom_asset_ids::SHINY_MISSILE_TXTR0,
             custom_asset_ids::SHINY_MISSILE_TXTR1,
@@ -611,15 +634,62 @@ fn create_item_scan_strg_pair<'r>(
     contents: &str,
 ) -> [structs::Resource<'r>; 2]
 {
+    create_item_scan_strg_pair_2(new_scan, new_strg, contents, 0)
+}
+
+fn create_item_scan_strg_pair_2<'r>(
+    new_scan: ResId<res_id::SCAN>,
+    new_strg: ResId<res_id::STRG>,
+    contents: &str,
+    is_important: u8,
+) -> [structs::Resource<'r>; 2]
+{
     let scan = build_resource(
         new_scan,
         structs::ResourceKind::Scan(structs::Scan {
-            frme: ResId::invalid(),
+            frme: ResId::<res_id::FRME>::new(0xDCEC3E77),
             strg: new_strg,
             scan_speed: 0,
             category: 0,
-            icon_flag: 0,
-            images: Default::default(),
+            icon_flag: is_important,
+            images: [
+                structs::ScanImage {
+                    txtr: ResId::invalid(),
+                    appearance_percent: 0.25,
+                    image_position: 0xFFFFFFFF,
+                    width: 0,
+                    height: 0,
+                    interval: 0.0,
+                    fade_duration: 0.0,
+                },
+                structs::ScanImage {
+                    txtr: ResId::invalid(),
+                    appearance_percent: 0.50,
+                    image_position: 0xFFFFFFFF,
+                    width: 0,
+                    height: 0,
+                    interval: 0.0,
+                    fade_duration: 0.0,
+                },
+                structs::ScanImage {
+                    txtr: ResId::invalid(),
+                    appearance_percent: 0.75,
+                    image_position: 0xFFFFFFFF,
+                    width: 0,
+                    height: 0,
+                    interval: 0.0,
+                    fade_duration: 0.0,
+                },
+                structs::ScanImage {
+                    txtr: ResId::invalid(),
+                    appearance_percent: 1.0,
+                    image_position: 0xFFFFFFFF,
+                    width: 0,
+                    height: 0,
+                    interval: 0.0,
+                    fade_duration: 0.0,
+                },
+            ].into(),
             padding: [255; 23].into(),
             _dummy: std::marker::PhantomData,
         }),
