@@ -51,6 +51,7 @@ pub mod scly_props
     pub mod timer;
     pub mod trigger;
     pub mod water;
+    pub mod waypoint;
     pub mod world_transporter;
 
     pub mod structs;
@@ -79,6 +80,7 @@ pub mod scly_props
     pub use self::timer::*;
     pub use self::trigger::*;
     pub use self::water::*;
+    pub use self::waypoint::*;
     pub use self::world_transporter::*;
 }
 
@@ -106,6 +108,8 @@ pub use scly_props::special_function::*;
 pub use scly_props::streamed_audio::*;
 pub use scly_props::timer::*;
 pub use scly_props::trigger::*;
+pub use scly_props::water::*;
+pub use scly_props::waypoint::*;
 pub use scly_props::world_transporter::*;
 
 pub use res_id::ResId;

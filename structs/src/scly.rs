@@ -239,6 +239,7 @@ build_scly_property!(
     StreamedAudio,     is_streamed_audio,     as_streamed_audio,     as_streamed_audio_mut,
     Timer,             is_timer,              as_timer,              as_timer_mut,
     Trigger,           is_trigger,            as_trigger,            as_trigger_mut,
+    Waypoint,          is_waypoint,           as_waypoint,           as_waypoint_mut,
     Water,             is_water,              as_water,              as_water_mut,
     WorldTransporter,  is_world_transporter,  as_world_transporter,  as_world_transporter_mut,
 );

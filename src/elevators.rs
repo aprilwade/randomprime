@@ -184,6 +184,18 @@ impl Elevator
     }
 }
 
+pub fn is_elevator(mrea: u32) -> bool {
+    for elv in Elevator::iter() {
+        if mrea == elv.elevator_data().mrea &&
+        mrea != Elevator::ArtifactTemple.elevator_data().mrea &&
+        mrea != Elevator::CraterEntryPoint.elevator_data().mrea
+        {
+            return true;
+        }
+    }
+    false
+}
+
 impl std::ops::Deref for Elevator
 {
     type Target = ElevatorData;

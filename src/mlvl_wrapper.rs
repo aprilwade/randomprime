@@ -59,7 +59,8 @@ impl<'r, 'mlvl, 'cursor, 'list> MlvlArea<'r, 'mlvl, 'cursor, 'list>
 
     pub fn mrea(&mut self) -> &mut Mrea<'r>
     {
-        self.mrea_cursor.value().unwrap().kind.as_mrea_mut().unwrap()
+        let x = self.mrea_cursor.value().unwrap();
+        x.kind.as_mrea_mut().unwrap()
     }
 
     pub fn add_layer(&mut self, name: CStr<'r>)

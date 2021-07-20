@@ -80,22 +80,31 @@ pub struct PickupConfig
     // pub desination: Option<String>,
 }
 
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanConfig
+{
+    pub position: [f32;3],
+    pub text: String,
+    pub is_red: bool,
+}
+
 // TODO: defaults
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomConfig
 {
-    // pub remove_locks: bool,
-    // pub superheated: bool,
-    // pub remove_water: bool,
-    // pub submerge: bool,
-    // pub extra_water: Vec<WaterConfig>,
-    // pub doors: Vec<String>,
-    // pub blast_shields: Vec<String>,
-    pub pickups: Vec<PickupConfig>,
-    // pub extra_pickups: Vec<PickupConfig>,
-    // pub extra_scans: Vec<ScanConfig>,
-    // pub aether_transform: Vec<AetherTransformConfig>,
+    // pub remove_locks: Option<bool>,
+    // pub superheated: Option<i8>,
+    // pub remove_water: Option<bool>,
+    // pub submerge: Option<bool>,
+    // pub extra_water: Option<Vec<WaterConfig>>,
+    // pub doors: Option<Vec<String>>,
+    // pub blast_shields: Option<Vec<String>>,
+    pub pickups: Option<Vec<PickupConfig>>,
+    // pub extra_pickups: Option<Vec<PickupConfig>>,
+    pub extra_scans: Option<Vec<ScanConfig>>,
+    // pub aether_transform: Option<Vec<AetherTransformConfig>>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]

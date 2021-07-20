@@ -33,26 +33,30 @@ These are the 5 Quality of Life categories that I've come up with and a *compreh
 
 # Level 2 - Cosmetic
 - remove all of the "wow look at samus so happy to have this cool upgrade" cutscenes (e.g. Space Jump)
-- remove all but 1 of the file select background  videos, so that during races, everyone spawns into the game at the same RTA
+- remove all but 1 of the file select background videos, so that during races, everyone spawns into the game at the same RTA
 - remove all but 1 of the attract videos to make copying the game to your wii faster
 - skip item acquisition pop-up message
 - make the morph ball HUD says `X/Y` instead of just `X`
 - If impact crater is skipped, go straight to credits instead of watching the escape sequence
 
 # Level 3 - Logical
+
 *Go Backwards*
+
+This section is broken up into each affected gameplay area:
 - Main plaza door 2-ways
 - power crashed frigate door from the back
 - scan through research lab hydra from the back
 - turn off the main quarry barrier from the back
-- remove PCA locks
-- remove EQ Access locks
-- scan through MQB barrier from the back
-- turn off MQA barrier from the back (metroid aggro trigger)
-- scan through elite control from the back
+- Go through lower mines backwards
+    - remove PCA locks
+    - remove EQ Access locks
+    - scan through MQB barrier from the back
+    - turn off MQA barrier from the back (metroid aggro trigger)
+    - scan through elite control from the back
 
 # Level 4 - Minor Cutscenes
-These are cutscenes which I think don't affect the game too much if removed.
+These are cutscenes which don't affect gameplay much if removed.
 - research lab aether
 - temple security station
 - energy core
@@ -60,7 +64,7 @@ These are cutscenes which I think don't affect the game too much if removed.
 - all of the "wow look the power is on" in frigate
 - life grove (the ghosts cutscene is left in because they just leave the map and never come back lmao)
 - main plaza
-- phendrana shorelines (just the area introduction, the ridley cutscene is left in)
+- phendrana shorelines (the ridley cutscene is left in)
 - main quarry
 - lava lake
 - tower of light
@@ -71,7 +75,7 @@ These are cutscenes which I think don't affect the game too much if removed.
 - hall of the elders (just the bomb slots cutscenes are removed)
 - crossway
 - geothermal core
-- vent shaft (the puffers hitting metal scene is left in because it doesn't work if removed)
+- vent shaft
 - chozo ice temple
 - phendrana canyon
 - ruined courtyard
@@ -81,6 +85,7 @@ These are cutscenes which I think don't affect the game too much if removed.
 
 # Level 5 - Major Cutscenes
 Includes all of the above cutscenes and...
+- Arrive/Depart cutscenes for all elevators
 - landing site
 - hive totem
 - ruined shrine
@@ -91,7 +96,10 @@ Includes all of the above cutscenes and...
 - mine security station
 - elite control
 - elite research
-- central dynamo (keep the bomb jump out of the maze cutscene, otherwise, slow player will get left down there lmao)
-- mqa (but with the timing closer to reality)
+- central dynamo (kept the bomb jump out of the maze cutscene, otherwise, slow players will get left down there lmao)
+- mqa
 - elite quarters
-- all of metroid prime (I fixed exo leaving the map without needing any compromises)
+- all of metroid prime
+- hall of the elders
+- artifact temple
+- end cinema

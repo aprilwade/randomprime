@@ -26,7 +26,7 @@ use crate::{
     custom_assets::{custom_asset_ids, collect_game_resources, PickupHashKey},
     dol_patcher::DolPatcher,
     ciso_writer::CisoWriter,
-    elevators::{Elevator, SpawnRoom, SpawnRoomData, World},
+    elevators::{Elevator, SpawnRoom, SpawnRoomData, World, is_elevator},
     gcz_writer::GczWriter,
     mlvl_wrapper,
     pickup_meta::{self, PickupType},
@@ -131,7 +131,8 @@ fn build_artifact_temple_totem_scan_strings<R>(
     let mut artifact_locations = Vec::<(&str, PickupType)>::new();
     for (_, level) in config.level_data.iter() {
         for (room_name, room) in level.rooms.iter() {
-            for pickup in room.pickups.iter() {
+            if room.pickups.is_none() { continue };
+            for pickup in room.pickups.as_ref().unwrap().iter() {
                 let pickup_type = PickupType::from_str(&pickup.pickup_type);
                 if pickup_type.idx() >= PickupType::ArtifactOfLifegiver.idx() && pickup_type.idx() <= PickupType::ArtifactOfStrength.idx() {
                     artifact_locations.push((&room_name.as_str(), pickup_type));
@@ -623,6 +624,50 @@ fn patch_add_item<'r>(
     Ok(())
 }
 
+fn patch_add_poi<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    scan_id: ResId<res_id::SCAN>,
+    strg_id: ResId<res_id::STRG>,
+    position: [f32;3],
+) -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layers = scly.layers.as_mut_vec();
+    layers[0].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::PointOfInterest(
+                Box::new(structs::PointOfInterest {
+                    name: b"mypoi\0".as_cstr(),
+                    position: position.into(),
+                    rotation: [0.0, 0.0, 0.0].into(),
+                    active: 1,
+                    scan_param: structs::scly_structs::ScannableParameters {
+                        scan: scan_id,
+                    },
+                    point_size: 12.0,
+                })
+            ),
+        }
+    );
+
+    let frme_id = ResId::<res_id::FRME>::new(0xDCEC3E77);
+
+    let scan_dep: structs::Dependency = scan_id.into();
+    area.add_dependencies(game_resources, 0, iter::once(scan_dep));
+
+    let strg_dep: structs::Dependency = strg_id.into();
+    area.add_dependencies(game_resources, 0, iter::once(strg_dep));
+
+    let frme_dep: structs::Dependency = frme_id.into();
+    area.add_dependencies(game_resources, 0, iter::once(frme_dep));
+
+    Ok(())
+}
+
 fn modify_pickups_in_mrea<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -801,17 +846,20 @@ fn modify_pickups_in_mrea<'r>(
         0x000200AF, // main plaza tree    
         0x00190584, 0x0019039C, // research lab hydra
         0x001F025C, // mqb tank
+        custom_asset_ids::MQA_POI_SCAN.to_u32(),
     ];
     for layer in layers.iter_mut() {
         for obj in layer.objects.as_mut_vec().iter_mut() {
             if obj.property_data.is_point_of_interest() {
                 let obj_id = obj.instance_id&0x00FFFFFF;
                 let poi = obj.property_data.as_point_of_interest_mut().unwrap();
-                if f32::abs(poi.position[0] - position[0]) < 6.0 &&
-                   f32::abs(poi.position[1] - position[1]) < 6.0 &&
-                   f32::abs(poi.position[2] - position[2]) < 3.0 &&
-                   !EXCLUDE_POI.contains(&obj_id) ||
-                   (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
+                if (
+                    f32::abs(poi.position[0] - position[0]) < 6.0 &&
+                    f32::abs(poi.position[1] - position[1]) < 6.0 &&
+                    f32::abs(poi.position[2] - position[2]) < 3.0 &&
+                    !EXCLUDE_POI.contains(&obj_id) &&
+                    pickup_location.location.instance_id != 0x002005EA
+                   ) || (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
                 {
                     poi.scan_param.scan = scan_id_out;
                 }
@@ -1011,6 +1059,7 @@ fn patch_samus_actor_size<'r>(
     player_size: f32,
 ) -> Result<(), String>
 {
+    let mrea_id = area.mlvl_area.mrea.to_u32();
     let scly = area.mrea().scly_section_mut();
     for layer in scly.layers.as_mut_vec() {
         for obj in layer.objects.as_mut_vec() {
@@ -1020,9 +1069,43 @@ fn patch_samus_actor_size<'r>(
                 player_actor.scale[1] = player_actor.scale[1]*player_size;
                 player_actor.scale[2] = player_actor.scale[2]*player_size;
             }
+
+            if mrea_id == 0xb4b41c48
+            {
+                if obj.property_data.is_actor()
+                {
+                    let actor = obj.property_data.as_actor_mut().unwrap();
+                    if actor.name.to_str().unwrap().contains(&"Samus")
+                    {
+                        actor.scale[0] = actor.scale[0]*player_size;
+                        actor.scale[1] = actor.scale[1]*player_size;
+                        actor.scale[2] = actor.scale[2]*player_size;
+                    }
+                }
+
+                // for the end movie, go the extra mile and tilt the cameras down
+                if player_size < 0.75
+                {
+                    if obj.property_data.is_camera()
+                    {
+                        let camera = obj.property_data.as_camera_mut().unwrap();
+                        let name = camera.name.to_str().unwrap().to_lowercase();
+                        if name.contains(&"buttons") {
+                            camera.rotation[0] = -2.0;
+                        } else if name.contains(&"camera4") {
+                            camera.rotation[0] = -5.0;
+                        }
+                    }
+                    
+                    if vec![0x000004AF, 0x000004A4, 0x00000461, 0x00000477, 0x00000476, 0x00000474, 0x00000479, 0x00000478, 0x00000473, 0x0000045B].contains(&(obj.instance_id&0x0000FFFF))
+                    {
+                        let waypoint = obj.property_data.as_waypoint_mut().unwrap();
+                        waypoint.position[2] = waypoint.position[2] - 2.2;
+                    }
+                }
+            }
         }
     }
-
     Ok(())
 }
 
@@ -1336,8 +1419,11 @@ fn fix_artifact_of_truth_requirements(
             let rooms = &config.level_data.get(World::TallonOverworld.to_json_key()).unwrap().rooms;
             if rooms.contains_key("Artifact Temple") {
                 let artifact_temple_pickups = &rooms.get("Artifact Temple").unwrap().pickups;
-                if artifact_temple_pickups.len() != 0 {
-                    _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).pickup_data().kind;
+                if artifact_temple_pickups.is_some() {
+                    let artifact_temple_pickups = artifact_temple_pickups.as_ref().unwrap();
+                    if artifact_temple_pickups.len() != 0 {
+                        _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).pickup_data().kind;
+                    }
                 }
             }
         }
@@ -1358,7 +1444,8 @@ fn fix_artifact_of_truth_requirements(
                 if _exists {break;}
                 for (_, room) in level.rooms.iter() {
                     if _exists {break;}
-                    for pickup in room.pickups.iter() {
+                    if room.pickups.is_none() { continue };
+                    for pickup in room.pickups.as_ref().unwrap().iter() {
                         let pickup = PickupType::from_str(&pickup.pickup_type);
                         if pickup.pickup_data().kind == kind {
                             _exists = true; // this artifact is placed somewhere in this world
@@ -2538,22 +2625,32 @@ fn patch_remove_cutscenes(
     let layer_count = area.layer_flags.layer_count as usize;
     let scly = area.mrea().scly_section_mut();
 
-    // Get a list of all camera instance ids
     let mut camera_ids = Vec::<u32>::new();
-    for layer in scly.layers.iter() {
+    let mut spawn_point_ids = Vec::<u32>::new();
+    
+    let mut elevator_orientation = [0.0, 0.0, 0.0];
+
+    for i in 0..layer_count {
+        let layer = &mut scly.layers.as_mut_vec()[i];
+        
         for obj in layer.objects.iter() {
-            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_camera() {
+            // Get a list of all camera instance ids
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF))
+            && obj.property_data.is_camera() {
                 camera_ids.push(obj.instance_id & 0x00FFFFFF);
             }
-        }
-    }
 
-    // Get a list of all spawn point ids
-    let mut spawn_point_ids = Vec::<u32>::new();
-    for layer in scly.layers.iter() {
-        for obj in layer.objects.iter() {
-            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_spawn_point() {
+            // Get a list of all spawn point ids
+            if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF)) && obj.property_data.is_spawn_point()
+            && (room_id != 0xf7285979 || i == 4) { // don't patch spawn points in shorelines except for ridley
                 spawn_point_ids.push(obj.instance_id & 0x00FFFFFF);
+            }
+
+            if obj.property_data.is_player_actor() {
+                let rotation = obj.property_data.as_player_actor().unwrap().rotation;
+                elevator_orientation[0] = rotation[0];
+                elevator_orientation[1] = rotation[1];
+                elevator_orientation[2] = rotation[2];
             }
         }
     }
@@ -2600,10 +2697,22 @@ fn patch_remove_cutscenes(
         for obj in layer.objects.as_mut_vec() {
             let obj_id = obj.instance_id & 0x00FFFFFF; // remove uper encoding byte
 
-            // If it's a cutscene-related timer, make it take 1 frame
-            if obj.property_data.is_timer() && timers_to_zero.contains(&obj_id) {
+            // If this is an elevator cutscene skip, orient the player towards the door
+            if is_elevator(room_id.to_u32()) && obj.property_data.is_spawn_point() {
+                obj.property_data.as_spawn_point_mut().unwrap().rotation = elevator_orientation.into();
+            }
+
+            // If it's a cutscene-related timer, make it nearly instantaneous
+            if obj.property_data.is_timer() {
                 let timer = obj.property_data.as_timer_mut().unwrap();
-                timer.start_time = 0.1;
+
+                if timers_to_zero.contains(&obj_id) {
+                    if obj_id == 0x0008024E {
+                        timer.start_time = 3.0; // chozo ice temple hands
+                    } else {
+                        timer.start_time = 0.1;
+                    }
+                }
             }
 
             // for each connection in that object
@@ -2760,10 +2869,17 @@ fn patch_remove_cutscenes(
                 let actor = obj.property_data.as_actor_mut().unwrap();
                 actor.hitbox[1] = 0.4;
                 actor.position[1] = actor.position[1] - 0.8;
+            } else if obj_id == 0x0002023E { // main plaza turn crane left relay
+                // snap the crane immediately so fast players don't fall through the intangible animation
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::ACTIVATE,
+                    target_object_id: 0x0002001F, // platform
+                });
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
-            if obj.property_data.is_ball_trigger() {
+            if obj.property_data.is_ball_trigger() && room_id != 0xEF069019 {
                 let ball_trigger = obj.property_data.as_ball_trigger_mut().unwrap();
                 ball_trigger.force = 10.0;
             }
@@ -2775,16 +2891,36 @@ fn patch_remove_cutscenes(
         }
 
         // remove all cutscene related objects from layer
-        layer.objects.as_mut_vec().retain(|obj|
-            skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || // except for exluded objects
-            !(
-                obj.property_data.is_camera() ||
-                obj.property_data.is_camera_filter_keyframe() ||
-                obj.property_data.is_camera_blur_keyframe() ||
-                obj.property_data.is_player_actor() ||
-                (obj.property_data.is_special_function() && obj.property_data.as_special_function().unwrap().type_ == 0x18) // "show billboard"
-            )
-        );
+        if room_id == 0xf7285979 && i != 4 // the ridley cutscene is okay
+        {
+            // special shorelines handling
+            let shorelines_triggers = vec![
+                0x00020155, // intro cutscene
+                0x000201F4, // shorelines tower cutscene
+            ];
+
+            layer.objects.as_mut_vec().retain(|obj|
+                skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || // except for exluded objects
+                !(shorelines_triggers.contains(&(&obj.instance_id & 0x00FFFFFF)))
+            );
+        }
+        else if room_id == 0xb4b41c48 { // keep the cinematic stuff in end cinema
+            layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_camera());
+        }
+        else
+        {
+            layer.objects.as_mut_vec().retain(|obj|
+                skip_ids.contains(&(&obj.instance_id & 0x00FFFFFF)) || // except for exluded objects
+                !(
+                    obj.property_data.is_camera() ||
+                    obj.property_data.is_camera_filter_keyframe() ||
+                    obj.property_data.is_camera_blur_keyframe() ||
+                    obj.property_data.is_player_actor() ||
+                    vec![0x0018028E, 0x001802A1, 0x0018025C, 0x001800CC].contains(&(obj.instance_id&0x00FFFFFF)) || // thardus death sounds
+                    (obj.property_data.is_special_function() && obj.property_data.as_special_function().unwrap().type_ == 0x18) // "show billboard"
+                )
+            );
+        }        
     }
 
     Ok(())
@@ -3144,7 +3280,8 @@ fn patch_credits(
                 let mut _room_name = String::new();
                 for (_, level) in config.level_data.iter() {
                     for (room_name, room) in level.rooms.iter() {
-                        for pickup_info in room.pickups.iter() {
+                        if room.pickups.is_none() { continue };
+                        for pickup_info in room.pickups.as_ref().unwrap().iter() {
                             if PickupType::from_str(pickup_type.name()) == PickupType::from_str(&pickup_info.pickup_type) {
                                 _room_name = room_name.to_string();
                                 break;
@@ -3905,6 +4042,7 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
+    ctwk_player_gun.beams[0].normal.damage = 9999999.0;
     Ok(())
 }
 
@@ -4034,7 +4172,9 @@ impl fmt::Display for Version
 fn patch_qol_game_breaking(
     patcher: &mut PrimePatcher,
     version: Version,
-    force_vanilla_layout: bool)
+    force_vanilla_layout: bool,
+    small_samus: bool,
+)
 {
     
     // randomizer-induced bugfixes
@@ -4050,14 +4190,16 @@ fn patch_qol_game_breaking(
         resource_info!("00_mines_savestation_b.MREA").into(),
         move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
     );
-    patcher.add_scly_patch(
-        resource_info!("01_over_mainplaza.MREA").into(),
-        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.5], true, false)
-    );
-    patcher.add_scly_patch(
-        resource_info!("0_elev_lava_b.MREA").into(),
-        move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 1.0], true, false)
-    );
+    if small_samus {
+        patcher.add_scly_patch(
+            resource_info!("01_over_mainplaza.MREA").into(),
+            move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.5], true, false)
+        );
+        patcher.add_scly_patch(
+            resource_info!("0_elev_lava_b.MREA").into(),
+            move |_ps, area| patch_spawn_point_position(_ps, area, [0.0, 0.0, 0.7], true, false)
+        );
+    }
 
     if force_vanilla_layout { return; }
 
@@ -4313,17 +4455,12 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
         move |ps, area| patch_remove_cutscenes(ps, area,
             vec![0x00020443], // turn the forcefield off faster
-            vec![0x00020021, 0x00020253, // play crane cutscene normally as there is no benefit to skipping it
-            ],
+            vec![],
             false,
         ),
     );
     patcher.add_scly_patch(
         resource_info!("11_over_muddywaters_b.MREA").into(), // lava lake
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
-    );
-    patcher.add_scly_patch(
-        resource_info!("14_tl_base01.MREA").into(), // tower of light
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
@@ -4340,7 +4477,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("11_wateryhall.MREA").into(), // watery hall
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0029280A, 0x002927FD], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("18_halfpipe.MREA").into(), // crossway
@@ -4353,6 +4490,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
             vec![
                 0x003400F5, 0x00340046, 0x0034004A, 0x003400EA, 0x0034004F, // leave chozo bowling cutscenes to avoid getting stuck
                 0x0034025C, 0x00340264, 0x00340268, 0x0034025B, // leave missile station cutsene
+                0x00340142, 0x00340378, // leave ghost death cutscene (it's major b/c reposition)
             ],
             false,
         ),
@@ -4394,7 +4532,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("08_ice_ridley.MREA").into(), // control tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002702DD], vec![], true),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002702DD, 0x002702D5, 0x00270544, 0x002703DF], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("13_ice_vault.MREA").into(), // research core
@@ -4420,20 +4558,32 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
         resource_info!("02_mines_shotemup.MREA").into(), // mine security station
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
     );
-}
-
-fn patch_ridley_phendrana_shorelines_cinematic(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
-    -> Result<(), String>
-{
-    let scly = area.mrea().scly_section_mut();
-    scly.layers.as_mut_vec()[4].objects.as_mut_vec().clear();
-    Ok(())
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // phendrana shorelines
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x00020203], vec![0x000202A9, 0x000202A8, 0x000202B7], true), // keep the ridley cinematic
+    );
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(),
-        patch_ridley_phendrana_shorelines_cinematic
+        resource_info!("01_endcinema.MREA").into(), // Impact Crater Escape Cinema (cause why not)
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+    );
+    // +Ghost death cutscene
+    patcher.add_scly_patch(
+        resource_info!("17_chozo_bowling.MREA").into(), // hall of the elders
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x003400F4, 0x003400F8, 0x003400F9, 0x0034018C], // speed up release from bomb slots
+            vec![
+                0x003400F5, 0x00340046, 0x0034004A, 0x003400EA, 0x0034004F, // leave chozo bowling cutscenes to avoid getting stuck
+                0x0034025C, 0x00340264, 0x00340268, 0x0034025B, // leave missile station cutsene
+            ],
+            false,
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // phendrana shorelines
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x00020203], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(), // artifact temple
@@ -4441,7 +4591,7 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
             vec![],
             vec![
                 // progress cutscene
-                // 0x00100463, 0x0010046F,
+                0x00100463, 0x0010046F,
                 // ridley intro cutscene
                 0x0010036F, 0x0010026C, 0x00100202, 0x00100207, 0x00100373, 0x001003C4, 0x001003D9, 0x001003DC, 0x001003E6, 0x001003CE, 0x0010020C, 0x0010021A, 0x001003EF, 0x001003E9, 0x0010021A, 0x00100491, 0x001003EE, 0x001003F0, 0x001003FE, 0x0010021F,
                 // crater entry/exit cutscene
@@ -4453,10 +4603,6 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     patcher.add_scly_patch(
         resource_info!("03_mines.MREA").into(), // elite research
         move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000D01A9], vec![], true),
-    );
-    patcher.add_scly_patch(
-        resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
     );
     patcher.add_scly_patch(
         resource_info!("19_hive_totem.MREA").into(), // hive totem
@@ -4716,10 +4862,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos, pickup_scans, savw_scans_to_add) = collect_game_resources(gc_disc, starting_memo, &config);
+    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add) =
+        collect_game_resources(gc_disc, starting_memo, &config);
+
     let game_resources = &game_resources;
     let pickup_hudmemos = &pickup_hudmemos;
     let pickup_scans = &pickup_scans;
+    let extra_scans = &extra_scans;
     let savw_scans_to_add = &savw_scans_to_add;
 
     // XXX These values need to out live the patcher
@@ -4778,12 +4927,41 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     1d180d7c.CTWK -> Particle.CTWK
     */
 
+    // Patch end sequence (player size)
+    if config.ctwk_config.player_size.is_some() {
+        patcher.add_scly_patch(
+            resource_info!("01_endcinema.MREA").into(),
+            move |ps, area| patch_samus_actor_size(ps, area, config.ctwk_config.player_size.clone().unwrap()),
+        );
+    }
+
+    // Add hard-coded POI
+    patcher.add_scly_patch(
+        resource_info!("01_ice_plaza.MREA").into(), // Phen Shorelines - Scannable in tower
+        move |ps, area| patch_add_poi(
+            ps, area,
+            game_resources,
+            custom_asset_ids::SHORELINES_POI_SCAN,
+            custom_asset_ids::SHORELINES_POI_STRG,
+            [-98.0624, -162.3933, 28.5371],
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("08_mines.MREA").into(), // MQA - Always scan dash from item
+        move |ps, area| patch_add_poi(
+            ps, area,
+            game_resources,
+            custom_asset_ids::MQA_POI_SCAN,
+            custom_asset_ids::MQA_POI_STRG,
+            [224.9169, 255.7093, -67.2823],
+        ),
+    );
+
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
         let world = World::from_pak(pak_name).unwrap();
-        
-        for room_info in rooms.iter() {
 
+        for room_info in rooms.iter() {
             if remove_control_disabler {
                 patcher.add_scly_patch(
                     (pak_name.as_bytes(), room_info.room_id.to_u32()),
@@ -4811,19 +4989,39 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     Ok(())
                 });
             }
+            
+            if config.qol_major_cutscenes && is_elevator(room_info.room_id.to_u32()) {
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    move |ps, area| patch_remove_cutscenes(
+                        ps, area,
+                        vec![],
+                        vec![],
+                        true,
+                    ),
+                );
+            }
 
-            // Get list of pickups specified for this room
-            let pickups = {
+            // Get list of patches specified for this room
+            let (pickups, scans) = {
                 let mut _pickups = Vec::new();
+                let mut _scans = Vec::new();
                 
                 let level = config.level_data.get(world.to_json_key());
                 if level.is_some() {
                     let room = level.unwrap().rooms.get(room_info.name.trim());
                     if room.is_some() {
-                        _pickups = room.unwrap().pickups.clone();
+                        let room = room.as_ref().unwrap();
+                        if room.pickups.is_some() {
+                            _pickups = room.pickups.clone().unwrap();
+                        }
+
+                        if room.extra_scans.is_some() {
+                            _scans = room.extra_scans.clone().unwrap();
+                        }
                     }
                 }
-                _pickups
+                (_pickups, _scans)
             };
 
             // Patch existing item locations
@@ -4895,6 +5093,26 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         config.qol_cosmetic,
                         config.obfuscate_items,
                     ),
+                );
+
+                idx = idx + 1;
+            }
+
+            // Add extra scans (poi)
+            idx = 0;
+            for scan in scans.iter() {
+                let scan = scan.clone();
+                let key = PickupHashKey {
+                    level_id: world.mlvl(),
+                    room_id: room_info.room_id.to_u32(),
+                    pickup_idx: idx as u32,
+                };
+
+                let (scan_id, strg_id) = extra_scans.get(&key).unwrap();
+
+                patcher.add_scly_patch(
+                    (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                    move |ps, area| patch_add_poi(ps, area, game_resources, scan_id.clone(), strg_id.clone(), scan.position),
                 );
 
                 idx = idx + 1;
@@ -5113,7 +5331,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if config.qol_game_breaking {
-        patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout);
+        patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout, config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.9);
     }
 
     if config.qol_cosmetic {
