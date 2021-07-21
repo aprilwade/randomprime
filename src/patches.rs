@@ -4042,7 +4042,7 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
-    ctwk_player_gun.beams[0].normal.damage = 9999999.0;
+    // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
     Ok(())
 }
 
