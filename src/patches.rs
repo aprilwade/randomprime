@@ -951,7 +951,7 @@ fn update_pickup(
         // "How is this pickup integrated into the room?"
         name: original_pickup.name,
         position: position.into(),
-        rotation: original_pickup.rotation,
+        rotation: pickup_model_type.pickup_data().rotation.clone().into(),
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
