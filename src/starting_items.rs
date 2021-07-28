@@ -4,6 +4,7 @@ use serde::{Deserialize};
 #[serde(rename_all = "camelCase")]
 pub struct StartingItems
 {
+    pub combat_visor: bool,
     pub power_beam: bool,
     pub scan_visor: bool,
     pub missiles: i32,
@@ -42,6 +43,7 @@ impl StartingItems
 
         StartingItems {
             power_beam:  true,
+            combat_visor:  true,
             scan_visor:  fetch_bits(1) == 1,
             missiles:  fetch_bits(8) as i32,
             energy_tanks:  fetch_bits(4) as i8,
@@ -70,6 +72,7 @@ impl StartingItems
 
     pub fn update_spawn_point(&self, spawn_point: &mut structs::SpawnPoint)
     {
+        spawn_point.combat_visor = self.combat_visor as u32;
         spawn_point.power = self.power_beam as u32;
         spawn_point.scan_visor = self.scan_visor as u32;
         spawn_point.missiles = self.missiles as u32;
@@ -150,6 +153,7 @@ impl Default for StartingItems
     fn default() -> Self
     {
         StartingItems {
+            combat_visor: true,
             power_beam: true,
             scan_visor: true,
             missiles: 0,
