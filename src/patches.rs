@@ -2886,6 +2886,13 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::ACTIVATE,
                     target_object_id: 0x0002001F, // platform
                 });
+
+                // set to left relay
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x0002025B,
+                });
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
