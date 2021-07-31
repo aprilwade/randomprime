@@ -6995,3 +6995,4 @@
 0x805a9cd4 g_MainStringTable
 0x805a9ce0 g_GameState
 0x805ab8ec g_EtankCapacity
+0x802d7494 CrashScreenControllerPollBranch
