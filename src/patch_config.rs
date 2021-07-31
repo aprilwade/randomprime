@@ -138,6 +138,7 @@ pub struct PatchConfig
     pub skip_hudmenus: bool,
     pub keep_fmvs: bool,
     pub obfuscate_items: bool,
+    pub automatic_crash_screen: bool,
     pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
@@ -215,6 +216,7 @@ struct Preferences
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
+    automatic_crash_screen: Option<bool>,
     trilogy_disc_path: Option<String>,
     keep_fmvs: Option<bool>,
     quickplay: Option<bool>,
@@ -308,6 +310,9 @@ impl PatchConfig
             .arg(Arg::with_name("skip hudmenus")
                 .long("non-modal-item-messages")
                 .help("Display a non-modal message when an item is is acquired"))
+            .arg(Arg::with_name("automatic crash screen")
+                .long("automatic-crash-screen")
+                .help("Makes the crash screen appear without any button combination required"))
             .arg(Arg::with_name("etank capacity")
                 .long("etank-capacity")
                 .help("Set the etank capacity and base health")
@@ -411,6 +416,7 @@ impl PatchConfig
         populate_config_bool!(matches;
             "skip hudmenus" => patch_config.preferences.skip_hudmenus,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
+            "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "keep attract mode" => patch_config.preferences.keep_fmvs,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
@@ -560,6 +566,7 @@ impl PatchConfigPrivate
 
             skip_hudmenus: self.preferences.skip_hudmenus.unwrap_or(true),
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
+            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
             keep_fmvs: self.preferences.keep_fmvs.unwrap_or(false),

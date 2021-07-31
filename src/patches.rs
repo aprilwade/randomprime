@@ -2314,6 +2314,13 @@ fn patch_dol<'r>(
     // });
     // dol_patcher.ppcasm_patch(&ball_color_patch)?;
 
+    if config.automatic_crash_screen {
+        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version), {
+            nop;
+        });
+        dol_patcher.ppcasm_patch(&automatic_crash_patch)?;
+    }
+
     let cinematic_skip_patch = ppcasm!(symbol_addr!("ShouldSkipCinematic__22CScriptSpecialFunctionFR13CStateManager", version), {
             li      r3, 0x1;
             blr;

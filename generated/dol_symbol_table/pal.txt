@@ -2762,3 +2762,4 @@
 0x8046ad38 g_MainStringTable
 0x8046ad44 g_GameState
 0x8046c99c g_EtankCapacity
+0x802c2558 CrashScreenControllerPollBranch
