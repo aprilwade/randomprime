@@ -69,7 +69,7 @@ impl<'r> SclyPropertyData for WorldTransporter<'r>
 
 impl<'r> WorldTransporter<'r>
 {
-    pub fn warp(mlvl: u32, mrea: u32, room_name: &str, font: ResId<FONT>, strg: ResId<STRG>, is_pal: bool) -> Self
+    pub fn warp(mlvl: u32, mrea: u32, teleporter_name: &str, font: ResId<FONT>, strg: ResId<STRG>, is_pal: bool) -> Self
     {
         let pal_additions = if is_pal {
             Some(WorldTransporterPalAdditions {
@@ -83,10 +83,8 @@ impl<'r> WorldTransporter<'r>
             None
         };
         
-        let name = CString::new(format!("Warp to {}", room_name)).unwrap();
-        
         WorldTransporter {
-            name: Cow::Owned(name),
+            name: Cow::Owned(CString::new(teleporter_name).unwrap()),
             active: 1,
             mlvl: ResId::new(mlvl),
             mrea: ResId::new(mrea),

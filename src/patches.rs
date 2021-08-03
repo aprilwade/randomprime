@@ -3110,7 +3110,7 @@ fn patch_save_station_for_warp_to_start<'r>(
             property_data: structs::WorldTransporter::warp(
                 spawn_room.mlvl,
                 spawn_room.mrea,
-                spawn_room.name,
+                "Warp to Start",
                 resource_info!("Deface14B_O.FONT").try_into().unwrap(),
                 ResId::new(custom_asset_ids::WARPING_TO_START_STRG.to_u32()),
                 version == Version::Pal
