@@ -184,6 +184,7 @@ pub struct PatchConfig
     pub warp_to_start: bool,
 
     pub obfuscate_items: bool,
+    pub automatic_crash_screen: bool,
     pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
     pub heat_damage_per_sec: f32,
@@ -231,6 +232,7 @@ struct Preferences
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
+    automatic_crash_screen: Option<bool>,
     trilogy_disc_path: Option<String>,
     quickplay: Option<bool>,
     quiet: Option<bool>,
@@ -346,6 +348,9 @@ impl PatchConfig
             .arg(Arg::with_name("warp to start")
                 .long("warp-to-start")
                 .help("Allows player to warp to start from any save station"))
+            .arg(Arg::with_name("automatic crash screen")
+                .long("automatic-crash-screen")
+                .help("Makes the crash screen appear without any button combination required"))
             .arg(Arg::with_name("etank capacity")
                 .long("etank-capacity")
                 .help("Set the etank capacity and base health")
@@ -439,6 +444,7 @@ impl PatchConfig
             "qol minor cutscenes" => patch_config.preferences.qol_minor_cutscenes,
             "qol major cutscenes" => patch_config.preferences.qol_major_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
+            "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
@@ -668,6 +674,7 @@ impl PatchConfigPrivate
             backwards_lower_mines: self.game_config.backwards_lower_mines.unwrap_or(true),
 
             obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
+            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,
             suit_hue_rotate_angle: None,
