@@ -4538,7 +4538,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
         resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
         move |ps, area| patch_remove_cutscenes(ps, area,
-            vec![0x00080201, 0x0008024E], // speed up hands animation
+            vec![0x00080201, 0x0008024E,0x00080170, 0x00080118], // speed up hands animation + grate open
             vec![],
             false),
     );
