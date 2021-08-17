@@ -54,6 +54,16 @@ impl fmt::Display for MapState {
     }
 }
 
+#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum CutsceneMode
+{
+    Original,
+    Competitive,
+    Minor,
+    Major,
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -165,10 +175,9 @@ pub struct PatchConfig
     pub iso_format: IsoFormat,
     pub output_iso: File,
 
+    pub qol_cutscenes: CutsceneMode,
     pub qol_game_breaking: bool,
     pub qol_cosmetic: bool,
-    pub qol_minor_cutscenes: bool,
-    pub qol_major_cutscenes: bool,
 
     pub phazon_elite_without_dynamo: bool,
     pub main_plaza_door: bool,
@@ -226,8 +235,7 @@ struct Preferences
     qol_game_breaking: Option<bool>,
     qol_cosmetic: Option<bool>,
     qol_logical: Option<bool>,
-    qol_minor_cutscenes: Option<bool>,
-    qol_major_cutscenes: Option<bool>,
+    qol_cutscenes: Option<String>,
 
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
@@ -331,12 +339,10 @@ impl PatchConfig
             .arg(Arg::with_name("qol cosmetic")
                 .long("qol-cosmetic")
                 .help("Patch cutscenes to fix continuity errors and UI to improve QoL without affecting IGT or the story"))
-            .arg(Arg::with_name("qol minor cutscenes")
-                .long("qol-minor-cutscenes")
-                .help("Remove cutscenes which do not drastically affect gameplay"))
-            .arg(Arg::with_name("qol major cutscenes")
-                .long("qol-major-cutscenes")
-                .help("Remove nearly every cutscene, even if the result affects timing/positioning (affects IGT)"))
+            .arg(Arg::with_name("qol cutscenes")
+                .long("qol-cutscenes")
+                .help("Original, Competitive, Minor, Major")
+                .takes_value(true))
             .arg(Arg::with_name("starting room")
                 .long("starting-room")
                 .help("Room which the player starts their adventure from. Format - <world>:<room name>, where <world> is [Frigate|Tallon|Chozo|Magmoor|Phendrana|Mines|Crater]")
@@ -441,8 +447,6 @@ impl PatchConfig
             "force vanilla layout" => patch_config.force_vanilla_layout,
             "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
-            "qol minor cutscenes" => patch_config.preferences.qol_minor_cutscenes,
-            "qol major cutscenes" => patch_config.preferences.qol_major_cutscenes,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
             "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
@@ -471,6 +475,9 @@ impl PatchConfig
         }
         if let Some(starting_room) = matches.value_of("starting room") {
             patch_config.game_config.starting_room = Some(starting_room.to_string());
+        }
+        if let Some(qol_cutscenes) = matches.value_of("qol cutscenes") {
+            patch_config.preferences.qol_cutscenes = Some(qol_cutscenes.to_string());
         }
 
         // integer/float
@@ -596,19 +603,12 @@ impl PatchConfigPrivate
                 self.preferences.qol_cosmetic.unwrap_or(true)
             }
         };
-        let qol_minor_cutscenes = {
-            if force_vanilla_layout {
-                false
-            } else {
-                self.preferences.qol_minor_cutscenes.unwrap_or(false)
-            }
-        };
-        let qol_major_cutscenes = {
-            if force_vanilla_layout {
-                false
-            } else {
-                self.preferences.qol_major_cutscenes.unwrap_or(false)
-            }
+        let qol_cutscenes = match self.preferences.qol_cutscenes.as_ref().unwrap_or(&"original".to_string()).to_lowercase().trim() {
+            "original" => CutsceneMode::Original,
+            "competitive" => CutsceneMode::Competitive,
+            "minor" => CutsceneMode::Minor,
+            "major" => CutsceneMode::Major,
+            _ => panic!("Unknown cutscene mode {}", self.preferences.qol_cutscenes.as_ref().unwrap()),
         };
 
         let starting_room = {
@@ -663,8 +663,7 @@ impl PatchConfigPrivate
 
             qol_game_breaking,
             qol_cosmetic,
-            qol_minor_cutscenes,
-            qol_major_cutscenes,
+            qol_cutscenes,
 
             phazon_elite_without_dynamo: self.game_config.phazon_elite_without_dynamo.unwrap_or(true), 
             main_plaza_door: self.game_config.main_plaza_door.unwrap_or(true),

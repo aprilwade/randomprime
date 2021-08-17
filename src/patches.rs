@@ -20,6 +20,7 @@ use crate::patch_config::{
     GameBanner,
     LevelConfig,
     CtwkConfig,
+    CutsceneMode,
 };
 
 use crate::{
@@ -4410,6 +4411,9 @@ fn patch_qol_cosmetic(
 
     // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
 }
+fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
+
+}
 
 fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
@@ -4761,8 +4765,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "qol game breaking: {:?}", config.qol_game_breaking).unwrap();
     writeln!(ct, "qol cosmetic: {:?}", config.qol_cosmetic).unwrap();
-    writeln!(ct, "qol minor cutscenes: {:?}", config.qol_minor_cutscenes).unwrap();
-    writeln!(ct, "qol major cutscenes: {:?}", config.qol_major_cutscenes).unwrap();
     writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
@@ -5014,7 +5016,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 });
             }
             
-            if config.qol_major_cutscenes && is_elevator(room_info.room_id.to_u32()) {
+            if config.qol_cutscenes == CutsceneMode::Major && is_elevator(room_info.room_id.to_u32()) {
                 patcher.add_scly_patch(
                     (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     move |ps, area| patch_remove_cutscenes(
@@ -5328,7 +5330,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if !config.force_vanilla_layout {
-        if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_major_cutscenes {
+        if starting_room.mrea != SpawnRoom::LandingSite.spawn_room_data().mrea || config.qol_cutscenes == CutsceneMode::Major {
             // If we have a non-default start point, patch the landing site to avoid
             // weirdness with cutscene triggers and the ship spawning.
             patcher.add_scly_patch(
@@ -5365,7 +5367,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
 
     if config.qol_cosmetic {
-        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic || config.qol_major_cutscenes);
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic);
 
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[
@@ -5393,11 +5395,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_qol_logical(&mut patcher, config);
     }
 
-    if config.qol_minor_cutscenes || config.qol_major_cutscenes {
+    if config.qol_cutscenes == CutsceneMode::Competitive {
+        patch_qol_competitive_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_cutscenes == CutsceneMode::Minor || config.qol_cutscenes == CutsceneMode::Major {
         patch_qol_minor_cutscenes(&mut patcher, version);
     }
 
-    if config.qol_major_cutscenes {
+    if config.qol_cutscenes == CutsceneMode::Major {
         patch_qol_major_cutscenes(&mut patcher);
     }
 
