@@ -851,8 +851,14 @@ fn modify_pickups_in_mrea<'r>(
     ];
     for layer in layers.iter_mut() {
         for obj in layer.objects.as_mut_vec().iter_mut() {
-            if obj.property_data.is_point_of_interest() {
-                let obj_id = obj.instance_id&0x00FFFFFF;
+            let obj_id = obj.instance_id&0x00FFFFFF;
+
+            // Make the door in magmoor workstaion passthrough so item is scannable
+            if obj_id == 0x0017016E || obj_id == 0x0017016F
+            {    
+                let actor = obj.property_data.as_actor_mut().unwrap();
+                actor.actor_params.visor_params.target_passthrough = 1;
+            } else if obj.property_data.is_point_of_interest() {
                 let poi = obj.property_data.as_point_of_interest_mut().unwrap();
                 if (
                     f32::abs(poi.position[0] - position[0]) < 6.0 &&
