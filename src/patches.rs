@@ -4411,8 +4411,110 @@ fn patch_qol_cosmetic(
 
     // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
 }
-fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
 
+fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
+    patcher.add_scly_patch(
+        resource_info!("05_over_xray.MREA").into(), // life grove (competitive only - watch raise post cutscenes)
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4, 0x002A01D0], false), // don't skip ghosts cutscene or ghosts will leave forever
+    );
+    patcher.add_scly_patch(
+        resource_info!("12_ice_research_b.MREA").into(),
+        move |ps, area| patch_lab_aether_cutscene_trigger(ps, area, version)
+    );
+    patcher.add_scly_patch(
+        resource_info!("00j_over_hall.MREA").into(), // temple security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("15_ice_cave_a.MREA").into(), // frost cave
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0029006C, 0x0029006B], vec![], true),
+    );
+    patcher.add_scly_patch(
+        resource_info!("15_energycores.MREA").into(), // energy core
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![
+                0x002C00E8, 0x002C0101, 0x002C00F5, // activate core delay
+                0x002C0068, 0x002C0055, 0x002C0079, // core energy flow activation delay
+                0x002C0067, 0x002C00E7, 0x002C0102, // jingle finish delay
+                0x002C0104, 0x002C00EB, // platform go up delay
+                0x002C0069, // water go down delay
+                0x002C01BC, // unlock door
+            ],
+            vec![],
+            false,
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_under_intro_reactor.MREA").into(), // reactor core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001B0100], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001E028A], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x002000DB], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("04_maproom_d.MREA").into(), // vault
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("0v_connect_tunnel.MREA").into(), // sun tower
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001D00E5, 0x001D00E8], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("07_ruinedroof.MREA").into(), // training chamber
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x000C0153, 0x000C0154, 0x000C015B], vec![], true),
+    );
+    patcher.add_scly_patch(
+        resource_info!("11_wateryhall.MREA").into(), // watery hall
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0029280A, 0x002927FD], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("18_halfpipe.MREA").into(), // crossway
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_over_burningeffigy.MREA").into(), // geothermal core
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x001401DD, 0x001401E3], // immediately move parts
+            vec![],
+            false,
+        ),
+    );
+    patcher.add_scly_patch(
+        resource_info!("06_ice_temple.MREA").into(), // chozo ice temple
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![0x00080201, 0x0008024E,0x00080170, 0x00080118], // speed up hands animation + grate open
+            vec![],
+            false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("04_ice_boost_canyon.MREA").into(), // Phendrana canyon
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("05_ice_shorelines.MREA").into(), // ruined courtyard
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(), // research core
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("03_mines.MREA").into(), // elite research (keep phazon elite cutscene)
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x000D04C8, 0x000D01CF], false),
+    );
+    patcher.add_scly_patch(
+        resource_info!("02_mines_shotemup.MREA").into(), // mine security station
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+    );
 }
 
 fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
@@ -4497,7 +4599,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("0v_connect_tunnel.MREA").into(), // sun tower
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x001D00E5, 0x001D00E8], vec![], false), // Open gate faster
     );
     patcher.add_scly_patch(
         resource_info!("07_ruinedroof.MREA").into(), // training chamber
