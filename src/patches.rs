@@ -680,6 +680,7 @@ fn modify_pickups_in_mrea<'r>(
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
     obfuscate_items: bool,
+    qol_pickup_scans: bool,
 ) -> Result<(), String>
 {
     let location_idx = 0;
@@ -843,32 +844,34 @@ fn modify_pickups_in_mrea<'r>(
     layers[new_layer_idx].objects.as_mut_vec().push(relay);
 
     // find any overlapping POI that give "helpful" hints to the player and replace their scan text with the items //
-    const EXCLUDE_POI: &[u32] = &[
-        0x000200AF, // main plaza tree    
-        0x00190584, 0x0019039C, // research lab hydra
-        0x001F025C, // mqb tank
-        custom_asset_ids::MQA_POI_SCAN.to_u32(),
-    ];
-    for layer in layers.iter_mut() {
-        for obj in layer.objects.as_mut_vec().iter_mut() {
-            let obj_id = obj.instance_id&0x00FFFFFF;
-
-            // Make the door in magmoor workstaion passthrough so item is scannable
-            if obj_id == 0x0017016E || obj_id == 0x0017016F
-            {    
-                let actor = obj.property_data.as_actor_mut().unwrap();
-                actor.actor_params.visor_params.target_passthrough = 1;
-            } else if obj.property_data.is_point_of_interest() {
-                let poi = obj.property_data.as_point_of_interest_mut().unwrap();
-                if (
-                    f32::abs(poi.position[0] - position[0]) < 6.0 &&
-                    f32::abs(poi.position[1] - position[1]) < 6.0 &&
-                    f32::abs(poi.position[2] - position[2]) < 3.0 &&
-                    !EXCLUDE_POI.contains(&obj_id) &&
-                    pickup_location.location.instance_id != 0x002005EA
-                   ) || (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
-                {
-                    poi.scan_param.scan = scan_id_out;
+    if qol_pickup_scans {
+        const EXCLUDE_POI: &[u32] = &[
+            0x000200AF, // main plaza tree    
+            0x00190584, 0x0019039C, // research lab hydra
+            0x001F025C, // mqb tank
+            custom_asset_ids::MQA_POI_SCAN.to_u32(),
+        ];
+        for layer in layers.iter_mut() {
+            for obj in layer.objects.as_mut_vec().iter_mut() {
+                let obj_id = obj.instance_id&0x00FFFFFF;
+    
+                // Make the door in magmoor workstaion passthrough so item is scannable
+                if obj_id == 0x0017016E || obj_id == 0x0017016F
+                {    
+                    let actor = obj.property_data.as_actor_mut().unwrap();
+                    actor.actor_params.visor_params.target_passthrough = 1;
+                } else if obj.property_data.is_point_of_interest() {
+                    let poi = obj.property_data.as_point_of_interest_mut().unwrap();
+                    if (
+                        f32::abs(poi.position[0] - position[0]) < 6.0 &&
+                        f32::abs(poi.position[1] - position[1]) < 6.0 &&
+                        f32::abs(poi.position[2] - position[2]) < 3.0 &&
+                        !EXCLUDE_POI.contains(&obj_id) &&
+                        pickup_location.location.instance_id != 0x002005EA
+                       ) || (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
+                    {
+                        poi.scan_param.scan = scan_id_out;
+                    }
                 }
             }
         }
@@ -5070,26 +5073,28 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     // Add hard-coded POI
-    patcher.add_scly_patch(
-        resource_info!("01_ice_plaza.MREA").into(), // Phen Shorelines - Scannable in tower
-        move |ps, area| patch_add_poi(
-            ps, area,
-            game_resources,
-            custom_asset_ids::SHORELINES_POI_SCAN,
-            custom_asset_ids::SHORELINES_POI_STRG,
-            [-98.0624, -162.3933, 28.5371],
-        ),
-    );
-    patcher.add_scly_patch(
-        resource_info!("08_mines.MREA").into(), // MQA - Always scan dash from item
-        move |ps, area| patch_add_poi(
-            ps, area,
-            game_resources,
-            custom_asset_ids::MQA_POI_SCAN,
-            custom_asset_ids::MQA_POI_STRG,
-            [224.9169, 255.7093, -67.2823],
-        ),
-    );
+    if config.qol_pickup_scans {
+        patcher.add_scly_patch(
+            resource_info!("01_ice_plaza.MREA").into(), // Phen Shorelines - Scannable in tower
+            move |ps, area| patch_add_poi(
+                ps, area,
+                game_resources,
+                custom_asset_ids::SHORELINES_POI_SCAN,
+                custom_asset_ids::SHORELINES_POI_STRG,
+                [-98.0624, -162.3933, 28.5371],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("08_mines.MREA").into(), // MQA - Always scan dash from item
+            move |ps, area| patch_add_poi(
+                ps, area,
+                game_resources,
+                custom_asset_ids::MQA_POI_SCAN,
+                custom_asset_ids::MQA_POI_STRG,
+                [224.9169, 255.7093, -67.2823],
+            ),
+        );
+    }
 
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
@@ -5198,6 +5203,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             key,
                             config.qol_cosmetic,
                             config.obfuscate_items,
+                            config.qol_pickup_scans,
                         )
                 );
 

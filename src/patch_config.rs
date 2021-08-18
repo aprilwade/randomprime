@@ -178,6 +178,7 @@ pub struct PatchConfig
     pub qol_cutscenes: CutsceneMode,
     pub qol_game_breaking: bool,
     pub qol_cosmetic: bool,
+    pub qol_pickup_scans: bool,
 
     pub phazon_elite_without_dynamo: bool,
     pub main_plaza_door: bool,
@@ -236,6 +237,7 @@ struct Preferences
     qol_cosmetic: Option<bool>,
     qol_logical: Option<bool>,
     qol_cutscenes: Option<String>,
+    qol_pickup_scans: Option<bool>,
 
     obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
@@ -447,6 +449,7 @@ impl PatchConfig
             "force vanilla layout" => patch_config.force_vanilla_layout,
             "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
+            "qol scans" => patch_config.preferences.qol_pickup_scans,
             "obfuscate items" => patch_config.preferences.obfuscate_items,
             "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
@@ -603,6 +606,13 @@ impl PatchConfigPrivate
                 self.preferences.qol_cosmetic.unwrap_or(true)
             }
         };
+        let qol_pickup_scans        = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.preferences.qol_pickup_scans.unwrap_or(true)
+            }
+        };
         let qol_cutscenes = match self.preferences.qol_cutscenes.as_ref().unwrap_or(&"original".to_string()).to_lowercase().trim() {
             "original" => CutsceneMode::Original,
             "competitive" => CutsceneMode::Competitive,
@@ -664,6 +674,7 @@ impl PatchConfigPrivate
             qol_game_breaking,
             qol_cosmetic,
             qol_cutscenes,
+            qol_pickup_scans,
 
             phazon_elite_without_dynamo: self.game_config.phazon_elite_without_dynamo.unwrap_or(true), 
             main_plaza_door: self.game_config.main_plaza_door.unwrap_or(true),
