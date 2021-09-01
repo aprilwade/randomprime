@@ -87,6 +87,7 @@ pub struct PickupConfig
     pub hudmemo_text: Option<String>,
     pub respawn: Option<bool>,
     pub position: Option<[f32;3]>,
+    pub modal_hudmemo: Option<bool>,
     // pub desination: Option<String>,
 }
 

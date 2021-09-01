@@ -501,7 +501,13 @@ fn patch_add_item<'r>(
                 name: b"myhudmemo\0".as_cstr(),
                 first_message_timer: 5.,
                 unknown: 1,
-                memo_type: 0, // nonmodal only
+                memo_type: {
+                    if skip_hudmemos {
+                        0
+                    } else {
+                        1
+                    }
+                },
                 strg: hudmemo_strg,
                 active: 1,
             })
@@ -5172,7 +5178,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             scan_text: None,
                             model: None,
                             respawn: None,
-                        } 
+                            modal_hudmemo: None,
+                        }
                     } else {
                         pickups[idx].clone() // TODO: cloning is suboptimal
                     }
@@ -5182,6 +5189,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     level_id: world.mlvl(),
                     room_id: room_info.room_id.to_u32(),
                     pickup_idx: idx as u32,
+                };
+
+                let skip_hudmemos = {
+                    if config.qol_cosmetic {
+                        !(pickup.modal_hudmemo.clone().unwrap_or(false))
+                    } else {
+                        true
+                    }
                 };
 
                 // modify pickup, connections, hudmemo etc.
@@ -5196,7 +5211,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             pickup_hudmemos,
                             pickup_scans,
                             key,
-                            config.qol_cosmetic,
+                            skip_hudmemos,
                             config.obfuscate_items,
                             config.qol_pickup_scans,
                         )
@@ -5215,6 +5230,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     pickup_idx: idx as u32,
                 };
 
+                let skip_hudmemos = {
+                    if config.qol_cosmetic {
+                        !(pickup.modal_hudmemo.clone().unwrap_or(false))
+                    } else {
+                        true
+                    }
+                };
+
                 patcher.add_scly_patch(
                     (pak_name.as_bytes(), room_info.room_id.to_u32()),
                     move |_ps, area| patch_add_item(
@@ -5225,7 +5248,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         pickup_hudmemos,
                         pickup_scans,
                         key,
-                        config.qol_cosmetic,
+                        skip_hudmemos,
                         config.obfuscate_items,
                     ),
                 );
