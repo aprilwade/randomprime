@@ -275,7 +275,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SHORELINES_POI_SCAN,
         custom_asset_ids::SHORELINES_POI_STRG,
-        "you shouldn't see this\0",
+        "task failed successfully\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::SHORELINES_POI_SCAN);
     assets.extend_from_slice(&create_item_scan_strg_pair(

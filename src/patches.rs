@@ -870,7 +870,8 @@ fn modify_pickups_in_mrea<'r>(
                         f32::abs(poi.position[2] - position[2]) < 3.0 &&
                         !EXCLUDE_POI.contains(&obj_id) &&
                         pickup_location.location.instance_id != 0x002005EA
-                       ) || (pickup_location.location.instance_id == 0x428011c && obj_id == 0x002803CE)  // research core scan
+                       ) || (pickup_location.location.instance_id == 0x0428011c && obj_id == 0x002803CE)  // research core scan
+                         || (pickup_location.location.instance_id == 0x00020176 && poi.scan_param.scan == custom_asset_ids::SHORELINES_POI_SCAN) // custom shorelines tower scan
                     {
                         poi.scan_param.scan = scan_id_out;
                     }
