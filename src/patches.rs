@@ -67,7 +67,6 @@ use std::{
 };
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
-const ALWAYS_MODAL_HUDMENUS: &[usize] = &[23, 50, 63];
 
 fn artifact_layer_change_template<'r>(instance_id: u32, pickup_kind: u32)
     -> structs::SclyObject<'r>
@@ -337,7 +336,6 @@ fn patch_add_item<'r>(
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
-    let location_idx = 0;
 
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
@@ -370,7 +368,7 @@ fn patch_add_item<'r>(
             });
 
     let name = CString::new(format!(
-            "Randomizer - Pickup {} ({:?})", location_idx, pickup_model_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_model_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
@@ -379,7 +377,7 @@ fn patch_add_item<'r>(
     let hudmemo_strg: ResId<res_id::STRG> = {
         if pickup_config.hudmemo_text.is_some() {
             *pickup_hudmemos.get(&pickup_hash_key).unwrap()
-        } else if skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+        } else if skip_hudmemos {
             pickup_type.skip_hudmemos_strg()
         } else {
             pickup_type.hudmemo_strg()
@@ -683,8 +681,6 @@ fn modify_pickups_in_mrea<'r>(
     qol_pickup_scans: bool,
 ) -> Result<(), String>
 {
-    let location_idx = 0;
-
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
     
@@ -716,14 +712,14 @@ fn modify_pickups_in_mrea<'r>(
             });
 
     let name = CString::new(format!(
-            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_type.pickup_data().name)).unwrap();
     area.add_layer(Cow::Owned(name));
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     let new_layer_2_idx = new_layer_idx + 1;
     if pickup_config.respawn.unwrap_or(false) {
         let name2 = CString::new(format!(
-            "Randomizer - Pickup {} ({:?})", location_idx, pickup_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_type.pickup_data().name)).unwrap();
         area.add_layer(Cow::Owned(name2));
         area.layer_flags.flags &= !(1 << new_layer_2_idx); // layer disabled by default
     }
@@ -732,7 +728,7 @@ fn modify_pickups_in_mrea<'r>(
     let hudmemo_strg: ResId<res_id::STRG> = {
         if pickup_config.hudmemo_text.is_some() {
             *pickup_hudmemos.get(&pickup_hash_key).unwrap()
-        } else if skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx) {
+        } else if skip_hudmemos {
             pickup_type.skip_hudmemos_strg()
         } else {
             pickup_type.hudmemo_strg()
@@ -881,10 +877,9 @@ fn modify_pickups_in_mrea<'r>(
         .find(|obj| obj.instance_id ==  pickup_location.hudmemo.instance_id)
         .unwrap();
     // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
-    // (Artifact of Truth) should always have modal hudmenus because a cutscene plays immediately
+    // (Artifact of Truth) should ys have modal hudmenus because a cutscene plays immediately
     // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
-    // TODO: location_idx is always 0?
-    update_hudmemo(hudmemo, hudmemo_strg, skip_hudmemos && !ALWAYS_MODAL_HUDMENUS.contains(&location_idx));
+    update_hudmemo(hudmemo, hudmemo_strg, skip_hudmemos);
 
     let location = pickup_location.attainment_audio;
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
