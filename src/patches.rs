@@ -1019,6 +1019,7 @@ fn update_hudmemo(
 
     if skip_hudmemos {
         hudmemo.memo_type = 0;
+        hudmemo.first_message_timer = 5.0;
     }
 }
 
