@@ -5196,7 +5196,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     if config.qol_cosmetic {
                         !(pickup.modal_hudmemo.clone().unwrap_or(false))
                     } else {
-                        true
+                        false
                     }
                 };
 
