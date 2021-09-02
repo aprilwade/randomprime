@@ -499,7 +499,7 @@ fn patch_add_item<'r>(
         property_data: structs::SclyProperty::HudMemo(
             Box::new(structs::HudMemo {
                 name: b"myhudmemo\0".as_cstr(),
-                first_message_timer: 5.,
+                first_message_timer: 5.0,
                 unknown: 1,
                 memo_type: {
                     if skip_hudmemos {
@@ -683,6 +683,7 @@ fn modify_pickups_in_mrea<'r>(
     pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
+    hudmemo_delay: f32,
     obfuscate_items: bool,
     qol_pickup_scans: bool,
 ) -> Result<(), String>
@@ -886,7 +887,7 @@ fn modify_pickups_in_mrea<'r>(
     // The items in Watery Hall (Charge beam), Research Core (Thermal Visor), and Artifact Temple
     // (Artifact of Truth) should ys have modal hudmenus because a cutscene plays immediately
     // after each item is acquired, and the nonmodal hudmenu wouldn't properly appear.
-    update_hudmemo(hudmemo, hudmemo_strg, skip_hudmemos);
+    update_hudmemo(hudmemo, hudmemo_strg, skip_hudmemos, hudmemo_delay);
 
     let location = pickup_location.attainment_audio;
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
@@ -1007,12 +1008,16 @@ fn update_hudmemo(
     hudmemo: &mut structs::SclyObject,
     hudmemo_strg: ResId<res_id::STRG>,
     skip_hudmemos: bool,
+    hudmemo_delay: f32,
 )
 {
     let hudmemo = hudmemo.property_data.as_hud_memo_mut().unwrap();
     hudmemo.strg = hudmemo_strg;
+    if hudmemo_delay != 0.0 {
+        hudmemo.first_message_timer = hudmemo_delay;
+    }
+
     if skip_hudmemos {
-        hudmemo.first_message_timer = 5.;
         hudmemo.memo_type = 0;
     }
 }
@@ -5194,9 +5199,17 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
                 let skip_hudmemos = {
                     if config.qol_cosmetic {
-                        !(pickup.modal_hudmemo.clone().unwrap_or(false))
+                        !(pickup.modal_hudmemo.clone().unwrap_or(false)) // make them modal if the client specified
                     } else {
-                        false
+                        false // leave them as they are in vanilla, modal
+                    }
+                };
+
+                let hudmemo_delay = {
+                    if pickup.modal_hudmemo.clone().unwrap_or(false) {
+                        5.0 // manually specified modal hudmemos are 5s
+                    } else {
+                        0.0 // otherwise, leave unchanged from vanilla
                     }
                 };
 
@@ -5213,6 +5226,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             pickup_scans,
                             key,
                             skip_hudmemos,
+                            hudmemo_delay,
                             config.obfuscate_items,
                             config.qol_pickup_scans,
                         )
