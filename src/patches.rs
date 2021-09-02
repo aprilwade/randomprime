@@ -2357,6 +2357,25 @@ fn patch_spawn_point_position<'r>(
     Ok(())
 }
 
+fn patch_fix_pca_crash(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    // find the loading trigger and enable it
+    let scly = area.mrea().scly_section_mut();
+    for layer in scly.layers.as_mut_vec() {
+        for obj in layer.objects.as_mut_vec() {
+            if obj.property_data.is_trigger() {
+                let trigger = obj.property_data.as_trigger_mut().unwrap();
+                if trigger.name.to_str().unwrap().contains(&"eliteboss") {
+                    trigger.active = 1;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn patch_backwards_lower_mines_pca(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -2364,15 +2383,6 @@ fn patch_backwards_lower_mines_pca(_ps: &mut PatcherState, area: &mut mlvl_wrapp
     let scly = area.mrea().scly_section_mut();
     for layer in scly.layers.as_mut_vec() {
         layer.objects.as_mut_vec().retain(|obj| !obj.property_data.is_platform());
-        for obj in layer.objects.as_mut_vec() {
-            if obj.property_data.is_trigger()
-            {
-                let trigger = obj.property_data.as_trigger_mut().unwrap();
-                if trigger.name.to_str().unwrap().contains(&"eliteboss") {
-                    trigger.active = 1;
-                }
-            }
-        }
     }
 
     // remove from level/area dependencies (this wasn't a necessary excercise, but it's nice to know how to do)
@@ -4217,7 +4227,16 @@ fn patch_qol_game_breaking(
     small_samus: bool,
 )
 {
-    
+    // Crashes
+    patcher.add_scly_patch(
+        resource_info!("07_mines_electric.MREA").into(),
+        patch_fix_central_dynamo_crash
+    );
+    patcher.add_scly_patch(
+        resource_info!("00p_mines_connect.MREA").into(),
+        patch_fix_pca_crash
+    );
+
     // randomizer-induced bugfixes
     patcher.add_scly_patch(
         resource_info!("1a_morphballtunnel.MREA").into(),
@@ -4321,10 +4340,6 @@ fn patch_qol_game_breaking(
     patcher.add_scly_patch(
         resource_info!("18_ice_gravity_chamber.MREA").into(),
         patch_gravity_chamber_stalactite_grapple_point
-    );
-    patcher.add_scly_patch(
-        resource_info!("07_mines_electric.MREA").into(),
-        patch_fix_central_dynamo_crash
     );
 }
 
