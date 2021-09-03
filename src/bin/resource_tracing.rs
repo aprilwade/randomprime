@@ -27,6 +27,7 @@ pub struct PickupLocation
     hudmemo: ScriptObjectLocation,
     attainment_audio: ScriptObjectLocation,
     post_pickup_relay_connections: Vec<structs::Connection>,
+    position: [f32;3],
 }
 
 #[derive(Clone, Debug)]
@@ -642,6 +643,7 @@ fn extract_pickup_location<'r>(
         attainment_audio: attainment_audio_location,
         hudmemo: hudmemo_loc,
         post_pickup_relay_connections: post_pickup_relay_connections,
+        position: pickup.position.clone().into(),
     };
 
     (location, removals)
@@ -1180,6 +1182,7 @@ fn main()
                 println!("                    location: {:?},", location.location);
                 println!("                    attainment_audio: {:?},", location.attainment_audio);
                 println!("                    hudmemo: {:?},", location.hudmemo);
+                println!("                    position: {:?},", location.position);
                 if location.post_pickup_relay_connections.len() == 0 {
                     println!("                    post_pickup_relay_connections: &[]");
                 } else {

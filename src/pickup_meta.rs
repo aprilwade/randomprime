@@ -402,7 +402,8 @@ pub struct PickupLocation
     pub location: ScriptObjectLocation,
     pub attainment_audio: ScriptObjectLocation,
     pub hudmemo: ScriptObjectLocation,
-    pub post_pickup_relay_connections: &'static [Connection]
+    pub post_pickup_relay_connections: &'static [Connection],
+    pub position: [f32;3],
 }
 
 #[derive(Clone, Copy, Debug)]
