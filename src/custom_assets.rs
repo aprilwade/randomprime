@@ -129,6 +129,7 @@ pub mod custom_asset_ids {
         FLAMETHROWER_DOOR_TXTR: TXTR,
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
+        MAP_DOT_TXTR: TXTR,
         SKIP_HUDMEMO_STRG_START: STRG,
         SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
 
@@ -181,6 +182,7 @@ fn extern_assets<'r>() -> Vec<Resource<'r>>
         (custom_asset_ids::WAVEBUSTER_DOOR_TXTR,      *b"TXTR", include_bytes!("../extra_assets/holorim_wavebuster.txtr")),
         (custom_asset_ids::ICESPREADER_DOOR_TXTR,     *b"TXTR", include_bytes!("../extra_assets/holorim_icespreader.txtr")),
         (custom_asset_ids::FLAMETHROWER_DOOR_TXTR,    *b"TXTR", include_bytes!("../extra_assets/holorim_flamethrower.txtr")),
+        (custom_asset_ids::MAP_DOT_TXTR,              *b"TXTR", include_bytes!("../extra_assets/map_pickupdot.txtr")),
     ];
 
     extern_assets.iter().map(|&(res, ref fourcc, bytes)| {
