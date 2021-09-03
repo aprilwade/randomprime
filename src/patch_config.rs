@@ -194,7 +194,6 @@ pub struct PatchConfig
     pub starting_memo: Option<String>,
     pub warp_to_start: bool,
 
-    pub obfuscate_items: bool,
     pub automatic_crash_screen: bool,
     pub etank_capacity: u32,
     pub nonvaria_heat_damage: bool,
@@ -240,7 +239,6 @@ struct Preferences
     qol_cutscenes: Option<String>,
     qol_pickup_scans: Option<bool>,
 
-    obfuscate_items: Option<bool>,
     map_default_state: Option<String>,
     artifact_hint_behavior: Option<String>,
     automatic_crash_screen: Option<bool>,
@@ -396,9 +394,6 @@ impl PatchConfig
                 .takes_value(true)
                 .validator(|s| s.parse::<i32>().map(|_| ())
                                             .map_err(|_| "Expected an integer".to_string())))
-            .arg(Arg::with_name("obfuscate items")
-                .long("obfuscate-items")
-                .help("Replace all item models with an obfuscated one"))
             .arg(Arg::with_name("quiet")
                 .long("quiet")
                 .help("Don't print the progress messages"))
@@ -451,7 +446,6 @@ impl PatchConfig
             "qol game breaking" => patch_config.preferences.qol_game_breaking,
             "qol cosmetic" => patch_config.preferences.qol_cosmetic,
             "qol scans" => patch_config.preferences.qol_pickup_scans,
-            "obfuscate items" => patch_config.preferences.obfuscate_items,
             "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
             "quiet" => patch_config.preferences.quiet,
@@ -684,7 +678,6 @@ impl PatchConfigPrivate
             backwards_upper_mines: self.game_config.backwards_upper_mines.unwrap_or(true),
             backwards_lower_mines: self.game_config.backwards_lower_mines.unwrap_or(true),
 
-            obfuscate_items: self.preferences.obfuscate_items.unwrap_or(false),
             automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(false),
             artifact_hint_behavior,
             flaahgra_music_files,

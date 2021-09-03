@@ -49,7 +49,6 @@ use reader_writer::{
     typenum::U3,
     CStrConversionExtension,
     FourCC,
-    LCow,
     Reader,
     Writable,
 };
@@ -285,43 +284,6 @@ fn patch_add_scans_to_savw(res: &mut structs::Resource, savw_scans_to_add: &Vec<
     Ok(())
 }
 
-#[derive(Copy, Clone, Debug)]
-enum MaybeObfuscatedPickup
-{
-    Unobfuscated(PickupType),
-    Obfuscated(PickupType),
-}
-
-impl MaybeObfuscatedPickup
-{
-    fn dependencies(&self) -> &'static [(u32, FourCC)]
-    {
-        match self {
-            MaybeObfuscatedPickup::Unobfuscated(pt) => pt.dependencies(),
-            MaybeObfuscatedPickup::Obfuscated(_) => PickupType::Nothing.dependencies(),
-        }
-    }
-
-    pub fn pickup_data<'a>(&self) -> LCow<'a, structs::Pickup<'static>>
-    {
-        match self {
-            MaybeObfuscatedPickup::Unobfuscated(pt) => LCow::Borrowed(pt.pickup_data()),
-            MaybeObfuscatedPickup::Obfuscated(original) => {
-                let original = original.pickup_data();
-                let nothing = PickupType::Nothing.pickup_data();
-
-                LCow::Owned(structs::Pickup {
-                    name: original.name.clone(),
-                    kind: original.kind,
-                    max_increase: original.max_increase,
-                    curr_increase: original.curr_increase,
-                    ..nothing.clone()
-                })
-            },
-        }
-    }
-}
-
 // TODO: factor out shared code with modify_pickups_in_mrea
 fn patch_add_item<'r>(
     ps: &mut PatcherState,
@@ -332,7 +294,6 @@ fn patch_add_item<'r>(
     pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
-    obfuscate_items: bool,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -348,17 +309,12 @@ fn patch_add_item<'r>(
     }
 
     // Pickup to use for visuals/hitbox //
-    let pickup_model_maybe_obfuscated = {
+    let pickup_model_type = {
         if pickup_config.model.is_some() {
             PickupType::from_str(&pickup_config.model.as_ref().unwrap())
         } else {
             pickup_type
         }
-    };
-    let pickup_model_type = if obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
-    } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
     };
 
     let deps_iter = pickup_model_type.dependencies().iter()
@@ -684,7 +640,6 @@ fn modify_pickups_in_mrea<'r>(
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
     hudmemo_delay: f32,
-    obfuscate_items: bool,
     qol_pickup_scans: bool,
 ) -> Result<(), String>
 {
@@ -699,17 +654,12 @@ fn modify_pickups_in_mrea<'r>(
     }
 
     // Pickup to use for visuals/hitbox //
-    let pickup_model_maybe_obfuscated = {
+    let pickup_model_type = {
         if pickup_config.model.is_some() {
             PickupType::from_str(&pickup_config.model.as_ref().unwrap())
         } else {
             pickup_type
         }
-    };
-    let pickup_model_type = if obfuscate_items {
-        MaybeObfuscatedPickup::Obfuscated(pickup_model_maybe_obfuscated)
-    } else {
-        MaybeObfuscatedPickup::Unobfuscated(pickup_model_maybe_obfuscated)
     };
 
     let deps_iter = pickup_model_type.dependencies().iter()
@@ -893,14 +843,14 @@ fn modify_pickups_in_mrea<'r>(
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  location.instance_id)
         .unwrap();
-    update_attainment_audio(attainment_audio, pickup_model_maybe_obfuscated);
+    update_attainment_audio(attainment_audio, pickup_model_type);
     Ok(())
 }
 
 fn update_pickup(
     pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
-    pickup_model_type: MaybeObfuscatedPickup,
+    pickup_model_type: PickupType,
     pickup_config: &PickupConfig,
     scan_id: Option<ResId<res_id::SCAN>>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
@@ -4899,7 +4849,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     writeln!(ct, "Options used:").unwrap();
     writeln!(ct, "qol game breaking: {:?}", config.qol_game_breaking).unwrap();
     writeln!(ct, "qol cosmetic: {:?}", config.qol_cosmetic).unwrap();
-    writeln!(ct, "obfuscated items: {}", config.obfuscate_items).unwrap();
     writeln!(ct, "nonvaria heat damage: {}", config.nonvaria_heat_damage).unwrap();
     writeln!(ct, "heat damage per sec: {}", config.heat_damage_per_sec).unwrap();
     writeln!(ct, "staggered suit damage: {}", config.staggered_suit_damage).unwrap();
@@ -5243,7 +5192,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             key,
                             skip_hudmemos,
                             hudmemo_delay,
-                            config.obfuscate_items,
                             config.qol_pickup_scans,
                         )
                 );
@@ -5280,7 +5228,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         pickup_scans,
                         key,
                         skip_hudmemos,
-                        config.obfuscate_items,
                     ),
                 );
 
