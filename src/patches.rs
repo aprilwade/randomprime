@@ -133,7 +133,7 @@ fn build_artifact_temple_totem_scan_strings<R>(
             if room.pickups.is_none() { continue };
             for pickup in room.pickups.as_ref().unwrap().iter() {
                 let pickup_type = PickupType::from_str(&pickup.pickup_type);
-                if pickup_type.idx() >= PickupType::ArtifactOfLifegiver.idx() && pickup_type.idx() <= PickupType::ArtifactOfStrength.idx() {
+                if pickup_type.kind() >= PickupType::ArtifactOfLifegiver.kind() && pickup_type.kind() <= PickupType::ArtifactOfStrength.kind() {
                     artifact_locations.push((&room_name.as_str(), pickup_type));
                 }
             }
@@ -160,7 +160,7 @@ fn build_artifact_temple_totem_scan_strings<R>(
 
     // Shame there isn't a way to flatten tuples automatically
     for (room_name, pt) in artifact_locations.iter() {
-        let artifact_id = pt.idx() - PickupType::ArtifactOfLifegiver.idx();
+        let artifact_id = (pt.kind().unwrap_or(0) - PickupType::ArtifactOfLifegiver.kind().unwrap()) as usize;
         if scan_text[artifact_id].len() != 0 {
             // If there are multiple of this particular artifact, then we use the first instance
             // for the location of the artifact.
