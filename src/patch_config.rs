@@ -163,6 +163,7 @@ pub struct CtwkConfig
     pub turn_speed: Option<f32>,
     pub underwater_fog_distance: Option<f32>,
     pub gun_position: Option<[f32;3]>,
+    pub step_up_height: Option<f32>,
 }
 
 #[derive(Debug)]

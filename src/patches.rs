@@ -3884,6 +3884,10 @@ fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player.step_down_height = ctwk_player.step_down_height*player_size;
     }
 
+    if ctwk_config.step_up_height.is_some() {
+        ctwk_player.step_up_height = ctwk_player.step_up_height*ctwk_config.step_up_height.unwrap();
+    }
+
     if ctwk_config.morph_ball_size.is_some() {
         ctwk_player.player_ball_half_extent = ctwk_player.player_ball_half_extent*ctwk_config.morph_ball_size.unwrap();
     }
