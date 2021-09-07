@@ -81,7 +81,8 @@ pub struct PickupConfig
 {
     #[serde(alias  = "type")]
     pub pickup_type: String,
-    pub count: Option<i32>,
+    pub curr_increase: Option<i32>,
+    pub max_increase: Option<i32>,
     pub model: Option<String>,
     pub scan_text: Option<String>,
     pub hudmemo_text: Option<String>,

@@ -366,28 +366,20 @@ fn patch_add_item<'r>(
         }
     };
 
-    // create pickup //
-    let (curr_increase, max_increase) = {
-        if pickup_config.count.is_some() {
-            let pickup_count = pickup_config.count.unwrap();
-            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
-                (pickup_count, 0)
-            } else {
-                (pickup_count, pickup_count)
-            }
+    let curr_increase = {
+        if pickup_config.curr_increase.is_some() {
+            pickup_config.curr_increase.unwrap()
         } else {
-            let data = pickup_type.pickup_data();
-            if pickup_type == PickupType::HealthRefill {
-                (10, 0)
-            } else if pickup_type == PickupType::MissileRefill  {
-                (5, 0)
-            } else if pickup_type == PickupType::PowerBombRefill {
-                (1, 0)
+            if pickup_type == PickupType::Missile {
+                5
             } else {
-                (data.curr_increase, data.max_increase)
+                1
             }
         }
     };
+
+    let max_increase = pickup_config.max_increase.unwrap_or(curr_increase);
+
     let pickup_position = pickup_config.position.unwrap();
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
@@ -869,27 +861,19 @@ fn update_pickup(
     let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
                                         pickup_model_type.pickup_data().scale);
 
-    let (curr_increase, max_increase) = {
-        if pickup_config.count.is_some() {
-            let pickup_count = pickup_config.count.unwrap();
-            if pickup_type == PickupType::HealthRefill || pickup_type == PickupType::MissileRefill || pickup_type == PickupType::PowerBombRefill {
-                (pickup_count, 0)
-            } else {
-                (pickup_count, pickup_count)
-            }
+    let curr_increase = {
+        if pickup_config.curr_increase.is_some() {
+            pickup_config.curr_increase.unwrap()
         } else {
-            let data = pickup_type.pickup_data();
-            if pickup_type == PickupType::HealthRefill {
-                (10, 0)
-            } else if pickup_type == PickupType::MissileRefill  {
-                (5, 0)
-            } else if pickup_type == PickupType::PowerBombRefill {
-                (1, 0)
+            if pickup_type == PickupType::Missile {
+                5
             } else {
-                (data.curr_increase, data.max_increase)
+                1
             }
         }
     };
+
+    let max_increase = pickup_config.max_increase.unwrap_or(curr_increase);
 
     let kind = match pickup_type {
         PickupType::PowerBeam => 0,
@@ -5147,7 +5131,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     if idx >= pickups_config_len {
                         PickupConfig {
                             pickup_type: "Nothing".to_string(), // TODO: Could figure out the vanilla item instead
-                            count: None,
+                            curr_increase: Some(0),
+                            max_increase: Some(0),
                             position: None,
                             hudmemo_text: None,
                             scan_text: None,
