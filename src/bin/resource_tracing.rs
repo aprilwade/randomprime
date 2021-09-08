@@ -1102,8 +1102,6 @@ fn main()
         }
     }
 
-
-
     // Special case of Nothing and Phazon Suits' custom CMDLs
     let suit_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_11.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::PHAZON_SUIT_CMDL, suit_aabb).is_none());
@@ -1111,7 +1109,6 @@ fn main()
 
     let missile_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_36_0.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::SHINY_MISSILE_CMDL, missile_aabb).is_none());
-
     // TODO: create power beam model
     create_nothing(&mut pickup_table); // TODO: change to look less like a suit
     create_shiny_missile(&mut pickup_table);

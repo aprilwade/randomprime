@@ -859,7 +859,9 @@ fn update_pickup(
     }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap();
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap_or(
+        pickup_meta::aabb_for_pickup_cmdl(PickupModel::EnergyTank.pickup_data().cmdl).unwrap()
+    );
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
     let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
