@@ -825,10 +825,10 @@ fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)
     // Special case for Nothing
     let mut nothing_bytes = Vec::new();
     {
-        let mut nothing_pickup: structs::Pickup = Reader::new(&pickup_table[&PickupModel::HealthRefill].bytes)
+        let mut nothing_pickup: structs::Pickup = Reader::new(&pickup_table[&PickupModel::PhazonSuit].bytes)
                                         .read::<Pickup>(()).clone();
         nothing_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Nothing\0").unwrap());
-        nothing_pickup.kind = PickupType::HealthRefill.kind();
+        nothing_pickup.kind = PickupType::Missile.kind();
         nothing_pickup.max_increase = 0;
         nothing_pickup.curr_increase = 0;
         nothing_pickup.cmdl = custom_asset_ids::NOTHING_CMDL;
@@ -836,15 +836,17 @@ fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)
         nothing_pickup.part = ResId::<res_id::PART>::invalid();
         nothing_pickup.write_to(&mut nothing_bytes).unwrap();
     }
-    let mut nothing_deps: HashSet<_> = pickup_table[&PickupModel::HealthRefill].deps.iter()
+    let mut nothing_deps: HashSet<_> = pickup_table[&PickupModel::PhazonSuit].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into(),
                       b"CMDL".into()].contains(&i.fourcc))
         .cloned()
         .collect();
     nothing_deps.extend(&[
         ResourceKey::from(custom_asset_ids::NOTHING_CMDL),
+        ResourceKey::from(custom_asset_ids::NOTHING_ANCS),
+        ResourceKey::from(custom_asset_ids::NOTHING_TXTR),
+        ResourceKey::from(ResId::<res_id::CMDL>::new(0x2f976e86)), // Metroid
         ResourceKey::from(ResId::<res_id::TXTR>::new(0xBE4CD99D)), // white door
-        ResourceKey::from(ResId::<res_id::TXTR>::new(0xF68DF7F1)), // purple door
     ]);
     assert!(pickup_table.insert(PickupModel::Nothing, PickupData {
         bytes: nothing_bytes,

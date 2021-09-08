@@ -284,9 +284,9 @@ impl PickupModel
     {
         let mut pickup: Pickup = Reader::new(self.raw_pickup_data()).read(());
         if self.name() == PickupModel::Nothing.name() {
-            pickup.scale[0] = 5.0;
-            pickup.scale[1] = 5.0;
-            pickup.scale[2] = 5.0;
+            pickup.scale[0] = 1.0;
+            pickup.scale[1] = 1.0;
+            pickup.scale[2] = 1.0;
         }
         pickup
     }
