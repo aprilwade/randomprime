@@ -446,7 +446,7 @@ fn patch_add_item<'r>(
         property_data: structs::SclyProperty::HudMemo(
             Box::new(structs::HudMemo {
                 name: b"myhudmemo\0".as_cstr(),
-                first_message_timer: 5.0,
+                first_message_timer: 3.0,
                 unknown: 1,
                 memo_type: {
                     if skip_hudmemos {
