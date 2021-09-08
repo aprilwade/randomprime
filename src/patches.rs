@@ -439,14 +439,19 @@ fn patch_add_item<'r>(
         )
     };
 
-    // create hudmemo
     let hudmemo = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
         connections: vec![].into(),
         property_data: structs::SclyProperty::HudMemo(
             Box::new(structs::HudMemo {
                 name: b"myhudmemo\0".as_cstr(),
-                first_message_timer: 3.0,
+                first_message_timer: {
+                    if skip_hudmemos {
+                        5.0
+                    } else {
+                        3.0
+                    }
+                },
                 unknown: 1,
                 memo_type: {
                     if skip_hudmemos {
