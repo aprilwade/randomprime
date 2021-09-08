@@ -30,7 +30,7 @@ use crate::{
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World, is_elevator},
     gcz_writer::GczWriter,
     mlvl_wrapper,
-    pickup_meta::{self, PickupType},
+    pickup_meta::{self, PickupType, PickupModel},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
     txtr_conversions::{
@@ -160,7 +160,7 @@ fn build_artifact_temple_totem_scan_strings<R>(
 
     // Shame there isn't a way to flatten tuples automatically
     for (room_name, pt) in artifact_locations.iter() {
-        let artifact_id = (pt.kind().unwrap_or(0) - PickupType::ArtifactOfLifegiver.kind().unwrap()) as usize;
+        let artifact_id = (pt.kind() - PickupType::ArtifactOfLifegiver.kind()) as usize;
         if scan_text[artifact_id].len() != 0 {
             // If there are multiple of this particular artifact, then we use the first instance
             // for the location of the artifact.
@@ -301,19 +301,12 @@ fn patch_add_item<'r>(
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
-    // panic if undefined game behavior //
-    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
-       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
-    {
-        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
-    }
-
     // Pickup to use for visuals/hitbox //
     let pickup_model_type = {
         if pickup_config.model.is_some() {
-            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
         } else {
-            pickup_type
+            PickupModel::from_type(pickup_type)
         }
     };
 
@@ -333,21 +326,23 @@ fn patch_add_item<'r>(
     let hudmemo_strg: ResId<res_id::STRG> = {
         if pickup_config.hudmemo_text.is_some() {
             *pickup_hudmemos.get(&pickup_hash_key).unwrap()
-        } else if skip_hudmemos {
-            pickup_type.skip_hudmemos_strg()
         } else {
             pickup_type.hudmemo_strg()
         }
     };
+
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
-    // If custom scan text, add that to dependencies as well //
+    {
+        let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
+        let frme_dep: structs::Dependency = frme.into();
+        area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));    
+    }
     let scan_id = {
         if pickup_config.scan_text.is_some() {
             let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
-            let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
 
             let scan_dep: structs::Dependency = scan.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
@@ -355,44 +350,54 @@ fn patch_add_item<'r>(
             let strg_dep: structs::Dependency = strg.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
 
-            let frme_dep: structs::Dependency = frme.into();
-            area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));
-            
-            // TODO: should remove now obsolete vanilla scan from dependencies list
+            scan
+        }
+        else
+        {
+            let scan_dep: structs::Dependency = pickup_type.scan().into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
 
-            Some(scan)
-        } else {
-            None
+            let strg_dep: structs::Dependency = pickup_type.scan_strg().into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+
+            pickup_type.scan()
         }
     };
 
     let curr_increase = {
-        if pickup_config.curr_increase.is_some() {
-            pickup_config.curr_increase.unwrap()
+        if pickup_type == PickupType::Nothing {
+            0
         } else {
-            if pickup_type == PickupType::Missile {
-                5
+            if pickup_config.curr_increase.is_some() {
+                pickup_config.curr_increase.unwrap()
             } else {
-                1
+                if pickup_type == PickupType::Missile {
+                    5
+                } else {
+                    1
+                }
             }
         }
     };
-
-    let max_increase = pickup_config.max_increase.unwrap_or(curr_increase);
+    let max_increase = {
+        if pickup_type == PickupType::Nothing {
+            0
+        } else {
+            pickup_config.max_increase.unwrap_or(curr_increase)
+        }
+    };
+    let kind = {
+        if pickup_type == PickupType::Nothing {
+            PickupType::HealthRefill.kind()
+        } else {
+            pickup_type.kind()
+        }
+    };
 
     let pickup_position = pickup_config.position.unwrap();
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
     }
-    let kind = match pickup_type {
-        PickupType::PowerBeam => 0,
-        PickupType::UnknownItem1 => 25,
-        PickupType::UnknownItem2 => 27,
-        PickupType::PowerBombRefill => 7,
-        PickupType::MissileRefill => 4,
-        PickupType::HealthRefill => 26,
-        _ => pickup_type.pickup_data().kind,
-    };
 
     let mut pickup = structs::Pickup {
         // Location Pickup Data
@@ -404,9 +409,9 @@ fn patch_add_item<'r>(
         scan_offset: pickup_model_type.pickup_data().scan_offset.clone(),
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
-        disappear_timer: PickupType::Missile.pickup_data().disappear_timer,
+        disappear_timer: 0.0,
         active: 1,
-        drop_rate: PickupType::Missile.pickup_data().drop_rate,
+        drop_rate: 100.0,
 
         // Type Pickup Data
         // "What does this pickup do?"
@@ -423,15 +428,9 @@ fn patch_add_item<'r>(
         actor_params: pickup_model_type.pickup_data().actor_params.clone(),
     };
 
-    // Should we use non-default scan id? //
-    pickup.actor_params.scan_params.scan = {
-        if scan_id.is_some() {
-            scan_id.unwrap()
-       } else {
-            pickup_type.pickup_data().actor_params.scan_params.scan.clone()
-       }
-    };
-    
+    // set the scan file id //
+    pickup.actor_params.scan_params.scan = scan_id;
+
     let mut pickup_obj = structs::SclyObject {
         instance_id: ps.fresh_instance_id_range.next().unwrap(),
         connections: vec![].into(),
@@ -515,7 +514,7 @@ fn patch_add_item<'r>(
     let layers = scly.layers.as_mut_vec();
 
     // If this is an artifact, create and push change function
-    let pickup_kind = pickup_type.pickup_data().kind;
+    let pickup_kind = pickup_type.kind();
     if pickup_kind >= 29 && pickup_kind <= 40 {
         let instance_id = ps.fresh_instance_id_range.next().unwrap();
         let function = artifact_layer_change_template(instance_id, pickup_kind);
@@ -648,9 +647,9 @@ fn modify_pickups_in_mrea<'r>(
     // Pickup to use for visuals/hitbox //
     let pickup_model_type = {
         if pickup_config.model.is_some() {
-            PickupType::from_str(&pickup_config.model.as_ref().unwrap())
+            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
         } else {
-            pickup_type
+            PickupModel::from_type(pickup_type)
         }
     };
 
@@ -661,14 +660,14 @@ fn modify_pickups_in_mrea<'r>(
             });
 
     let name = CString::new(format!(
-            "Randomizer - Pickup ({:?})", pickup_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
     area.add_layer(Cow::Owned(name));
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     let new_layer_2_idx = new_layer_idx + 1;
     if pickup_config.respawn.unwrap_or(false) {
         let name2 = CString::new(format!(
-            "Randomizer - Pickup ({:?})", pickup_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
         area.add_layer(Cow::Owned(name2));
         area.layer_flags.flags &= !(1 << new_layer_2_idx); // layer disabled by default
     }
@@ -677,21 +676,23 @@ fn modify_pickups_in_mrea<'r>(
     let hudmemo_strg: ResId<res_id::STRG> = {
         if pickup_config.hudmemo_text.is_some() {
             *pickup_hudmemos.get(&pickup_hash_key).unwrap()
-        } else if skip_hudmemos {
-            pickup_type.skip_hudmemos_strg()
         } else {
             pickup_type.hudmemo_strg()
         }
     };
+
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
     let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
     area.add_dependencies(game_resources, new_layer_idx, deps_iter);
 
-    // If custom scan text, add that to dependencies as well //
+    {
+        let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
+        let frme_dep: structs::Dependency = frme.into();
+        area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));    
+    }
     let scan_id = {
         if pickup_config.scan_text.is_some() {
             let (scan, strg) = *pickup_scans.get(&pickup_hash_key).unwrap();
-            let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
 
             let scan_dep: structs::Dependency = scan.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
@@ -699,14 +700,17 @@ fn modify_pickups_in_mrea<'r>(
             let strg_dep: structs::Dependency = strg.into();
             area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
 
-            let frme_dep: structs::Dependency = frme.into();
-            area.add_dependencies(game_resources, new_layer_idx, iter::once(frme_dep));
-            
-            // TODO: should remove now obsolete vanilla scan from dependencies list
+            scan
+        }
+        else
+        {
+            let scan_dep: structs::Dependency = pickup_type.scan().into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(scan_dep));
 
-            Some(scan)
-        } else {
-            None
+            let strg_dep: structs::Dependency = pickup_type.scan_strg().into();
+            area.add_dependencies(game_resources, new_layer_idx, iter::once(strg_dep));
+
+            pickup_type.scan()
         }
     };
 
@@ -728,7 +732,7 @@ fn modify_pickups_in_mrea<'r>(
     });
 
     // If this is an artifact, insert a layer change function
-    let pickup_kind = pickup_type.pickup_data().kind;
+    let pickup_kind = pickup_type.kind();
     if pickup_kind >= 29 && pickup_kind <= 40 {
         let instance_id = ps.fresh_instance_id_range.next().unwrap();
         let function = artifact_layer_change_template(instance_id, pickup_kind);
@@ -835,16 +839,16 @@ fn modify_pickups_in_mrea<'r>(
     let attainment_audio = layers[location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id ==  location.instance_id)
         .unwrap();
-    update_attainment_audio(attainment_audio, pickup_model_type);
+    update_attainment_audio(attainment_audio, pickup_type);
     Ok(())
 }
 
 fn update_pickup(
     pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
-    pickup_model_type: PickupType,
+    pickup_model_type: PickupModel,
     pickup_config: &PickupConfig,
-    scan_id: Option<ResId<res_id::SCAN>>,
+    scan_id: ResId<res_id::SCAN>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
 {
     let pickup = pickup_obj.property_data.as_pickup_mut().unwrap();
@@ -862,27 +866,33 @@ fn update_pickup(
                                         pickup_model_type.pickup_data().scale);
 
     let curr_increase = {
-        if pickup_config.curr_increase.is_some() {
-            pickup_config.curr_increase.unwrap()
+        if pickup_type == PickupType::Nothing {
+            0
         } else {
-            if pickup_type == PickupType::Missile {
-                5
+            if pickup_config.curr_increase.is_some() {
+                pickup_config.curr_increase.unwrap()
             } else {
-                1
+                if pickup_type == PickupType::Missile {
+                    5
+                } else {
+                    1
+                }
             }
         }
     };
-
-    let max_increase = pickup_config.max_increase.unwrap_or(curr_increase);
-
-    let kind = match pickup_type {
-        PickupType::PowerBeam => 0,
-        PickupType::UnknownItem1 => 25,
-        PickupType::UnknownItem2 => 27,
-        PickupType::PowerBombRefill => 7,
-        PickupType::MissileRefill => 4,
-        PickupType::HealthRefill => 26,
-        _ => pickup_type.pickup_data().kind,
+    let max_increase = {
+        if pickup_type == PickupType::Nothing {
+            0
+        } else {
+            pickup_config.max_increase.unwrap_or(curr_increase)
+        }
+    };
+    let kind = {
+        if pickup_type == PickupType::Nothing {
+            PickupType::HealthRefill.kind()
+        } else {
+            pickup_type.kind()
+        }
     };
 
     // The pickup needs to be repositioned so that the center of its model
@@ -927,13 +937,7 @@ fn update_pickup(
     };
 
     // Should we use non-default scan id? //
-    pickup.actor_params.scan_params.scan = {
-        if scan_id.is_some() {
-            scan_id.unwrap()
-       } else {
-            pickup_type.pickup_data().actor_params.scan_params.scan.clone()
-       }
-    };
+    pickup.actor_params.scan_params.scan = scan_id;
 
     (position, pickup.actor_params.scan_params.scan)
 }
@@ -1138,7 +1142,6 @@ fn make_elevators_patch<'a>(
                         wt.mrea = ResId::new(dest.mrea);
                         wt.mlvl = ResId::new(dest.mlvl);
                         wt.volume = 0; // Turning off the wooshing sound
-                                       // todo: only turn off if non-transporter destination
                     }
                 }
 
@@ -1374,7 +1377,7 @@ fn fix_artifact_of_truth_requirements(
                 if artifact_temple_pickups.is_some() {
                     let artifact_temple_pickups = artifact_temple_pickups.as_ref().unwrap();
                     if artifact_temple_pickups.len() != 0 {
-                        _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).pickup_data().kind;
+                        _at_pickup_kind = PickupType::from_str(&artifact_temple_pickups[0].pickup_type).kind();
                     }
                 }
             }
@@ -1399,7 +1402,7 @@ fn fix_artifact_of_truth_requirements(
                     if room.pickups.is_none() { continue };
                     for pickup in room.pickups.as_ref().unwrap().iter() {
                         let pickup = PickupType::from_str(&pickup.pickup_type);
-                        if pickup.pickup_data().kind == kind {
+                        if pickup.kind() == kind {
                             _exists = true; // this artifact is placed somewhere in this world
                             break;
                         }
@@ -2962,8 +2965,6 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
             message: structs::ConnectionMsg::DEACTIVATE,
             target_object_id: 67568447,
         });
-    // TODO: Trigger a MemoryRelay too
-
     // TODO: Instead of the above, when you pass through a trigger near the "other" door, disable
     // the all of triggers related to the cutscenes in the room.
     Ok(())
@@ -3656,15 +3657,10 @@ fn patch_dol<'r>(
     }
 
     for (pickup_type, value) in &config.item_max_capacity {
-        match pickup_type.kind() {
-            Some(index) => {
-                let capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + index * 4, {
-                    .long *value;
-                });
-                dol_patcher.ppcasm_patch(&capacity_patch)?;
-            }
-            None => {}
-        }
+        let capacity_patch = ppcasm!(symbol_addr!("CPlayerState_PowerUpMaxValues", version) + pickup_type.kind() * 4, {
+            .long *value;
+        });
+        dol_patcher.ppcasm_patch(&capacity_patch)?;
     }
 
     // set etank capacity and base health
@@ -5459,7 +5455,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout, config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.9);
     }
 
-    // not only is this game-breaking, but it's nonsensical and counterintuitive, always fix ///
+    // not only is this game-breaking, but it's nonsensical and counterintuitive, always fix //
     patcher.add_scly_patch(
         resource_info!("00i_mines_connect.MREA").into(), // Dynamo Access (Mines)
         move |ps, area| patch_spawn_point_position(ps, area, [0.0, 0.0, 0.0], true, false)

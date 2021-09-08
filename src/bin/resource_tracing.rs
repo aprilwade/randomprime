@@ -3,7 +3,7 @@
 
 pub use randomprime::*;
 use randomprime::custom_assets::custom_asset_ids;
-use randomprime::pickup_meta::{PickupType, ScriptObjectLocation};
+use randomprime::pickup_meta::{PickupType, PickupModel, ScriptObjectLocation};
 
 use reader_writer::{FourCC, Reader, Writable};
 use structs::{Ancs, Cmdl, Evnt, Pickup, res_id, ResId, Resource, Scan};
@@ -234,48 +234,48 @@ impl ResourceKey
     }
 }
 
-fn pickup_type_for_pickup(pickup: &structs::Pickup) -> Option<PickupType>
+fn pickup_model_for_pickup(pickup: &structs::Pickup) -> Option<PickupModel>
 {
     match pickup.kind {
-        4 if pickup.max_increase > 0 => Some(PickupType::Missile),
-        4 if pickup.max_increase == 0 => Some(PickupType::MissileRefill),
-        24 if pickup.max_increase > 0 => Some(PickupType::EnergyTank),
-        9 => Some(PickupType::ThermalVisor),
-        13 => Some(PickupType::XRayVisor),
-        22 => Some(PickupType::VariaSuit),
-        21 => Some(PickupType::GravitySuit),
+        4 if pickup.max_increase > 0 => Some(PickupModel::Missile),
+        4 if pickup.max_increase == 0 => Some(PickupModel::MissileRefill),
+        24 if pickup.max_increase > 0 => Some(PickupModel::EnergyTank),
+        9 => Some(PickupModel::Visor),
+        13 => Some(PickupModel::Visor),
+        22 => Some(PickupModel::VariaSuit),
+        21 => Some(PickupModel::GravitySuit),
         // XXX There's two PhazonSuit objects floating around, we want the one with a model
-        23 if pickup.cmdl != 0xFFFFFFFF => Some(PickupType::PhazonSuit),
-        16 => Some(PickupType::MorphBall),
-        18 => Some(PickupType::BoostBall),
-        19 => Some(PickupType::SpiderBall),
-        6 => Some(PickupType::MorphBallBomb),
-        7 if pickup.max_increase == 1 => Some(PickupType::PowerBombExpansion),
-        7 if pickup.max_increase == 4 => Some(PickupType::PowerBomb),
-        7 if pickup.max_increase == 0 => Some(PickupType::PowerBombRefill),
-        10 => Some(PickupType::ChargeBeam),
-        15 => Some(PickupType::SpaceJumpBoots),
-        12 => Some(PickupType::GrappleBeam),
-        11 => Some(PickupType::SuperMissile),
-        28 => Some(PickupType::Wavebuster),
-        14 => Some(PickupType::IceSpreader),
-        8 => Some(PickupType::Flamethrower),
-        2 => Some(PickupType::WaveBeam),
-        1 => Some(PickupType::IceBeam),
-        3 => Some(PickupType::PlasmaBeam),
-        33 => Some(PickupType::ArtifactOfLifegiver),
-        32 => Some(PickupType::ArtifactOfWild),
-        38 => Some(PickupType::ArtifactOfWorld),
-        37 => Some(PickupType::ArtifactOfSun),
-        31 => Some(PickupType::ArtifactOfElder),
-        39 => Some(PickupType::ArtifactOfSpirit),
-        29 => Some(PickupType::ArtifactOfTruth),
-        35 => Some(PickupType::ArtifactOfChozo),
-        34 => Some(PickupType::ArtifactOfWarrior),
-        40 => Some(PickupType::ArtifactOfNewborn),
-        36 => Some(PickupType::ArtifactOfNature),
-        30 => Some(PickupType::ArtifactOfStrength),
-        26 => Some(PickupType::HealthRefill),
+        23 if pickup.cmdl != 0xFFFFFFFF => Some(PickupModel::PhazonSuit),
+        16 => Some(PickupModel::MorphBall),
+        18 => Some(PickupModel::BoostBall),
+        19 => Some(PickupModel::SpiderBall),
+        6 => Some(PickupModel::MorphBallBomb),
+        7 if pickup.max_increase == 1 => Some(PickupModel::PowerBombExpansion),
+        7 if pickup.max_increase == 4 => Some(PickupModel::PowerBomb),
+        7 if pickup.max_increase == 0 => Some(PickupModel::PowerBombRefill),
+        10 => Some(PickupModel::ChargeBeam),
+        15 => Some(PickupModel::SpaceJumpBoots),
+        12 => Some(PickupModel::GrappleBeam),
+        11 => Some(PickupModel::SuperMissile),
+        28 => Some(PickupModel::Wavebuster),
+        14 => Some(PickupModel::IceSpreader),
+        8 => Some(PickupModel::Flamethrower),
+        2 => Some(PickupModel::WaveBeam),
+        1 => Some(PickupModel::IceBeam),
+        3 => Some(PickupModel::PlasmaBeam),
+        33 => Some(PickupModel::ArtifactOfLifegiver),
+        32 => Some(PickupModel::ArtifactOfWild),
+        38 => Some(PickupModel::ArtifactOfWorld),
+        37 => Some(PickupModel::ArtifactOfSun),
+        31 => Some(PickupModel::ArtifactOfElder),
+        39 => Some(PickupModel::ArtifactOfSpirit),
+        29 => Some(PickupModel::ArtifactOfTruth),
+        35 => Some(PickupModel::ArtifactOfChozo),
+        34 => Some(PickupModel::ArtifactOfWarrior),
+        40 => Some(PickupModel::ArtifactOfNewborn),
+        36 => Some(PickupModel::ArtifactOfNature),
+        30 => Some(PickupModel::ArtifactOfStrength),
+        26 if pickup.curr_increase == 20 => Some(PickupModel::HealthRefill),
         _ => None,
     }
 }
@@ -416,9 +416,6 @@ fn extract_pickup_data<'r>(
     if pickup.kind == 23 {
         pickup.cmdl = custom_asset_ids::PHAZON_SUIT_CMDL;
         pickup.ancs.file_id = custom_asset_ids::PHAZON_SUIT_ANCS;
-        pickup.actor_params.scan_params.scan = custom_asset_ids::PHAZON_SUIT_SCAN;
-    } else if pickup.kind == 9 {
-        pickup.actor_params.scan_params.scan = custom_asset_ids::THERMAL_VISOR_SCAN;
     }
 
     let mut bytes = vec![];
@@ -804,18 +801,11 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
     // Don't ask me why; Claris seems to skip this one.
     deps.remove(&resource_info!("purple.PART").into());
 
-    if pickup_kind == 9 {
-        deps.insert(ResourceKey::from(custom_asset_ids::THERMAL_VISOR_SCAN));
-        deps.insert(ResourceKey::from(custom_asset_ids::THERMAL_VISOR_STRG));
-    } else if pickup_kind == 19 {
+    if pickup_kind == 19 {
         // Spiderball. I couldn't find any references to this outside of PAK resource
         // indexes and dependency lists.
         deps.insert(resource_info!("spiderball.CSKR").into());
     } else if pickup_kind == 23 {
-        // Phazon suit.
-        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_SCAN));
-        deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_STRG));
-
         // Remove the Gravity Suit's CMDL and ANCS
         deps.remove(&resource_info!("Node1_11.CMDL").into());
         deps.remove(&resource_info!("Node1_11.ANCS").into());
@@ -830,12 +820,12 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
     };
 }
 
-fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
+fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)
 {
     // Special case for Nothing
     let mut nothing_bytes = Vec::new();
     {
-        let mut nothing_pickup = Reader::new(&pickup_table[&PickupType::PhazonSuit].bytes)
+        let mut nothing_pickup = Reader::new(&pickup_table[&PickupModel::PhazonSuit].bytes)
                                         .read::<Pickup>(()).clone();
         nothing_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Nothing\0").unwrap());
         nothing_pickup.kind = 26; // This kind matches an energy refill
@@ -843,82 +833,46 @@ fn create_nothing(pickup_table: &mut HashMap<PickupType, PickupData>)
         nothing_pickup.curr_increase = 0;
         nothing_pickup.cmdl = custom_asset_ids::NOTHING_CMDL;
         nothing_pickup.ancs.file_id = custom_asset_ids::NOTHING_ANCS;
-        nothing_pickup.actor_params.scan_params.scan = custom_asset_ids::NOTHING_SCAN;
         nothing_pickup.write_to(&mut nothing_bytes).unwrap();
     }
-    let mut nothing_deps: HashSet<_> = pickup_table[&PickupType::PhazonSuit].deps.iter()
+    let mut nothing_deps: HashSet<_> = pickup_table[&PickupModel::PhazonSuit].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into(),
                       b"CMDL".into(), b"ANCS".into()].contains(&i.fourcc))
         .cloned()
         .collect();
     nothing_deps.remove(&ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
     nothing_deps.extend(&[
-        ResourceKey::from(custom_asset_ids::NOTHING_SCAN_STRG),
-        ResourceKey::from(custom_asset_ids::NOTHING_SCAN),
         ResourceKey::from(custom_asset_ids::NOTHING_CMDL),
         ResourceKey::from(custom_asset_ids::NOTHING_ANCS),
         ResourceKey::from(custom_asset_ids::NOTHING_TXTR),
     ]);
-    assert!(pickup_table.insert(PickupType::Nothing, PickupData {
+    assert!(pickup_table.insert(PickupModel::Nothing, PickupData {
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG.to_u32(),
-        // TODO replace with something silly or silence?
+        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
 }
 
-fn create_scan_visor(pickup_table: &mut HashMap<PickupType, PickupData>)
-{
-    let mut scan_visor_bytes = Vec::new();
-    {
-        let mut scan_visor_pickup = Reader::new(&pickup_table[&PickupType::XRayVisor].bytes)
-            .read::<Pickup>(()).clone();
-        scan_visor_pickup.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Scan Visor\0").unwrap());
-        scan_visor_pickup.kind = 5;
-        scan_visor_pickup.actor_params.scan_params.scan = custom_asset_ids::SCAN_VISOR_SCAN;
-        scan_visor_pickup.write_to(&mut scan_visor_bytes).unwrap();
-    }
-
-    let mut scan_visor_deps: HashSet<_> = pickup_table[&PickupType::XRayVisor].deps.iter()
-        .filter(|i| ![b"SCAN".into(), b"STRG".into()].contains(&i.fourcc))
-        .cloned()
-        .collect();
-    scan_visor_deps.remove(&ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
-    scan_visor_deps.extend(&[
-        ResourceKey::from(custom_asset_ids::SCAN_VISOR_SCAN_STRG),
-        ResourceKey::from(custom_asset_ids::SCAN_VISOR_SCAN),
-    ]);
-    assert!(pickup_table.insert(PickupType::ScanVisor, PickupData {
-        bytes: scan_visor_bytes,
-        deps: scan_visor_deps,
-        hudmemo_strg: custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG.to_u32(),
-        attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
-    }).is_none());
-}
-
-fn create_shiny_missile(pickup_table: &mut HashMap<PickupType, PickupData>)
+fn create_shiny_missile(pickup_table: &mut HashMap<PickupModel, PickupData>)
 {
     let mut shiny_missile_bytes = Vec::new();
     {
-        let mut shiny_missile = Reader::new(&pickup_table[&PickupType::Missile].bytes)
+        let mut shiny_missile = Reader::new(&pickup_table[&PickupModel::Missile].bytes)
             .read::<Pickup>(()).clone();
         shiny_missile.name = Cow::Borrowed(CStr::from_bytes_with_nul(b"Shiny Missile\0").unwrap());
         shiny_missile.cmdl = custom_asset_ids::SHINY_MISSILE_CMDL;
         shiny_missile.ancs.file_id = custom_asset_ids::SHINY_MISSILE_ANCS;
-        shiny_missile.actor_params.scan_params.scan = custom_asset_ids::SHINY_MISSILE_SCAN;
         shiny_missile.write_to(&mut shiny_missile_bytes).unwrap();
     }
 
-    let mut shiny_missile_deps: HashSet<_> = pickup_table[&PickupType::Missile].deps.iter()
+    let mut shiny_missile_deps: HashSet<_> = pickup_table[&PickupModel::Missile].deps.iter()
         .filter(|i| ![b"SCAN".into(), b"STRG".into(), b"CMDL".into(),
                       b"ANCS".into(), b"EVNT".into(), b"TXTR".into(),
                       b"PART".into(), b"ANIM".into()].contains(&i.fourcc))
         .cloned()
         .collect();
     shiny_missile_deps.extend(&[
-        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_SCAN_STRG),
-        ResourceKey::from(custom_asset_ids::SHINY_MISSILE_SCAN),
         ResourceKey::from(custom_asset_ids::SHINY_MISSILE_CMDL),
         ResourceKey::from(custom_asset_ids::SHINY_MISSILE_ANCS),
         ResourceKey::from(custom_asset_ids::SHINY_MISSILE_EVNT),
@@ -929,10 +883,10 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupType, PickupData>)
         resource_info!("healthnew.PART").into(),
         resource_info!("AfterPick.PART").into(),
     ]);
-    assert!(pickup_table.insert(PickupType::ShinyMissile, PickupData {
+    assert!(pickup_table.insert(PickupModel::ShinyMissile, PickupData {
         bytes: shiny_missile_bytes,
         deps: shiny_missile_deps,
-        hudmemo_strg: custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG.to_u32(),
+        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
     }).is_none());
 }
@@ -1068,13 +1022,14 @@ fn main()
                     } else {
                         continue
                     };
-                    let pickup_type = if let Some(pt) = pickup_type_for_pickup(&pickup) {
-                        pt
+
+                    let pickup_model = if let Some(pm) = pickup_model_for_pickup(&pickup) {
+                        pm
                     } else {
                         continue
                     };
 
-                    if pickup_type != PickupType::HealthRefill && pickup_type != PickupType::MissileRefill && pickup_type != PickupType::PowerBombRefill {
+                    if pickup_model != PickupModel::HealthRefill && pickup_model != PickupModel::MissileRefill && pickup_model != PickupModel::PowerBombRefill {
                         let obj_loc = ScriptObjectLocation {
                             instance_id: obj.instance_id,
                             layer: layer_num as u32,
@@ -1085,7 +1040,7 @@ fn main()
                             &obj,
                             obj_loc,
                         );
-    
+
                         for loc in removals {
                             room_removals.entry(loc.layer)
                                 .or_insert_with(Vec::new)
@@ -1096,17 +1051,17 @@ fn main()
 
                     // XXX There's a couple of pickups where the first occurances don't have scans,
                     // so skip those for the pickup_table
-                    if (pickup_type == PickupType::Missile || pickup_type == PickupType::EnergyTank)
+                    if (pickup_model == PickupModel::Missile || pickup_model == PickupModel::EnergyTank)
                         && pickup.actor_params.scan_params.scan == 0xFFFFFFFF {
                         continue
                     }
 
-                    if pickup_table.contains_key(&pickup_type) {
+                    if pickup_table.contains_key(&pickup_model) {
                         continue
                     }
 
                     pickup_table.insert(
-                        pickup_type,
+                        pickup_model,
                         extract_pickup_data(&scly, &obj, &mut res_db)
                     );
 
@@ -1157,9 +1112,8 @@ fn main()
     let missile_aabb = *cmdl_aabbs.get(&ResId::<res_id::CMDL>::new(resource_info!("Node1_36_0.CMDL").res_id)).unwrap();
     assert!(cmdl_aabbs.insert(custom_asset_ids::SHINY_MISSILE_CMDL, missile_aabb).is_none());
 
-    // TODO: create power beam, unknown1, unknown2
-    create_nothing(&mut pickup_table);
-    create_scan_visor(&mut pickup_table);
+    // TODO: create power beam model
+    create_nothing(&mut pickup_table); // TODO: change to look less like a suit
     create_shiny_missile(&mut pickup_table);
 
     println!("// This file is generated by bin/resource_tracing.rs");
@@ -1244,43 +1198,28 @@ fn main()
     println!("impl PickupType");
     println!("{{");
 
-    println!("    pub fn hudmemo_strg(&self) -> ResId<res_id::STRG>");
-    println!("    {{");
-    println!("        ResId::new(match self {{");
-    for pt in PickupType::iter() {
-        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
-            continue; // not found in vanilla game
-        }
-        println!("            PickupType::{:?} => 0x{:x},", pt, pickup_table[&pt].hudmemo_strg);
-    }
-    println!("            _ => 0xFFFFFFFF,");
-    println!("        }})");
-    println!("    }}");
-
     println!("    pub fn attainment_audio_file_name(&self) -> &'static str");
     println!("    {{");
     println!("        match self {{");
     for pt in PickupType::iter() {
-        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
-            continue; // not found in vanilla game
-        }
-        let filename = stdstr::from_utf8(&pickup_table[&pt].attainment_audio_file_name).unwrap();
+        let pm = PickupModel::from_type(pt);
+        let filename = stdstr::from_utf8(&pickup_table[&pm].attainment_audio_file_name).unwrap();
         println!("            PickupType::{:?} => {:?},", pt, filename);
     }
-    println!("            _ => {:?},", "audio/jin_itemattain.dsp\u{0}");
     println!("        }}");
     println!("    }}");
+
+    println!("}}");
+    println!("impl PickupModel");
+    println!("{{");
 
     println!("    pub fn dependencies(&self) -> &'static [(u32, FourCC)]");
     println!("    {{");
     println!("        match self {{");
-    for pt in PickupType::iter() {
-        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
-            continue; // not found in vanilla game
-        }
-        let mut deps: Vec<_> = pickup_table[&pt].deps.iter().collect();
+    for pm in PickupModel::iter() {
+        let mut deps: Vec<_> = pickup_table[&pm].deps.iter().collect();
         deps.sort();
-        println!("            PickupType::{:?} => {{", pt);
+        println!("            PickupModel::{:?} => {{", pm);
         println!("                const DATA: &[(u32, FourCC)] = &[");
         for dep in deps {
             println!(
@@ -1293,60 +1232,6 @@ fn main()
         println!("                DATA");
         println!("            }},");
     }
-    println!("            PickupType::PowerBeam => {{
-        const DATA: &[(u32, FourCC)] = &[
-            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
-            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
-            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
-            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
-            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
-            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
-            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
-            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
-            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
-            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
-            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
-        ];
-        DATA
-    }},
-    PickupType::UnknownItem1 => {{
-        const DATA: &[(u32, FourCC)] = &[
-            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
-            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
-            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
-            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
-            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
-            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
-            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
-            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
-            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
-            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
-            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
-        ];
-        DATA
-    }},
-    PickupType::UnknownItem2 => {{
-        const DATA: &[(u32, FourCC)] = &[
-            (0x0DEB9456, FourCC::from_bytes(b\"PART\")),
-            (0x1544D478, FourCC::from_bytes(b\"TXTR\")),
-            (0x394D3877, FourCC::from_bytes(b\"ANIM\")),
-            (0x454FB170, FourCC::from_bytes(b\"TXTR\")),
-            (0x4B26EFDA, FourCC::from_bytes(b\"EVNT\")),
-            (0xAF9DEFBE, FourCC::from_bytes(b\"CINF\")),
-            (0xDEAF0003, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF0007, FourCC::from_bytes(b\"STRG\")),
-            (0xDEAF0008, FourCC::from_bytes(b\"SCAN\")),
-            (0xDEAF0009, FourCC::from_bytes(b\"TXTR\")),
-            (0xDEAF000A, FourCC::from_bytes(b\"CMDL\")),
-            (0xDEAF000B, FourCC::from_bytes(b\"ANCS\")),
-            (0xFEBBC197, FourCC::from_bytes(b\"CSKR\")),
-        ];
-        DATA
-    }},");
     println!("        }}");
     println!("    }}");
 
@@ -1354,12 +1239,9 @@ fn main()
     println!("    fn raw_pickup_data(&self) -> &'static [u8]");
     println!("    {{");
     println!("        match self {{");
-    for pt in PickupType::iter() {
-        if pt == PickupType::PowerBeam || pt == PickupType::UnknownItem1 || pt == PickupType::UnknownItem2 {
-            continue; // not found in vanilla game
-        }
-        println!("            PickupType::{:?} => &[", pt);
-        let pickup_bytes = &pickup_table[&pt].bytes;
+    for pm in PickupModel::iter() {
+        println!("            PickupModel::{:?} => &[", pm);
+        let pickup_bytes = &pickup_table[&pm].bytes;
         for y in 0..((pickup_bytes.len() + BYTES_PER_LINE - 1) / BYTES_PER_LINE) {
             let len = ::std::cmp::min(BYTES_PER_LINE, pickup_bytes.len() - y * BYTES_PER_LINE);
             print!("               ");
@@ -1370,106 +1252,6 @@ fn main()
         }
         println!("            ],");
     }
-    println!("                    // TODO: these are just copies of nothing - the actual data is handled during patching
-    PickupType::UnknownItem1 => &[
-        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
-        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
-        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
-        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
-        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
-        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
-        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
-        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
-        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
-    ],
-    PickupType::UnknownItem2 => &[
-        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
-        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
-        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
-        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
-        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
-        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
-        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
-        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
-        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
-    ],
-    PickupType::PowerBeam => &[
-        0x00, 0x00, 0x00, 0x12, 0x4E, 0x6F, 0x74, 0x68,
-        0x69, 0x6E, 0x67, 0x00, 0xC3, 0x18, 0x19, 0x25,
-        0x41, 0xCB, 0xC3, 0x2E, 0xC3, 0x0C, 0xB0, 0x2F,
-        0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
-        0xC2, 0x82, 0x1E, 0x3D, 0x3F, 0xE6, 0x45, 0xA3,
-        0x3F, 0xE6, 0x45, 0xA3, 0x3F, 0xE6, 0x45, 0xA3,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x42, 0xC8, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xDE, 0xAF, 0x00, 0x0A, 0xDE, 0xAF, 0x00, 0x0B,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x0E,
-        0x01, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x41, 0xA0, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xDE,
-        0xAF, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF, 0xFF, 0xFF, 0x01, 0x3F, 0x80, 0x00, 0x00,
-        0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x01, 0x00,
-        0x00, 0x3F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x0D, 0xEB, 0x94, 0x56,
-    ],");
     println!("        }}");
     println!("    }}");
 

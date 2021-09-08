@@ -9,7 +9,7 @@ use structs::{res_id, ResId, Resource, ResourceKind};
 use crate::{
     patch_config::PatchConfig,
     elevators::{World, SpawnRoomData},
-    pickup_meta::{self, PickupType},
+    pickup_meta::{self, PickupType, PickupModel},
     door_meta::{DoorType, BlastShieldType},
     ResourceData,
     GcDiscLookupExtensions,
@@ -57,23 +57,13 @@ macro_rules! def_asset_ids {
 pub mod custom_asset_ids {
     def_asset_ids! {
         // Item Assets //
-        PHAZON_SUIT_SCAN: SCAN = 0xDEAF0000,
-        PHAZON_SUIT_STRG: STRG,
-        PHAZON_SUIT_TXTR1: TXTR,
+        PHAZON_SUIT_TXTR1: TXTR = 0xDEAF0000,
         PHAZON_SUIT_TXTR2: TXTR,
         PHAZON_SUIT_CMDL: CMDL,
         PHAZON_SUIT_ANCS: ANCS,
-        NOTHING_ACQUIRED_HUDMEMO_STRG: STRG,
-        NOTHING_SCAN_STRG: STRG, // 0xDEAF0007
-        NOTHING_SCAN: SCAN,
         NOTHING_TXTR: TXTR,
         NOTHING_CMDL: CMDL,
         NOTHING_ANCS: ANCS,
-        THERMAL_VISOR_SCAN: SCAN,
-        THERMAL_VISOR_STRG: STRG,
-        SCAN_VISOR_ACQUIRED_HUDMEMO_STRG: STRG,
-        SCAN_VISOR_SCAN_STRG: STRG,
-        SCAN_VISOR_SCAN: SCAN,
         SHINY_MISSILE_TXTR0: TXTR,
         SHINY_MISSILE_TXTR1: TXTR,
         SHINY_MISSILE_TXTR2: TXTR,
@@ -81,9 +71,6 @@ pub mod custom_asset_ids {
         SHINY_MISSILE_ANCS: ANCS,
         SHINY_MISSILE_EVNT: EVNT,
         SHINY_MISSILE_ANIM: ANIM,
-        SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG: STRG,
-        SHINY_MISSILE_SCAN_STRG: STRG,
-        SHINY_MISSILE_SCAN: SCAN,
         SHORELINES_POI_SCAN: SCAN,
         SHORELINES_POI_STRG: STRG,
         MQA_POI_SCAN: SCAN,
@@ -130,10 +117,13 @@ pub mod custom_asset_ids {
         DISABLED_DOOR_TXTR: TXTR,
         AI_DOOR_TXTR: TXTR,
         MAP_DOT_TXTR: TXTR,
-        SKIP_HUDMEMO_STRG_START: STRG,
-        SKIP_HUDMEMO_STRG_END: STRG = SKIP_HUDMEMO_STRG_START.to_u32() + 38,
 
-        EXTRA_IDS_START: STRG,
+        // Strings to use if none are specified
+        DEFAULT_PICKUP_SCAN_STRGS: STRG,
+        DEFAULT_PICKUP_SCANS: SCAN = DEFAULT_PICKUP_SCAN_STRGS.to_u32() + 50,
+        DEFAULT_PICKUP_HUDMEMO_STRGS: STRG = DEFAULT_PICKUP_SCANS.to_u32() + 50,
+
+        EXTRA_IDS_START: STRG = DEFAULT_PICKUP_HUDMEMO_STRGS.to_u32() + 50,
     }
 }
 
@@ -225,55 +215,7 @@ pub fn custom_assets<'r>(
         custom_asset_ids::PHAZON_SUIT_TXTR1,
         custom_asset_ids::PHAZON_SUIT_TXTR2,
     ));
-    assets.extend_from_slice(&create_item_scan_strg_pair(
-        custom_asset_ids::PHAZON_SUIT_SCAN,
-        custom_asset_ids::PHAZON_SUIT_STRG,
-        "Phazon Suit\0",
-    ));
-    savw_scans_to_add.push(custom_asset_ids::PHAZON_SUIT_SCAN);
-    assets.extend_from_slice(&create_item_scan_strg_pair(
-        custom_asset_ids::NOTHING_SCAN,
-        custom_asset_ids::NOTHING_SCAN_STRG,
-        "???\0",
-    ));
-    savw_scans_to_add.push(custom_asset_ids::NOTHING_SCAN);
-    assets.push(build_resource(
-        custom_asset_ids::NOTHING_ACQUIRED_HUDMEMO_STRG,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-            "&just=center;Nothing acquired!\0".to_owned(),
-        ])),
-    ));
-    assets.extend_from_slice(&create_item_scan_strg_pair(
-        custom_asset_ids::THERMAL_VISOR_SCAN,
-        custom_asset_ids::THERMAL_VISOR_STRG,
-        "Thermal Visor\0",
-    ));
-    savw_scans_to_add.push(custom_asset_ids::THERMAL_VISOR_SCAN);
-    assets.extend_from_slice(&create_item_scan_strg_pair(
-        custom_asset_ids::SCAN_VISOR_SCAN,
-        custom_asset_ids::SCAN_VISOR_SCAN_STRG,
-        "Scan Visor\0",
-    ));
-    savw_scans_to_add.push(custom_asset_ids::SCAN_VISOR_SCAN);
-    assets.push(build_resource(
-        custom_asset_ids::SCAN_VISOR_ACQUIRED_HUDMEMO_STRG,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-            "&just=center;Scan Visor acquired!\0".to_owned(),
-        ])),
-    ));
-    assets.extend_from_slice(&create_item_scan_strg_pair(
-        custom_asset_ids::SHINY_MISSILE_SCAN,
-        custom_asset_ids::SHINY_MISSILE_SCAN_STRG,
-        "Shiny Missile\0",
-    ));
-    savw_scans_to_add.push(custom_asset_ids::SHINY_MISSILE_SCAN);
     assets.extend_from_slice(&create_shiny_missile_assets(resources));
-    assets.push(build_resource(
-        custom_asset_ids::SHINY_MISSILE_ACQUIRED_HUDMEMO_STRG,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-            "&just=center;Shiny Missile acquired!\0".to_owned(),
-        ])),
-    ));
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SHORELINES_POI_SCAN,
         custom_asset_ids::SHORELINES_POI_STRG,
@@ -292,6 +234,24 @@ pub fn custom_assets<'r>(
             custom_asset_ids::STARTING_ITEMS_HUDMEMO_STRG,
             structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
                 format!("&just=center;{}\0", starting_memo.clone().unwrap()),
+            ])),
+        ));
+    }
+
+    // Create fallback/default scan/scan-text/hudmemo assets //
+    for pt in PickupType::iter() {
+        let name: &str = pt.name();
+        assets.extend_from_slice(&create_item_scan_strg_pair(
+            pt.scan(),
+            pt.scan_strg(),
+            &format!("{}\0", name),
+        ));
+        savw_scans_to_add.push(pt.scan());
+
+        assets.push(build_resource(
+            pt.hudmemo_strg(),
+            structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+                format!("&just=center;{} aquired\0", name),
             ])),
         ));
     }
@@ -404,23 +364,6 @@ pub fn custom_assets<'r>(
             }
         }
     }
-
-    // Create fallback pickup hudmemo strings //
-    for pt in PickupType::iter() {
-        let id = pt.skip_hudmemos_strg();
-        assets.push(build_resource(
-            id,
-            structs::ResourceKind::Strg(structs::Strg {
-                string_tables: vec![
-                    structs::StrgStringTable {
-                        lang: b"ENGL".into(),
-                        strings: vec![format!("&just=center;{} acquired!\u{0}",
-                                              pt.name()).into()].into(),
-                    },
-                ].into(),
-            })
-        ));
-    }
     
     // Warping to starting area
     assets.push(build_resource(
@@ -457,11 +400,10 @@ pub fn collect_game_resources<'r>(
 {
     // Get list of all dependencies patcher needs //
     let mut looking_for = HashSet::<_>::new();
-    looking_for.extend(PickupType::iter().flat_map(|x| x.dependencies().iter().cloned()));
-    looking_for.extend(PickupType::iter().map(|x| -> (_, _) { x.hudmemo_strg().into() }));
+    looking_for.extend(PickupModel::iter().flat_map(|x| x.dependencies().iter().cloned()));
     looking_for.extend(DoorType::iter().flat_map(|x| x.dependencies()));
     looking_for.extend(BlastShieldType::iter().flat_map(|x| x.dependencies()));
-    
+
     let mut deps: Vec<(u32, FourCC)> = Vec::new();
     deps.push((0xDCEC3E77,FourCC::from_bytes(b"FRME")));
     looking_for.extend(deps);
