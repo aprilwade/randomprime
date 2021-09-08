@@ -5159,7 +5159,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
                 let hudmemo_delay = {
                     if pickup.modal_hudmemo.clone().unwrap_or(false) {
-                        5.0 // manually specified modal hudmemos are 5s
+                        3.0 // manually specified modal hudmemos are 3s
                     } else {
                         0.0 // otherwise, leave unchanged from vanilla
                     }
