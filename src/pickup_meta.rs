@@ -282,7 +282,13 @@ impl PickupModel
 
     pub fn pickup_data<'a>(&self) -> Pickup
     {
-        Reader::new(self.raw_pickup_data()).read(())
+        let mut pickup: Pickup = Reader::new(self.raw_pickup_data()).read(());
+        if self.name() == PickupModel::Nothing.name() {
+            pickup.scale[0] = 5.0;
+            pickup.scale[1] = 5.0;
+            pickup.scale[2] = 5.0;
+        }
+        pickup
     }
 
     pub fn iter() -> impl Iterator<Item = PickupModel>

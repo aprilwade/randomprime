@@ -201,12 +201,12 @@ pub fn custom_assets<'r>(
     let mut assets = extern_assets();
 
     // Custom pickup model assets
-    assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
+    assets.extend_from_slice(&create_nothing_icon_cmdl_and_ancs(
         resources,
         custom_asset_ids::NOTHING_CMDL,
         custom_asset_ids::NOTHING_ANCS,
-        custom_asset_ids::NOTHING_TXTR,
-        custom_asset_ids::PHAZON_SUIT_TXTR2,
+        ResId::<res_id::TXTR>::new(0xBE4CD99D),
+        ResId::<res_id::TXTR>::new(0xF68DF7F1),
     ));
     assets.extend_from_slice(&create_suit_icon_cmdl_and_ancs(
         resources,
@@ -494,6 +494,55 @@ fn create_custom_door_cmdl<'r>(
     };
 
     new_door_cmdl
+}
+
+fn create_nothing_icon_cmdl_and_ancs<'r>(
+    resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    new_cmdl_id: ResId<res_id::CMDL>,
+    new_ancs_id: ResId<res_id::ANCS>,
+    new_txtr1: ResId<res_id::TXTR>,
+    new_txtr2: ResId<res_id::TXTR>,
+) -> [structs::Resource<'r>; 2]
+{
+    let new_suit_cmdl = {
+        let grav_suit_cmdl = ResourceData::new(
+            &resources[&resource_info!("Large_health_NEW_Bound.CMDL").into()]
+        );
+        let cmdl_bytes = grav_suit_cmdl.decompress().into_owned();
+        let mut cmdl: structs::Cmdl = Reader::new(&cmdl_bytes[..]).read::<structs::Cmdl>(());
+
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[0] = new_txtr1;
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[1] = new_txtr1; // outside txtr
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[2] = new_txtr1;
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[3] = new_txtr1;
+        cmdl.material_sets.as_mut_vec()[0].texture_ids.as_mut_vec()[4] = new_txtr2; // center txtr
+
+        let mut new_cmdl_bytes = vec![];
+        cmdl.write_to(&mut new_cmdl_bytes).unwrap();
+
+        build_resource(
+            new_cmdl_id,
+            structs::ResourceKind::External(new_cmdl_bytes, b"CMDL".into())
+        )
+    };
+    let new_suit_ancs = {
+        let grav_suit_ancs = ResourceData::new(
+            &resources[&resource_info!("Large_health_NEW.ANCS").into()]
+        );
+        let ancs_bytes = grav_suit_ancs.decompress().into_owned();
+        let mut ancs = Reader::new(&ancs_bytes[..]).read::<structs::Ancs>(());
+
+        ancs.char_set.char_info.as_mut_vec()[0].cmdl = new_cmdl_id;
+
+        let mut new_ancs_bytes = vec![];
+        ancs.write_to(&mut new_ancs_bytes).unwrap();
+
+        build_resource(
+            new_ancs_id,
+            structs::ResourceKind::External(new_ancs_bytes, b"ANCS".into())
+        )
+    };
+    [new_suit_cmdl, new_suit_ancs]
 }
 
 fn create_suit_icon_cmdl_and_ancs<'r>(
