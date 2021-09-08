@@ -4658,7 +4658,7 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     );
     patcher.add_scly_patch(
         resource_info!("01_ice_plaza.MREA").into(), // phendrana shorelines
-        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x00020203], vec![0x000202A9, 0x000202A8, 0x000202B7, 0x000201F2, 0x000201F4], true), // keep the ridley cinematic + tower scene
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x00020203], vec![0x000202A9, 0x000202A8, 0x000202B7], true), // keep the ridley cinematic
     );
 }
 
