@@ -337,13 +337,22 @@ impl PickupModel
     }
 
     pub fn from_str(string: &str) -> Self {
+        let string = string.to_lowercase();
+        let string = string.trim();
         for i in PickupModel::iter() {
-            if i.name().to_string().to_lowercase().trim() == string.to_lowercase().trim() {
+            if i.name().to_string().to_lowercase().trim() == string {
                 return i;
             }
         }
 
-        panic!("Unknown Pickup Model - {}", string);
+        // Deprecated Maping
+        if vec!["combat visor", "scan visor", "x-ray visor", "xray visor", "thermal visor", "combat", "scan", "xray", "thermal"]
+            .contains(&string)
+        {
+            return PickupModel::Visor;
+        }
+
+        panic!("Unknown Pickup Model - {}", string)
     }
 
     /**
