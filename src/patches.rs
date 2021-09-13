@@ -4082,6 +4082,18 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     Ok(())
 }
 
+fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let ctwk_player_ball = match &mut ctwk {
+        structs::Ctwk::CtwkBall(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkBall", res.file_id),
+    };
+
+    Ok(())
+}
+
 fn patch_move_item_loss_scan<'r>(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -5050,6 +5062,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.add_resource_patch(
         resource_info!("PlayerGun.CTWK").into(),
         |res| patch_ctwk_player_gun(res, &config.ctwk_config),
+    );
+    patcher.add_resource_patch(
+        resource_info!("Ball.CTWK").into(),
+        |res| patch_ctwk_ball(res, &config.ctwk_config),
     );
 
     /* TODO: add more tweaks

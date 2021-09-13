@@ -1,6 +1,6 @@
 use auto_struct_macros::auto_struct;
 use reader_writer::{
-    Reader, Readable, Writable, CStr, generic_array::GenericArray, typenum::{U2, U3, U5, U6, U8},
+    Reader, Readable, Writable, CStr, generic_array::GenericArray, typenum::*,
 };
 use std::io;
 
@@ -10,6 +10,7 @@ pub enum Ctwk<'r>
     CtwkGame(CtwkGame<'r>),
     CtwkPlayer(CtwkPlayer<'r>),
     CtwkPlayerGun(CtwkPlayerGun<'r>),
+    CtwkBall(CtwkBall<'r>),
 }
 
 impl<'r> Writable for Ctwk<'r>
@@ -20,6 +21,7 @@ impl<'r> Writable for Ctwk<'r>
             Ctwk::CtwkGame(ctwk) => ctwk.write_to(writer),
             Ctwk::CtwkPlayer(ctwk) => ctwk.write_to(writer),
             Ctwk::CtwkPlayerGun(ctwk) => ctwk.write_to(writer),
+            Ctwk::CtwkBall(ctwk) => ctwk.write_to(writer),
         }
     }
 }
@@ -36,6 +38,7 @@ impl<'r> Readable<'r> for Ctwk<'r>
              96 => Ctwk::CtwkGame(reader.read(())),
             800 => Ctwk::CtwkPlayer(reader.read(())),
             512 => Ctwk::CtwkPlayerGun(reader.read(())),
+            480 => Ctwk::CtwkBall(reader.read(())),
             _ => panic!("Unhandled CTWK size - {}", reader.size()),
         }
     }
@@ -46,6 +49,7 @@ impl<'r> Readable<'r> for Ctwk<'r>
             Ctwk::CtwkGame(ctwk) => ctwk.size(),
             Ctwk::CtwkPlayer(ctwk) => ctwk.size(),
             Ctwk::CtwkPlayerGun(ctwk) => ctwk.size(),
+            Ctwk::CtwkBall(ctwk) => ctwk.size(),
         }
     }
 }
@@ -313,6 +317,40 @@ pub struct CtwkPlayerGun<'r>
     pub beams: GenericArray<SWeaponInfo, U5>,
     pub combos: GenericArray<SShotParam, U5>,
     pub ricochet_data: GenericArray<f32, U6>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct CtwkBall<'r>
+{
+    pub start: Reader<'r>,
+    // pub dont_care: GenericArray<u8, U480>,
+
+    pub max_translation_accel: GenericArray<f32, U8>,
+    pub translation_friction: GenericArray<f32, U8>,
+    pub translation_max_speed: GenericArray<f32, U8>,
+    pub unknown0: GenericArray<f32, U4>,
+    pub ball_forward_braking_accel: GenericArray<f32, U8>,
+    pub ball_gravity: f32,
+    pub ball_water_gravity: f32,
+    pub unknown1: GenericArray<f32, U3>,
+    pub dont_care0: GenericArray<f32, U27>,
+    pub unknown2: GenericArray<f32, U6>,
+    pub conservative_door_cam_distance: f32,
+    pub unknown3: f32,
+    pub dont_care1: GenericArray<f32, U27>,
+    pub boost_drain_time: f32,
+    pub boost_min_charge_time: f32,
+    pub boost_min_rel_speed_for_damage: f32,
+    pub boost_charge_time0: f32,
+    pub boost_charge_time1: f32,
+    pub boost_charge_time2: f32,
+    pub boost_incremental_speed0: f32,
+    pub boost_incremental_speed1: f32,
+    pub boost_incremental_speed2: f32,
 
     #[auto_struct(pad_align = 32)]
     _pad: (),
