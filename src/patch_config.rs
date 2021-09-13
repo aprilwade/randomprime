@@ -152,6 +152,8 @@ pub struct CtwkConfig
     pub max_speed: Option<f32>,
     pub max_acceleration: Option<f32>,
     pub space_jump_impulse: Option<f32>,
+    pub vertical_space_jump_accel: Option<f32>,
+    pub horizontal_space_jump_accel: Option<f32>,
     pub eye_offset: Option<f32>,
     pub toggle_free_look: Option<bool>,
     pub two_buttons_for_free_look: Option<bool>,
@@ -165,6 +167,14 @@ pub struct CtwkConfig
     pub underwater_fog_distance: Option<f32>,
     pub gun_position: Option<[f32;3]>,
     pub step_up_height: Option<f32>,
+    pub allowed_jump_time: Option<f32>,
+    pub allowed_space_jump_time: Option<f32>,
+    pub min_space_jump_window: Option<f32>,
+    pub max_space_jump_window: Option<f32>,
+    pub min_jump_time: Option<f32>,
+    pub min_space_jump_time: Option<f32>,
+    pub falling_space_jump: Option<bool>,
+    pub impulse_space_jump: Option<bool>,
 }
 
 #[derive(Debug)]

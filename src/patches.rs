@@ -4004,6 +4004,49 @@ fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     if ctwk_config.space_jump_impulse.is_some() {
         ctwk_player.double_jump_impulse = ctwk_player.double_jump_impulse*ctwk_config.space_jump_impulse.unwrap();
     }
+    if ctwk_config.vertical_space_jump_accel.is_some() {
+        ctwk_player.vertical_double_jump_accel = ctwk_player.vertical_double_jump_accel*ctwk_config.vertical_space_jump_accel.unwrap();
+    }
+    if ctwk_config.horizontal_space_jump_accel.is_some() {
+        ctwk_player.horizontal_double_jump_accel = ctwk_player.horizontal_double_jump_accel*ctwk_config.horizontal_space_jump_accel.unwrap();
+    }
+
+    if ctwk_config.allowed_jump_time.is_some() {
+        ctwk_player.allowed_jump_time = ctwk_player.allowed_jump_time*ctwk_config.allowed_jump_time.unwrap();
+    }
+    if ctwk_config.allowed_space_jump_time.is_some() {
+        ctwk_player.allowed_double_jump_time = ctwk_player.allowed_double_jump_time*ctwk_config.allowed_space_jump_time.unwrap();
+    }
+    if ctwk_config.min_space_jump_window.is_some() {
+        ctwk_player.min_double_jump_window = ctwk_player.min_double_jump_window*ctwk_config.min_double_jump_window.unwrap();
+    }
+    if ctwk_config.max_space_jump_window.is_some() {
+        ctwk_player.max_double_jump_window = ctwk_player.max_double_jump_window*ctwk_config.max_space_jump_window.unwrap();
+    }
+    if ctwk_config.min_jump_time.is_some() {
+        ctwk_player.min_jump_time = ctwk_player.min_jump_time*ctwk_config.min_jump_time.unwrap();
+    }
+    if ctwk_config.min_space_jump_time.is_some() {
+        ctwk_player.min_double_jump_time = ctwk_player.min_double_jump_time*ctwk_config.min_space_jump_time.unwrap();
+    }
+    if ctwk_config.falling_space_jump.is_some() {
+        ctwk_player.falling_double_jump = {
+            if ctwk_config.falling_space_jump.unwrap() {
+                1
+            } else {
+                0
+            }
+        };
+    }
+    if ctwk_config.impulse_space_jump.is_some() {
+        ctwk_player.impulse_double_jump = {
+            if ctwk_config.impulse_space_jump.unwrap() {
+                1
+            } else {
+                0
+            }
+        };
+    }
 
     if ctwk_config.eye_offset.is_some() {
         ctwk_player.eye_offset = ctwk_player.eye_offset*ctwk_config.eye_offset.unwrap();
