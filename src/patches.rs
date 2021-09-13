@@ -4018,7 +4018,7 @@ fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player.allowed_double_jump_time = ctwk_player.allowed_double_jump_time*ctwk_config.allowed_space_jump_time.unwrap();
     }
     if ctwk_config.min_space_jump_window.is_some() {
-        ctwk_player.min_double_jump_window = ctwk_player.min_double_jump_window*ctwk_config.min_double_jump_window.unwrap();
+        ctwk_player.min_double_jump_window = ctwk_player.min_double_jump_window*ctwk_config.min_space_jump_window.unwrap();
     }
     if ctwk_config.max_space_jump_window.is_some() {
         ctwk_player.max_double_jump_window = ctwk_player.max_double_jump_window*ctwk_config.max_space_jump_window.unwrap();
