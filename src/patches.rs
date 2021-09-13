@@ -4086,10 +4086,84 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 -> Result<(), String>
 {
     let mut ctwk = res.kind.as_ctwk_mut().unwrap();
-    let ctwk_player_ball = match &mut ctwk {
+    let ctwk_ball = match &mut ctwk {
         structs::Ctwk::CtwkBall(i) => i,
         _ => panic!("Failed to map res=0x{:X} as CtwkBall", res.file_id),
     };
+
+    if ctwk_config.max_translation_accel.is_some() {
+        ctwk_ball.max_translation_accel[0] = ctwk_ball.max_translation_accel[0]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[1] = ctwk_ball.max_translation_accel[1]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[2] = ctwk_ball.max_translation_accel[2]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[3] = ctwk_ball.max_translation_accel[3]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[4] = ctwk_ball.max_translation_accel[4]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[5] = ctwk_ball.max_translation_accel[5]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[6] = ctwk_ball.max_translation_accel[6]*ctwk_config.max_translation_accel.unwrap();
+        ctwk_ball.max_translation_accel[7] = ctwk_ball.max_translation_accel[7]*ctwk_config.max_translation_accel.unwrap();
+    }
+    if ctwk_config.translation_friction.is_some() {
+        ctwk_ball.translation_friction[0] = ctwk_ball.translation_friction[0]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[1] = ctwk_ball.translation_friction[1]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[2] = ctwk_ball.translation_friction[2]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[3] = ctwk_ball.translation_friction[3]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[4] = ctwk_ball.translation_friction[4]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[5] = ctwk_ball.translation_friction[5]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[6] = ctwk_ball.translation_friction[6]*ctwk_config.translation_friction.unwrap();
+        ctwk_ball.translation_friction[7] = ctwk_ball.translation_friction[7]*ctwk_config.translation_friction.unwrap();
+    }
+    if ctwk_config.translation_max_speed.is_some() {
+        ctwk_ball.translation_max_speed[0] = ctwk_ball.translation_max_speed[0]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[1] = ctwk_ball.translation_max_speed[1]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[2] = ctwk_ball.translation_max_speed[2]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[3] = ctwk_ball.translation_max_speed[3]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[4] = ctwk_ball.translation_max_speed[4]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[5] = ctwk_ball.translation_max_speed[5]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[6] = ctwk_ball.translation_max_speed[6]*ctwk_config.translation_max_speed.unwrap();
+        ctwk_ball.translation_max_speed[7] = ctwk_ball.translation_max_speed[7]*ctwk_config.translation_max_speed.unwrap();
+    }
+    if ctwk_config.ball_forward_braking_accel.is_some() {
+        ctwk_ball.ball_forward_braking_accel[0] = ctwk_ball.ball_forward_braking_accel[0]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[1] = ctwk_ball.ball_forward_braking_accel[1]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[2] = ctwk_ball.ball_forward_braking_accel[2]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[3] = ctwk_ball.ball_forward_braking_accel[3]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[4] = ctwk_ball.ball_forward_braking_accel[4]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[5] = ctwk_ball.ball_forward_braking_accel[5]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[6] = ctwk_ball.ball_forward_braking_accel[6]*ctwk_config.ball_forward_braking_accel.unwrap();
+        ctwk_ball.ball_forward_braking_accel[7] = ctwk_ball.ball_forward_braking_accel[7]*ctwk_config.ball_forward_braking_accel.unwrap();
+    }
+    if ctwk_config.ball_gravity.is_some() {
+        ctwk_ball.ball_gravity = ctwk_ball.ball_gravity*ctwk_config.ball_gravity.unwrap();
+    }
+    if ctwk_config.ball_water_gravity.is_some() {
+        ctwk_ball.ball_water_gravity = ctwk_ball.ball_water_gravity*ctwk_config.ball_water_gravity.unwrap();
+    }
+    if ctwk_config.boost_drain_time.is_some() {
+        ctwk_ball.boost_drain_time = ctwk_ball.boost_drain_time*ctwk_config.boost_drain_time.unwrap();
+    }
+    if ctwk_config.boost_min_charge_time.is_some() {
+        ctwk_ball.boost_min_charge_time = ctwk_ball.boost_min_charge_time*ctwk_config.boost_min_charge_time.unwrap();
+    }
+    if ctwk_config.boost_min_rel_speed_for_damage.is_some() {
+        ctwk_ball.boost_min_rel_speed_for_damage = ctwk_ball.boost_min_rel_speed_for_damage*ctwk_config.boost_min_rel_speed_for_damage.unwrap();
+    }
+    if ctwk_config.boost_charge_time0.is_some() {
+        ctwk_ball.boost_charge_time0 = ctwk_ball.boost_charge_time0*ctwk_config.boost_charge_time0.unwrap();
+    }
+    if ctwk_config.boost_charge_time1.is_some() {
+        ctwk_ball.boost_charge_time1 = ctwk_ball.boost_charge_time1*ctwk_config.boost_charge_time1.unwrap();
+    }
+    if ctwk_config.boost_charge_time2.is_some() {
+        ctwk_ball.boost_charge_time2 = ctwk_ball.boost_charge_time2*ctwk_config.boost_charge_time2.unwrap();
+    }
+    if ctwk_config.boost_incremental_speed0.is_some() {
+        ctwk_ball.boost_incremental_speed0 = ctwk_ball.boost_incremental_speed0*ctwk_config.boost_incremental_speed0.unwrap();
+    }
+    if ctwk_config.boost_incremental_speed1.is_some() {
+        ctwk_ball.boost_incremental_speed1 = ctwk_ball.boost_incremental_speed1*ctwk_config.boost_incremental_speed1.unwrap();
+    }
+    if ctwk_config.boost_incremental_speed2.is_some() {
+        ctwk_ball.boost_incremental_speed2 = ctwk_ball.boost_incremental_speed2*ctwk_config.boost_incremental_speed2.unwrap();
+    }
 
     Ok(())
 }

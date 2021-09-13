@@ -175,6 +175,23 @@ pub struct CtwkConfig
     pub min_space_jump_time: Option<f32>,
     pub falling_space_jump: Option<bool>,
     pub impulse_space_jump: Option<bool>,
+
+    // Ball.CTWK
+    pub max_translation_accel: Option<f32>,
+    pub translation_friction: Option<f32>,
+    pub translation_max_speed: Option<f32>,
+    pub ball_forward_braking_accel: Option<f32>,
+    pub ball_gravity: Option<f32>,
+    pub ball_water_gravity: Option<f32>,
+    pub boost_drain_time: Option<f32>,
+    pub boost_min_charge_time: Option<f32>,
+    pub boost_min_rel_speed_for_damage: Option<f32>,
+    pub boost_charge_time0: Option<f32>,
+    pub boost_charge_time1: Option<f32>,
+    pub boost_charge_time2: Option<f32>,
+    pub boost_incremental_speed0: Option<f32>,
+    pub boost_incremental_speed1: Option<f32>,
+    pub boost_incremental_speed2: Option<f32>,
 }
 
 #[derive(Debug)]

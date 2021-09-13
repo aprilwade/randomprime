@@ -327,8 +327,6 @@ pub struct CtwkPlayerGun<'r>
 pub struct CtwkBall<'r>
 {
     pub start: Reader<'r>,
-    // pub dont_care: GenericArray<u8, U480>,
-
     pub max_translation_accel: GenericArray<f32, U8>,
     pub translation_friction: GenericArray<f32, U8>,
     pub translation_max_speed: GenericArray<f32, U8>,
