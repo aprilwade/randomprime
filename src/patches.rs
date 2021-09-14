@@ -4086,6 +4086,8 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 -> Result<(), String>
 {
     let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    println!("patched res=0x{:X}", res.file_id);
+ 
     let ctwk_ball = match &mut ctwk {
         structs::Ctwk::CtwkBall(i) => i,
         _ => panic!("Failed to map res=0x{:X} as CtwkBall", res.file_id),

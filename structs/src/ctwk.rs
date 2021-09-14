@@ -349,6 +349,7 @@ pub struct CtwkBall<'r>
     pub boost_incremental_speed0: f32,
     pub boost_incremental_speed1: f32,
     pub boost_incremental_speed2: f32,
+    pub filler: GenericArray<u8, U32>,
 
     #[auto_struct(pad_align = 32)]
     _pad: (),
