@@ -4518,6 +4518,10 @@ fn patch_qol_cosmetic(
 
 fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
+        resource_info!("10_over_1alavaarea.MREA").into(), // magmoor workstation
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153], false), // skip patching 1st cutscene (special floaty case)
+    );
+    patcher.add_scly_patch(
         resource_info!("05_over_xray.MREA").into(), // life grove (competitive only - watch raise post cutscenes)
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x002A00C4, 0x002A01D0], false), // don't skip ghosts cutscene or ghosts will leave forever
     );
