@@ -2791,10 +2791,10 @@ fn patch_remove_cutscenes(
             } else if obj_id == 0x001E027E { // observatory scan
                 // just cut out all the confusion by having the scan always active
                 obj.property_data.as_point_of_interest_mut().unwrap().active = 1;
-            } else if obj_id == 0x00170153 { // magmoor workstation cutscene (power activated)
+            } else if obj_id == 0x00170153 && !skip_ids.contains(&obj_id) { // magmoor workstation cutscene (power activated)
                 // play this cutscene, but only for a second
                 // this is to allow players to get floaty jump without having red mist
-                obj.property_data.as_camera_mut().unwrap().shot_duration = 4.0;
+                obj.property_data.as_camera_mut().unwrap().shot_duration = 3.3;
             } else if obj_id == 0x00070062 { // subchamber 2 trigger
                 // When the player enters the room (properly), start the fight
                 obj.connections.as_mut_vec().push(structs::Connection {
@@ -2865,6 +2865,15 @@ fn patch_remove_cutscenes(
                     message: structs::ConnectionMsg::SET_TO_ZERO,
                     target_object_id: 0x0002025B,
                 });
+            } else if obj_id == 0x00130141 { // arboretum disable gate timer
+                // Disable glowey gate marks with gate
+                for target_object_id in vec![0x00130119, 0x00130118, 0x0013011F, 0x0013011E] { // glowy symbols
+                    obj.connections.as_mut_vec().push(structs::Connection {
+                        state: structs::ConnectionState::ZERO,
+                        message: structs::ConnectionMsg::DEACTIVATE,
+                        target_object_id,
+                    });
+                }
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
@@ -4518,6 +4527,10 @@ fn patch_qol_cosmetic(
 
 fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
     patcher.add_scly_patch(
+        resource_info!("08_courtyard.MREA").into(), // Arboretum
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0013012E, 0x00130131, 0x00130141], vec![], false),
+    );
+    patcher.add_scly_patch(
         resource_info!("10_over_1alavaarea.MREA").into(), // magmoor workstation
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![0x00170153], false), // skip patching 1st cutscene (special floaty case)
     );
@@ -4626,6 +4639,10 @@ fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version)
 }
 
 fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
+    patcher.add_scly_patch(
+        resource_info!("08_courtyard.MREA").into(), // Arboretum
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0013012E, 0x00130131, 0x00130141], vec![], false),
+    );
     patcher.add_scly_patch(
         resource_info!("08_mines.MREA").into(), // MQA (just first cutscene)
         move |ps, area| patch_remove_cutscenes(ps, area,
@@ -4803,6 +4820,10 @@ fn patch_qol_minor_cutscenes(patcher: &mut PrimePatcher, version: Version) {
 }
 
 pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
+    patcher.add_scly_patch(
+        resource_info!("08_courtyard.MREA").into(), // Arboretum
+        move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0013012E, 0x00130131, 0x00130141], vec![], false),
+    );
     patcher.add_scly_patch(
         resource_info!("01_endcinema.MREA").into(), // Impact Crater Escape Cinema (cause why not)
         move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
