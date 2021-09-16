@@ -75,6 +75,8 @@ pub mod custom_asset_ids {
         SHORELINES_POI_STRG: STRG,
         MQA_POI_SCAN: SCAN,
         MQA_POI_STRG: STRG,
+        CFLDG_POI_SCAN: SCAN,
+        CFLDG_POI_STRG: STRG,
         
         // Starting items memo
         STARTING_ITEMS_HUDMEMO_STRG: STRG,
@@ -229,6 +231,12 @@ pub fn custom_assets<'r>(
         "Scan Visor is a Movement System.\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::MQA_POI_SCAN);
+    assets.extend_from_slice(&create_item_scan_strg_pair(
+        custom_asset_ids::CFLDG_POI_SCAN,
+        custom_asset_ids::CFLDG_POI_STRG,
+        "Toaster's Champions: Awp82\0",
+    ));
+    savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
     if starting_memo.is_some() {
         assets.push(build_resource(

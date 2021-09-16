@@ -5252,6 +5252,16 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             ),
         );
     }
+    patcher.add_scly_patch(
+        resource_info!("06_under_intro_freight.MREA").into(),
+        move |ps, area| patch_add_poi(
+            ps, area,
+            game_resources,
+            custom_asset_ids::CFLDG_POI_SCAN,
+            custom_asset_ids::CFLDG_POI_STRG,
+            [-44.0, 361.0, -120.0],
+        ),
+    );
 
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
