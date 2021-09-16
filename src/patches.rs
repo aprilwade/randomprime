@@ -2799,6 +2799,10 @@ fn patch_remove_cutscenes(
                 objs_to_add.push(relay);
             }
 
+            if skip_ids.contains(&obj_id) {
+                continue;
+            }
+
             // Special handling for specific rooms //
             if obj_id == 0x00250123 { // flaahgra death cutscene (first camera)
                 // teleport the player at end of shot (4.0s), this is long enough for
@@ -4545,6 +4549,18 @@ fn patch_qol_cosmetic(
 }
 
 fn patch_qol_competitive_cutscenes(patcher: &mut PrimePatcher, version: Version) {
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(), // main quarry (just pirate booty)
+        move |ps, area| patch_remove_cutscenes(ps, area,
+            vec![],
+            vec![
+                0x000203DE, 0x000203DC, 0x0002040D, 0x0002040C, // keep area entrance cutscene
+                0x0002023E, 0x00020021, 0x00020253, // keep crane cutscenes
+                0x0002043D, // keep barrier cutscene
+            ],
+            false,
+        ),
+    );
     patcher.add_scly_patch(
         resource_info!("08_courtyard.MREA").into(), // Arboretum
         move |ps, area| patch_remove_cutscenes(ps, area, vec![0x0013012E, 0x00130131, 0x00130141], vec![], false),
