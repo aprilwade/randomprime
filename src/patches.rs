@@ -2994,19 +2994,18 @@ fn patch_mines_security_station_soft_lock<'r>(_ps: &mut PatcherState, area: &mut
     -> Result<(), String>
 {
     let scly = area.mrea().scly_section_mut();
-    let layer = &mut scly.layers.as_mut_vec()[0];
+    for layer in scly.layers.as_mut_vec().iter_mut() {
+        for obj in layer.objects.as_mut_vec().iter_mut() {
+            if (obj.instance_id & 0x00FFFFFF) != 0x0007033F {
+                continue;
+            }
+            let trigger = obj.property_data.as_trigger_mut().unwrap();
+            trigger.scale[0] = 50.0;
+            trigger.scale[1] = 100.0;
+            trigger.scale[2] = 40.0;
+        }
+    }
 
-    // Disable the the trigger when all the pirates are killed
-    let obj = layer.objects.as_mut_vec().iter_mut()
-        .find(|obj| obj.instance_id == 460074)
-        .unwrap();
-    obj.connections.as_mut_vec().push(structs::Connection {
-            state: structs::ConnectionState::MAX_REACHED,
-            message: structs::ConnectionMsg::DEACTIVATE,
-            target_object_id: 67568447,
-        });
-    // TODO: Instead of the above, when you pass through a trigger near the "other" door, disable
-    // the all of triggers related to the cutscenes in the room.
     Ok(())
 }
 
