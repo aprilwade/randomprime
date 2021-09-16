@@ -2598,7 +2598,7 @@ fn patch_remove_cutscenes(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
     timers_to_zero: Vec<u32>,
-    skip_ids: Vec<u32>,
+    mut skip_ids: Vec<u32>,
     use_timers_instead_of_relay: bool,
 )
     -> Result<(), String>
@@ -2616,6 +2616,26 @@ fn patch_remove_cutscenes(
         let layer = &mut scly.layers.as_mut_vec()[i];
         
         for obj in layer.objects.iter() {
+            // If this is an elevator cutscene taking the player up, don't skip it //
+            // (skipping it can cause sounds to persist in an annoying fashion)    //
+            if is_elevator(room_id.to_u32())
+            {
+                if obj.property_data.is_camera() {
+                    let camera = obj.property_data.as_camera().unwrap();
+                    let name = camera.name.clone().into_owned().to_owned().to_str().unwrap().to_string().to_lowercase();
+                    if name.contains(&"leaving") {
+                        skip_ids.push(obj.instance_id & 0x00FFFFFF);
+                    }
+                }
+                if obj.property_data.is_player_actor() {
+                    let player_actor = obj.property_data.as_player_actor().unwrap();
+                    let name = player_actor.name.clone().into_owned().to_owned().to_str().unwrap().to_string().to_lowercase();
+                    if name.contains(&"leaving") {
+                        skip_ids.push(obj.instance_id & 0x00FFFFFF);
+                    }
+                }
+            }
+
             // Get a list of all camera instance ids
             if !skip_ids.contains(&(obj.instance_id & 0x00FFFFFF))
             && obj.property_data.is_camera() {
@@ -4095,7 +4115,6 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 -> Result<(), String>
 {
     let mut ctwk = res.kind.as_ctwk_mut().unwrap();
-    println!("patched res=0x{:X}", res.file_id);
  
     let ctwk_ball = match &mut ctwk {
         structs::Ctwk::CtwkBall(i) => i,
