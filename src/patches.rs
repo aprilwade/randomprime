@@ -810,7 +810,8 @@ fn modify_pickups_in_mrea<'r>(
                 let obj_id = obj.instance_id&0x00FFFFFF;
     
                 // Make the door in magmoor workstaion passthrough so item is scannable
-                if obj_id == 0x0017016E || obj_id == 0x0017016F
+                // Also the ice in ruins west
+                if obj_id == 0x0017016E || obj_id == 0x0017016F || obj_id == 0x00092738
                 {    
                     let actor = obj.property_data.as_actor_mut().unwrap();
                     actor.actor_params.visor_params.target_passthrough = 1;
@@ -824,6 +825,7 @@ fn modify_pickups_in_mrea<'r>(
                         pickup_location.location.instance_id != 0x002005EA
                        ) || (pickup_location.location.instance_id == 0x0428011c && obj_id == 0x002803CE)  // research core scan
                          || (pickup_location.location.instance_id == 0x00020176 && poi.scan_param.scan == custom_asset_ids::SHORELINES_POI_SCAN) // custom shorelines tower scan
+                         || (pickup_location.location.instance_id == 0x000928ED && poi.scan_param.scan == 0x00092837) // Ice Ruins West scan
                     {
                         poi.scan_param.scan = scan_id_out;
                     }
