@@ -3101,12 +3101,23 @@ fn patch_save_station_for_warp_to_start<'r>(
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     spawn_room: SpawnRoomData,
     version: Version,
+    warp_to_start_delay_s: f32,
 ) -> Result<(), String>
 {
+    let mut warp_to_start_delay_s = warp_to_start_delay_s;
+    if warp_to_start_delay_s < 3.0 {
+        warp_to_start_delay_s = 3.0
+    }
+
     area.add_dependencies(
         &game_resources,
         0,
         iter::once(custom_asset_ids::WARPING_TO_START_STRG.into())
+    );
+    area.add_dependencies(
+        &game_resources,
+        0,
+        iter::once(custom_asset_ids::WARPING_TO_START_DELAY_STRG.into())
     );
 
     let scly = area.mrea().scly_section_mut();
@@ -3140,7 +3151,7 @@ fn patch_save_station_for_warp_to_start<'r>(
             property_data: structs::Timer {
                 name: b"Warp to start delay\0".as_cstr(),
 
-                start_time: 3.0,
+                start_time: warp_to_start_delay_s,
                 max_random_add: 0.0,
                 reset_to_zero: 0,
                 start_immediately: 0,
@@ -3163,10 +3174,10 @@ fn patch_save_station_for_warp_to_start<'r>(
            property_data: structs::HudMemo {
                 name: b"Warping hudmemo\0".as_cstr(),
 
-                first_message_timer: 3.0,
+                first_message_timer: warp_to_start_delay_s,
                 unknown: 1,
                 memo_type: 0,
-                strg: custom_asset_ids::WARPING_TO_START_STRG,
+                strg: custom_asset_ids::WARPING_TO_START_DELAY_STRG,
                 active: 1,
             }.into(),
            connections: vec![].into(),
@@ -5883,6 +5894,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     &game_resources,
                     starting_room,
                     version,
+                    config.warp_to_start_delay_s,
                 )
             );
         }

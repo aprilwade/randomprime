@@ -83,6 +83,7 @@ pub mod custom_asset_ids {
         
         // Warping to start transition message
         WARPING_TO_START_STRG: STRG,
+        WARPING_TO_START_DELAY_STRG: STRG,
 
         // Door Assets //
         MORPH_BALL_BOMB_DOOR_CMDL: CMDL,
@@ -234,7 +235,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::CFLDG_POI_SCAN,
         custom_asset_ids::CFLDG_POI_STRG,
-        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000\0",
+        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
@@ -379,6 +380,17 @@ pub fn custom_assets<'r>(
         custom_asset_ids::WARPING_TO_START_STRG,
         structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
             "&just=center;Returning to starting room...\0".to_owned(),
+        ])),
+    ));
+
+    let mut warp_to_start_delay_s = config.warp_to_start_delay_s;
+    if warp_to_start_delay_s < 3.0 {
+        warp_to_start_delay_s = 3.0
+    }
+    assets.push(build_resource(
+        custom_asset_ids::WARPING_TO_START_DELAY_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            format!("&just=center;Warping in {}s...\0", warp_to_start_delay_s as u32).to_owned(),
         ])),
     ));
 
