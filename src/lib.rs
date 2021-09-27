@@ -18,6 +18,7 @@ use std::{
 
 pub mod c_interface;
 pub mod custom_assets;
+pub mod extern_assets;
 pub mod ciso_writer;
 pub mod dol_patcher;
 pub mod elevators;

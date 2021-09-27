@@ -197,6 +197,7 @@ pub struct CtwkConfig
 #[derive(Debug)]
 pub struct PatchConfig
 {
+    pub extern_assets_dir: Option<String>,
     pub seed: u64,
 
     pub force_vanilla_layout: bool,
@@ -320,6 +321,7 @@ struct PatchConfigPrivate
     input_iso: Option<String>,
     output_iso: Option<String>,
     force_vanilla_layout: Option<bool>,
+    extern_assets_dir: Option<String>,
     seed: Option<u64>,
 
     #[serde(default)]
@@ -355,6 +357,9 @@ impl PatchConfig
                 .takes_value(true))
             .arg(Arg::with_name("output iso path")
                 .long("output-iso")
+                .takes_value(true))
+            .arg(Arg::with_name("extern assets dir")
+                .long("extern-assets-dir")
                 .takes_value(true))
             .arg(Arg::with_name("profile json path")
                 .long("profile")
@@ -490,6 +495,9 @@ impl PatchConfig
         }
         if let Some(output_iso_path) = matches.value_of("output iso path") {
             patch_config.output_iso = Some(output_iso_path.to_string());
+        }
+        if let Some(extern_assets_dir) = matches.value_of("extern assets dir") {
+            patch_config.extern_assets_dir = Some(extern_assets_dir.to_string());
         }
         if let Some(map_default_state) = matches.value_of("map default state") {
             patch_config.preferences.map_default_state = Some(map_default_state.to_string());
@@ -692,6 +700,7 @@ impl PatchConfigPrivate
             force_vanilla_layout,
 
             seed: self.seed.unwrap_or(123),
+            extern_assets_dir: self.extern_assets_dir,
 
             level_data: self.level_data.clone(),
 

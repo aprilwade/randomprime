@@ -38,6 +38,7 @@ use crate::{
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
+    extern_assets::ExternPickupModel,
 };
 
 use dol_symbol_table::mp1_symbol;
@@ -4113,6 +4114,39 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     }
 
     // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
+
+    ctwk_player_gun.beams[0].normal.knockback = ctwk_player_gun.beams[0].normal.knockback*10.0;
+    ctwk_player_gun.beams[0].cool_down = 0.00001;
+    ctwk_player_gun.beams[1].cool_down = 0.00001;
+    ctwk_player_gun.beams[2].cool_down = 0.00001;
+    ctwk_player_gun.beams[3].cool_down = 0.00001;
+    ctwk_player_gun.beams[4].cool_down = 0.00001;
+
+    ctwk_player_gun.combos[0].radius = 99999.0;
+    ctwk_player_gun.combos[0].radius_damage = 99999.0;
+    ctwk_player_gun.combos[0].knockback = 99999.0;
+    
+    ctwk_player_gun.combos[1].radius = 99999.0;
+    ctwk_player_gun.combos[1].radius_damage = 99999.0;
+    ctwk_player_gun.combos[1].knockback = 99999.0;
+
+    ctwk_player_gun.combos[2].radius = 99999.0;
+    ctwk_player_gun.combos[2].radius_damage = 99999.0;
+    ctwk_player_gun.combos[2].knockback = 99999.0;
+
+    ctwk_player_gun.combos[3].radius = 99999.0;
+    ctwk_player_gun.combos[3].radius_damage = 99999.0;
+    ctwk_player_gun.combos[3].knockback = 99999.0;
+
+    ctwk_player_gun.combos[4].radius = 99999.0;
+    ctwk_player_gun.combos[4].radius_damage = 99999.0;
+    ctwk_player_gun.combos[4].knockback = 99999.0;
+
+    ctwk_player_gun.power_bomb.damage = 9999999.0;
+    ctwk_player_gun.power_bomb.radius = 9999999.0;
+    ctwk_player_gun.power_bomb.radius_damage = 9999999.0;
+
+    
     Ok(())
 }
 
@@ -5121,6 +5155,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
+    let extern_assets = ExternPickupModel::parse(config.);
+
     let remove_ball_color = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
     let remove_control_disabler = config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
     let move_item_loss_scan = config.ctwk_config.player_size.clone().unwrap_or(1.0) > 1.001;
