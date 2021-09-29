@@ -12,7 +12,7 @@ mod gc_disc;
 mod hint;
 mod mapa;
 mod mapw;
-mod mlvl;
+pub mod mlvl;
 mod mrea;
 mod pak;
 mod ctwk;

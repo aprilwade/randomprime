@@ -89,7 +89,7 @@ pub struct Area<'r>
 
     pub attached_area_count: u32,
     #[auto_struct(init = (attached_area_count as usize, ()))]
-    pub attached_areas: RoArray<'r, u16>,
+    pub attached_areas: LazyArray<'r, u16>,
 
     // Not actually unknown, length of an array that's always empty...
     #[auto_struct(expect = 0)]
@@ -100,7 +100,7 @@ pub struct Area<'r>
     #[auto_struct(derive = docks.len() as u32)]
     dock_count: u32,
     #[auto_struct(init = (dock_count as usize, ()))]
-    pub docks: RoArray<'r, Dock<'r>>,
+    pub docks: LazyArray<'r, Dock<'r>>,
 }
 
 #[auto_struct(Readable, Writable)]
@@ -222,12 +222,12 @@ pub struct Dock<'r>
     #[auto_struct(derive = connecting_docks.len() as u32 )]
     connecting_dock_count: u32,
     #[auto_struct(init = (connecting_dock_count as usize, ()))]
-    pub connecting_docks: RoArray<'r, DockConnection>,
+    pub connecting_docks: LazyArray<'r, DockConnection>,
 
     #[auto_struct(derive = dock_coordinates.len() as u32 )]
     dock_coordinate_count: u32,
     #[auto_struct(init = (dock_coordinate_count as usize, ()))]
-    pub dock_coordinates: RoArray<'r, GenericArray<f32, U3>>,
+    pub dock_coordinates: LazyArray<'r, GenericArray<f32, U3>>,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
