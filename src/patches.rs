@@ -4361,6 +4361,136 @@ fn patch_remove_control_disabler<'r>(
     Ok(())
 }
 
+fn patch_add_dock_teleport<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    source_position: [f32;3],
+    source_scale: [f32;3],
+    destination_position: [f32;3],
+    destination_rotation: [f32;3],
+)
+-> Result<(), String>
+{    
+    let layer = &mut area.mrea().scly_section_mut().layers.as_mut_vec()[0];
+    let spawn_point_id = ps.fresh_instance_id_range.next().unwrap();
+
+    // Insert a spawn point in-bounds
+    layer.objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: spawn_point_id,
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::SpawnPoint(
+                Box::new(structs::SpawnPoint {
+                    name: b"dockspawnpoint\0".as_cstr(),
+                    position: destination_position.into(),
+                    rotation: destination_rotation.into(),
+                    power: 0,
+                    ice: 0,
+                    wave: 0,
+                    plasma: 0,
+                    missiles: 0,
+                    scan_visor: 0,
+                    bombs: 0,
+                    power_bombs: 0,
+                    flamethrower: 0,
+                    thermal_visor: 0,
+                    charge: 0,
+                    super_missile: 0,
+                    grapple: 0,
+                    xray: 0,
+                    ice_spreader: 0,
+                    space_jump: 0,
+                    morph_ball: 0,
+                    combat_visor: 0,
+                    boost_ball: 0,
+                    spider_ball: 0,
+                    power_suit: 0,
+                    gravity_suit: 0,
+                    varia_suit: 0,
+                    phazon_suit: 0,
+                    energy_tanks: 0,
+                    unknown0: 0,
+                    health_refill: 0,
+                    unknown1: 0,
+                    wavebuster: 0,
+                    default_spawn: 0,
+                    active: 1,
+                    morphed: 0,
+                })
+            ),
+        }
+    );
+
+    // Insert a trigger at the previous room which sends the player to the freshly created spawn point
+    layer.objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: spawn_point_id as u32,
+                },
+            ].into(),
+            property_data: structs::SclyProperty::Trigger(
+                Box::new(structs::Trigger {
+                    name: b"dockteleporttrigger\0".as_cstr(),
+                    position: source_position.into(),
+                    scale: source_scale.into(),
+                    damage_info: structs::scly_structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    force: [0.0, 0.0, 0.0].into(),
+                    flags: 1,
+                    active: 1,
+                    deactivate_on_enter: 0,
+                    deactivate_on_exit: 0,
+                })
+            ),
+        }
+    );
+
+    Ok(())
+}
+
+fn patch_modify_dock<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    old_mrea_idx: u32,
+    new_mrea_idx: u32,
+)
+-> Result<(), String>
+{
+    let mut replaced = false;
+    let mrea_id = area.mlvl_area.mrea.to_u32();
+    let attached_areas: &mut reader_writer::LazyArray<'r, u16> = &mut area.mlvl_area.attached_areas;
+    let docks: &mut reader_writer::LazyArray<'r, structs::mlvl::Dock<'r>> = &mut area.mlvl_area.docks;
+
+    // Update the list of attached areas to use the new area instead of the old one
+    for i in 0..attached_areas.as_mut_vec().len() {
+        if attached_areas.as_mut_vec()[i as usize] == old_mrea_idx as u16 {
+            attached_areas.as_mut_vec()[i as usize] = new_mrea_idx as u16;
+            replaced = true;
+        }
+    }
+
+    // Update dock(s) to load the new area instead of the old one
+    for i in 0..docks.as_mut_vec().len() {
+        if docks.as_mut_vec()[i].connecting_docks.as_mut_vec()[0].array_index == old_mrea_idx {
+            docks.as_mut_vec()[i].connecting_docks.as_mut_vec()[0].array_index = new_mrea_idx;
+            replaced = true;
+        }
+    }
+
+    if !replaced {
+        panic!("failed to find mrea idx {} in room 0x{:X} when shuffling rooms", old_mrea_idx, mrea_id);
+    }
+
+    Ok(())
+}
 
 fn patch_bnr(
     file: &mut structs::FstEntryFile,
