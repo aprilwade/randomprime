@@ -14,12 +14,12 @@ pub struct Dock<'r>
 
     pub name: CStr<'r>,
 
-    pub unknown0: u8,
+    pub active: u8,
     pub position: GenericArray<f32, U3>,
     pub scale: GenericArray<f32, U3>,
-    pub dock_number: u32,
-    pub this_room: u8,
-    pub unknown1: u8,
+    pub dock_index: u32,
+    pub room_index: u32,
+    pub load_connected: u8,
 }
 
 impl<'r> SclyPropertyData for Dock<'r>

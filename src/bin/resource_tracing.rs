@@ -504,7 +504,7 @@ fn extract_door_location<'r>(
 
     // Handle dock_number exception (Main Ventillation Shaft B) //
     let dock_number = match dock {
-        Some(dock) => Some(dock.property_data.as_dock().unwrap().dock_number),
+        Some(dock) => Some(dock.property_data.as_dock().unwrap().dock_index),
         None if obj_location.instance_id == 0x150062 => Some(3),
         None if obj_location.instance_id == 0x150066 => Some(2),
         None => None,
