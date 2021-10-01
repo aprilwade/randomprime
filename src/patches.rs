@@ -4366,13 +4366,74 @@ fn patch_add_dock_teleport<'r>(
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
     source_position: [f32;3],
     source_scale: [f32;3],
-    destination_position: [f32;3],
-    destination_rotation: [f32;3],
+    destination_dock_num: u32,
 )
 -> Result<(), String>
-{    
+{
+    let mrea_id = area.mlvl_area.mrea.to_u32();
     let layer = &mut area.mrea().scly_section_mut().layers.as_mut_vec()[0];
     let spawn_point_id = ps.fresh_instance_id_range.next().unwrap();
+
+    // find the destination dock
+    let mut found = false;
+    let mut dock_position: GenericArray<f32, U3> = [0.0, 0.0, 0.0].into();
+    for obj in layer.objects.as_mut_vec() {
+        if !obj.property_data.is_dock() {
+            continue;
+        }
+
+        let dock = obj.property_data.as_dock().unwrap();
+        if dock.dock_index != destination_dock_num {
+            continue;
+        }
+        
+        found = true;
+        dock_position = dock.position.clone();
+    }
+
+    if !found {
+        panic!("failed to find dock #{} in room 0x{:X}", destination_dock_num, mrea_id)
+    }
+
+    // Find the nearest door
+    let mut door_rotation: GenericArray<f32, U3> = [0.0, 0.0, 0.0].into();
+    for obj in layer.objects.as_mut_vec() {
+        if !obj.property_data.is_door() {
+            continue;
+        }
+
+        let door = obj.property_data.as_door().unwrap();
+        if  f32::abs(door.position[0] - dock_position[0]) > 5.0 ||
+            f32::abs(door.position[1] - dock_position[1]) > 5.0 ||
+            f32::abs(door.position[2] - dock_position[2]) > 5.0 {
+            continue;
+        }
+
+        door_rotation = door.rotation.clone();
+    }
+
+    let mut spawn_point_position = dock_position.clone();
+    let mut spawn_point_rotation = [0.0, 0.0, 0.0];
+    let door_offset = 3.0;
+    let vertical_offset = -2.0;
+    if door_rotation[2] >= 45.0 && door_rotation[2] < 135.0 {
+        // Leads North (Y+)
+        spawn_point_position[1] = spawn_point_position[1] - door_offset;
+        spawn_point_rotation[2] = 180.0;
+    } else if (door_rotation[2] >= 135.0 && door_rotation[2] < 225.0) || (door_rotation[2] < -135.0 && door_rotation[2] > -225.0) {
+        // Leads East (X+)
+        spawn_point_position[0] = spawn_point_position[0] + door_offset;
+        spawn_point_rotation[2] = 270.0;
+    } else if door_rotation[2] >= -135.0 && door_rotation[2] < -45.0 {
+        // Leads South (Y-)
+        spawn_point_position[1] = spawn_point_position[1] + door_offset;
+        spawn_point_rotation[2] = 0.0;
+    } else if door_rotation[2] >= -45.0 && door_rotation[2] < 45.0 {
+        // Leads West (X-)
+        spawn_point_position[0] = spawn_point_position[0] - door_offset;
+        spawn_point_rotation[2] = 90.0;
+    }
+    spawn_point_position[2] = spawn_point_position[2] + vertical_offset;
 
     // Insert a spawn point in-bounds
     layer.objects.as_mut_vec().push(
@@ -4382,8 +4443,8 @@ fn patch_add_dock_teleport<'r>(
             property_data: structs::SclyProperty::SpawnPoint(
                 Box::new(structs::SpawnPoint {
                     name: b"dockspawnpoint\0".as_cstr(),
-                    position: destination_position.into(),
-                    rotation: destination_rotation.into(),
+                    position: spawn_point_position.into(),
+                    rotation: spawn_point_rotation.into(),
                     power: 0,
                     ice: 0,
                     wave: 0,
