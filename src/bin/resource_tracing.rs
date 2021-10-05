@@ -37,6 +37,8 @@ pub struct DoorLocation
     door_force_location: ScriptObjectLocation,
     door_shield_location: Option<ScriptObjectLocation>,
     dock_number: Option<u32>,
+    dock_position: Option<[f32;3]>,
+    dock_scale: Option<[f32;3]>,
 }
 
 struct ResourceDb<'r>
@@ -509,6 +511,23 @@ fn extract_door_location<'r>(
         None if obj_location.instance_id == 0x150066 => Some(2),
         None => None,
     };
+    
+    let mut dock_position: Option<[f32;3]> = None;
+    let mut dock_scale: Option<[f32;3]> = None;
+    if dock_number.is_some() {
+        let dock = search_for_scly_object(&obj.connections, &scly_db,
+            |obj| obj.property_data.as_dock()
+                .map(|dk| dk.dock_index == dock_number.clone().unwrap())
+                .unwrap_or(false),
+            );
+
+        if dock.is_some() {
+            let dock = dock.unwrap();
+            let dock = dock.property_data.as_dock().unwrap();
+            dock_position = Some([dock.position[0], dock.position[1], dock.position[2]]);
+            dock_scale = Some([dock.scale[0], dock.scale[1], dock.scale[2]]);
+        }
+    }
 
     let key_door_location = if !key_shield_loc.is_none() && !key_force_loc.is_none() {
         Some(DoorLocation {
@@ -516,6 +535,8 @@ fn extract_door_location<'r>(
             door_force_location: key_force_loc.unwrap(),
             door_shield_location: key_shield_loc,
             dock_number,
+            dock_position,
+            dock_scale,
         })
     } else {
         None
@@ -526,6 +547,8 @@ fn extract_door_location<'r>(
         door_force_location: unlock_force_loc,
         door_shield_location: unlock_shield_loc,
         dock_number,
+        dock_position,
+        dock_scale,
     }),key_door_location)
 }
 
@@ -1160,6 +1183,8 @@ fn main()
                 println!("                    door_force_location: {:?},", door.door_force_location);
                 println!("                    door_shield_location: {:?},", door.door_shield_location);
                 println!("                    dock_number: {:?},", door.dock_number);
+                println!("                    dock_position: {:?},", door.dock_position);
+                println!("                    dock_scale: {:?},", door.dock_scale);
                 println!("                }},");
             }
             println!("            ],");

@@ -438,6 +438,8 @@ pub struct DoorLocation
     pub door_force_location: ScriptObjectLocation,
     pub door_shield_location: Option<ScriptObjectLocation>,
     pub dock_number: Option<u32>,
+    pub dock_position: Option<[f32;3]>,
+    pub dock_scale: Option<[f32;3]>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
