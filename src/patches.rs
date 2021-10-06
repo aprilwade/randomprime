@@ -21,6 +21,7 @@ use crate::patch_config::{
     LevelConfig,
     CtwkConfig,
     CutsceneMode,
+    DoorConfig,
 };
 
 use crate::{
@@ -30,7 +31,7 @@ use crate::{
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World, is_elevator},
     gcz_writer::GczWriter,
     mlvl_wrapper,
-    pickup_meta::{self, PickupType, PickupModel},
+    pickup_meta::{self, PickupType, PickupModel, DoorLocation},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
     txtr_conversions::{
@@ -5618,9 +5619,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             }
 
             // Get list of patches specified for this room
-            let (pickups, scans) = {
+            let (pickups, scans, doors) = {
                 let mut _pickups = Vec::new();
                 let mut _scans = Vec::new();
+                let mut _doors = HashMap::<u32, DoorConfig>::new();
                 
                 let level = config.level_data.get(world.to_json_key());
                 if level.is_some() {
@@ -5634,9 +5636,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         if room.extra_scans.is_some() {
                             _scans = room.extra_scans.clone().unwrap();
                         }
+
+                        if room.doors.is_some() {
+                            _doors = room.doors.clone().unwrap();
+                        }
                     }
                 }
-                (_pickups, _scans)
+                (_pickups, _scans, _doors)
             };
 
             // Patch existing item locations
@@ -5757,6 +5763,47 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 );
 
                 idx = idx + 1;
+            }
+
+            // Edit dock destinations
+            for (dock_num, door_config) in doors {
+                // Find the corresponding traced info for this dock
+                let mut door_location: Option<DoorLocation> = None;
+                for dl in room_info.door_locations {
+                    if dl.dock_number.is_some() && dl.dock_number.clone().unwrap() == dock_num {
+                        door_location = Some(dl.clone());
+                        break;
+                    }
+                }
+                if door_location.is_none() {
+                    panic!("Could not find dock #{} in '{}'", dock_num, room_info.name);
+                }
+                let door_location = door_location.unwrap();
+
+                // If specified, patch this door's connection
+                if door_config.destination.is_some() {
+
+                    // Get info about the destination room
+                    let destination = door_config.destination.clone().unwrap();
+                    let destination_room = SpawnRoomData::from_str(format!("{}:{}", world.to_str(), destination.room_name).as_str());
+
+                    // Patch the current room to lead to the new destination room
+                    patcher.add_scly_patch(
+                        (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                        move |ps, area| patch_modify_dock(ps, area, dock_num, destination_room.mrea_idx),
+                    );
+
+                    // Patch the destination room to "catch" the player with a teleporter at the same location as this room's dock
+                    patcher.add_scly_patch(
+                        (pak_name.as_bytes(), destination_room.mrea),
+                        move |ps, area| patch_add_dock_teleport(
+                            ps, area,
+                            door_location.dock_position.clone().unwrap(),
+                            door_location.dock_scale.clone().unwrap(),
+                            destination.dock_num, // Used to determined where the player is placed in the new room
+                        ),
+                    );
+                }
             }
         }
     }

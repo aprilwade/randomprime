@@ -101,7 +101,23 @@ pub struct ScanConfig
     pub is_red: bool,
 }
 
-// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DoorDestination
+{
+    pub room_name: String,
+    pub dock_num: u32,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DoorConfig
+{
+    // #[serde(alias  = "type")]
+    // pub door_type: Option<String>,
+    pub destination: Option<DoorDestination>, // Must be in same area. Ex: "destination":"Main Plaza"
+}
+
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomConfig
@@ -116,6 +132,7 @@ pub struct RoomConfig
     pub pickups: Option<Vec<PickupConfig>>,
     // pub extra_pickups: Option<Vec<PickupConfig>>,
     pub extra_scans: Option<Vec<ScanConfig>>,
+    pub doors: Option<HashMap<u32, DoorConfig>>,
     // pub aether_transform: Option<Vec<AetherTransformConfig>>,
 }
 
