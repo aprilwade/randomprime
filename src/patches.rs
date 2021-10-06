@@ -4483,6 +4483,17 @@ fn patch_add_dock_teleport<'r>(
         }
     );
 
+    // Thin out the trigger so that you can't touch it through the door
+    let mut thinnest = 0;
+    if source_scale[1] < source_scale[thinnest] {
+        thinnest = 1;
+    }
+    if source_scale[2] < source_scale[thinnest] {
+        thinnest = 2;
+    }
+    let mut source_scale = source_scale.clone();
+    source_scale[thinnest] = 0.1;
+
     // Insert a trigger at the previous room which sends the player to the freshly created spawn point
     layer.objects.as_mut_vec().push(
         structs::SclyObject {
@@ -5765,7 +5776,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 idx = idx + 1;
             }
 
-            // Edit dock destinations
+            // Edit doors
             for (dock_num, door_config) in doors {
                 // Find the corresponding traced info for this dock
                 let mut door_location: Option<DoorLocation> = None;
@@ -5782,6 +5793,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
                 // If specified, patch this door's connection
                 if door_config.destination.is_some() {
+                    // TODO: special handling is needed if a dock takes you to a room which is already connected to this one at another dock
+                    // TODO: special handling is desired if a dock takes you to it's vanilla destination
+                    // TOOD: add scan point on this door to tell what the destination door is
+                    // TODO: need to trace dock resources for morph ball tunnels (e.g. fiery shores)
 
                     // Get info about the destination room
                     let destination = door_config.destination.clone().unwrap();
