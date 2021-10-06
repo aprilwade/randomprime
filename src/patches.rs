@@ -4520,7 +4520,7 @@ fn patch_add_dock_teleport<'r>(
 fn patch_modify_dock<'r>(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
-    old_mrea_idx: u32,
+    dock_num: u32,
     new_mrea_idx: u32,
 )
 -> Result<(), String>
@@ -4530,11 +4530,16 @@ fn patch_modify_dock<'r>(
     let attached_areas: &mut reader_writer::LazyArray<'r, u16> = &mut area.mlvl_area.attached_areas;
     let docks: &mut reader_writer::LazyArray<'r, structs::mlvl::Dock<'r>> = &mut area.mlvl_area.docks;
 
+    if dock_num >= attached_areas.as_mut_vec().len() as u32
+    {
+        panic!("dock num #{} doesn't index attached areas in room 0x{:X}", dock_num, mrea_id);
+    }
+    let old_mrea_idx = attached_areas.as_mut_vec()[dock_num as usize] as u32;
+
     // Update the list of attached areas to use the new area instead of the old one
     for i in 0..attached_areas.as_mut_vec().len() {
         if attached_areas.as_mut_vec()[i as usize] == old_mrea_idx as u16 {
             attached_areas.as_mut_vec()[i as usize] = new_mrea_idx as u16;
-            replaced = true;
         }
     }
 
