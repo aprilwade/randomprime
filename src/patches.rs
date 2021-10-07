@@ -5583,6 +5583,18 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             [-44.0, 361.0, -120.0],
         ),
     );
+    
+    if config.qol_cutscenes == CutsceneMode::Competitive {
+        patch_qol_competitive_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_cutscenes == CutsceneMode::Minor || config.qol_cutscenes == CutsceneMode::Major {
+        patch_qol_minor_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_cutscenes == CutsceneMode::Major {
+        patch_qol_major_cutscenes(&mut patcher);
+    }
 
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
@@ -5797,6 +5809,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     // TODO: special handling is desired if a dock takes you to it's vanilla destination
                     // TOOD: add scan point on this door to tell what the destination door is
                     // TODO: need to trace dock resources for morph ball tunnels (e.g. fiery shores)
+                    // TODO: allow destinations outside this pak
 
                     // Get info about the destination room
                     let destination = door_config.destination.clone().unwrap();
@@ -6070,18 +6083,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     if !config.force_vanilla_layout {
         patch_qol_logical(&mut patcher, config);
-    }
-
-    if config.qol_cutscenes == CutsceneMode::Competitive {
-        patch_qol_competitive_cutscenes(&mut patcher, version);
-    }
-
-    if config.qol_cutscenes == CutsceneMode::Minor || config.qol_cutscenes == CutsceneMode::Major {
-        patch_qol_minor_cutscenes(&mut patcher, version);
-    }
-
-    if config.qol_cutscenes == CutsceneMode::Major {
-        patch_qol_major_cutscenes(&mut patcher);
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
