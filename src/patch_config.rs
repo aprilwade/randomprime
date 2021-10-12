@@ -93,7 +93,7 @@ pub struct PickupConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ScanConfig
 {
     pub position: [f32;3],
@@ -103,7 +103,7 @@ pub struct ScanConfig
 
 // TODO: defaults
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
 {
     // pub remove_locks: Option<bool>,
@@ -120,7 +120,7 @@ pub struct RoomConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LevelConfig
 {
     pub transports: HashMap<String, String>,
@@ -129,7 +129,7 @@ pub struct LevelConfig
 
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CtwkConfig
 {
     pub fov: Option<f32>,
@@ -260,7 +260,7 @@ pub struct PatchConfig
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
     qol_game_breaking: Option<bool>,
@@ -278,7 +278,7 @@ struct Preferences
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct GameConfig
 {
     starting_room: Option<String>,
@@ -316,7 +316,7 @@ struct GameConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct PatchConfigPrivate
 {
     input_iso: Option<String>,
