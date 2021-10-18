@@ -235,7 +235,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::CFLDG_POI_SCAN,
         custom_asset_ids::CFLDG_POI_STRG,
-        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi\0",
+        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
@@ -765,9 +765,22 @@ fn create_item_scan_strg_pair_2<'r>(
             _dummy: std::marker::PhantomData,
         }),
     );
+
+    let mut strings: Vec<String> = vec![];
+
+    if contents.len() > 92 {
+        let string1:String = (contents.clone().to_string())[..92].to_string();
+        let remainder = (contents.clone().to_string())[92..].to_string();
+        strings.push(string1 + "\0");
+        strings.push("\0".to_string());
+        strings.push(remainder);
+    } else {
+        strings.push(contents.clone().to_string());
+    }
+
     let strg = build_resource(
         new_strg,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![contents.to_owned()])),
+        structs::ResourceKind::Strg(structs::Strg::from_strings(strings)),
     );
     [scan, strg]
 }
