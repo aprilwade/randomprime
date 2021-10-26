@@ -5827,14 +5827,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
-    {
         let iter = PHAZON_SUIT_TEXTURES.iter();
         /*
             .chain(VARIA_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
         */
-        for varia_texture in iter {            
+        for varia_texture in iter {
             // TODO: Whyyyyyyyyyyyyyy
             if vec![
                 0xBA7DF5D6, 0x27FFD993, 0x1AEC5A79, 0x50A70472, 0x60EA8AC4, 0x985C0EAA, 0x1C38E5E2,
