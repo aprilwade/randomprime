@@ -276,6 +276,28 @@ fn patch_thermal_conduits_damage_vulnerabilities(_ps: &mut PatcherState, area: &
     Ok(())
 }
 
+fn is_door_lock<'r>(obj: &structs::SclyObject<'r>) -> bool {
+    let actor = obj.property_data.as_actor();
+    
+    if actor.is_none() {
+        false // non-actors are never door locks
+    }
+    else {
+        let _actor = actor.unwrap();
+        _actor.cmdl == 0x5391EDB6 || _actor.cmdl == 0x6E5D6796 // door locks are indentified by their model (check for both horizontal and vertical variants)
+    }
+}
+
+fn remove_door_locks(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    layer.objects.as_mut_vec().retain(|obj| !is_door_lock(obj));  // keep everything that isn't a door lock
+    
+    Ok(())
+}
+
 fn patch_morphball_hud(res: &mut structs::Resource)
     -> Result<(), String>
 {
@@ -5759,6 +5781,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     if config.patch_power_conduits {
         patch_power_conduits(&mut patcher);
+    }
+
+    if config.remove_mine_security_station_locks {
+        patcher.add_scly_patch(
+            resource_info!("02_mines_shotemup.MREA").into(), // Mines Security Station
+            remove_door_locks,
+        );
     }
 
     // TODO: only patch what we need
