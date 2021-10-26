@@ -31,10 +31,14 @@ use crate::{
     gcz_writer::GczWriter,
     mlvl_wrapper,
     pickup_meta::{self, PickupType, PickupModel},
+    door_meta::{DoorType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
     txtr_conversions::{
-        cmpr_compress, cmpr_decompress, huerotate_in_place, VARIA_SUIT_TEXTURES,
+        cmpr_compress,
+        cmpr_decompress,
+        huerotate_in_place,
+        VARIA_SUIT_TEXTURES,
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
@@ -227,6 +231,48 @@ fn patch_save_banner_txtr(res: &mut structs::Resource)
     const TXTR_BYTES: &[u8] = include_bytes!("../extra_assets/save_banner.txtr");
     res.compressed = false;
     res.kind = structs::ResourceKind::Unknown(Reader::new(TXTR_BYTES), b"TXTR".into());
+    Ok(())
+}
+
+fn patch_thermal_conduits_damage_vulnerabilities(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+
+    let thermal_conduit_damageable_trigger_obj_ids = [
+        0x000F01C8, // ruined courtyard
+        0x0028043F, // research core
+        0x0015006C, // main ventilation shaft section b
+        0x0019002C, // reactor core
+        0x00190030, // reactor core
+        0x0019002E, // reactor core
+        0x00190029, // reactor core
+        0x001A006C, // reactor core access
+        0x001A006D, // reactor core access
+        0x001B008E, // cargo freight lift to deck gamma
+        0x001B008F, // cargo freight lift to deck gamma
+        0x001B0090, // cargo freight lift to deck gamma
+        0x001E01DC, // biohazard containment
+        0x001E01E1, // biohazard containment
+        0x001E01E0, // biohazard containment
+        0x0020002A, // biotech research area 1
+        0x00200030, // biotech research area 1
+        0x0020002E, // biotech research area 1
+        0x0002024C, // main quarry
+        0x00170141, // magmoor workstation
+        0x00170142, // magmoor workstation
+        0x00170143, // magmoor workstation
+    ];
+
+    for obj in layer.objects.as_mut_vec().iter_mut() {
+        if thermal_conduit_damageable_trigger_obj_ids.contains(&obj.instance_id) {
+            let dt = obj.property_data.as_damageable_trigger_mut().unwrap();
+            dt.damage_vulnerability = DoorType::Blue.vulnerability();
+            dt.health_info.health = 1.0; // single power beam shot
+        }
+    }
+
     Ok(())
 }
 
@@ -5134,6 +5180,59 @@ pub fn patch_qol_major_cutscenes(patcher: &mut PrimePatcher) {
     );
 }
 
+fn patch_power_conduits<'a>(patcher: &mut PrimePatcher<'_, 'a>)
+{
+    patcher.add_scly_patch(
+        resource_info!("05_ice_shorelines.MREA").into(), // ruined courtyard
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+
+    patcher.add_scly_patch(
+        resource_info!("13_ice_vault.MREA").into(), // research core
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("08b_under_intro_ventshaft.MREA").into(), // Main Ventilation Shaft Section B
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+
+    patcher.add_scly_patch(
+        resource_info!("07_under_intro_reactor.MREA").into(), // reactor core
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("06_under_intro_to_reactor.MREA").into(), // reactor core access
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("06_under_intro_freight.MREA").into(), // cargo freight lift to deck gamma
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_zoo.MREA").into(), // biohazard containment
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("05_under_intro_specimen_chamber.MREA").into(), // biotech research area 1
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+    
+    patcher.add_scly_patch(
+        resource_info!("01_mines_mainplaza.MREA").into(), // main quarry
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+
+    patcher.add_scly_patch(
+        resource_info!("10_over_1alavaarea.MREA").into(), // magmoor workstation
+        patch_thermal_conduits_damage_vulnerabilities
+    );
+}
+
 pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     where T: structs::ProgressNotifier
 {
@@ -5657,6 +5756,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         resource_info!("TXTR_SaveBanner.TXTR").into(),
         patch_save_banner_txtr
     );
+
+    if config.patch_power_conduits {
+        patch_power_conduits(&mut patcher);
+    }
 
     // TODO: only patch what we need
     patcher.add_resource_patch(
