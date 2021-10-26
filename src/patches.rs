@@ -38,7 +38,7 @@ use crate::{
         cmpr_compress,
         cmpr_decompress,
         huerotate_in_place,
-        VARIA_SUIT_TEXTURES,
+        // VARIA_SUIT_TEXTURES,
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
@@ -1189,8 +1189,8 @@ fn make_elevators_patch<'a>(
     for (_, level) in level_data.iter() {
         for (elevator_name, destination_name) in level.transports.iter() {
 
-            // special case, handled elsewhere
-            if elevator_name == "destroyed frigate cutscene" {
+            // special cases, handled elsewhere
+            if vec!["Frigate Escape Cutscene", "Essence Dead Cutscene"].contains(&(elevator_name.as_str())) {
                 continue;
             }
 
@@ -1414,8 +1414,7 @@ fn patch_ending_scene_straight_to_credits(
     Ok(())
 }
 
-
-fn patch_frigate_teleporter<'r>(
+fn patch_teleporter_destination<'r>(
     area: &mut mlvl_wrapper::MlvlArea,
     spawn_room: SpawnRoomData,
 )
@@ -5363,7 +5362,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         let mut destination_name = "Tallon:Landing Site";
         let frigate_level = config.level_data.get(World::FrigateOrpheon.to_json_key());
         if frigate_level.is_some() {
-            let x = frigate_level.unwrap().transports.get(&"Destroyed Frigate Cutscene".to_string());
+            let x = frigate_level.unwrap().transports.get(&"Frigate Escape Cutscene".to_string());
             if x.is_some() {
                 destination_name = x.unwrap();
             }
@@ -5371,7 +5370,18 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
         SpawnRoomData::from_str(destination_name)
     };
-    assert!(frigate_done_room.mlvl != World::FrigateOrpheon.mlvl()); // panic if the frigate level gets you stuck in a loop
+    let essence_done_room = {
+        let mut destination = None;
+        let crater_level = config.level_data.get(World::ImpactCrater.to_json_key());
+        if crater_level.is_some() {
+            let x = crater_level.unwrap().transports.get(&"Essence Dead Cutscene".to_string());
+            if x.is_some() {
+                destination = Some(SpawnRoomData::from_str(x.unwrap()))
+            }
+        }
+
+        destination        
+    };
 
     let mut rng = StdRng::seed_from_u64(config.seed);
     let artifact_totem_strings = build_artifact_temple_totem_scan_strings(config, &mut rng, config.artifact_hints.clone());
@@ -5714,7 +5724,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         // redirect end of frigate cutscene to room specified in layout
         patcher.add_scly_patch(
             resource_info!("01_intro_hanger.MREA").into(),
-            move |_ps, area| patch_frigate_teleporter(area, frigate_done_room),
+            move |_ps, area| patch_teleporter_destination(area, frigate_done_room),
         );
 
         if move_item_loss_scan {
@@ -5723,6 +5733,14 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 patch_move_item_loss_scan,
             );
         }
+    }
+
+    if essence_done_room.is_some() {
+        // redirect end of crater cutscene to room specified in layout
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            move |_ps, area| patch_teleporter_destination(area, essence_done_room.unwrap()),
+        );
     }
 
     gc_disc.add_file(
