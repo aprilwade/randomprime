@@ -5266,7 +5266,7 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    let extern_assets = ExternPickupModel::parse(config.extern_assets_dir.clone().unwrap())?;
+    let (extern_models, extern_assets) = ExternPickupModel::parse(&config.extern_assets_dir.clone().unwrap())?;
 
     let remove_ball_color = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
     let remove_control_disabler = config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
