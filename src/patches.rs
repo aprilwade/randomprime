@@ -38,7 +38,7 @@ use crate::{
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
-    extern_assets::ExternPickupModel,
+    extern_assets::{ExternPickupModel, ExternAsset},
 };
 
 use dol_symbol_table::mp1_symbol;
@@ -295,6 +295,8 @@ fn patch_add_item<'r>(
     pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
+    extern_models: &HashMap<String, ExternPickupModel>,
+    extern_assets: &HashMap<u32, ExternAsset>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -302,23 +304,43 @@ fn patch_add_item<'r>(
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
+    let extern_model = if pickup_config.model.is_some() {
+        extern_models.get(pickup_config.model.as_ref().unwrap())
+    } else {
+        None
+    };
+
     // Pickup to use for visuals/hitbox //
-    let pickup_model_type = {
+    // Can be None, in which case, it's an external model //
+    let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
-            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
+            let model_name = pickup_config.model.as_ref().unwrap();
+            let pmt = PickupModel::from_str(&model_name);
+            if pmt.is_none() && !extern_model.is_some() {
+                panic!("Unkown Model Type {}", model_name);
+            }
+
+            pmt
         } else {
-            PickupModel::from_type(pickup_type)
+            Some(PickupModel::from_type(pickup_type))
         }
     };
 
-    let deps_iter = pickup_model_type.dependencies().iter()
-        .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-            });
+    let pickup_model_data = pickup_model_type.clone();
+    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_data.pickup_data();
+    if extern_model.is_some() {
+        let scale = extern_model.as_ref().unwrap().scale.clone();
+        pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
+        pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
+        pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
+
+        pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
+        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+    }
 
     let name = CString::new(format!(
-            "Randomizer - Pickup ({:?})", pickup_model_type.pickup_data().name)).unwrap();
+            "Randomizer - Pickup ({:?})", pickup_model_data.name)).unwrap();
     area.add_layer(Cow::Owned(name));
 
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
@@ -333,8 +355,30 @@ fn patch_add_item<'r>(
     };
 
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
-    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
+
+    /* Add Model Dependencies */
+    if pickup_model_type.is_some() {
+        let deps_iter = pickup_model_type
+            .clone().unwrap()
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    else if extern_model.is_some() {
+        let deps = extern_model.as_ref().unwrap().dependencies.clone();
+        let deps_iter = deps.iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            }
+        );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
 
     {
         let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
@@ -406,8 +450,8 @@ fn patch_add_item<'r>(
         name: b"customItem\0".as_cstr(),
         position: pickup_position.into(),
         rotation: [0.0, 0.0, 0.0].into(),
-        hitbox: pickup_model_type.pickup_data().hitbox.clone(),
-        scan_offset: pickup_model_type.pickup_data().scan_offset.clone(),
+        hitbox: pickup_model_data.hitbox.clone(),
+        scan_offset: pickup_model_data.scan_offset.clone(),
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
         disappear_timer: 0.0,
@@ -422,11 +466,11 @@ fn patch_add_item<'r>(
 
         // Model Pickup Data
         // "What does this pickup look like?"
-        scale: pickup_model_type.pickup_data().scale.clone(),
-        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
-        ancs: pickup_model_type.pickup_data().ancs.clone(),
-        part: pickup_model_type.pickup_data().part.clone(),
-        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
+        scale: pickup_model_data.scale.clone(),
+        cmdl: pickup_model_data.cmdl.clone(),
+        ancs: pickup_model_data.ancs.clone(),
+        part: pickup_model_data.part.clone(),
+        actor_params: pickup_model_data.actor_params.clone(),
     };
 
     // set the scan file id //
@@ -638,32 +682,47 @@ fn modify_pickups_in_mrea<'r>(
     skip_hudmemos: bool,
     hudmemo_delay: f32,
     qol_pickup_scans: bool,
+    extern_models: &HashMap<String, ExternPickupModel>,
+    extern_assets: &HashMap<u32, ExternAsset>,
 ) -> Result<(), String>
 {
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
-    
-    // panic if undefined game behavior //
-    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
-       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
-    {
-        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
-    }
+
+    let extern_model = if pickup_config.model.is_some() {
+        extern_models.get(pickup_config.model.as_ref().unwrap())
+    } else {
+        None
+    };
 
     // Pickup to use for visuals/hitbox //
-    let pickup_model_type = {
+    // Can be None, in which case, it's an external model //
+    let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
-            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
+            let model_name = pickup_config.model.as_ref().unwrap();
+            let pmt = PickupModel::from_str(&model_name);
+            if pmt.is_none() && !extern_model.is_some() {
+                panic!("Unkown Model Type {}", model_name);
+            }
+
+            pmt
         } else {
-            PickupModel::from_type(pickup_type)
+            Some(PickupModel::from_type(pickup_type))
         }
     };
 
-    let deps_iter = pickup_model_type.dependencies().iter()
-        .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-            });
+    let pickup_model_data = pickup_model_type.clone();
+    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_data.pickup_data();
+    if extern_model.is_some() {
+        let scale = extern_model.as_ref().unwrap().scale.clone();
+        pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
+        pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
+        pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
+
+        pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
+        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+    }
 
     let name = CString::new(format!(
             "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
@@ -688,8 +747,30 @@ fn modify_pickups_in_mrea<'r>(
     };
 
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
-    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
+
+    /* Add Model Dependencies */
+    if pickup_model_type.is_some() {
+        let deps_iter = pickup_model_type
+            .clone().unwrap()
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    else if extern_model.is_some() {
+        let deps = extern_model.as_ref().unwrap().dependencies.clone();
+        let deps_iter = deps.iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            }
+        );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
 
     {
         let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
@@ -790,7 +871,7 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
-    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
+    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_data, extern_model, pickup_config, scan_id);
 
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
@@ -854,7 +935,8 @@ fn modify_pickups_in_mrea<'r>(
 fn update_pickup(
     pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
-    pickup_model_type: PickupModel,
+    pickup_model_data: structs::Pickup,
+    extern_model: Option<&ExternPickupModel>,
     pickup_config: &PickupConfig,
     scan_id: ResId<res_id::SCAN>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
@@ -867,13 +949,13 @@ fn update_pickup(
     }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap_or(
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_data.cmdl).unwrap_or(
         pickup_meta::aabb_for_pickup_cmdl(PickupModel::EnergyTank.pickup_data().cmdl).unwrap()
     );
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
-    let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
-                                        pickup_model_type.pickup_data().scale);
+    let new_center = calculate_center(new_aabb, pickup_model_data.rotation,
+                                        pickup_model_data.scale);
 
     let curr_increase = {
         if pickup_type == PickupType::Nothing {
@@ -918,7 +1000,7 @@ fn update_pickup(
         // "How is this pickup integrated into the room?"
         name: original_pickup.name,
         position: position.into(),
-        rotation: pickup_model_type.pickup_data().rotation.clone().into(),
+        rotation: pickup_model_data.rotation.clone().into(),
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
@@ -939,11 +1021,11 @@ fn update_pickup(
 
         // Model Pickup Data
         // "What does this pickup look like?"
-        scale: pickup_model_type.pickup_data().scale,
-        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
-        ancs: pickup_model_type.pickup_data().ancs.clone(),
-        part: pickup_model_type.pickup_data().part.clone(),
-        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
+        scale: pickup_model_data.scale,
+        cmdl: pickup_model_data.cmdl.clone(),
+        ancs: pickup_model_data.ancs.clone(),
+        part: pickup_model_data.part.clone(),
+        actor_params: pickup_model_data.actor_params.clone(),
     };
 
     // Should we use non-default scan id? //
@@ -5309,6 +5391,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     let pickup_scans = &pickup_scans;
     let extra_scans = &extra_scans;
     let savw_scans_to_add = &savw_scans_to_add;
+    let extern_assets = &extern_assets;
+    let extern_models = &extern_models;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -5538,6 +5622,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             skip_hudmemos,
                             hudmemo_delay,
                             config.qol_pickup_scans,
+                            extern_models,
+                            extern_assets,
                         )
                 );
 
@@ -5573,6 +5659,8 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         pickup_scans,
                         key,
                         skip_hudmemos,
+                        extern_models,
+                        extern_assets,
                     ),
                 );
 
