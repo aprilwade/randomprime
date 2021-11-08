@@ -31,7 +31,6 @@ pub struct ExternPickupModel {
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
 struct ExternPickupModelJson {
     pub ancs: u32,
     pub cmdl: u32,
@@ -39,7 +38,6 @@ struct ExternPickupModelJson {
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
 struct ExternAssetJson {
     pub old_id: u32,
     pub new_id: u32,
@@ -47,24 +45,28 @@ struct ExternAssetJson {
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
 struct ExternAssetDependencyJson {
+    #[serde(alias = "type")]
     pub fourcc: String,
     pub id: u32,
 }
 
+#[derive(Deserialize, Debug, Default, Clone)]
+struct MetadataJson {
+    pub items: HashMap<String, ExternPickupModelJson>,
+    pub new_assets: Vec<ExternAssetJson>,
+
+}
+
 impl ExternPickupModel {
-    pub fn parse(filename: String) -> Vec<ExternPickupModel> {
+    pub fn parse(filename: String) -> Result<Vec<ExternPickupModel>, String> {
 
         let mut models: Vec<Self> = Vec::<ExternPickupModel>::new();
         
-        let metadata = fs::read_to_string("filename").expect(format!("Unable to read extern model metadata from '{}'", filename).as_str());
-        println!("{}", metadata);
+        let _metadata = fs::read_to_string(format!("{}\\meta.json", filename)).expect(format!("Unable to read extern model metadata from '{}'", filename).as_str());
+        let metadata: MetadataJson = serde_json::from_str(&_metadata)
+            .map_err(|e| format!("Extern Assets metadata.json parse failed: {}", e))?;
 
-        models
+        Ok(models)
     }
-
-    /*
-    let data = fs::read("/etc/hosts").expect(format!("Unable to read asset data from '{}'", filename).as_str());
-    */
 }

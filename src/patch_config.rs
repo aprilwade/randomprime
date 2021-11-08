@@ -704,7 +704,7 @@ impl PatchConfigPrivate
             force_vanilla_layout,
 
             seed: self.seed.unwrap_or(123),
-            extern_assets_dir: self.extern_assets_dir,
+            extern_assets_dir: self.extern_assets_dir.clone(),
 
             level_data: self.level_data.clone(),
 
