@@ -10039,7 +10039,6 @@ impl PickupModel
                     (0xBC16DE4A, FourCC::from_bytes(b"TXTR")),
                     (0xDEEE73AB, FourCC::from_bytes(b"ANCS")),
                     (0xEB66A2FD, FourCC::from_bytes(b"TXTR")),
-                    (0xF02F1B9A, FourCC::from_bytes(b"PART")),
                     (0xFA73F2AE, FourCC::from_bytes(b"EVNT")),
                 ];
                 DATA

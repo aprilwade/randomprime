@@ -3102,12 +3102,33 @@ fn patch_save_station_for_warp_to_start<'r>(
     game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
     spawn_room: SpawnRoomData,
     version: Version,
+    warp_to_start_delay_s: f32,
 ) -> Result<(), String>
 {
+    let mut warp_to_start_delay_s = warp_to_start_delay_s;
+    if warp_to_start_delay_s < 3.0 {
+        warp_to_start_delay_s = 3.0
+    }
+
+    area.add_dependencies(
+        &game_resources,
+        0,
+        iter::once(custom_asset_ids::WARPING_TO_START_STRG.into())
+    );
+    area.add_dependencies(
+        &game_resources,
+        0,
+        iter::once(custom_asset_ids::WARPING_TO_START_DELAY_STRG.into())
+    );
+
     let scly = area.mrea().scly_section_mut();
     let layer = &mut scly.layers.as_mut_vec()[0];
     let world_transporter_id = ps.fresh_instance_id_range.next().unwrap();
-    
+    let timer_id = ps.fresh_instance_id_range.next().unwrap();
+    let hudmemo_id = ps.fresh_instance_id_range.next().unwrap();
+    let player_hint_id = ps.fresh_instance_id_range.next().unwrap();
+
+    // Add world transporter leading to starting room
     layer.objects
          .as_mut_vec()
          .push(structs::SclyObject {
@@ -3122,24 +3143,114 @@ fn patch_save_station_for_warp_to_start<'r>(
             ).into(),
             connections: vec![].into(),
         });
+
+    // Add timer to delay warp (can crash if player warps too quickly)
+    layer.objects
+         .as_mut_vec()
+         .push(structs::SclyObject {
+            instance_id: timer_id,
+            property_data: structs::Timer {
+                name: b"Warp to start delay\0".as_cstr(),
+
+                start_time: warp_to_start_delay_s,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 0,
+                active: 1,
+            }.into(),
+            connections: vec![
+                structs::Connection {
+                    target_object_id: world_transporter_id,
+                    state: structs::ConnectionState::ZERO,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                },
+            ].into(),
+        });
+
+    // Inform the player that they are about to be warped
+    layer.objects
+        .as_mut_vec()
+        .push(structs::SclyObject {
+           instance_id: hudmemo_id,
+           property_data: structs::HudMemo {
+                name: b"Warping hudmemo\0".as_cstr(),
+
+                first_message_timer: warp_to_start_delay_s,
+                unknown: 1,
+                memo_type: 0,
+                strg: custom_asset_ids::WARPING_TO_START_DELAY_STRG,
+                active: 1,
+            }.into(),
+           connections: vec![].into(),
+       });
+    
+    // Stop the player from moving
+    layer.objects
+        .as_mut_vec()
+        .push(structs::SclyObject {
+           instance_id: player_hint_id,
+           property_data: structs::PlayerHint {
+            
+            name: b"Warping playerhint\0".as_cstr(),
+
+            position: [0.0, 0.0, 0.0].into(),
+            rotation: [0.0, 0.0, 0.0].into(),
+        
+            unknown0: 1, // active
+        
+            inner_struct: structs::PlayerHintStruct {
+                unknowns: [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1, // disable
+                    1, // disable
+                    1, // disable
+                    1, // disable
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ].into(),
+            }.into(),
+
+            unknown1: 10, // priority
+           }.into(),
+           connections: vec![].into(),
+       });
+
     for obj in layer.objects.iter_mut() {
         if let Some(sp_function) = obj.property_data.as_special_function_mut() {
             if sp_function.type_ == 7 { // Is Save Station function
                 obj.connections
                    .as_mut_vec()
                    .push(structs::Connection {
-                        target_object_id: world_transporter_id,
+                        target_object_id: timer_id,
                         state: structs::ConnectionState::RETREAT,
-                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        message: structs::ConnectionMsg::RESET_AND_START,
+                    });
+                obj.connections
+                    .as_mut_vec()
+                    .push(structs::Connection {
+                         target_object_id: hudmemo_id,
+                         state: structs::ConnectionState::RETREAT,
+                         message: structs::ConnectionMsg::SET_TO_ZERO,
+                     });
+                obj.connections
+                    .as_mut_vec()
+                    .push(structs::Connection {
+                        target_object_id: player_hint_id,
+                        state: structs::ConnectionState::RETREAT,
+                        message: structs::ConnectionMsg::INCREMENT,
                     });
             }
         }
     }
-    area.add_dependencies(
-        &game_resources,
-        0,
-        iter::once(custom_asset_ids::WARPING_TO_START_STRG.into())
-    );
+
     Ok(())
 }
 
@@ -5752,14 +5863,23 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     if let Some(angle) = config.suit_hue_rotate_angle {
-        let iter = VARIA_SUIT_TEXTURES.iter()
-            .chain(PHAZON_SUIT_TEXTURES.iter())
+        let iter = PHAZON_SUIT_TEXTURES.iter();
+        /*
+            .chain(VARIA_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
+        */
         for varia_texture in iter {
+            // TODO: Whyyyyyyyyyyyyyy
+            if vec![
+                0xBA7DF5D6, 0x27FFD993, 0x1AEC5A79, 0x50A70472, 0x60EA8AC4, 0x985C0EAA, 0x1C38E5E2,
+                ].contains(&varia_texture.res_id) {
+                continue;
+            }
+
             patcher.add_resource_patch((*varia_texture).into(), move |res| {
                 let res_data = crate::ResourceData::new(res);
-                let data = res_data.decompress();
+                let data = res_data.decompress().into_owned();
                 let mut reader = Reader::new(&data[..]);
                 let mut txtr: structs::Txtr = reader.read(());
 
@@ -5819,6 +5939,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     &game_resources,
                     starting_room,
                     version,
+                    config.warp_to_start_delay_s,
                 )
             );
         }

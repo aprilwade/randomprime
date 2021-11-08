@@ -93,7 +93,7 @@ pub struct PickupConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ScanConfig
 {
     pub position: [f32;3],
@@ -103,7 +103,7 @@ pub struct ScanConfig
 
 // TODO: defaults
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
 {
     // pub remove_locks: Option<bool>,
@@ -120,7 +120,7 @@ pub struct RoomConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LevelConfig
 {
     pub transports: HashMap<String, String>,
@@ -129,7 +129,7 @@ pub struct LevelConfig
 
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CtwkConfig
 {
     pub fov: Option<f32>,
@@ -223,6 +223,7 @@ pub struct PatchConfig
     pub starting_room: String,
     pub starting_memo: Option<String>,
     pub warp_to_start: bool,
+    pub warp_to_start_delay_s: f32,
 
     pub automatic_crash_screen: bool,
     pub etank_capacity: u32,
@@ -260,7 +261,7 @@ pub struct PatchConfig
 /*** Un-Parsed Config (doubles as JSON input specification) ***/
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
     qol_game_breaking: Option<bool>,
@@ -278,12 +279,13 @@ struct Preferences
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct GameConfig
 {
     starting_room: Option<String>,
     starting_memo: Option<String>,
     warp_to_start: Option<bool>,
+    warp_to_start_delay_s: Option<f32>,
 
     nonvaria_heat_damage: Option<bool>,
     staggered_suit_damage: Option<bool>,
@@ -315,7 +317,7 @@ struct GameConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct PatchConfigPrivate
 {
     input_iso: Option<String>,
@@ -525,6 +527,9 @@ impl PatchConfig
         if let Some(etank_capacity) = matches.value_of("etank capacity") {
             patch_config.game_config.etank_capacity = Some(etank_capacity.parse::<u32>().unwrap());
         }
+        if let Some(warp_to_start_delay_s) = matches.value_of("warp to start delay") {
+            patch_config.game_config.warp_to_start_delay_s = Some(warp_to_start_delay_s.parse::<f32>().unwrap());
+        }
         
         // custom
         if let Some(starting_items_str) = matches.value_of("starting items") {
@@ -541,7 +546,6 @@ impl PatchConfig
         patch_config.parse()
     }
 }
-
 
 impl PatchConfigPrivate
 {
@@ -726,6 +730,7 @@ impl PatchConfigPrivate
             starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
             warp_to_start,
+            warp_to_start_delay_s: self.game_config.warp_to_start_delay_s.unwrap_or(0.0),
 
             nonvaria_heat_damage: self.game_config.nonvaria_heat_damage.unwrap_or(false),
             staggered_suit_damage: self.game_config.staggered_suit_damage.unwrap_or(false),
