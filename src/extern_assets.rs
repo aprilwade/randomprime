@@ -1,9 +1,7 @@
-use resource_info_table::resource_info;
 use serde::Deserialize;
 use std::{fs::{self, File}, io::{self, Read}, path::PathBuf};
 use std::collections::HashMap;
 use reader_writer::FourCC;
-
 
 /* Public Structs */
 #[derive(Debug, Clone)]
@@ -124,7 +122,7 @@ impl ExternPickupModel {
             let fourcc = fourcc.to_str().unwrap();
             let fourcc = fourcc.split(".");
             let fourcc: Vec<&str> = fourcc.collect();
-            if fourcc.len() < 2 {
+            if fourcc.len() < 4 {
                 panic!("Extern asset, unexpected asset filename format");
             }
             let fourcc = fourcc[fourcc.len() - 1];

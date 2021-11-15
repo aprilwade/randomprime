@@ -38,7 +38,7 @@ use crate::{
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
-    extern_assets::{ExternPickupModel, ExternAsset},
+    extern_assets::ExternPickupModel,
 };
 
 use dol_symbol_table::mp1_symbol;
@@ -296,7 +296,6 @@ fn patch_add_item<'r>(
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
     extern_models: &HashMap<String, ExternPickupModel>,
-    extern_assets: &HashMap<u32, ExternAsset>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -683,7 +682,6 @@ fn modify_pickups_in_mrea<'r>(
     hudmemo_delay: f32,
     qol_pickup_scans: bool,
     extern_models: &HashMap<String, ExternPickupModel>,
-    extern_assets: &HashMap<u32, ExternAsset>,
 ) -> Result<(), String>
 {
     // Pickup to use for game functionality //
@@ -5348,8 +5346,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, version: Version)
     -> Result<(), String>
 {
-    let (extern_models, extern_assets) = ExternPickupModel::parse(&config.extern_assets_dir.clone().unwrap())?;
-
     let remove_ball_color = config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
     let remove_control_disabler = config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.999 || config.ctwk_config.morph_ball_size.clone().unwrap_or(1.0) < 0.999;
     let move_item_loss_scan = config.ctwk_config.player_size.clone().unwrap_or(1.0) > 1.001;
@@ -5383,16 +5379,15 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add) =
-        collect_game_resources(gc_disc, starting_memo, &config);
+    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models, extern_assets) =
+        collect_game_resources(gc_disc, starting_memo, &config)?;
 
+    let extern_models = &extern_models;
     let game_resources = &game_resources;
     let pickup_hudmemos = &pickup_hudmemos;
     let pickup_scans = &pickup_scans;
     let extra_scans = &extra_scans;
     let savw_scans_to_add = &savw_scans_to_add;
-    let extern_assets = &extern_assets;
-    let extern_models = &extern_models;
 
     // XXX These values need to out live the patcher
     let select_game_fmv_suffix = ["A", "B", "C"].choose(&mut rng).unwrap();
@@ -5623,7 +5618,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             hudmemo_delay,
                             config.qol_pickup_scans,
                             extern_models,
-                            extern_assets,
                         )
                 );
 
@@ -5660,7 +5654,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         key,
                         skip_hudmemos,
                         extern_models,
-                        extern_assets,
                     ),
                 );
 
