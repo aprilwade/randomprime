@@ -720,7 +720,7 @@ impl PatchConfigPrivate
             backwards_upper_mines: self.game_config.backwards_upper_mines.unwrap_or(true),
             backwards_lower_mines: self.game_config.backwards_lower_mines.unwrap_or(true),
 
-            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(false),
+            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(true),
             artifact_hint_behavior,
             flaahgra_music_files,
             suit_hue_rotate_angle: None,

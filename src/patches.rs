@@ -767,6 +767,7 @@ fn modify_pickups_in_mrea<'r>(
                 asset_type: fourcc,
             }
         );
+        println!("{:?}", deps_iter);
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
     }
 

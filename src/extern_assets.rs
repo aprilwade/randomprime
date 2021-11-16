@@ -71,14 +71,28 @@ impl ExternPickupModel {
         for (name, model) in metadata.items.iter() {
             // Collect all dependencies for this model
             let mut dependencies: Vec<(u32, FourCC)> = Vec::new();
-            for asset in metadata.new_assets.iter() {
-                if asset.new_id == model.ancs || asset.new_id == model.cmdl {
-                    for dep in &asset.dependencies {
-                        let fourcc = dep.fourcc.as_bytes();
-                        let fourcc: [u8;4] = [fourcc[0], fourcc[1], fourcc[2], fourcc[3]];
-                        let fourcc = FourCC::from_bytes(&fourcc);
+            let mut deps: HashSet<u32> = HashSet::new();
+            dependencies.push((model.ancs, FourCC::from_bytes(b"ANCS")));
+            deps.insert(model.ancs.clone());
+            dependencies.push((model.cmdl, FourCC::from_bytes(b"CMDL")));
+            deps.insert(model.cmdl.clone());
+            let mut added = true;
+            while added {
+                added = false;
+                for asset in metadata.new_assets.iter() {
+                    if deps.contains(&asset.new_id) {
+                        for dep in &asset.dependencies {
+                            if deps.contains(&dep.id) {
+                                continue;
+                            }
+                            let fourcc = dep.fourcc.as_bytes();
+                            let fourcc: [u8;4] = [fourcc[0], fourcc[1], fourcc[2], fourcc[3]];
+                            let fourcc = FourCC::from_bytes(&fourcc);
 
-                        dependencies.push((dep.id, fourcc));
+                            dependencies.push((dep.id, fourcc));
+                            deps.insert(dep.id);
+                            added = true;
+                        }
                     }
                 }
             }
@@ -108,7 +122,6 @@ impl ExternPickupModel {
         // Parse asset data
         let mut assets: HashMap<u32, ExternAsset> = HashMap::new();
         for id in ids_to_find {
-            
             // Find the file which corresponds to this id
             let mut filename = None;
             let mut found = false;
@@ -120,12 +133,10 @@ impl ExternPickupModel {
                     break;
                 }
             }
-
             if !found {
                 panic!("Failed to find file corresponding to asset id {}", id)
             }
             let filename = filename.unwrap();
-
             // Derrive FourCC from file extension
             // (I dislike Rust; This is just for parsing 4 letters)
             let fourcc = filename.clone();
