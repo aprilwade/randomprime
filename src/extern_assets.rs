@@ -122,7 +122,7 @@ impl ExternPickupModel {
             let fourcc = fourcc.to_str().unwrap();
             let fourcc = fourcc.split(".");
             let fourcc: Vec<&str> = fourcc.collect();
-            if fourcc.len() < 4 {
+            if fourcc.len() < 2 {
                 panic!("Extern asset, unexpected asset filename format");
             }
             let fourcc = fourcc[fourcc.len() - 1];
