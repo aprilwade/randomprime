@@ -170,11 +170,7 @@ fn extern_assets_runtime<'r>(extern_assets_dir: Option<String>)
 
     let mut resources = Vec::<Resource<'r>>::new();
     for (id, asset) in extern_assets.iter() {
-        let bytes = &asset.bytes;
-        let bytes: &[u8] = &bytes[..];
-        let reader = Reader::new(bytes);
-
-        let resource = ResourceKind::Unknown(reader, asset.fourcc);
+        let resource = ResourceKind::External(asset.bytes.clone(), asset.fourcc);
         resources.push(
             build_resource_raw(*id, resource)
         );
