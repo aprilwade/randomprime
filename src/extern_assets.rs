@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::{fs::{self, File}, io::{self, Read}, path::PathBuf};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use reader_writer::FourCC;
 
 /* Public Structs */
@@ -95,15 +95,25 @@ impl ExternPickupModel {
             );
         }
 
+        // Asset ids required
+        let mut ids_to_find: HashSet<u32> = HashSet::new();
+        for (_, model) in models.iter() {
+            ids_to_find.insert(model.ancs.clone());
+            ids_to_find.insert(model.cmdl.clone());
+            for (dep, _) in model.dependencies.iter() {
+                ids_to_find.insert(dep.clone());
+            }
+        }
+
         // Parse asset data
         let mut assets: HashMap<u32, ExternAsset> = HashMap::new();
-        for asset in metadata.new_assets.iter() {
+        for id in ids_to_find {
             
             // Find the file which corresponds to this id
             let mut filename = None;
             let mut found = false;
             for file in &files {
-                if file.to_str().unwrap().to_string().contains(&format!("{}", asset.new_id))
+                if file.to_str().unwrap().to_string().contains(&format!("{}", id))
                 {
                     found = true;
                     filename = Some(file);
@@ -112,7 +122,7 @@ impl ExternPickupModel {
             }
 
             if !found {
-                panic!("Failed to find file corresponding to asset id {}", asset.new_id)
+                panic!("Failed to find file corresponding to asset id {}", id)
             }
             let filename = filename.unwrap();
 
@@ -137,7 +147,7 @@ impl ExternPickupModel {
             file.read(&mut bytes).expect("buffer overflow");
 
             assets.insert(
-                asset.new_id,
+                id,
                 ExternAsset {
                     fourcc,
                     bytes,
