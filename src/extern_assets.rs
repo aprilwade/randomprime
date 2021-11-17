@@ -9,6 +9,7 @@ pub struct ExternPickupModel {
     pub ancs: u32,
     pub cmdl: u32,
     pub scale: f32,
+    pub character: u32,
     pub dependencies: Vec<(u32, FourCC)>,
 }
 
@@ -25,6 +26,7 @@ struct ExternPickupModelJson {
     pub ancs: u32,
     pub cmdl: u32,
     pub scale: f32,
+    pub character: u32,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -104,6 +106,7 @@ impl ExternPickupModel {
                     ancs: model.ancs,
                     cmdl: model.cmdl,
                     scale: model.scale,
+                    character: model.character,
                     dependencies,
                 }
             );

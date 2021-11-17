@@ -326,16 +326,22 @@ fn patch_add_item<'r>(
     };
 
     let pickup_model_data = pickup_model_type.clone();
-    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Nothing);
+    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Missile);
     let mut pickup_model_data = pickup_model_data.pickup_data();
     if extern_model.is_some() {
         let scale = extern_model.as_ref().unwrap().scale.clone();
         pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
         pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
         pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
-
         pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
         pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.part = ResId::invalid();
+        pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
+        pickup_model_data.ancs.default_animation = 0;
+        pickup_model_data.actor_params.xray_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.xray_cskr = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cskr = ResId::invalid();
     }
 
     let name = CString::new(format!(
@@ -710,16 +716,22 @@ fn modify_pickups_in_mrea<'r>(
     };
 
     let pickup_model_data = pickup_model_type.clone();
-    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Nothing);
+    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Missile);
     let mut pickup_model_data = pickup_model_data.pickup_data();
     if extern_model.is_some() {
         let scale = extern_model.as_ref().unwrap().scale.clone();
         pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
         pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
         pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
-
         pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
         pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.part = ResId::invalid();
+        pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
+        pickup_model_data.ancs.default_animation = 0;
+        pickup_model_data.actor_params.xray_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.xray_cskr = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cskr = ResId::invalid();
     }
 
     let name = CString::new(format!(
@@ -767,7 +779,6 @@ fn modify_pickups_in_mrea<'r>(
                 asset_type: fourcc,
             }
         );
-        // println!("{:?}", deps_iter);
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
     }
 
