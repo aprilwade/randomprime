@@ -231,9 +231,13 @@ pub fn custom_assets<'r>(
 
     // External assets
     let mut assets = extern_assets_compile_time();
-    let (more_assets, extern_models) = extern_assets_runtime(config.extern_assets_dir.clone())?;
-    assets.extend_from_slice(&more_assets);
-
+    let extern_models = if config.extern_assets_dir.is_some() {    
+        let (more_assets, extern_models) = extern_assets_runtime(config.extern_assets_dir.clone())?;
+        assets.extend_from_slice(&more_assets);
+        extern_models // HashMap of extern models available for use
+    } else {
+        HashMap::<String, ExternPickupModel>::new() // empty hashmap (no models available)
+    };
     // Custom pickup model assets
     assets.extend_from_slice(&create_nothing_icon_cmdl_and_ancs(
         resources,

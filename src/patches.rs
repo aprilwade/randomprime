@@ -310,7 +310,6 @@ fn patch_add_item<'r>(
     };
 
     // Pickup to use for visuals/hitbox //
-    // Can be None, in which case, it's an external model //
     let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
             let model_name = pickup_config.model.as_ref().unwrap();
@@ -319,15 +318,15 @@ fn patch_add_item<'r>(
                 panic!("Unkown Model Type {}", model_name);
             }
 
-            pmt
+            pmt // Some - Native Prime Model
+                // None - External Model (e.g. Screw Attack)
         } else {
-            Some(PickupModel::from_type(pickup_type))
+            Some(PickupModel::from_type(pickup_type)) // No model specified, use pickup type as inspiration
         }
     };
 
-    let pickup_model_data = pickup_model_type.clone();
-    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Missile);
-    let mut pickup_model_data = pickup_model_data.pickup_data();
+    let pickup_model_type = pickup_model_type.clone().unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_type.pickup_data();
     if extern_model.is_some() {
         let scale = extern_model.as_ref().unwrap().scale.clone();
         pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
@@ -363,18 +362,8 @@ fn patch_add_item<'r>(
     area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
 
     /* Add Model Dependencies */
-    if pickup_model_type.is_some() {
-        let deps_iter = pickup_model_type
-            .clone().unwrap()
-            .dependencies().iter()
-            .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-                }
-            );
-        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
-    }
-    else if extern_model.is_some() {
+    // Dependencies are defined externally
+    if extern_model.is_some() {
         let deps = extern_model.as_ref().unwrap().dependencies.clone();
         let deps_iter = deps.iter()
             .map(|&(file_id, fourcc)| structs::Dependency {
@@ -382,6 +371,17 @@ fn patch_add_item<'r>(
                 asset_type: fourcc,
             }
         );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    // If we aren't using an external model, use the dependencies traced by resource_tracing 
+    else {
+        let deps_iter = pickup_model_type
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
     }
 
@@ -700,7 +700,6 @@ fn modify_pickups_in_mrea<'r>(
     };
 
     // Pickup to use for visuals/hitbox //
-    // Can be None, in which case, it's an external model //
     let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
             let model_name = pickup_config.model.as_ref().unwrap();
@@ -709,15 +708,15 @@ fn modify_pickups_in_mrea<'r>(
                 panic!("Unkown Model Type {}", model_name);
             }
 
-            pmt
+            pmt // Some - Native Prime Model
+                // None - External Model (e.g. Screw Attack)
         } else {
-            Some(PickupModel::from_type(pickup_type))
+            Some(PickupModel::from_type(pickup_type)) // No model specified, use pickup type as inspiration
         }
     };
 
-    let pickup_model_data = pickup_model_type.clone();
-    let pickup_model_data = pickup_model_data.unwrap_or(PickupModel::Missile);
-    let mut pickup_model_data = pickup_model_data.pickup_data();
+    let pickup_model_type = pickup_model_type.clone().unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_type.pickup_data();
     if extern_model.is_some() {
         let scale = extern_model.as_ref().unwrap().scale.clone();
         pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
@@ -760,18 +759,8 @@ fn modify_pickups_in_mrea<'r>(
     area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
 
     /* Add Model Dependencies */
-    if pickup_model_type.is_some() {
-        let deps_iter = pickup_model_type
-            .clone().unwrap()
-            .dependencies().iter()
-            .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-                }
-            );
-        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
-    }
-    else if extern_model.is_some() {
+    // Dependencies are defined externally
+    if extern_model.is_some() {
         let deps = extern_model.as_ref().unwrap().dependencies.clone();
         let deps_iter = deps.iter()
             .map(|&(file_id, fourcc)| structs::Dependency {
@@ -779,6 +768,17 @@ fn modify_pickups_in_mrea<'r>(
                 asset_type: fourcc,
             }
         );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    // If we aren't using an external model, use the dependencies traced by resource_tracing
+    else {
+        let deps_iter = pickup_model_type
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
     }
 
