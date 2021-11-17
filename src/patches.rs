@@ -881,7 +881,7 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
-    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_data, extern_model, pickup_config, scan_id);
+    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_data, pickup_config, scan_id);
 
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
@@ -946,7 +946,6 @@ fn update_pickup(
     pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
     pickup_model_data: structs::Pickup,
-    extern_model: Option<&ExternPickupModel>,
     pickup_config: &PickupConfig,
     scan_id: ResId<res_id::SCAN>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
@@ -5391,7 +5390,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models, extern_assets) =
+    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models) =
         collect_game_resources(gc_disc, starting_memo, &config)?;
 
     let extern_models = &extern_models;

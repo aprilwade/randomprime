@@ -163,7 +163,7 @@ pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<
 // Assets defined in an external file at RUNTIME
 fn extern_assets_runtime<'r>(extern_assets_dir: Option<String>)
  -> Result<
-     (Vec<Resource<'r>>, HashMap<String, ExternPickupModel>, HashMap<u32, ExternAsset>),
+     (Vec<Resource<'r>>, HashMap<String, ExternPickupModel>),
      String>
 {
     let (extern_models, extern_assets) = ExternPickupModel::parse(&extern_assets_dir.clone().unwrap())?;
@@ -176,7 +176,7 @@ fn extern_assets_runtime<'r>(extern_assets_dir: Option<String>)
         );
     }
 
-    Ok((resources, extern_models, extern_assets))
+    Ok((resources, extern_models))
 }
 
 // Assets defined in an external file at COMPILE TIME
@@ -221,7 +221,6 @@ pub fn custom_assets<'r>(
         Vec<Resource<'r>>,
         Vec<ResId<res_id::SCAN>>,
         HashMap<String, ExternPickupModel>,
-        HashMap<u32, ExternAsset>,
     ),
     String>
 {
@@ -233,7 +232,7 @@ pub fn custom_assets<'r>(
 
     // External assets
     let mut assets = extern_assets_compile_time();
-    let (more_assets, extern_models, extern_assets) = extern_assets_runtime(config.extern_assets_dir.clone())?;
+    let (more_assets, extern_models) = extern_assets_runtime(config.extern_assets_dir.clone())?;
     assets.extend_from_slice(&more_assets);
 
     // Custom pickup model assets
@@ -434,7 +433,7 @@ pub fn custom_assets<'r>(
         }
     }
 
-    Ok((assets, savw_scans_to_add, extern_models, extern_assets))
+    Ok((assets, savw_scans_to_add, extern_models))
 }
 
 // When modifying resources in an MREA, we need to give the room a copy of the resources/
@@ -453,7 +452,6 @@ pub fn collect_game_resources<'r>(
         HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
         Vec<ResId<res_id::SCAN>>,
         HashMap<String, ExternPickupModel>,
-        HashMap<u32, ExternAsset>,
     ),
     String>
 {
@@ -497,7 +495,7 @@ pub fn collect_game_resources<'r>(
     // Remove extra assets from dependency search since they won't appear     //
     // in any pak. Instead add them to the output resource pool. These assets //
     // are provided as external files checked into the repository.            //
-    let (custom_assets, savw_scans_to_add, extern_models, extern_assets) = custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, &mut extra_scans, config)?;
+    let (custom_assets, savw_scans_to_add, extern_models) = custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, &mut extra_scans, config)?;
     for res in custom_assets {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
@@ -508,7 +506,7 @@ pub fn collect_game_resources<'r>(
         panic!("error - still looking for {:?}", looking_for);
     }
 
-    Ok((found, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models, extern_assets))
+    Ok((found, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models))
 }
 
 fn create_custom_door_cmdl<'r>(
