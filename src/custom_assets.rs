@@ -14,7 +14,6 @@ use crate::{
     ResourceData,
     GcDiscLookupExtensions,
     extern_assets::ExternPickupModel,
-    extern_assets::ExternAsset,
 };
 
 use std::{
