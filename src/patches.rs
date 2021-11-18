@@ -447,9 +447,14 @@ fn patch_add_item<'r>(
         }
     };
 
-    let pickup_position = pickup_config.position.unwrap();
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
+    }
+    
+    // If this is the echoes missile expansion model, compensate for the Z offset
+    let mut pickup_position = pickup_config.position.unwrap();
+    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+        pickup_position[2] = pickup_position[2] - 1.2;
     }
 
     let mut pickup = structs::Pickup {
@@ -1001,11 +1006,16 @@ fn update_pickup(
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
-    let position = [
+    let mut position = [
         original_pickup.position[0] - (new_center[0] - original_center[0]),
         original_pickup.position[1] - (new_center[1] - original_center[1]),
         original_pickup.position[2] - (new_center[2] - original_center[2]),
     ];
+
+    // If this is the echoes missile expansion model, compensate for the Z offset
+    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+        position[2] = position[2] - 1.2;
+    }
 
     *pickup = structs::Pickup {
         // Location Pickup Data
