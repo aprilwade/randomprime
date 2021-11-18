@@ -270,7 +270,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::CFLDG_POI_SCAN,
         custom_asset_ids::CFLDG_POI_STRG,
-        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid\0",
+        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid, Lokir, MeriKatt\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
