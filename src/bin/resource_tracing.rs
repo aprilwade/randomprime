@@ -840,7 +840,9 @@ fn patch_dependencies(pickup_kind: u32, deps: &mut HashSet<ResourceKey>)
         deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_ANCS));
         deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR1));
         deps.insert(ResourceKey::from(custom_asset_ids::PHAZON_SUIT_TXTR2));
-    };
+    } else if pickup_kind == PickupType::HealthRefill.kind() {
+        deps.remove(&ResourceKey::new(0xF02F1B9A, b"PART".into())); // This doesn't exist in PAL, and NTSC is fine
+    }
 }
 
 fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)

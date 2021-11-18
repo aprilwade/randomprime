@@ -18,6 +18,7 @@ use std::{
 
 pub mod c_interface;
 pub mod custom_assets;
+pub mod extern_assets;
 pub mod ciso_writer;
 pub mod dol_patcher;
 pub mod elevators;
@@ -174,9 +175,20 @@ pub struct ResourceData<'a>
     pub data: Reader<'a>,
 }
 
-
 impl<'a> ResourceData<'a>
 {
+    pub fn new_external(res: &'a structs::Resource<'_>) -> ResourceData<'a>
+    {
+        let reader = match &res.kind {
+            structs::ResourceKind::External(bytes, _) => Reader::new(&bytes[..]),
+            _ => panic!("Only uninitialized (aka Unknown) resources may be added."),
+        };
+        ResourceData {
+            is_compressed: res.compressed,
+            data: reader,
+        }
+    }
+
     pub fn new(res: &structs::Resource<'a>) -> ResourceData<'a>
     {
         let reader = match res.kind {
