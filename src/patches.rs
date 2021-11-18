@@ -4397,38 +4397,11 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     }
 
     // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
-
-    ctwk_player_gun.beams[0].normal.knockback = ctwk_player_gun.beams[0].normal.knockback*10.0;
-    ctwk_player_gun.beams[0].cool_down = 0.00001;
-    ctwk_player_gun.beams[1].cool_down = 0.00001;
-    ctwk_player_gun.beams[2].cool_down = 0.00001;
-    ctwk_player_gun.beams[3].cool_down = 0.00001;
-    ctwk_player_gun.beams[4].cool_down = 0.00001;
-
-    ctwk_player_gun.combos[0].radius = 99999.0;
-    ctwk_player_gun.combos[0].radius_damage = 99999.0;
-    ctwk_player_gun.combos[0].knockback = 99999.0;
-    
-    ctwk_player_gun.combos[1].radius = 99999.0;
-    ctwk_player_gun.combos[1].radius_damage = 99999.0;
-    ctwk_player_gun.combos[1].knockback = 99999.0;
-
-    ctwk_player_gun.combos[2].radius = 99999.0;
-    ctwk_player_gun.combos[2].radius_damage = 99999.0;
-    ctwk_player_gun.combos[2].knockback = 99999.0;
-
-    ctwk_player_gun.combos[3].radius = 99999.0;
-    ctwk_player_gun.combos[3].radius_damage = 99999.0;
-    ctwk_player_gun.combos[3].knockback = 99999.0;
-
-    ctwk_player_gun.combos[4].radius = 99999.0;
-    ctwk_player_gun.combos[4].radius_damage = 99999.0;
-    ctwk_player_gun.combos[4].knockback = 99999.0;
-
-    ctwk_player_gun.power_bomb.damage = 9999999.0;
-    ctwk_player_gun.power_bomb.radius = 9999999.0;
-    ctwk_player_gun.power_bomb.radius_damage = 9999999.0;
-
+    // ctwk_player_gun.beams[0].cool_down = 0.00001;
+    // ctwk_player_gun.beams[1].cool_down = 0.00001;
+    // ctwk_player_gun.beams[2].cool_down = 0.00001;
+    // ctwk_player_gun.beams[3].cool_down = 0.00001;
+    // ctwk_player_gun.beams[4].cool_down = 0.00001;
     
     Ok(())
 }
