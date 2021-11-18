@@ -336,12 +336,12 @@ impl PickupModel
         ].iter().map(|i| *i)
     }
 
-    pub fn from_str(string: &str) -> Self {
+    pub fn from_str(string: &str) -> Option<Self> {
         let string = string.to_lowercase();
         let string = string.trim();
         for i in PickupModel::iter() {
             if i.name().to_string().to_lowercase().trim() == string {
-                return i;
+                return Some(i);
             }
         }
 
@@ -349,10 +349,10 @@ impl PickupModel
         if vec!["combat visor", "scan visor", "x-ray visor", "xray visor", "thermal visor", "combat", "scan", "xray", "thermal"]
             .contains(&string)
         {
-            return PickupModel::Visor;
+            return Some(PickupModel::Visor);
         }
 
-        panic!("Unknown Pickup Model - {}", string)
+        None
     }
 
     /**
@@ -438,6 +438,8 @@ pub struct DoorLocation
     pub door_force_location: ScriptObjectLocation,
     pub door_shield_location: Option<ScriptObjectLocation>,
     pub dock_number: Option<u32>,
+    pub dock_position: Option<[f32;3]>,
+    pub dock_scale: Option<[f32;3]>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]

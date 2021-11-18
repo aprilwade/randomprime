@@ -21,6 +21,7 @@ use crate::patch_config::{
     LevelConfig,
     CtwkConfig,
     CutsceneMode,
+    DoorConfig,
 };
 
 use crate::{
@@ -30,7 +31,7 @@ use crate::{
     elevators::{Elevator, SpawnRoom, SpawnRoomData, World, is_elevator},
     gcz_writer::GczWriter,
     mlvl_wrapper,
-    pickup_meta::{self, PickupType, PickupModel},
+    pickup_meta::{self, PickupType, PickupModel, DoorLocation},
     door_meta::{DoorType},
     patcher::{PatcherState, PrimePatcher},
     starting_items::StartingItems,
@@ -38,10 +39,11 @@ use crate::{
         cmpr_compress,
         cmpr_decompress,
         huerotate_in_place,
-        // VARIA_SUIT_TEXTURES,
+        VARIA_SUIT_TEXTURES,
         PHAZON_SUIT_TEXTURES,
     },
     GcDiscLookupExtensions,
+    extern_assets::ExternPickupModel,
 };
 
 use dol_symbol_table::mp1_symbol;
@@ -362,6 +364,7 @@ fn patch_add_item<'r>(
     pickup_scans: &HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     pickup_hash_key: PickupHashKey,
     skip_hudmemos: bool,
+    extern_models: &HashMap<String, ExternPickupModel>,
 ) -> Result<(), String>
 {
     let room_id = area.mlvl_area.internal_id;
@@ -369,26 +372,54 @@ fn patch_add_item<'r>(
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
 
+    let extern_model = if pickup_config.model.is_some() {
+        extern_models.get(pickup_config.model.as_ref().unwrap())
+    } else {
+        None
+    };
+
     // Pickup to use for visuals/hitbox //
-    let pickup_model_type = {
+    let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
-            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
+            let model_name = pickup_config.model.as_ref().unwrap();
+            let pmt = PickupModel::from_str(&model_name);
+            if pmt.is_none() && !extern_model.is_some() {
+                panic!("Unkown Model Type {}", model_name);
+            }
+
+            pmt // Some - Native Prime Model
+                // None - External Model (e.g. Screw Attack)
         } else {
-            PickupModel::from_type(pickup_type)
+            Some(PickupModel::from_type(pickup_type)) // No model specified, use pickup type as inspiration
         }
     };
 
-    let deps_iter = pickup_model_type.dependencies().iter()
-        .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-            });
+    let pickup_model_type = pickup_model_type.clone().unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_type.pickup_data();
+    if extern_model.is_some() {
+        let scale = extern_model.as_ref().unwrap().scale.clone();
+        pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
+        pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
+        pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
+        pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
+        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.part = ResId::invalid();
+        pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
+        pickup_model_data.ancs.default_animation = 0;
+        pickup_model_data.actor_params.xray_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.xray_cskr = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cskr = ResId::invalid();
+    }
 
-    let name = CString::new(format!(
-            "Randomizer - Pickup ({:?})", pickup_model_type.pickup_data().name)).unwrap();
-    area.add_layer(Cow::Owned(name));
-
-    let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+    let new_layer_idx = if area.layer_flags.layer_count > 60 {
+        let name = CString::new(format!(
+            "Randomizer - Pickup ({:?})", pickup_model_data.name)).unwrap();
+        area.add_layer(Cow::Owned(name));
+        area.layer_flags.layer_count as usize - 1
+    } else {
+        0
+    };
 
     // Add hudmemo string as dependency to room //
     let hudmemo_strg: ResId<res_id::STRG> = {
@@ -400,8 +431,31 @@ fn patch_add_item<'r>(
     };
 
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
-    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
+
+    /* Add Model Dependencies */
+    // Dependencies are defined externally
+    if extern_model.is_some() {
+        let deps = extern_model.as_ref().unwrap().dependencies.clone();
+        let deps_iter = deps.iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            }
+        );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    // If we aren't using an external model, use the dependencies traced by resource_tracing 
+    else {
+        let deps_iter = pickup_model_type
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
 
     {
         let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
@@ -462,9 +516,14 @@ fn patch_add_item<'r>(
         }
     };
 
-    let pickup_position = pickup_config.position.unwrap();
     if pickup_config.position.is_none() {
         panic!("Position is required for additional pickup in room '0x{:X}'", pickup_hash_key.room_id);
+    }
+    
+    // If this is the echoes missile expansion model, compensate for the Z offset
+    let mut pickup_position = pickup_config.position.unwrap();
+    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+        pickup_position[2] = pickup_position[2] - 1.2;
     }
 
     let mut pickup = structs::Pickup {
@@ -473,8 +532,8 @@ fn patch_add_item<'r>(
         name: b"customItem\0".as_cstr(),
         position: pickup_position.into(),
         rotation: [0.0, 0.0, 0.0].into(),
-        hitbox: pickup_model_type.pickup_data().hitbox.clone(),
-        scan_offset: pickup_model_type.pickup_data().scan_offset.clone(),
+        hitbox: pickup_model_data.hitbox.clone(),
+        scan_offset: pickup_model_data.scan_offset.clone(),
         fade_in_timer: 0.0,
         spawn_delay: 0.0,
         disappear_timer: 0.0,
@@ -489,11 +548,11 @@ fn patch_add_item<'r>(
 
         // Model Pickup Data
         // "What does this pickup look like?"
-        scale: pickup_model_type.pickup_data().scale.clone(),
-        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
-        ancs: pickup_model_type.pickup_data().ancs.clone(),
-        part: pickup_model_type.pickup_data().part.clone(),
-        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
+        scale: pickup_model_data.scale.clone(),
+        cmdl: pickup_model_data.cmdl.clone(),
+        ancs: pickup_model_data.ancs.clone(),
+        part: pickup_model_data.part.clone(),
+        actor_params: pickup_model_data.actor_params.clone(),
     };
 
     // set the scan file id //
@@ -601,7 +660,7 @@ fn patch_add_item<'r>(
         );
     }
 
-    if !pickup_config.respawn.unwrap_or(false) {
+    if !pickup_config.respawn.unwrap_or(false) && new_layer_idx != 0 {
         // Create Special Function to disable layer once item is obtained
         // This is needed because otherwise the item would re-appear every
         // time the room is loaded
@@ -705,32 +764,51 @@ fn modify_pickups_in_mrea<'r>(
     skip_hudmemos: bool,
     hudmemo_delay: f32,
     qol_pickup_scans: bool,
+    extern_models: &HashMap<String, ExternPickupModel>,
 ) -> Result<(), String>
 {
     // Pickup to use for game functionality //
     let pickup_type = PickupType::from_str(&pickup_config.pickup_type);
-    
-    // panic if undefined game behavior //
-    if (pickup_type == PickupType::UnknownItem1 || pickup_type == PickupType::UnknownItem2 || pickup_type == PickupType::PowerBeam) &&
-       (pickup_config.hudmemo_text.is_none() || pickup_config.scan_text.is_none())
-    {
-        panic!("{} does not have defaut hudmemo/scan text", pickup_type.name());
-    }
+
+    let extern_model = if pickup_config.model.is_some() {
+        extern_models.get(pickup_config.model.as_ref().unwrap())
+    } else {
+        None
+    };
 
     // Pickup to use for visuals/hitbox //
-    let pickup_model_type = {
+    let pickup_model_type: Option<PickupModel> = {
         if pickup_config.model.is_some() {
-            PickupModel::from_str(&pickup_config.model.as_ref().unwrap())
+            let model_name = pickup_config.model.as_ref().unwrap();
+            let pmt = PickupModel::from_str(&model_name);
+            if pmt.is_none() && !extern_model.is_some() {
+                panic!("Unkown Model Type {}", model_name);
+            }
+
+            pmt // Some - Native Prime Model
+                // None - External Model (e.g. Screw Attack)
         } else {
-            PickupModel::from_type(pickup_type)
+            Some(PickupModel::from_type(pickup_type)) // No model specified, use pickup type as inspiration
         }
     };
 
-    let deps_iter = pickup_model_type.dependencies().iter()
-        .map(|&(file_id, fourcc)| structs::Dependency {
-                asset_id: file_id,
-                asset_type: fourcc,
-            });
+    let pickup_model_type = pickup_model_type.clone().unwrap_or(PickupModel::Nothing);
+    let mut pickup_model_data = pickup_model_type.pickup_data();
+    if extern_model.is_some() {
+        let scale = extern_model.as_ref().unwrap().scale.clone();
+        pickup_model_data.scale[0] = pickup_model_data.scale[0]*scale;
+        pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
+        pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
+        pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
+        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.part = ResId::invalid();
+        pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
+        pickup_model_data.ancs.default_animation = 0;
+        pickup_model_data.actor_params.xray_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.xray_cskr = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cmdl = ResId::invalid();
+        pickup_model_data.actor_params.thermal_cskr = ResId::invalid();
+    }
 
     let name = CString::new(format!(
             "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
@@ -755,8 +833,31 @@ fn modify_pickups_in_mrea<'r>(
     };
 
     let hudmemo_dep: structs::Dependency = hudmemo_strg.into();
-    let deps_iter = deps_iter.chain(iter::once(hudmemo_dep));
-    area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    area.add_dependencies(game_resources, new_layer_idx, iter::once(hudmemo_dep));    
+
+    /* Add Model Dependencies */
+    // Dependencies are defined externally
+    if extern_model.is_some() {
+        let deps = extern_model.as_ref().unwrap().dependencies.clone();
+        let deps_iter = deps.iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+            }
+        );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
+    // If we aren't using an external model, use the dependencies traced by resource_tracing
+    else {
+        let deps_iter = pickup_model_type
+            .dependencies().iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: fourcc,
+                }
+            );
+        area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+    }
 
     {
         let frme = ResId::<res_id::FRME>::new(0xDCEC3E77);
@@ -857,7 +958,7 @@ fn modify_pickups_in_mrea<'r>(
     let pickup_obj = layers[pickup_location.location.layer as usize].objects.iter_mut()
         .find(|obj| obj.instance_id == pickup_location.location.instance_id)
         .unwrap();
-    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_type, pickup_config, scan_id);
+    let (position, scan_id_out) = update_pickup(pickup_obj, pickup_type, pickup_model_data, pickup_config, scan_id);
 
     if additional_connections.len() > 0 {
         pickup_obj.connections.as_mut_vec().extend_from_slice(&additional_connections);
@@ -921,7 +1022,7 @@ fn modify_pickups_in_mrea<'r>(
 fn update_pickup(
     pickup_obj: &mut structs::SclyObject,
     pickup_type: PickupType,
-    pickup_model_type: PickupModel,
+    pickup_model_data: structs::Pickup,
     pickup_config: &PickupConfig,
     scan_id: ResId<res_id::SCAN>,
 ) -> ([f32; 3], ResId<res_id::SCAN>)
@@ -934,13 +1035,13 @@ fn update_pickup(
     }
 
     let original_aabb = pickup_meta::aabb_for_pickup_cmdl(original_pickup.cmdl).unwrap();
-    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_type.pickup_data().cmdl).unwrap_or(
+    let new_aabb = pickup_meta::aabb_for_pickup_cmdl(pickup_model_data.cmdl).unwrap_or(
         pickup_meta::aabb_for_pickup_cmdl(PickupModel::EnergyTank.pickup_data().cmdl).unwrap()
     );
     let original_center = calculate_center(original_aabb, original_pickup.rotation,
                                             original_pickup.scale);
-    let new_center = calculate_center(new_aabb, pickup_model_type.pickup_data().rotation,
-                                        pickup_model_type.pickup_data().scale);
+    let new_center = calculate_center(new_aabb, pickup_model_data.rotation,
+                                        pickup_model_data.scale);
 
     let curr_increase = {
         if pickup_type == PickupType::Nothing {
@@ -974,18 +1075,23 @@ fn update_pickup(
 
     // The pickup needs to be repositioned so that the center of its model
     // matches the center of the original.
-    let position = [
+    let mut position = [
         original_pickup.position[0] - (new_center[0] - original_center[0]),
         original_pickup.position[1] - (new_center[1] - original_center[1]),
         original_pickup.position[2] - (new_center[2] - original_center[2]),
     ];
+
+    // If this is the echoes missile expansion model, compensate for the Z offset
+    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+        position[2] = position[2] - 1.2;
+    }
 
     *pickup = structs::Pickup {
         // Location Pickup Data
         // "How is this pickup integrated into the room?"
         name: original_pickup.name,
         position: position.into(),
-        rotation: pickup_model_type.pickup_data().rotation.clone().into(),
+        rotation: pickup_model_data.rotation.clone().into(),
         hitbox: original_pickup.hitbox,
         scan_offset: [
             original_pickup.scan_offset[0] + (new_center[0] - original_center[0]),
@@ -1006,11 +1112,11 @@ fn update_pickup(
 
         // Model Pickup Data
         // "What does this pickup look like?"
-        scale: pickup_model_type.pickup_data().scale,
-        cmdl: pickup_model_type.pickup_data().cmdl.clone(),
-        ancs: pickup_model_type.pickup_data().ancs.clone(),
-        part: pickup_model_type.pickup_data().part.clone(),
-        actor_params: pickup_model_type.pickup_data().actor_params.clone(),
+        scale: pickup_model_data.scale,
+        cmdl: pickup_model_data.cmdl.clone(),
+        ancs: pickup_model_data.ancs.clone(),
+        part: pickup_model_data.part.clone(),
+        actor_params: pickup_model_data.actor_params.clone(),
     };
 
     // Should we use non-default scan id? //
@@ -4291,6 +4397,39 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     }
 
     // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
+
+    ctwk_player_gun.beams[0].normal.knockback = ctwk_player_gun.beams[0].normal.knockback*10.0;
+    ctwk_player_gun.beams[0].cool_down = 0.00001;
+    ctwk_player_gun.beams[1].cool_down = 0.00001;
+    ctwk_player_gun.beams[2].cool_down = 0.00001;
+    ctwk_player_gun.beams[3].cool_down = 0.00001;
+    ctwk_player_gun.beams[4].cool_down = 0.00001;
+
+    ctwk_player_gun.combos[0].radius = 99999.0;
+    ctwk_player_gun.combos[0].radius_damage = 99999.0;
+    ctwk_player_gun.combos[0].knockback = 99999.0;
+    
+    ctwk_player_gun.combos[1].radius = 99999.0;
+    ctwk_player_gun.combos[1].radius_damage = 99999.0;
+    ctwk_player_gun.combos[1].knockback = 99999.0;
+
+    ctwk_player_gun.combos[2].radius = 99999.0;
+    ctwk_player_gun.combos[2].radius_damage = 99999.0;
+    ctwk_player_gun.combos[2].knockback = 99999.0;
+
+    ctwk_player_gun.combos[3].radius = 99999.0;
+    ctwk_player_gun.combos[3].radius_damage = 99999.0;
+    ctwk_player_gun.combos[3].knockback = 99999.0;
+
+    ctwk_player_gun.combos[4].radius = 99999.0;
+    ctwk_player_gun.combos[4].radius_damage = 99999.0;
+    ctwk_player_gun.combos[4].knockback = 99999.0;
+
+    ctwk_player_gun.power_bomb.damage = 9999999.0;
+    ctwk_player_gun.power_bomb.radius = 9999999.0;
+    ctwk_player_gun.power_bomb.radius_damage = 9999999.0;
+
+    
     Ok(())
 }
 
@@ -4428,6 +4567,213 @@ fn patch_remove_control_disabler<'r>(
     Ok(())
 }
 
+fn patch_add_dock_teleport<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    source_position: [f32;3],
+    source_scale: [f32;3],
+    destination_dock_num: u32,
+)
+-> Result<(), String>
+{
+    let mrea_id = area.mlvl_area.mrea.to_u32();
+    let layer = &mut area.mrea().scly_section_mut().layers.as_mut_vec()[0];
+    let spawn_point_id = ps.fresh_instance_id_range.next().unwrap();
+
+    // find the destination dock
+    let mut found = false;
+    let mut dock_position: GenericArray<f32, U3> = [0.0, 0.0, 0.0].into();
+    for obj in layer.objects.as_mut_vec() {
+        if !obj.property_data.is_dock() {
+            continue;
+        }
+
+        let dock = obj.property_data.as_dock().unwrap();
+        if dock.dock_index != destination_dock_num {
+            continue;
+        }
+        
+        found = true;
+        dock_position = dock.position.clone();
+    }
+
+    if !found {
+        panic!("failed to find dock #{} in room 0x{:X}", destination_dock_num, mrea_id)
+    }
+
+    // Find the nearest door
+    let mut door_rotation: GenericArray<f32, U3> = [0.0, 0.0, 0.0].into();
+    for obj in layer.objects.as_mut_vec() {
+        if !obj.property_data.is_door() {
+            continue;
+        }
+
+        let door = obj.property_data.as_door().unwrap();
+        if  f32::abs(door.position[0] - dock_position[0]) > 5.0 ||
+            f32::abs(door.position[1] - dock_position[1]) > 5.0 ||
+            f32::abs(door.position[2] - dock_position[2]) > 5.0 {
+            continue;
+        }
+
+        door_rotation = door.rotation.clone();
+    }
+
+    let mut spawn_point_position = dock_position.clone();
+    let mut spawn_point_rotation = [0.0, 0.0, 0.0];
+    let door_offset = 3.0;
+    let vertical_offset = -2.0;
+    if door_rotation[2] >= 45.0 && door_rotation[2] < 135.0 {
+        // Leads North (Y+)
+        spawn_point_position[1] = spawn_point_position[1] - door_offset;
+        spawn_point_rotation[2] = 180.0;
+    } else if (door_rotation[2] >= 135.0 && door_rotation[2] < 225.0) || (door_rotation[2] < -135.0 && door_rotation[2] > -225.0) {
+        // Leads East (X+)
+        spawn_point_position[0] = spawn_point_position[0] + door_offset;
+        spawn_point_rotation[2] = 270.0;
+    } else if door_rotation[2] >= -135.0 && door_rotation[2] < -45.0 {
+        // Leads South (Y-)
+        spawn_point_position[1] = spawn_point_position[1] + door_offset;
+        spawn_point_rotation[2] = 0.0;
+    } else if door_rotation[2] >= -45.0 && door_rotation[2] < 45.0 {
+        // Leads West (X-)
+        spawn_point_position[0] = spawn_point_position[0] - door_offset;
+        spawn_point_rotation[2] = 90.0;
+    }
+    spawn_point_position[2] = spawn_point_position[2] + vertical_offset;
+
+    // Insert a spawn point in-bounds
+    layer.objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: spawn_point_id,
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::SpawnPoint(
+                Box::new(structs::SpawnPoint {
+                    name: b"dockspawnpoint\0".as_cstr(),
+                    position: spawn_point_position.into(),
+                    rotation: spawn_point_rotation.into(),
+                    power: 0,
+                    ice: 0,
+                    wave: 0,
+                    plasma: 0,
+                    missiles: 0,
+                    scan_visor: 0,
+                    bombs: 0,
+                    power_bombs: 0,
+                    flamethrower: 0,
+                    thermal_visor: 0,
+                    charge: 0,
+                    super_missile: 0,
+                    grapple: 0,
+                    xray: 0,
+                    ice_spreader: 0,
+                    space_jump: 0,
+                    morph_ball: 0,
+                    combat_visor: 0,
+                    boost_ball: 0,
+                    spider_ball: 0,
+                    power_suit: 0,
+                    gravity_suit: 0,
+                    varia_suit: 0,
+                    phazon_suit: 0,
+                    energy_tanks: 0,
+                    unknown0: 0,
+                    health_refill: 0,
+                    unknown1: 0,
+                    wavebuster: 0,
+                    default_spawn: 0,
+                    active: 1,
+                    morphed: 0,
+                })
+            ),
+        }
+    );
+
+    // Thin out the trigger so that you can't touch it through the door
+    let mut thinnest = 0;
+    if source_scale[1] < source_scale[thinnest] {
+        thinnest = 1;
+    }
+    if source_scale[2] < source_scale[thinnest] {
+        thinnest = 2;
+    }
+    let mut source_scale = source_scale.clone();
+    source_scale[thinnest] = 0.1;
+
+    // Insert a trigger at the previous room which sends the player to the freshly created spawn point
+    layer.objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![
+                structs::Connection {
+                    state: structs::ConnectionState::ENTERED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: spawn_point_id as u32,
+                },
+            ].into(),
+            property_data: structs::SclyProperty::Trigger(
+                Box::new(structs::Trigger {
+                    name: b"dockteleporttrigger\0".as_cstr(),
+                    position: source_position.into(),
+                    scale: source_scale.into(),
+                    damage_info: structs::scly_structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    force: [0.0, 0.0, 0.0].into(),
+                    flags: 1,
+                    active: 1,
+                    deactivate_on_enter: 0,
+                    deactivate_on_exit: 0,
+                })
+            ),
+        }
+    );
+
+    Ok(())
+}
+
+fn patch_modify_dock<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    dock_num: u32,
+    new_mrea_idx: u32,
+)
+-> Result<(), String>
+{
+    let mut replaced = false;
+    let mrea_id = area.mlvl_area.mrea.to_u32();
+    let attached_areas: &mut reader_writer::LazyArray<'r, u16> = &mut area.mlvl_area.attached_areas;
+    let docks: &mut reader_writer::LazyArray<'r, structs::mlvl::Dock<'r>> = &mut area.mlvl_area.docks;
+
+    if dock_num >= attached_areas.as_mut_vec().len() as u32
+    {
+        panic!("dock num #{} doesn't index attached areas in room 0x{:X}", dock_num, mrea_id);
+    }
+    let old_mrea_idx = attached_areas.as_mut_vec()[dock_num as usize] as u32;
+
+    // Update the list of attached areas to use the new area instead of the old one
+    for i in 0..attached_areas.as_mut_vec().len() {
+        if attached_areas.as_mut_vec()[i as usize] == old_mrea_idx as u16 {
+            attached_areas.as_mut_vec()[i as usize] = new_mrea_idx as u16;
+        }
+    }
+
+    // Update dock(s) to load the new area instead of the old one
+    for i in 0..docks.as_mut_vec().len() {
+        if docks.as_mut_vec()[i].connecting_docks.as_mut_vec()[0].array_index == old_mrea_idx {
+            docks.as_mut_vec()[i].connecting_docks.as_mut_vec()[0].array_index = new_mrea_idx;
+            replaced = true;
+        }
+    }
+
+    if !replaced {
+        panic!("failed to find mrea idx {} in room 0x{:X} when shuffling rooms", old_mrea_idx, mrea_id);
+    }
+
+    Ok(())
+}
 
 fn patch_bnr(
     file: &mut structs::FstEntryFile,
@@ -5396,9 +5742,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         }
     };
 
-    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add) =
-        collect_game_resources(gc_disc, starting_memo, &config);
+    let (game_resources, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models) =
+        collect_game_resources(gc_disc, starting_memo, &config)?;
 
+    let extern_models = &extern_models;
     let game_resources = &game_resources;
     let pickup_hudmemos = &pickup_hudmemos;
     let pickup_scans = &pickup_scans;
@@ -5506,6 +5853,18 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             [-44.0, 361.0, -120.0],
         ),
     );
+    
+    if config.qol_cutscenes == CutsceneMode::Competitive {
+        patch_qol_competitive_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_cutscenes == CutsceneMode::Minor || config.qol_cutscenes == CutsceneMode::Major {
+        patch_qol_minor_cutscenes(&mut patcher, version);
+    }
+
+    if config.qol_cutscenes == CutsceneMode::Major {
+        patch_qol_major_cutscenes(&mut patcher);
+    }
 
     // Patch pickups
     for (pak_name, rooms) in pickup_meta::ROOM_INFO.iter() {
@@ -5553,9 +5912,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             }
 
             // Get list of patches specified for this room
-            let (pickups, scans) = {
+            let (pickups, scans, doors) = {
                 let mut _pickups = Vec::new();
                 let mut _scans = Vec::new();
+                let mut _doors = HashMap::<u32, DoorConfig>::new();
                 
                 let level = config.level_data.get(world.to_json_key());
                 if level.is_some() {
@@ -5569,9 +5929,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         if room.extra_scans.is_some() {
                             _scans = room.extra_scans.clone().unwrap();
                         }
+
+                        if room.doors.is_some() {
+                            _doors = room.doors.clone().unwrap();
+                        }
                     }
                 }
-                (_pickups, _scans)
+                (_pickups, _scans, _doors)
             };
 
             // Patch existing item locations
@@ -5633,6 +5997,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             skip_hudmemos,
                             hudmemo_delay,
                             config.qol_pickup_scans,
+                            extern_models,
                         )
                 );
 
@@ -5668,6 +6033,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                         pickup_scans,
                         key,
                         skip_hudmemos,
+                        extern_models,
                     ),
                 );
 
@@ -5692,6 +6058,52 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 );
 
                 idx = idx + 1;
+            }
+
+            // Edit doors
+            for (dock_num, door_config) in doors {
+                // Find the corresponding traced info for this dock
+                let mut door_location: Option<DoorLocation> = None;
+                for dl in room_info.door_locations {
+                    if dl.dock_number.is_some() && dl.dock_number.clone().unwrap() == dock_num {
+                        door_location = Some(dl.clone());
+                        break;
+                    }
+                }
+                if door_location.is_none() {
+                    panic!("Could not find dock #{} in '{}'", dock_num, room_info.name);
+                }
+                let door_location = door_location.unwrap();
+
+                // If specified, patch this door's connection
+                if door_config.destination.is_some() {
+                    // TODO: special handling is needed if a dock takes you to a room which is already connected to this one at another dock
+                    // TODO: special handling is desired if a dock takes you to it's vanilla destination
+                    // TOOD: add scan point on this door to tell what the destination door is
+                    // TODO: need to trace dock resources for morph ball tunnels (e.g. fiery shores)
+                    // TODO: allow destinations outside this pak
+
+                    // Get info about the destination room
+                    let destination = door_config.destination.clone().unwrap();
+                    let destination_room = SpawnRoomData::from_str(format!("{}:{}", world.to_str(), destination.room_name).as_str());
+
+                    // Patch the current room to lead to the new destination room
+                    patcher.add_scly_patch(
+                        (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                        move |ps, area| patch_modify_dock(ps, area, dock_num, destination_room.mrea_idx),
+                    );
+
+                    // Patch the destination room to "catch" the player with a teleporter at the same location as this room's dock
+                    patcher.add_scly_patch(
+                        (pak_name.as_bytes(), destination_room.mrea),
+                        move |ps, area| patch_add_dock_teleport(
+                            ps, area,
+                            door_location.dock_position.clone().unwrap(),
+                            door_location.dock_scale.clone().unwrap(),
+                            destination.dock_num, // Used to determined where the player is placed in the new room
+                        ),
+                    );
+                }
             }
         }
     }
@@ -5964,38 +6376,30 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_qol_logical(&mut patcher, config);
     }
 
-    if config.qol_cutscenes == CutsceneMode::Competitive {
-        patch_qol_competitive_cutscenes(&mut patcher, version);
-    }
-
-    if config.qol_cutscenes == CutsceneMode::Minor || config.qol_cutscenes == CutsceneMode::Major {
-        patch_qol_minor_cutscenes(&mut patcher, version);
-    }
-
-    if config.qol_cutscenes == CutsceneMode::Major {
-        patch_qol_major_cutscenes(&mut patcher);
-    }
-
     if let Some(angle) = config.suit_hue_rotate_angle {
-        let iter = PHAZON_SUIT_TEXTURES.iter();
-        /*
+        let iter = PHAZON_SUIT_TEXTURES.iter()
             .chain(VARIA_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
             .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
-        */
         for varia_texture in iter {
-            // TODO: Whyyyyyyyyyyyyyy
-            if vec![
-                0xBA7DF5D6, 0x27FFD993, 0x1AEC5A79, 0x50A70472, 0x60EA8AC4, 0x985C0EAA, 0x1C38E5E2,
-                ].contains(&varia_texture.res_id) {
-                continue;
-            }
-
             patcher.add_resource_patch((*varia_texture).into(), move |res| {
-                let res_data = crate::ResourceData::new(res);
-                let data = res_data.decompress().into_owned();
-                let mut reader = Reader::new(&data[..]);
-                let mut txtr: structs::Txtr = reader.read(());
+                let res_data; 
+                let data; 
+                let mut txtr: structs::Txtr = match &res.kind {
+                    structs::ResourceKind::Unknown(_, _) => {
+                        res_data = crate::ResourceData::new(res);
+                        data = res_data.decompress().into_owned();
+                        let mut reader = Reader::new(&data[..]);
+                        reader.read(())
+                    }, 
+                    structs::ResourceKind::External(_, _) => {
+                        res_data = crate::ResourceData::new_external(res);
+                        data = res_data.decompress().into_owned();
+                        let mut reader = Reader::new(&data[..]);
+                        reader.read(())
+                    }, 
+                    _ => panic!("Unsupported resource kind for recoloring."), 
+                };
 
                 let mut w = txtr.width as usize;
                 let mut h = txtr.height as usize;

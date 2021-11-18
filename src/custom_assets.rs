@@ -13,6 +13,7 @@ use crate::{
     door_meta::{DoorType, BlastShieldType},
     ResourceData,
     GcDiscLookupExtensions,
+    extern_assets::ExternPickupModel,
 };
 
 use std::{
@@ -158,8 +159,27 @@ pub fn build_resource_raw<'r>(file_id: u32, kind: ResourceKind<'r>) -> Resource<
     }
 }
 
-// Assets defined in an external file
-fn extern_assets<'r>() -> Vec<Resource<'r>>
+// Assets defined in an external file at RUNTIME
+fn extern_assets_runtime<'r>(extern_assets_dir: Option<String>)
+ -> Result<
+     (Vec<Resource<'r>>, HashMap<String, ExternPickupModel>),
+     String>
+{
+    let (extern_models, extern_assets) = ExternPickupModel::parse(&extern_assets_dir.clone().unwrap())?;
+
+    let mut resources = Vec::<Resource<'r>>::new();
+    for (id, asset) in extern_assets.iter() {
+        let resource = ResourceKind::External(asset.bytes.clone(), asset.fourcc);
+        resources.push(
+            build_resource_raw(*id, resource)
+        );
+    }
+
+    Ok((resources, extern_models))
+}
+
+// Assets defined in an external file at COMPILE TIME
+fn extern_assets_compile_time<'r>() -> Vec<Resource<'r>>
 {
     let extern_assets: &[(ResId<res_id::TXTR>, [u8; 4], &[u8])] = &[
         (custom_asset_ids::PHAZON_SUIT_TXTR1,         *b"TXTR", include_bytes!("../extra_assets/phazon_suit_texure_1.txtr")),
@@ -192,7 +212,16 @@ pub fn custom_assets<'r>(
     pickup_scans: &mut HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     extra_scans: &mut HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
     config: &PatchConfig,
-) -> (Vec<Resource<'r>>, Vec<ResId<res_id::SCAN>>)
+    
+)
+->
+    Result<
+    (
+        Vec<Resource<'r>>,
+        Vec<ResId<res_id::SCAN>>,
+        HashMap<String, ExternPickupModel>,
+    ),
+    String>
 {
     /*  This is a list of all custom SCAN IDs which might be used throughout the game.
         We need to patch these into a SAVW file so that the game engine allocates enough space
@@ -201,8 +230,14 @@ pub fn custom_assets<'r>(
     let mut savw_scans_to_add: Vec<ResId<res_id::SCAN>> = Vec::new();
 
     // External assets
-    let mut assets = extern_assets();
-
+    let mut assets = extern_assets_compile_time();
+    let extern_models = if config.extern_assets_dir.is_some() {    
+        let (more_assets, extern_models) = extern_assets_runtime(config.extern_assets_dir.clone())?;
+        assets.extend_from_slice(&more_assets);
+        extern_models // HashMap of extern models available for use
+    } else {
+        HashMap::<String, ExternPickupModel>::new() // empty hashmap (no models available)
+    };
     // Custom pickup model assets
     assets.extend_from_slice(&create_nothing_icon_cmdl_and_ancs(
         resources,
@@ -235,7 +270,7 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::CFLDG_POI_SCAN,
         custom_asset_ids::CFLDG_POI_STRG,
-        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid\0",
+        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid, Lokir, MeriKatt\0",
     ));
     savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
@@ -401,23 +436,27 @@ pub fn custom_assets<'r>(
         }
     }
 
-    (assets, savw_scans_to_add)
+    Ok((assets, savw_scans_to_add, extern_models))
 }
 
 // When modifying resources in an MREA, we need to give the room a copy of the resources/
-// assests used b. Create a cache of all the resources needed by any pickup, door, etc...
+// assests used. Create a cache of all the resources needed by any pickup, door, etc...
 pub fn collect_game_resources<'r>(
     gc_disc: &structs::GcDisc<'r>,
     starting_memo: Option<&str>,
     config: &PatchConfig,
 )
-    -> (
+    ->
+    Result<
+    (
         HashMap<(u32, FourCC), structs::Resource<'r>>,
         HashMap<PickupHashKey, ResId<res_id::STRG>>,
         HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
         HashMap<PickupHashKey, (ResId<res_id::SCAN>, ResId<res_id::STRG>)>,
         Vec<ResId<res_id::SCAN>>,
-    )
+        HashMap<String, ExternPickupModel>,
+    ),
+    String>
 {
     // Get list of all dependencies patcher needs //
     let mut looking_for = HashSet::<_>::new();
@@ -459,7 +498,7 @@ pub fn collect_game_resources<'r>(
     // Remove extra assets from dependency search since they won't appear     //
     // in any pak. Instead add them to the output resource pool. These assets //
     // are provided as external files checked into the repository.            //
-    let (custom_assets, savw_scans_to_add) = custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, &mut extra_scans, config);
+    let (custom_assets, savw_scans_to_add, extern_models) = custom_assets(&found, starting_memo, &mut pickup_hudmemos, &mut pickup_scans, &mut extra_scans, config)?;
     for res in custom_assets {
         let key = (res.file_id, res.fourcc());
         looking_for.remove(&key);
@@ -470,7 +509,7 @@ pub fn collect_game_resources<'r>(
         panic!("error - still looking for {:?}", looking_for);
     }
 
-    (found, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add)
+    Ok((found, pickup_hudmemos, pickup_scans, extra_scans, savw_scans_to_add, extern_models))
 }
 
 fn create_custom_door_cmdl<'r>(

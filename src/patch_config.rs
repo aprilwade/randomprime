@@ -101,7 +101,23 @@ pub struct ScanConfig
     pub is_red: bool,
 }
 
-// TODO: defaults
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DoorDestination
+{
+    pub room_name: String,
+    pub dock_num: u32,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DoorConfig
+{
+    // #[serde(alias  = "type")]
+    // pub door_type: Option<String>,
+    pub destination: Option<DoorDestination>, // Must be in same area. Ex: "destination":"Main Plaza"
+}
+
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
@@ -116,6 +132,7 @@ pub struct RoomConfig
     pub pickups: Option<Vec<PickupConfig>>,
     // pub extra_pickups: Option<Vec<PickupConfig>>,
     pub extra_scans: Option<Vec<ScanConfig>>,
+    pub doors: Option<HashMap<u32, DoorConfig>>,
     // pub aether_transform: Option<Vec<AetherTransformConfig>>,
 }
 
@@ -197,6 +214,7 @@ pub struct CtwkConfig
 #[derive(Debug)]
 pub struct PatchConfig
 {
+    pub extern_assets_dir: Option<String>,
     pub seed: u64,
 
     pub force_vanilla_layout: bool,
@@ -326,6 +344,7 @@ struct PatchConfigPrivate
     input_iso: Option<String>,
     output_iso: Option<String>,
     force_vanilla_layout: Option<bool>,
+    extern_assets_dir: Option<String>,
     seed: Option<u64>,
 
     #[serde(default)]
@@ -361,6 +380,9 @@ impl PatchConfig
                 .takes_value(true))
             .arg(Arg::with_name("output iso path")
                 .long("output-iso")
+                .takes_value(true))
+            .arg(Arg::with_name("extern assets dir")
+                .long("extern-assets-dir")
                 .takes_value(true))
             .arg(Arg::with_name("profile json path")
                 .long("profile")
@@ -496,6 +518,9 @@ impl PatchConfig
         }
         if let Some(output_iso_path) = matches.value_of("output iso path") {
             patch_config.output_iso = Some(output_iso_path.to_string());
+        }
+        if let Some(extern_assets_dir) = matches.value_of("extern assets dir") {
+            patch_config.extern_assets_dir = Some(extern_assets_dir.to_string());
         }
         if let Some(map_default_state) = matches.value_of("map default state") {
             patch_config.preferences.map_default_state = Some(map_default_state.to_string());
@@ -700,6 +725,7 @@ impl PatchConfigPrivate
             force_vanilla_layout,
 
             seed: self.seed.unwrap_or(123),
+            extern_assets_dir: self.extern_assets_dir.clone(),
 
             level_data: self.level_data.clone(),
 
@@ -716,7 +742,7 @@ impl PatchConfigPrivate
             backwards_lower_mines: self.game_config.backwards_lower_mines.unwrap_or(false),
             patch_power_conduits: self.game_config.patch_power_conduits.unwrap_or(false),
             remove_mine_security_station_locks: self.game_config.remove_mine_security_station_locks.unwrap_or(false),
-            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(false),
+            automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(true),
             artifact_hint_behavior,
             flaahgra_music_files,
             suit_hue_rotate_angle: None,
