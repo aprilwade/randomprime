@@ -5094,28 +5094,198 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, config: &PatchConfig)
 fn patch_qol_cosmetic(
     patcher: &mut PrimePatcher,
     skip_ending_cinematic: bool,
+    quick_patch: bool,
 )
 {
-    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
-    // copy and to make compressed ISOs smaller.
-    const FMV_NAMES: &[&[u8]] = &[
-        b"Video/attract0.thp",
-        b"Video/attract1.thp",
-        b"Video/attract2.thp",
-        b"Video/attract3.thp",
-        b"Video/attract4.thp",
-        b"Video/attract5.thp",
-        b"Video/attract6.thp",
-        b"Video/attract7.thp",
-        b"Video/attract8.thp",
-        b"Video/attract9.thp",
-    ];
-    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
-    for name in FMV_NAMES {
-        patcher.add_file_patch(name, |file| {
-            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
-            Ok(())
-        });
+    if quick_patch {
+        // Replace all non-critical files with empty ones to speed up patching
+        const FILENAMES: &[&[u8]] = &[
+            b"Video/00_first_start.thp",
+            b"Video/01_startloop.thp",
+            b"Video/02_start_fileselect_A.thp",
+            b"Video/02_start_fileselect_B.thp",
+            b"Video/02_start_fileselect_C.thp",
+            b"Video/03_fileselectloop.thp",
+            b"Video/04_fileselect_playgame_A.thp",
+            b"Video/04_fileselect_playgame_B.thp",
+            b"Video/04_fileselect_playgame_C.thp",
+            b"Video/05_tallonText.thp",
+            b"Video/06_fileselect_GBA.thp",
+            b"Video/07_GBAloop.thp",
+            b"Video/08_GBA_fileselect.thp",
+            b"Video/AfterCredits.thp",
+            b"Video/SpecialEnding.thp",
+            b"Video/attract0.thp",
+            b"Video/attract1.thp",
+            b"Video/attract2.thp",
+            b"Video/attract3.thp",
+            b"Video/attract4.thp",
+            b"Video/attract5.thp",
+            b"Video/attract6.thp",
+            b"Video/attract7.thp",
+            b"Video/attract8.thp",
+            b"Video/attract9.thp",
+            b"Video/creditBG.thp",
+            b"Video/from_gallery.thp",
+            b"Video/losegame.thp",
+            b"Video/to_gallery.thp",
+            b"Video/win_bad_begin.thp",
+            b"Video/win_bad_end.thp",
+            b"Video/win_bad_loop.thp",
+            b"Video/win_good_begin.thp",
+            b"Video/win_good_end.thp",
+            b"Video/win_good_loop.thp",
+            b"Audio/CraterReveal2.dsp",
+            b"Audio/END-escapeL.dsp",
+            b"Audio/END-escapeR.dsp",
+            b"Audio/Ruins-soto-AL.dsp",
+            b"Audio/Ruins-soto-AR.dsp",
+            b"Audio/Ruins-soto-BL.dsp",
+            b"Audio/Ruins-soto-BR.dsp",
+            b"Audio/amb_x_elevator_lp_02.dsp",
+            b"Audio/cra_mainL.dsp",
+            b"Audio/cra_mainR.dsp",
+            b"Audio/cra_mprime1L.dsp",
+            b"Audio/cra_mprime1R.dsp",
+            b"Audio/cra_mprime2L.dsp",
+            b"Audio/cra_mprime2R.dsp",
+            b"Audio/crash-ship-3L.dsp",
+            b"Audio/crash-ship-3R.dsp",
+            b"Audio/crash-ship-maeL.dsp",
+            b"Audio/crash-ship-maeR.dsp",
+            b"Audio/ending3.rsf",
+            b"Audio/evt_x_event_00.dsp",
+            b"Audio/frontend_1.rsf",
+            b"Audio/frontend_2.rsf",
+            b"Audio/gen_SaveStationL.dsp",
+            b"Audio/gen_SaveStationR.dsp",
+            b"Audio/gen_ShortBattle2L.dsp",
+            b"Audio/gen_ShortBattle2R.dsp",
+            b"Audio/gen_ShortBattleL.dsp",
+            b"Audio/gen_ShortBattleR.dsp",
+            b"Audio/gen_elevatorL.dsp",
+            b"Audio/gen_elevatorR.dsp",
+            b"Audio/gen_puzzleL.dsp",
+            b"Audio/gen_puzzleR.dsp",
+            b"Audio/gen_rechargeL.dsp",
+            b"Audio/gen_rechargeR.dsp",
+            b"Audio/ice_chapelL.dsp",
+            b"Audio/ice_chapelR.dsp",
+            b"Audio/ice_connectL.dsp",
+            b"Audio/ice_connectR.dsp",
+            b"Audio/ice_kincyoL.dsp",
+            b"Audio/ice_kincyoR.dsp",
+            b"Audio/ice_shorelinesL.dsp",
+            b"Audio/ice_shorelinesR.dsp",
+            b"Audio/ice_thardusL.dsp",
+            b"Audio/ice_thardusR.dsp",
+            b"Audio/ice_worldmainL.dsp",
+            b"Audio/ice_worldmainR.dsp",
+            b"Audio/ice_x_wind_lp_00L.dsp",
+            b"Audio/ice_x_wind_lp_00R.dsp",
+            b"Audio/int_biohazardL.dsp",
+            b"Audio/int_biohazardR.dsp",
+            b"Audio/int_escapel.dsp",
+            b"Audio/int_escaper.dsp",
+            b"Audio/int_introcinemaL.dsp",
+            b"Audio/int_introcinemaR.dsp",
+            b"Audio/int_introstageL.dsp",
+            b"Audio/int_introstageR.dsp",
+            b"Audio/int_parasitequeenL.dsp",
+            b"Audio/int_parasitequeenR.dsp",
+            b"Audio/int_spaceL.dsp",
+            b"Audio/int_spaceR.dsp",
+            b"Audio/int_toujouL.dsp",
+            b"Audio/int_toujouR.dsp",
+            b"Audio/itm_x_short_02.dsp",
+            b"Audio/jin_artifact.dsp",
+            b"Audio/jin_itemattain.dsp",
+            b"Audio/lav_lavamaeL.dsp",
+            b"Audio/lav_lavamaeR.dsp",
+            b"Audio/lav_lavamainL.dsp",
+            b"Audio/lav_lavamainR.dsp",
+            b"Audio/min_darkL.dsp",
+            b"Audio/min_darkR.dsp",
+            b"Audio/min_mainL.dsp",
+            b"Audio/min_mainR.dsp",
+            b"Audio/min_omegapirateL.dsp",
+            b"Audio/min_omegapirateR.dsp",
+            b"Audio/min_phazonL.dsp",
+            b"Audio/min_phazonR.dsp",
+            b"Audio/min_x_wind_lp_01L.dsp",
+            b"Audio/min_x_wind_lp_01R.dsp",
+            b"Audio/over-craterrevealL.dsp",
+            b"Audio/over-craterrevealR.dsp",
+            b"Audio/over-ridleyL.dsp",
+            b"Audio/over-ridleyR.dsp",
+            b"Audio/over-ridleydeathL.dsp",
+            b"Audio/over-ridleydeathR.dsp",
+            b"Audio/over-stonehengeL.dsp",
+            b"Audio/over-stonehengeR.dsp",
+            b"Audio/over-world-daichiL.dsp",
+            b"Audio/over-world-daichiR.dsp",
+            b"Audio/over-worldL.dsp",
+            b"Audio/over-worldR.dsp",
+            b"Audio/pir_battle3L.dsp",
+            b"Audio/pir_battle3R.dsp",
+            b"Audio/pir_isogiL.dsp",
+            b"Audio/pir_isogiR.dsp",
+            b"Audio/pir_yoinL.dsp",
+            b"Audio/pir_yoinR.dsp",
+            b"Audio/pir_zencyoL.dsp",
+            b"Audio/pir_zencyoR.dsp",
+            b"Audio/pvm01.dsp",
+            b"Audio/rid_r_death_01.dsp",
+            b"Audio/rui_chozobowlingL.dsp",
+            b"Audio/rui_chozobowlingR.dsp",
+            b"Audio/rui_flaaghraL.dsp",
+            b"Audio/rui_flaaghraR.dsp",
+            b"Audio/rui_hivetotemL.dsp",
+            b"Audio/rui_hivetotemR.dsp",
+            b"Audio/rui_monkeylowerL.dsp",
+            b"Audio/rui_monkeylowerR.dsp",
+            b"Audio/rui_samusL.dsp",
+            b"Audio/rui_samusR.dsp",
+            b"Audio/ruins-firstL.dsp",
+            b"Audio/ruins-firstR.dsp",
+            b"Audio/ruins-nakaL.dsp",
+            b"Audio/ruins-nakaR.dsp",
+            b"Audio/sam_samusappear.dsp",
+            b"Audio/samusjak.rsf",
+            b"Audio/tha_b_enraged_00.dsp",
+            b"Audio/tha_r_death_00.dsp",
+        ];
+        const EMPTY: &[u8] = include_bytes!("../extra_assets/attract_mode.thp"); // empty file
+        for name in FILENAMES {
+            patcher.add_file_patch(name, |file| {
+                *file = structs::FstEntryFile::ExternalFile(Box::new(EMPTY));
+                Ok(())
+            });
+        }
+    }
+    else
+    {    
+        // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
+        // copy and to make compressed ISOs smaller.
+        const FMV_NAMES: &[&[u8]] = &[
+            b"Video/attract0.thp",
+            b"Video/attract1.thp",
+            b"Video/attract2.thp",
+            b"Video/attract3.thp",
+            b"Video/attract4.thp",
+            b"Video/attract5.thp",
+            b"Video/attract6.thp",
+            b"Video/attract7.thp",
+            b"Video/attract8.thp",
+            b"Video/attract9.thp",
+        ];
+        const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
+        for name in FMV_NAMES {
+            patcher.add_file_patch(name, |file| {
+                *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+                Ok(())
+            });
+        }
     }
 
     patcher.add_resource_patch(
@@ -6409,7 +6579,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
 
     if config.qol_cosmetic {
-        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic);
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic, config.quickpatch);
 
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[

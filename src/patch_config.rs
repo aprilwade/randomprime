@@ -266,6 +266,7 @@ pub struct PatchConfig
     pub suit_hue_rotate_angle: Option<i32>,
 
     pub quickplay: bool,
+    pub quickpatch: bool,
 
     pub game_banner: GameBanner,
     pub comment: String,
@@ -294,6 +295,7 @@ struct Preferences
     automatic_crash_screen: Option<bool>,
     trilogy_disc_path: Option<String>,
     quickplay: Option<bool>,
+    quickpatch: Option<bool>,
     quiet: Option<bool>,
 }
 
@@ -471,6 +473,9 @@ impl PatchConfig
             .arg(Arg::with_name("quickplay")
                 .long("quickplay")
                 .hidden(true))
+            .arg(Arg::with_name("quickpatch")
+                .long("quickpatch")
+                .hidden(true))
             .arg(Arg::with_name("text file comment")
                 .long("text-file-comment")
                 .hidden(true)
@@ -505,6 +510,7 @@ impl PatchConfig
             "qol scans" => patch_config.preferences.qol_pickup_scans,
             "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
+            "quickpatch" => patch_config.preferences.quickpatch,
             "quiet" => patch_config.preferences.quiet,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
@@ -748,6 +754,7 @@ impl PatchConfigPrivate
             suit_hue_rotate_angle: None,
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
+            quickpatch: self.preferences.quickpatch.unwrap_or(false),
 
             starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
