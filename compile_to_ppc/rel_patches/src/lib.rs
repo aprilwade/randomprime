@@ -52,6 +52,12 @@ unsafe extern "C" fn setup_global_state()
            target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
            version = Ntsc0_02)]
 #[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
+           version = NtscK)]
+#[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x34,
+           version = NtscJ)]
+#[patch_fn(kind = call,
            target = "FinishedLoading__19SNewFileSelectFrame" + 0x34,
            version = Pal)]
 unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *const u8)
@@ -60,7 +66,7 @@ unsafe extern "C" fn update_main_menu_text(frame: *mut CGuiFrame, widget_name: *
     let res = CGuiFrame::find_widget(frame, widget_name);
 
     let version = GameVersion::current();
-    let str_idx = if version == GameVersion::Pal {
+    let str_idx = if version == GameVersion::Pal || version == GameVersion::NtscJ {
         104
     } else {
         110

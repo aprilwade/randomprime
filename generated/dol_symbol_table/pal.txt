@@ -29,6 +29,7 @@
 0x8000e874 Reset__18CFirstPersonCameraFRC12CTransform4fR13CStateManager
 0x8001052c AddObject__11CObjectListFR7CEntity
 0x800106d4 __ct__Q211CObjectList16SObjectListEntryFv
+0x800106ec __dt__7CPlayerFv
 0x80010ce4 sub_80010b88
 0x800110d4 IsEnergyLow__7CPlayerCFRC13CStateManager
 0x80011708 SetPlayerHitWallDuringMove__7CPlayerFv
@@ -1675,6 +1676,7 @@
 0x802c21d4 Initialize__Q210CStopwatch7CSWDataFv
 0x802c2250 Wait__Q210CStopwatch7CSWDataCFf
 0x802c23dc SetErrorHandlers
+0x802c2438 CrashScreenControllerPollBranch
 0x802c28b4 __ct__10CAnimationFR12CInputStream
 0x802c2940 GetMetaAnimation__17CAnimationManagerCFUi
 0x802c29c0 GetAnimationTree__17CAnimationManagerCFUiRC24CMetaAnimTreeBuildOrders
@@ -2779,4 +2781,3 @@
 0x8046ad3c g_Main
 0x8046ad44 g_GameState
 0x8046c99c g_EtankCapacity
-0x802c2558 CrashScreenControllerPollBranch

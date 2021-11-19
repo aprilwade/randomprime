@@ -304,6 +304,11 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     -> Result<(), String>
 {
     let frme = res.kind.as_frme_mut().unwrap();
+    let (jpn_font, jpn_point_scale) = if frme.version == 0 {
+        (None, None)
+    } else {
+        (Some(resource_info!("Deface18B.FONT").try_into().unwrap()), Some([50, 24].into()))
+    };
     let widget = frme.widgets.iter_mut()
         .find(|widget| widget.name == b"textpane_bombdigits\0".as_cstr())
         .unwrap();
@@ -312,6 +317,8 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     match &mut widget.kind {
         structs::FrmeWidgetKind::TextPane(textpane) => {
             textpane.font = resource_info!("Deface18B.FONT").try_into().unwrap();
+            textpane.jpn_font = jpn_font;
+            textpane.jpn_point_scale = jpn_point_scale;
             textpane.word_wrap = 0;
         }
         _ => panic!("Widget \"textpane_bombdigits\" should be a TXPN"),
@@ -3426,27 +3433,60 @@ fn patch_save_station_for_warp_to_start<'r>(
     Ok(())
 }
 
-fn patch_memorycard_strg(res: &mut structs::Resource) -> Result<(), String>
+fn patch_memorycard_strg(res: &mut structs::Resource, version: Version) -> Result<(), String>
 {
-    let strings = res.kind.as_strg_mut().unwrap()
-        .string_tables
-        .as_mut_vec()
-        .iter_mut()
-        .find(|table| table.lang == b"ENGL".into())
-        .unwrap()
-        .strings
-        .as_mut_vec();
+    if version == Version::NtscJ {
+        let strings = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
 
-    let s = strings.iter_mut()
-        .find(|s| *s == "Save progress to Memory Card in Slot A?\u{0}")
-        .unwrap();
-    *s = "Save progress to Memory Card in Slot A?\nHold &image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; while choosing No to warp to starting area.\u{0}".to_string().into();
+        let s = strings.iter_mut()
+            .nth(8)
+            .unwrap();
+        *s = "スロットAのメモリーカードに\nデータをセーブしますか？\n&image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; キーを押したまま、「いいえ」を選択して開始ルームにワープします。\u{0}".to_string().into();
+    } else {
+        let strings = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"ENGL".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
+
+        let s = strings.iter_mut()
+            .find(|s| *s == "Save progress to Memory Card in Slot A?\u{0}")
+            .unwrap();
+        *s = "Save progress to Memory Card in Slot A?\nHold &image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; while choosing No to warp to starting room.\u{0}".to_string().into();
+    }
 
     Ok(())
 }
 
-fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
+fn patch_main_strg(res: &mut structs::Resource, version: Version, msg: &str) -> Result<(), String>
 {
+    if version == Version::NtscJ {
+        let strings_jpn = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
+
+        let s = strings_jpn.iter_mut()
+            .nth(37)
+            .unwrap();
+        *s = "&main-color=#FFFFFF;エクストラ\u{0}".to_string().into();
+        strings_jpn.push(format!("{}\0", msg).into());
+    }
+    
     let strings = res.kind.as_strg_mut().unwrap()
         .string_tables
         .as_mut_vec()
@@ -3460,8 +3500,8 @@ fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
         .find(|s| *s == "Metroid Fusion Connection Bonuses\u{0}")
         .unwrap();
     *s = "Extras\u{0}".to_string().into();
-
     strings.push(format!("{}\0", msg).into());
+
     Ok(())
 }
 
@@ -3472,7 +3512,7 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
     let (jpn_font, jpn_point_scale) = if frme.version == 0 {
         (None, None)
     } else {
-        (Some(ResId::new(0x5d696116)), Some([237, 35].into()))
+        (Some(ResId::new(0xC29C51F1)), Some([237, 35].into()))
     };
 
     frme.widgets.as_mut_vec().push(structs::FrmeWidget {
@@ -3536,11 +3576,16 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
 
 fn patch_credits(
     res: &mut structs::Resource,
+    version: Version,
     config: &PatchConfig,
 )
     -> Result<(), String>
 {
     let mut output = "\n\n\n\n\n\n\n".to_string();
+    
+    if version == Version::NtscJ {
+        output = format!("&line-extra-space=16;&font=5D696116;{}", output);
+    }
 
     if config.credits_string.is_some() {
         output = format!("{}{}", output, config.credits_string.as_ref().unwrap());
@@ -3606,6 +3651,17 @@ fn patch_credits(
         }
     }
     output = format!("{}{}", output, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0");
+    if version == Version::NtscJ {
+        let output_jpn = format!("{}", output);
+        res.kind.as_strg_mut().unwrap().string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec()
+            .push(output_jpn.into());
+    }
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
@@ -3739,7 +3795,7 @@ fn patch_dol<'r>(
     remove_ball_color: bool,
 ) -> Result<(), String>
 {
-    if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         return Ok(())
     }
 
@@ -3751,11 +3807,12 @@ fn patch_dol<'r>(
                     Version::NtscU0_00    => s.addr_0_00,
                     Version::NtscU0_01    => unreachable!(),
                     Version::NtscU0_02    => s.addr_0_02,
-                    Version::NtscJ    => unreachable!(),
-                    Version::Pal         => s.addr_pal,
+                    Version::NtscK        => s.addr_kor,
+                    Version::NtscJ        => s.addr_jap,
+                    Version::Pal          => s.addr_pal,
                     Version::NtscUTrilogy => unreachable!(),
                     Version::NtscJTrilogy => unreachable!(),
-                    Version::PalTrilogy => unreachable!(),
+                    Version::PalTrilogy   => unreachable!(),
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -3767,7 +3824,7 @@ fn patch_dol<'r>(
     };
 
     let mut dol_patcher = DolPatcher::new(reader);
-    if version == Version::Pal {
+    if version == Version::Pal || version == Version::NtscJ {
         dol_patcher
             .patch(symbol_addr!("aMetroidprime", version), b"randomprime\0"[..].into())?;
     } else {
@@ -3809,7 +3866,7 @@ fn patch_dol<'r>(
     }
 
     if config.automatic_crash_screen {
-        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version), {
+        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {
             nop;
         });
         dol_patcher.ppcasm_patch(&automatic_crash_patch)?;
@@ -3821,12 +3878,21 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
+    // pattern 50801f38 981f???? 881f???? 5080177a 981f???? 83e1
     if version == Version::Pal {
         let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x1dc, {
             li      r6, 100;
             stw     r6, 0x80(r31);
             lis     r6, 0xF7FF;
             stw     r6, 0x84(r31);
+        });
+        dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
+    } else if version == Version::NtscJ {
+        let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x1bc, {
+            li      r6, 100;
+            stw     r6, 0x664(r31);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x668(r31);
         });
         dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
     } else {
@@ -3849,6 +3915,16 @@ fn patch_dol<'r>(
             li      r4, 2;
         });
         dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
+    } else if version == Version::NtscJ {
+        let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x310, {
+            li      r6, 100;
+            stw     r6, 0x664(r29);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x668(r29);
+            mr      r3, r30;
+            li      r4, 2;
+        });
+        dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
     } else {
         let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
             li      r6, 100;
@@ -3861,7 +3937,7 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
     };
 
-    if version != Version::Pal {
+    if version != Version::Pal && version != Version::NtscJ {
         let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
                 b          skip;
             fmt:
@@ -3909,7 +3985,7 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
     }
 
-    if version == Version::Pal {
+    if version == Version::Pal || version == Version::NtscJ {
         let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x0c, {
                 lis         r3, {spawn_room.mlvl}@h;
         });
@@ -3953,7 +4029,7 @@ fn patch_dol<'r>(
     }
 
     if config.staggered_suit_damage {
-        let (patch_offset, jump_offset) = if version == Version::Pal {
+        let (patch_offset, jump_offset) = if version == Version::Pal || version == Version::NtscJ {
             (0x11c, 0x1b8)
         } else {
             (0x128, 0x1c4)
@@ -3997,7 +4073,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&etank_capacity_base_health_patch)?;
 
-    if version == Version::NtscU0_02 || version == Version::Pal {
+    if version == Version::NtscU0_02 || version == Version::Pal || version == Version::NtscJ {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
         });
@@ -4085,7 +4161,16 @@ fn patch_dol<'r>(
             let map_str = rel_files::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
-        Version::NtscJ => unreachable!(),
+        Version::NtscK => {
+            let loader_bytes = rel_files::REL_LOADER_KOR;
+            let map_str = rel_files::REL_LOADER_KOR_MAP;
+            (loader_bytes, map_str)
+        },
+        Version::NtscJ => {
+            let loader_bytes = rel_files::REL_LOADER_JAP;
+            let map_str = rel_files::REL_LOADER_JAP_MAP;
+            (loader_bytes, map_str)
+        },
         Version::Pal => {
             let loader_bytes = rel_files::REL_LOADER_PAL;
             let map_str = rel_files::REL_LOADER_PAL_MAP;
@@ -4799,6 +4884,7 @@ enum Version
     NtscU0_00,
     NtscU0_01,
     NtscU0_02,
+    NtscK,
     NtscJ,
     Pal,
     NtscUTrilogy,
@@ -4814,11 +4900,12 @@ impl fmt::Display for Version
             Version::NtscU0_00    => write!(f, "1.00"),
             Version::NtscU0_01    => write!(f, "1.01"),
             Version::NtscU0_02    => write!(f, "1.02"),
-            Version::NtscJ    => write!(f, "jap"),
-            Version::Pal         => write!(f, "pal"),
+			Version::NtscK        => write!(f, "kor"),
+            Version::NtscJ        => write!(f, "jap"),
+            Version::Pal          => write!(f, "pal"),
             Version::NtscUTrilogy => write!(f, "trilogy_ntsc_u"),
             Version::NtscJTrilogy => write!(f, "trilogy_ntsc_j"),
-            Version::PalTrilogy => write!(f, "trilogy_pal"),
+            Version::PalTrilogy   => write!(f, "trilogy_pal"),
         }
     }
 }
@@ -5597,16 +5684,17 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     let mut gc_disc: structs::GcDisc = reader.read(());
 
     let version = match (&gc_disc.header.game_identifier(), gc_disc.header.disc_id, gc_disc.header.version) {
-        (b"GM8E01", 0, 0) => Version::NtscU0_00,
-        (b"GM8E01", 0, 1) => Version::NtscU0_01,
-        (b"GM8E01", 0, 2) => Version::NtscU0_02,
-        (b"GM8J01", 0, 0) => Version::NtscJ,
-        (b"GM8P01", 0, 0) => Version::Pal,
-        (b"R3ME01", 0, 0) => Version::NtscUTrilogy,
-        (b"R3IJ01", 0, 0) => Version::NtscJTrilogy,
-        (b"R3MP01", 0, 0) => Version::PalTrilogy,
+        (b"GM8E01", 0, 0)  => Version::NtscU0_00,
+        (b"GM8E01", 0, 1)  => Version::NtscU0_01,
+        (b"GM8E01", 0, 2)  => Version::NtscU0_02,
+        (b"GM8E01", 0, 48) => Version::NtscK,
+        (b"GM8J01", 0, 0)  => Version::NtscJ,
+        (b"GM8P01", 0, 0)  => Version::Pal,
+        (b"R3ME01", 0, 0)  => Version::NtscUTrilogy,
+        (b"R3IJ01", 0, 0)  => Version::NtscJTrilogy,
+        (b"R3MP01", 0, 0)  => Version::PalTrilogy,
         _ => Err(concat!(
-                "The input ISO doesn't appear to be NTSC-US, PAL Metroid Prime, ",
+                "The input ISO doesn't appear to be NTSC-US, NTSC-J, NTSC-K, PAL Metroid Prime, ",
                 "or NTSC-US, NTSC-J, PAL Metroid Prime Trilogy."
             ))?
     };
@@ -5629,7 +5717,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
         Version::NtscU0_01    => None,
         Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
         Version::Pal          => Some(rel_files::PATCHES_PAL_REL),
-        Version::NtscJ        => None,
+        Version::NtscK        => Some(rel_files::PATCHES_KOR_REL),
+        Version::NtscJ        => Some(rel_files::PATCHES_JAP_REL),
         Version::NtscUTrilogy => None,
         Version::NtscJTrilogy => None,
         Version::PalTrilogy => None,
@@ -6155,10 +6244,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             );
         }
     }
-
     patcher.add_resource_patch(
         resource_info!("STRG_Main.STRG").into(),// 0x0552a456
-        |res| patch_main_strg(res, &config.main_menu_message)
+        |res| patch_main_strg(res, version, &config.main_menu_message)
     );
     patcher.add_resource_patch(
         resource_info!("FRME_NewFileSelect.FRME").into(),
@@ -6166,7 +6254,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
-        |res| patch_credits(res, config)
+        |res| patch_credits(res, version, config)
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
@@ -6437,7 +6525,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
         patcher.add_resource_patch(
             resource_info!("STRG_MemoryCard.STRG").into(),// 0x19C3F7F7
-            |res| patch_memorycard_strg(res)
+            |res| patch_memorycard_strg(res, version)
         );
     }
 

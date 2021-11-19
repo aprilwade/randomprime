@@ -61,7 +61,7 @@ fn main()
     invoke_cargo(&ppc_manifest, "rel_loader");
     invoke_cargo(&ppc_manifest, "rel_patches");
 
-    for version in &["1.00", "1.02", "pal"] {
+    for version in &["1.00", "1.02", "pal", "kor", "jap"] {
         let sym_table_path = symbol_table_dir.join(format!("{}.txt", version));
         eprintln!("{:?}", root_dir.join("..").join(&sym_table_path));
         let mut symbol_table = read_symbol_table(root_dir.join(sym_table_path)).unwrap();
