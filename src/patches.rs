@@ -4396,12 +4396,16 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
-    // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
-    // ctwk_player_gun.beams[0].cool_down = 0.00001;
-    // ctwk_player_gun.beams[1].cool_down = 0.00001;
-    // ctwk_player_gun.beams[2].cool_down = 0.00001;
-    // ctwk_player_gun.beams[3].cool_down = 0.00001;
-    // ctwk_player_gun.beams[4].cool_down = 0.00001;
+    ctwk_player_gun.beams[0].normal.damage = 99999.0;
+    ctwk_player_gun.beams[1].normal.damage = 99999.0;
+    ctwk_player_gun.beams[2].normal.damage = 99999.0;
+    ctwk_player_gun.beams[3].normal.damage = 99999.0;
+    ctwk_player_gun.beams[4].normal.damage = 99999.0;
+    ctwk_player_gun.beams[0].cool_down = 0.00001;
+    ctwk_player_gun.beams[1].cool_down = 0.00001;
+    ctwk_player_gun.beams[2].cool_down = 0.00001;
+    ctwk_player_gun.beams[3].cool_down = 0.00001;
+    ctwk_player_gun.beams[4].cool_down = 0.00001;
     
     Ok(())
 }
@@ -4488,6 +4492,139 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     }
     if ctwk_config.boost_incremental_speed2.is_some() {
         ctwk_ball.boost_incremental_speed2 = ctwk_ball.boost_incremental_speed2*ctwk_config.boost_incremental_speed2.unwrap();
+    }
+
+    Ok(())
+}
+
+fn patch_final_boss_permadeath<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+)
+-> Result<(), String>
+{
+    let mrea_id = area.mlvl_area.mrea.to_u32();
+    let layer_count = area.mrea().scly_section_mut().layers.len();
+    area.add_layer(b"Disable Bosses Layer\0".as_cstr());
+    area.layer_flags.flags &= !(1 << layer_count); // layer disabled by default
+    let layers = &mut area.mrea().scly_section_mut().layers.as_mut_vec();
+    let mut objs_to_remove = Vec::<u32>::new();
+    for i in 0..layer_count {
+        for obj in layers[i].objects.as_mut_vec().clone() {
+            if  (
+                    obj.property_data.is_actor() ||
+                    obj.property_data.is_camera() ||
+                    obj.property_data.is_platform() ||
+                    obj.property_data.is_trigger() || 
+                    obj.property_data.is_spawn_point() ||
+                    obj.property_data.object_type() == 0x83 ||
+                    obj.property_data.object_type() == 0x84
+                )
+                && !vec![0x00050014, 0x0005000E].contains(&obj.instance_id)
+            {
+                objs_to_remove.push(obj.instance_id);
+            }
+        }
+    }
+   
+    let mut connections = Vec::new();
+    for target_object_id in objs_to_remove {
+        if target_object_id == 0x0006003D {
+            connections.push(structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::ACTIVATE,
+                target_object_id,
+            });
+        } else {
+            connections.push(structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::DEACTIVATE,
+                target_object_id,
+            });
+        }
+    }
+    layers[1].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            property_data: structs::Timer {
+                name: b"remove boss\0".as_cstr(),
+                start_time: 0.1,
+                max_random_add: 0.0,
+                reset_to_zero: 0,
+                start_immediately: 1,
+                active: 1,
+            }.into(),
+            connections: connections.into(),
+        }
+    );
+
+    // Subchamber Four
+    if mrea_id == 0xA7AC009B || mrea_id == 0x1A666C55 {
+        // Allocate list of ids
+        let destinations = if mrea_id == 0xA7AC009B {
+            vec![0x67156A0D, 0xDADF06C3, 0x0749DF46, 0x7A3AD91E, 0xA7AC009B]
+        } else {
+            vec![0x1A666C55]
+        };
+
+        let mut special_function_ids = Vec::<u32>::new();
+        for _ in 0..destinations.len() {
+            special_function_ids.push(ps.fresh_instance_id_range.next().unwrap());
+        }
+
+        // Add special functions
+        for i in 0..destinations.len() {
+            layers[0].objects.as_mut_vec().push(
+                structs::SclyObject {
+                    instance_id: special_function_ids[i],
+                    property_data: structs::SpecialFunction::layer_change_fn(
+                        b"SpecialFunction - Bosses Stay Dead\0".as_cstr(),
+                        destinations[i],
+                        1,
+                    ).into(),
+                    connections: vec![].into(),
+                }
+            );
+        }
+
+        // Add connections to post-death relay
+        for layer_idx in 0..layer_count {
+            for obj in layers[layer_idx].objects.as_mut_vec() {
+                if obj.instance_id & 0x0000FFFF == 0x00000022 || obj.property_data.object_type() == 0x83 { // post-death relay
+                    println!("adding the relay connections 0x{:X}...", obj.instance_id);
+                    for i in 0..destinations.len() {
+                        obj.connections.as_mut_vec().push(structs::Connection {
+                            state: structs::ConnectionState::ZERO,
+                            message: structs::ConnectionMsg::INCREMENT,
+                            target_object_id: special_function_ids[i],
+                        });
+                    }
+                }
+            }
+        }
+
+        let mut _connections = Vec::new();
+        for i in 0..destinations.len() {
+            _connections.push(structs::Connection {
+                state: structs::ConnectionState::ZERO,
+                message: structs::ConnectionMsg::INCREMENT,
+                target_object_id: special_function_ids[i],
+            });
+        }
+        layers[0].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                property_data: structs::Timer {
+                    name: b"change layer\0".as_cstr(),
+                    start_time: 0.1,
+                    max_random_add: 0.0,
+                    reset_to_zero: 0,
+                    start_immediately: 1,
+                    active: 1,
+                }.into(),
+                connections: _connections.into(),
+            }
+        );
     }
 
     Ok(())
@@ -4852,6 +4989,30 @@ fn patch_qol_game_breaking(
     patcher.add_scly_patch(
         resource_info!("00_mines_savestation_b.MREA").into(),
         move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03a_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03b_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03c_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03d_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03e_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
+    );
+    patcher.add_scly_patch(
+        resource_info!("03f_crater.MREA").into(),
+        move |ps, area| patch_final_boss_permadeath(ps, area)
     );
     if small_samus {
         patcher.add_scly_patch(
