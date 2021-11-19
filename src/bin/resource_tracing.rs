@@ -1011,7 +1011,23 @@ fn main()
                 .unwrap().into_owned();
             let mapa_id = &ResId::<res_id::MAPA>::new(target_mapa.file_id);
 
+            // println!("\n\n");
             for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
+                // for obj in scly_layer.objects.iter() {
+                //     if obj.property_data.is_pickup() {
+                //         let pickup = obj.property_data.as_pickup().unwrap();
+                //         if pickup.drop_rate == 0.0 {
+                //             continue;
+                //         }
+                //         if pickup.kind == PickupType::HealthRefill.kind() {
+                //             println!("Health     | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         } else if pickup.kind == PickupType::PowerBomb.kind() && pickup.max_increase == 0 {
+                //             println!("Power Bomb | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         } else if pickup.kind == PickupType::Missile.kind() && pickup.max_increase == 0 {
+                //             println!("Missile    | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         }
+                //     }
+                // }
 
                 // trace door resources //
                 for obj in scly_layer.objects.iter() {
@@ -1116,6 +1132,7 @@ fn main()
                     .strings.iter().next().unwrap()
                     .into_owned().into_string();
 
+                // println!("=== {} ===", name.as_str().to_string());
                 pak_locations.push(RoomInfo {
                     room_id: ResId::<res_id::MREA>::new(res.file_id),
                     name,
