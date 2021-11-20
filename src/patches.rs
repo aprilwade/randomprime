@@ -3080,6 +3080,35 @@ fn patch_remove_cutscenes(
                         target_object_id,
                     });
                 }
+            } else if obj_id == 0x001A04B8 || obj_id == 0x001A04C5 { // Elite Quarters Pickup(s)
+                let pickup = obj.property_data.as_pickup_mut().unwrap();
+                pickup.position[2] = pickup.position[2] + 2.0; // Move up so it's more obvious
+
+                // The pickup should display hudmemo instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001A0348,
+                });
+                // The pickup should unlock lift instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::DECREMENT,
+                    target_object_id: 0x001A03D9,
+                });
+                // The pickup should unlock doors instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001A0328,
+                });
+
+            } else if obj_id == 0x001A0126 { // Omega Pirate
+                obj.connections.as_mut_vec().retain(|conn| !vec![
+                    0x001A03D9, // elevator shield
+                    0x001A0328, // door unlock relay
+                    ].contains(&(conn.target_object_id & 0x00FFFFFF))
+                );
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
@@ -3120,7 +3149,7 @@ fn patch_remove_cutscenes(
                     obj.property_data.is_camera_filter_keyframe() ||
                     obj.property_data.is_camera_blur_keyframe() ||
                     obj.property_data.is_player_actor() ||
-                    vec![0x0018028E, 0x001802A1, 0x0018025C, 0x001800CC, 0x00180212, 0x00020473, 0x00070521].contains(&(obj.instance_id&0x00FFFFFF)) || // thardus death sounds + thardus corpse + main quarry, security station playerhint
+                    vec![0x0018028E, 0x001802A1, 0x0018025C, 0x001800CC, 0x00180212, 0x00020473, 0x00070521, 0x001A034A, 0x001A04C2, 0x001A034B].contains(&(obj.instance_id&0x00FFFFFF)) || // thardus death sounds + thardus corpse + main quarry, security station playerhint, post OP death timer for hudmemo, Elite Quarters Control Disablers
                     (obj.property_data.is_special_function() && obj.property_data.as_special_function().unwrap().type_ == 0x18) // "show billboard"
                 )
             );
@@ -4481,12 +4510,12 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
-    // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
-    // ctwk_player_gun.beams[0].cool_down = 0.00001;
-    // ctwk_player_gun.beams[1].cool_down = 0.00001;
-    // ctwk_player_gun.beams[2].cool_down = 0.00001;
-    // ctwk_player_gun.beams[3].cool_down = 0.00001;
-    // ctwk_player_gun.beams[4].cool_down = 0.00001;
+    ctwk_player_gun.beams[0].normal.damage = 9999999.0;
+    ctwk_player_gun.beams[0].cool_down = 0.00001;
+    ctwk_player_gun.beams[1].cool_down = 0.00001;
+    ctwk_player_gun.beams[2].cool_down = 0.00001;
+    ctwk_player_gun.beams[3].cool_down = 0.00001;
+    ctwk_player_gun.beams[4].cool_down = 0.00001;
     
     Ok(())
 }
