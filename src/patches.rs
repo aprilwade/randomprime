@@ -1002,6 +1002,7 @@ fn modify_pickups_in_mrea<'r>(
                        ) || (pickup_location.location.instance_id == 0x0428011c && obj_id == 0x002803CE)  // research core scan
                          || (pickup_location.location.instance_id == 0x00020176 && poi.scan_param.scan == custom_asset_ids::SHORELINES_POI_SCAN) // custom shorelines tower scan
                          || (pickup_location.location.instance_id == 600301 && poi.scan_param.scan == 0x00092837) // Ice Ruins West scan
+                         || (pickup_location.location.instance_id == 524406 && poi.scan_param.scan == 0x0008002C) // Ruined Fountain
                     {
                         poi.scan_param.scan = scan_id_out;
                     }
