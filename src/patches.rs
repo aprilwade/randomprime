@@ -4623,9 +4623,41 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     };
 
     if ctwk_config.hud_color.is_some() {
-        let hud_color = ctwk_config.hud_color.unwrap();
+        let mut hud_color = ctwk_config.hud_color.unwrap();
         for i in 0..148 {
-            ctwk_gui_colors.colors[i] = hud_color.into();
+            // Skip coloring all the energy stuff because it glitches otherwise
+            if vec![112, 141, 142, 143, 144, 145, 146, 147,
+            96,
+            97,
+            112,
+            113,
+            115,
+            116,
+            117,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            129,
+            130,
+            131,
+            132,
+            133,
+            134,
+            135,
+            136,
+            137,
+            138,
+            139,
+            140].contains(&i) {
+                let mut color = ctwk_gui_colors.colors[i as usize].clone();
+                color[3] = color[3]/2.0;
+                ctwk_gui_colors.colors[i as usize] = color.into();
+                continue;
+            }
+            ctwk_gui_colors.colors[i as usize] = [hud_color[0], hud_color[1], hud_color[2], ctwk_gui_colors.colors[i as usize][3]].into();
         }
     }
 
@@ -6818,7 +6850,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let time = Instant::now();
     patcher.run(gc_disc)?;
-    println!("Elapsed - {:?}", time.elapsed());
+    println!("Created patches in {:?}", time.elapsed());
 
     Ok(())
 }
