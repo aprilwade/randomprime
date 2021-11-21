@@ -219,6 +219,9 @@ pub struct CtwkConfig
     pub boost_incremental_speed0: Option<f32>,
     pub boost_incremental_speed1: Option<f32>,
     pub boost_incremental_speed2: Option<f32>,
+
+    // GuiColors.CTWK
+    pub hud_color: Option<[f32;4]>, // RGBA, 0 - 1.0
 }
 
 #[derive(Debug)]

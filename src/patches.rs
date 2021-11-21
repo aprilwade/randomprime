@@ -4613,6 +4613,25 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     Ok(())
 }
 
+fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let ctwk_gui_colors = match &mut ctwk {
+        structs::Ctwk::CtwkGuiColors(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkGuiColors", res.file_id),
+    };
+
+    if ctwk_config.hud_color.is_some() {
+        let hud_color = ctwk_config.hud_color.unwrap();
+        for i in 0..148 {
+            ctwk_gui_colors.colors[i] = hud_color.into();
+        }
+    }
+
+    Ok(())
+}
+
 fn patch_move_item_loss_scan<'r>(
     _ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -6059,6 +6078,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.add_resource_patch(
         resource_info!("Ball.CTWK").into(),
         |res| patch_ctwk_ball(res, &config.ctwk_config),
+    );
+    patcher.add_resource_patch(
+        resource_info!("GuiColors.CTWK").into(),
+        |res| patch_ctwk_gui_colors(res, &config.ctwk_config),
     );
 
     /* TODO: add more tweaks
