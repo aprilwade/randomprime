@@ -21,7 +21,6 @@ pub struct RoArray<'r, T>
     data_start: Reader<'r>,
 }
 
-
 impl<'r, T> RoArray<'r, T>
     where T: Readable<'r>,
           T::Args: Clone,

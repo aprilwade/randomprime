@@ -119,6 +119,16 @@ pub struct DoorConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SuitColors
+{
+    pub power_deg: Option<i16>,
+    pub varia_deg: Option<i16>,
+    pub gravity_deg: Option<i16>,
+    pub phazon_deg: Option<i16>,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
 {
@@ -263,7 +273,7 @@ pub struct PatchConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
-    pub suit_hue_rotate_angle: Option<i32>,
+    pub suit_colors: Option<SuitColors>,
 
     pub quickplay: bool,
     pub quickpatch: bool,
@@ -284,6 +294,8 @@ pub struct PatchConfig
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
+    suit_colors: Option<SuitColors>,
+
     qol_game_breaking: Option<bool>,
     qol_cosmetic: Option<bool>,
     qol_logical: Option<bool>,
@@ -448,11 +460,6 @@ impl PatchConfig
                 .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
                                 "Flaahgra fight music will be used to replace the original"))
                 .takes_value(true))
-            .arg(Arg::with_name("suit hue rotate angle")
-                .long("suit-hue-rotate-angle")
-                .takes_value(true)
-                .validator(|s| s.parse::<i32>().map(|_| ())
-                                            .map_err(|_| "Expected an integer".to_string())))
             .arg(Arg::with_name("quiet")
                 .long("quiet")
                 .help("Don't print the progress messages"))
@@ -751,7 +758,7 @@ impl PatchConfigPrivate
             automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(true),
             artifact_hint_behavior,
             flaahgra_music_files,
-            suit_hue_rotate_angle: None,
+            suit_colors: self.preferences.suit_colors.clone(),
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
             quickpatch: self.preferences.quickpatch.unwrap_or(false),

@@ -24,6 +24,10 @@ use crate::patch_config::{
     DoorConfig,
 };
 
+use std::{fs::{self, File}, io::{self, Read}, path::PathBuf};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use crate::{
     custom_assets::{custom_asset_ids, collect_game_resources, PickupHashKey},
     dol_patcher::DolPatcher,
@@ -57,6 +61,7 @@ use reader_writer::{
     FourCC,
     Reader,
     Writable,
+    RoArray,
 };
 use structs::{res_id, ResId};
 
@@ -69,6 +74,7 @@ use std::{
     io::Write,
     iter,
     mem,
+    time::Instant,
 };
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
@@ -6637,47 +6643,106 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_qol_logical(&mut patcher, config);
     }
 
-    if let Some(angle) = config.suit_hue_rotate_angle {
-        let iter = PHAZON_SUIT_TEXTURES.iter()
-            .chain(VARIA_SUIT_TEXTURES.iter())
-            .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
-            .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
-        for varia_texture in iter {
-            patcher.add_resource_patch((*varia_texture).into(), move |res| {
-                let res_data; 
-                let data; 
-                let mut txtr: structs::Txtr = match &res.kind {
-                    structs::ResourceKind::Unknown(_, _) => {
-                        res_data = crate::ResourceData::new(res);
-                        data = res_data.decompress().into_owned();
-                        let mut reader = Reader::new(&data[..]);
-                        reader.read(())
-                    }, 
-                    structs::ResourceKind::External(_, _) => {
-                        res_data = crate::ResourceData::new_external(res);
-                        data = res_data.decompress().into_owned();
-                        let mut reader = Reader::new(&data[..]);
-                        reader.read(())
-                    }, 
-                    _ => panic!("Unsupported resource kind for recoloring."), 
-                };
+    if config.suit_colors.is_some() {
+        let suit_colors = config.suit_colors.as_ref().unwrap();
+        let mut suit_textures = Vec::new();
+        let mut angles = Vec::new();
 
-                let mut w = txtr.width as usize;
-                let mut h = txtr.height as usize;
-                for mipmap in txtr.pixel_data.as_mut_vec() {
-                    let mut decompressed_bytes = vec![0u8; w * h * 4];
-                    cmpr_decompress(&mipmap.as_mut_vec()[..], h, w, &mut decompressed_bytes[..]);
-                    huerotate_in_place(&mut decompressed_bytes[..], w, h, angle);
-                    cmpr_compress(&decompressed_bytes[..], w, h, &mut mipmap.as_mut_vec()[..]);
-                    w /= 2;
-                    h /= 2;
-                }
-                let mut bytes = vec![];
-                txtr.write_to(&mut bytes).unwrap();
-                res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
-                res.compressed = false;
-                Ok(())
-            })
+        if suit_colors.power_deg.is_some() {
+            suit_textures.push(crate::txtr_conversions::POWER_SUIT_TEXTURES);
+            angles.push(suit_colors.power_deg.clone().unwrap());
+        }
+        if suit_colors.varia_deg.is_some() {
+            suit_textures.push(VARIA_SUIT_TEXTURES);
+            angles.push(suit_colors.varia_deg.clone().unwrap());
+        }
+        if suit_colors.gravity_deg.is_some() {
+            suit_textures.push(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES);
+            angles.push(suit_colors.gravity_deg.clone().unwrap());
+        }
+        if suit_colors.phazon_deg.is_some() {
+            suit_textures.push(PHAZON_SUIT_TEXTURES);
+            angles.push(suit_colors.phazon_deg.clone().unwrap());
+        }
+
+        fs::create_dir("cache")
+            .map_err(|e| format!("Failed to create cache dir: {}", e))
+            .ok();
+
+        for i in 0..suit_textures.len() {
+            let angle = angles[i] as f32;
+            let cosv = (angle * std::f32::consts::PI / 180.0).cos();
+            let sinv = (angle * std::f32::consts::PI / 180.0).sin();
+            let matrix: [f32; 9] = [
+                // Reds
+                0.213 + cosv * 0.787 - sinv * 0.213,
+                0.715 - cosv * 0.715 - sinv * 0.715,
+                0.072 - cosv * 0.072 + sinv * 0.928,
+                // Greens
+                0.213 - cosv * 0.213 + sinv * 0.143,
+                0.715 + cosv * 0.285 + sinv * 0.140,
+                0.072 - cosv * 0.072 - sinv * 0.283,
+                // Blues
+                0.213 - cosv * 0.213 - sinv * 0.787,
+                0.715 - cosv * 0.715 + sinv * 0.715,
+                0.072 + cosv * 0.928 + sinv * 0.072,
+            ];
+            for texture in suit_textures[i] {
+                patcher.add_resource_patch((*texture).into(), move |res| {
+                    let res_data;
+                    let data;
+                    let mut txtr: structs::Txtr = match &res.kind {
+                        structs::ResourceKind::Unknown(_, _) => {
+                            res_data = crate::ResourceData::new(res);
+                            data = res_data.decompress().into_owned();
+                            let mut reader = Reader::new(&data[..]);
+                            reader.read(())
+                        },
+                        structs::ResourceKind::External(_, _) => {
+                            res_data = crate::ResourceData::new_external(res);
+                            data = res_data.decompress().into_owned();
+                            let mut reader = Reader::new(&data[..]);
+                            reader.read(())
+                        },
+                        _ => panic!("Unsupported resource kind for recoloring."),
+                    };
+                    let mut w = txtr.width as usize;
+                    let mut h = txtr.height as usize;
+                    for mipmap in txtr.pixel_data.as_mut_vec() {
+                        let hash: u64 = calculate_hash(&mipmap.as_mut_vec().to_vec()) + (angle as u64);
+
+                        // Read file contents to RAM
+                        let filename = format!("cache/{}",hash);
+                        let file = File::open(&filename).ok();
+                        if file.is_some() {
+                            let metadata = fs::metadata(&filename).expect("unable to read metadata");
+                            let mut bytes = vec![0; metadata.len() as usize];
+                            file.unwrap().read(&mut bytes)
+                                .map_err(|e| format!("Failed to read cache file: {}", e))?;
+                            *mipmap.as_mut_vec() = bytes;
+                        }
+                        else
+                        {
+                            let mut decompressed_bytes = vec![0u8; w * h * 4];
+                            cmpr_decompress(&mipmap.as_mut_vec()[..], h, w, &mut decompressed_bytes[..]);
+                            huerotate_in_place(&mut decompressed_bytes[..], w, h, matrix);
+                            cmpr_compress(&(decompressed_bytes[..]), w, h, &mut mipmap.as_mut_vec()[..]);
+                            // cache.insert(hash, mipmap.as_mut_vec().to_vec());
+                            let mut file = File::create(filename)
+                                .map_err(|e| format!("Failed to create cache file: {}", e))?;
+                            file.write_all(&mipmap.as_mut_vec().to_vec())
+                                .map_err(|e| format!("Failed to write cache file: {}", e))?;
+                        }
+                        w = w / 2;
+                        h = h / 2;
+                    }
+                    let mut bytes = vec![];
+                    txtr.write_to(&mut bytes).unwrap();
+                    res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
+                    res.compressed = false;
+                    Ok(())
+                })
+            }
         }
     }
     
@@ -6729,6 +6794,16 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
+    let time = Instant::now();
     patcher.run(gc_disc)?;
+    println!("Elapsed - {:?}", time.elapsed());
+
     Ok(())
+}
+
+/* For mipmapcache */
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }
