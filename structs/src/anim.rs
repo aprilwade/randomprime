@@ -139,10 +139,11 @@ pub struct AnimCompressed<'r>
 //     translation_bits_z: u8,
 // }
 
-// #[auto_struct(Readable, FixedSize)]
-// #[derive(Debug, Clone)]
-// pub struct CharAnimTime
-// {
-//     time: f32,
-//     differential_state: u32,
-// }
+#[auto_struct(Readable, FixedSize)]
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct CharAnimTime
+{
+    time: f32,
+    differential_state: u32,
+}

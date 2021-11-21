@@ -422,12 +422,6 @@ fn extract_pickup_data<'r>(
     let mut bytes = vec![];
     pickup.write_to(&mut bytes).unwrap();
 
-    let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
-        |obj| obj.property_data.as_hud_memo()
-            .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
-            .unwrap_or(false)
-    );
-
     PickupData {
         bytes,
         deps,
