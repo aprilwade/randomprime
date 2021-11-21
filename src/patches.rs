@@ -24,7 +24,7 @@ use crate::patch_config::{
     DoorConfig,
 };
 
-use std::{fs::{self, File}, io::{self, Read}, path::PathBuf};
+use std::{fs::{self, File}, io::{Read}};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -61,7 +61,6 @@ use reader_writer::{
     FourCC,
     Reader,
     Writable,
-    RoArray,
 };
 use structs::{res_id, ResId};
 

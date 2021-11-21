@@ -340,7 +340,6 @@ struct PickupData
 {
     bytes: Vec<u8>,
     deps: HashSet<ResourceKey>,
-    hudmemo_strg: u32,
     attainment_audio_file_name: Vec<u8>,
 }
 
@@ -428,16 +427,10 @@ fn extract_pickup_data<'r>(
             .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
             .unwrap_or(false)
     );
-    let hudmemo_strg = if let Some(hudmemo) = hudmemo {
-        hudmemo.property_data.as_hud_memo().unwrap().strg.to_u32()
-    } else {
-        resource_info!("Phazon Suit acquired!.STRG").res_id
-    };
 
     PickupData {
         bytes,
         deps,
-        hudmemo_strg,
         attainment_audio_file_name,
     }
 }
@@ -876,7 +869,6 @@ fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)
     assert!(pickup_table.insert(PickupModel::Nothing, PickupData {
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
 }
@@ -913,7 +905,6 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupModel, PickupData>)
     assert!(pickup_table.insert(PickupModel::ShinyMissile, PickupData {
         bytes: shiny_missile_bytes,
         deps: shiny_missile_deps,
-        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
     }).is_none());
 }

@@ -298,7 +298,6 @@ struct Preferences
 
     qol_game_breaking: Option<bool>,
     qol_cosmetic: Option<bool>,
-    qol_logical: Option<bool>,
     qol_cutscenes: Option<String>,
     qol_pickup_scans: Option<bool>,
 

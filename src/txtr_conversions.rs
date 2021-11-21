@@ -1,5 +1,4 @@
 use std::convert::TryInto;
-use std::collections::HashMap;
 
 use libsquish_wrapper::{compress_dxt1gcn_block, decompress_dxt1gcn_block};
 use resource_info_table::{resource_info, ResourceInfo};
