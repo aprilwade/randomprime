@@ -414,7 +414,8 @@ fn patch_add_item<'r>(
         pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
         pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
         pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
-        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        // pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.ancs.file_id = ResId::invalid();
         pickup_model_data.part = ResId::invalid();
         pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
         pickup_model_data.ancs.default_animation = 0;
@@ -534,7 +535,8 @@ fn patch_add_item<'r>(
     
     // If this is the echoes missile expansion model, compensate for the Z offset
     let mut pickup_position = pickup_config.position.unwrap();
-    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+    let json_pickup_name = pickup_config.model.as_ref().unwrap_or(&"".to_string()).clone();
+    if json_pickup_name.contains(&"MissileExpansion") {
         pickup_position[2] = pickup_position[2] - 1.2;
     }
 
@@ -824,7 +826,9 @@ fn modify_pickups_in_mrea<'r>(
 
     let name = CString::new(format!(
             "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
-    area.add_layer(Cow::Owned(name));
+    if pickup_config.position.as_ref().unwrap_or(&[0.0, 0.0, 0.0])[2] != -10000.0 { // part of an elaborate hack to fix echoes translators
+        area.add_layer(Cow::Owned(name));
+    }
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     let new_layer_2_idx = new_layer_idx + 1;
@@ -858,6 +862,19 @@ fn modify_pickups_in_mrea<'r>(
             }
         );
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+        let model_name = pickup_config.model.as_ref().unwrap();
+        if model_name.contains(&"Translator") {
+            let external_violet_model = extern_models.get(&"VioletTranslator".to_string());
+            let deps = external_violet_model.as_ref().unwrap().dependencies.clone();
+            let deps_iter = deps.iter()
+                .map(|&(file_id, fourcc)| structs::Dependency {
+                    asset_id: file_id,
+                    asset_type: fourcc,
+                }
+            );
+            println!("adding extra deps");
+            area.add_dependencies(game_resources, new_layer_idx, deps_iter);
+        }
     }
     // If we aren't using an external model, use the dependencies traced by resource_tracing
     else {
@@ -4623,7 +4640,7 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     };
 
     if ctwk_config.hud_color.is_some() {
-        let mut hud_color = ctwk_config.hud_color.unwrap();
+        let hud_color = ctwk_config.hud_color.unwrap();
         for i in 0..148 {
             // Skip coloring all the energy stuff because it glitches otherwise
             if vec![112, 141, 142, 143, 144, 145, 146, 147,
@@ -6349,7 +6366,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     move |_ps, area| patch_add_item(
                         _ps,
                         area,
-                        &pickup, 
+                        &pickup,
                         game_resources,
                         pickup_hudmemos,
                         pickup_scans,
@@ -6725,6 +6742,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
         for i in 0..suit_textures.len() {
             let angle = angles[i] as f32;
+
+            fs::create_dir(format!("cache/{}", angle))
+                .map_err(|e| format!("Failed to create cache subdir: {}", e))
+                .ok();
+
             let cosv = (angle * std::f32::consts::PI / 180.0).cos();
             let sinv = (angle * std::f32::consts::PI / 180.0).sin();
             let matrix: [f32; 9] = [
@@ -6763,10 +6785,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     let mut w = txtr.width as usize;
                     let mut h = txtr.height as usize;
                     for mipmap in txtr.pixel_data.as_mut_vec() {
-                        let hash: u64 = calculate_hash(&mipmap.as_mut_vec().to_vec()) + (angle as u64);
-
+                        let hash: u64 = calculate_hash(&mipmap.as_mut_vec().to_vec());
                         // Read file contents to RAM
-                        let filename = format!("cache/{}",hash);
+                        let filename = format!("cache/{}/{}",angle,hash);
                         let file = File::open(&filename).ok();
                         if file.is_some() {
                             let metadata = fs::metadata(&filename).expect("unable to read metadata");
