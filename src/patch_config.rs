@@ -192,7 +192,6 @@ pub struct CtwkConfig
     pub hardmode_weapon_mult: Option<f32>,
     pub turn_speed: Option<f32>,
     pub underwater_fog_distance: Option<f32>,
-    pub gun_position: Option<[f32;3]>,
     pub step_up_height: Option<f32>,
     pub allowed_jump_time: Option<f32>,
     pub allowed_space_jump_time: Option<f32>,
@@ -202,6 +201,11 @@ pub struct CtwkConfig
     pub min_space_jump_time: Option<f32>,
     pub falling_space_jump: Option<bool>,
     pub impulse_space_jump: Option<bool>,
+
+    // PlayerGun.CTWK
+    pub gun_position: Option<[f32;3]>, // offset
+    pub gun_damage: Option<f32>,
+    pub gun_cooldown: Option<f32>,
 
     // Ball.CTWK
     pub max_translation_accel: Option<f32>,

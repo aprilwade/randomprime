@@ -4551,6 +4551,23 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
+    if ctwk_config.gun_damage.is_some() {
+        let gun_damage = ctwk_config.gun_damage.unwrap();
+        ctwk_player_gun.missile.damage = ctwk_player_gun.missile.damage*gun_damage;
+        for i in 0..ctwk_player_gun.beams.len() {
+            ctwk_player_gun.beams[i].normal.damage = ctwk_player_gun.beams[i].normal.damage*gun_damage;
+            ctwk_player_gun.beams[i].charged.damage = ctwk_player_gun.beams[i].charged.damage*gun_damage;
+            ctwk_player_gun.combos[i].damage = ctwk_player_gun.combos[i].damage*gun_damage;
+        }
+    }
+
+    if ctwk_config.gun_cooldown.is_some() {
+        let gun_cooldown = ctwk_config.gun_cooldown.unwrap();
+        for i in 0..ctwk_player_gun.beams.len() {
+            ctwk_player_gun.beams[i].cool_down = ctwk_player_gun.beams[i].cool_down*gun_cooldown;
+        }
+    }
+
     // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
     // ctwk_player_gun.beams[0].cool_down = 0.00001;
     // ctwk_player_gun.beams[1].cool_down = 0.00001;
