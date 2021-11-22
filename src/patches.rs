@@ -1550,6 +1550,24 @@ fn patch_ending_scene_straight_to_credits(
     Ok(())
 }
 
+fn patch_arboretum_vines(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    let weeds = layers[1].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00130135)
+        .unwrap().clone();
+    
+    layers[0].objects.as_mut_vec().push(weeds.clone());
+    layers[1].objects.as_mut_vec().retain(|obj|
+        obj.instance_id&0x00FFFFFF != 0x00130135
+    );
+
+    Ok(())
+}
+
 fn patch_teleporter_destination<'r>(
     area: &mut mlvl_wrapper::MlvlArea,
     spawn_room: SpawnRoomData,
@@ -4533,12 +4551,12 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
-    ctwk_player_gun.beams[0].normal.damage = 9999999.0;
-    ctwk_player_gun.beams[0].cool_down = 0.00001;
-    ctwk_player_gun.beams[1].cool_down = 0.00001;
-    ctwk_player_gun.beams[2].cool_down = 0.00001;
-    ctwk_player_gun.beams[3].cool_down = 0.00001;
-    ctwk_player_gun.beams[4].cool_down = 0.00001;
+    // ctwk_player_gun.beams[0].normal.damage = 9999999.0;
+    // ctwk_player_gun.beams[0].cool_down = 0.00001;
+    // ctwk_player_gun.beams[1].cool_down = 0.00001;
+    // ctwk_player_gun.beams[2].cool_down = 0.00001;
+    // ctwk_player_gun.beams[3].cool_down = 0.00001;
+    // ctwk_player_gun.beams[4].cool_down = 0.00001;
     
     Ok(())
 }
@@ -5402,6 +5420,12 @@ fn patch_qol_cosmetic(
             patch_ending_scene_straight_to_credits
         );
     }
+
+
+    patcher.add_scly_patch(
+        resource_info!("08_courtyard.MREA").into(),
+        patch_arboretum_vines
+    );
 
     // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
 }
