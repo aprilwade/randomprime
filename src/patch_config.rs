@@ -275,6 +275,7 @@ pub struct PatchConfig
 
     pub starting_items: StartingItems,
     pub item_loss_items: StartingItems,
+    pub disable_item_loss: bool,
 
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
@@ -335,6 +336,7 @@ struct GameConfig
 
     starting_items: Option<StartingItems>,
     item_loss_items: Option<StartingItems>,
+    disable_item_loss: Option<bool>,
 
     etank_capacity: Option<u32>,
     item_max_capacity: Option<HashMap<String,u32>>,
@@ -786,6 +788,7 @@ impl PatchConfigPrivate
             starting_items,
             item_loss_items: self.game_config.item_loss_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
+            disable_item_loss: self.game_config.disable_item_loss.unwrap_or(false),
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             item_max_capacity: item_max_capacity,

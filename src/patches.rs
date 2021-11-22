@@ -1474,6 +1474,23 @@ fn make_elevators_patch<'a>(
     (skip_frigate, skip_ending_cinematic)
 }
 
+fn patch_disable_item_loss(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
+    let camera = layer.objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00050115)
+        .unwrap();
+    for conn in camera.connections.as_mut_vec().iter_mut() {
+        if conn.message == structs::ConnectionMsg::RESET {
+            conn.message = structs::ConnectionMsg::SET_TO_ZERO;
+        }
+    }
+    Ok(())
+}
+
 fn patch_landing_site_cutscene_triggers(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
@@ -6696,6 +6713,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             patcher.add_scly_patch(
                 resource_info!("01_over_mainplaza.MREA").into(),
                 patch_landing_site_cutscene_triggers
+            );
+        }
+
+        if config.disable_item_loss {
+            patcher.add_scly_patch(
+                resource_info!("02_intro_elevator.MREA").into(),
+                patch_disable_item_loss
             );
         }
     }
