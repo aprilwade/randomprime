@@ -997,6 +997,8 @@ fn main()
             let mapa_id = &ResId::<res_id::MAPA>::new(target_mapa.file_id);
 
             // println!("\n\n");
+            // let mut layer_changers: Vec<(u32,u32,u32)> = Vec::new();
+            // let mut enable_disable: Vec<(u32,bool)> = Vec::new();
             for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
                 // for obj in scly_layer.objects.iter() {
                 //     if obj.property_data.is_pickup() {
@@ -1010,6 +1012,22 @@ fn main()
                 //             println!("Power Bomb | {}% | {}", pickup.drop_rate, pickup.curr_increase);
                 //         } else if pickup.kind == PickupType::Missile.kind() && pickup.max_increase == 0 {
                 //             println!("Missile    | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         }
+                //     }
+                // }
+
+                // for obj in scly_layer.objects.iter() {
+                //     if obj.property_data.is_special_function() {
+                //         let sf = obj.property_data.as_special_function().unwrap();
+                //         if sf.type_ == 16 {
+                //             layer_changers.push((obj.instance_id, sf.layer_change_room_id, sf.layer_change_layer_id));
+                //         }
+                //     }
+                //     for conn in obj.connections.iter() {
+                //         if conn.message == structs::ConnectionMsg::INCREMENT {
+                //             enable_disable.push((conn.target_object_id,true));
+                //         } else if conn.message == structs::ConnectionMsg::DECREMENT {
+                //             enable_disable.push((conn.target_object_id,false));
                 //         }
                 //     }
                 // }
@@ -1107,6 +1125,13 @@ fn main()
                     }
                 }
             }
+            // for (id, room_id, layer_num) in layer_changers.iter() {
+            //     for (target_id, is_enable) in enable_disable.iter() {
+            //         if id & 0x0000FFFF == target_id & 0x0000FFFF {
+            //             println!("{}, {}, {}, {:?}", res.file_id, room_id, layer_num, is_enable);
+            //         }
+            //     }
+            // }
 
             {
                 let strg_id = mrea_name_strg_map[&ResId::<res_id::MREA>::new(res.file_id)];
@@ -1117,9 +1142,9 @@ fn main()
                     .strings.iter().next().unwrap()
                     .into_owned().into_string();
 
-                // println!("=== {} ===", name.as_str().to_string());
+                let room_id = ResId::<res_id::MREA>::new(res.file_id);
                 pak_locations.push(RoomInfo {
-                    room_id: ResId::<res_id::MREA>::new(res.file_id),
+                    room_id,
                     name,
                     name_id: strg_id,
                     mapa_id: *mapa_id,
