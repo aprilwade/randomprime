@@ -24,6 +24,10 @@ use crate::patch_config::{
     DoorConfig,
 };
 
+use std::{fs::{self, File}, io::{Read}};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use crate::{
     custom_assets::{custom_asset_ids, collect_game_resources, PickupHashKey},
     dol_patcher::DolPatcher,
@@ -69,6 +73,7 @@ use std::{
     io::Write,
     iter,
     mem,
+    time::Instant,
 };
 
 const ARTIFACT_OF_TRUTH_REQ_LAYER: u32 = 24;
@@ -304,6 +309,11 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     -> Result<(), String>
 {
     let frme = res.kind.as_frme_mut().unwrap();
+    let (jpn_font, jpn_point_scale) = if frme.version == 0 {
+        (None, None)
+    } else {
+        (Some(resource_info!("Deface18B.FONT").try_into().unwrap()), Some([50, 24].into()))
+    };
     let widget = frme.widgets.iter_mut()
         .find(|widget| widget.name == b"textpane_bombdigits\0".as_cstr())
         .unwrap();
@@ -312,6 +322,8 @@ fn patch_morphball_hud(res: &mut structs::Resource)
     match &mut widget.kind {
         structs::FrmeWidgetKind::TextPane(textpane) => {
             textpane.font = resource_info!("Deface18B.FONT").try_into().unwrap();
+            textpane.jpn_font = jpn_font;
+            textpane.jpn_point_scale = jpn_point_scale;
             textpane.word_wrap = 0;
         }
         _ => panic!("Widget \"textpane_bombdigits\" should be a TXPN"),
@@ -402,7 +414,8 @@ fn patch_add_item<'r>(
         pickup_model_data.scale[1] = pickup_model_data.scale[1]*scale;
         pickup_model_data.scale[2] = pickup_model_data.scale[2]*scale;
         pickup_model_data.cmdl = ResId::<res_id::CMDL>::new(extern_model.as_ref().unwrap().cmdl);
-        pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        // pickup_model_data.ancs.file_id = ResId::<res_id::ANCS>::new(extern_model.as_ref().unwrap().ancs);
+        pickup_model_data.ancs.file_id = ResId::invalid();
         pickup_model_data.part = ResId::invalid();
         pickup_model_data.ancs.node_index = extern_model.as_ref().unwrap().character;
         pickup_model_data.ancs.default_animation = 0;
@@ -522,7 +535,8 @@ fn patch_add_item<'r>(
     
     // If this is the echoes missile expansion model, compensate for the Z offset
     let mut pickup_position = pickup_config.position.unwrap();
-    if pickup_config.model.as_ref().unwrap_or(&"".to_string()).contains(&"MissileExpansion") {
+    let json_pickup_name = pickup_config.model.as_ref().unwrap_or(&"".to_string()).clone();
+    if json_pickup_name.contains(&"MissileExpansion") {
         pickup_position[2] = pickup_position[2] - 1.2;
     }
 
@@ -812,7 +826,9 @@ fn modify_pickups_in_mrea<'r>(
 
     let name = CString::new(format!(
             "Randomizer - Pickup ({:?})", pickup_type.name())).unwrap();
-    area.add_layer(Cow::Owned(name));
+    if pickup_config.position.as_ref().unwrap_or(&[0.0, 0.0, 0.0])[2] != -10000.0 { // part of an elaborate hack to fix echoes translators
+        area.add_layer(Cow::Owned(name));
+    }
     let new_layer_idx = area.layer_flags.layer_count as usize - 1;
 
     let new_layer_2_idx = new_layer_idx + 1;
@@ -995,6 +1011,7 @@ fn modify_pickups_in_mrea<'r>(
                        ) || (pickup_location.location.instance_id == 0x0428011c && obj_id == 0x002803CE)  // research core scan
                          || (pickup_location.location.instance_id == 0x00020176 && poi.scan_param.scan == custom_asset_ids::SHORELINES_POI_SCAN) // custom shorelines tower scan
                          || (pickup_location.location.instance_id == 600301 && poi.scan_param.scan == 0x00092837) // Ice Ruins West scan
+                         || (pickup_location.location.instance_id == 524406 && poi.scan_param.scan == 0x0008002C) // Ruined Fountain
                     {
                         poi.scan_param.scan = scan_id_out;
                     }
@@ -1444,6 +1461,269 @@ fn make_elevators_patch<'a>(
     (skip_frigate, skip_ending_cinematic)
 }
 
+fn patch_post_pq_frigate(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let room_id = area.mlvl_area.mrea.to_u32();
+    let layer_count = area.layer_flags.layer_count as usize;
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    for i in 0..layer_count {
+        layers[i].objects.as_mut_vec().retain(|obj|
+            !vec![
+                0x00010074, 0x00010070, 0x00010072, 0x00010071, 0x00010073, 0x00010009, // Air Lock
+                0x000E003B, 0x000E0025, 0x000E00CF, 0x000E0095, // Biotech 1
+                0x0003000D, 0x0003000C, // Mech Shaft
+                0x000500AF, 0x000500AE, 0x000500B1, 0x0005013F, // Alpha Elevator
+            ].contains(&(obj.instance_id&0x00FFFFFF))
+        );
+    }
+    let hatch = layers[0].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00010064);
+    if hatch.is_some() {
+        let hatch = hatch.unwrap();
+        for conn in hatch.connections.as_mut_vec().iter_mut() {
+            if conn.message == structs::ConnectionMsg::DEACTIVATE {
+                conn.message = structs::ConnectionMsg::ACTIVATE;
+            }
+        }
+    }
+
+    // Air lock
+    if layer_count > 1 {
+        let trigger = layers[1].objects.iter_mut()
+            .find(|obj| obj.instance_id&0x00FFFFFF == 0x000E003A);
+        if trigger.is_some() {
+            let trigger = trigger.unwrap();
+            for conn in trigger.connections.as_mut_vec().iter_mut() {
+                if vec![
+                    0x000E0122, // 0x000E0079, 0x000E0078,
+                ].contains(&(conn.target_object_id & 0x00FFFFFF)) {
+                    conn.message = structs::ConnectionMsg::ACTIVATE;
+                }
+            }
+        }
+    }
+
+    let cfldg_trigger = layers[0].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x001A00B7);
+    if cfldg_trigger.is_some() {
+        let cfldg_trigger = cfldg_trigger.unwrap();
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_MAX,
+                target_object_id: 0x001A011D,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00D3,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00D4,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00FB,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ENTERED,
+                message: structs::ConnectionMsg::RESET_AND_START,
+                target_object_id: 0x001A005D,
+            }
+        );
+        let trigger_property_data = cfldg_trigger.property_data.as_trigger_mut().unwrap();
+        trigger_property_data.position = [185.410889, -233.339539, -86.378212].into();
+        trigger_property_data.flags = 0x1000; // detect morphed player
+    }
+
+    // reactor core entrance
+    if room_id == 0x3ea190ee {
+        layers[0].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: _ps.fresh_instance_id_range.next().unwrap(),
+                property_data: structs::Trigger {
+                    name: b"Trigger\0".as_cstr(),
+                    position: [184.816299, -263.740845, -86.882622].into(),
+                    scale: [1.5, 1.5, 1.5].into(),
+                    damage_info: structs::scly_structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    force: [0.0, 0.0, 0.0].into(),
+                    flags: 0x1000, // detect morphed
+                    active: 1,
+                    deactivate_on_enter: 0,
+                    deactivate_on_exit: 0
+                }.into(),
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::INSIDE,
+                        message: structs::ConnectionMsg::SET_TO_MAX,
+                        target_object_id: 0x001B0002,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::INSIDE,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x001B0001,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x001B007F,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::RESET_AND_START,
+                        target_object_id: 0x001B0041,
+                    }
+                ].into()
+            }
+        );
+    }
+
+    Ok(())
+}
+
+fn patch_add_circle_platform<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    position: [f32;3],
+) -> Result<(), String>
+{
+    let deps = vec![
+        (0x48DF38A3, b"CMDL"),
+        (0xB2D50628, b"DCLN"),
+        (0x19C17D5C, b"TXTR"),
+        (0x0259F5F6, b"TXTR"),
+        (0x71190250, b"TXTR"),
+        (0xD0BA0FA8, b"TXTR"),
+        (0xF1478D6A, b"TXTR"),
+    ];
+    let deps_iter = deps.iter()
+        .map(|&(file_id, fourcc)| structs::Dependency {
+            asset_id: file_id,
+            asset_type: FourCC::from_bytes(fourcc),
+        }
+    );
+    area.add_dependencies(game_resources,0,deps_iter);
+
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    layers[0].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            property_data: structs::Platform {
+                name: b"myplatform\0".as_cstr(),
+
+                position: position.into(),
+                rotation: [0.0, 0.0, -90.0].into(),
+                scale: [1.0, 1.0, 1.0].into(),
+                unknown0: [0.0, 0.0, 0.0].into(), // extent
+                scan_offset: [0.0, 0.0, 0.0].into(),
+            
+                cmdl: ResId::<res_id::CMDL>::new(0x48DF38A3),
+                ancs: structs::scly_structs::AncsProp {
+                    file_id: ResId::invalid(),
+                    node_index: 0,
+                    default_animation: 0xFFFFFFFF,
+                },
+                actor_params: structs::scly_structs::ActorParameters {
+                    light_params: structs::scly_structs::LightParameters {
+                        unknown0: 1,
+                        unknown1: 1.0,
+                        shadow_tessellation: 0,
+                        unknown2: 1.0,
+                        unknown3: 20.0,
+                        color: [1.0, 1.0, 1.0, 1.0].into(),
+                        unknown4: 1,
+                        world_lighting: 1,
+                        light_recalculation: 1,
+                        unknown5: [0.0, 0.0, 0.0].into(),
+                        unknown6: 4,
+                        unknown7: 4,
+                        unknown8: 0,
+                        light_layer_id: 0
+                    },
+                    scan_params: structs::scly_structs::ScannableParameters {
+                        scan: ResId::invalid(), // None
+                    },
+                    xray_cmdl: ResId::invalid(), // None
+                    xray_cskr: ResId::invalid(), // None
+                    thermal_cmdl: ResId::invalid(), // None
+                    thermal_cskr: ResId::invalid(), // None
+
+                    unknown0: 1,
+                    unknown1: 1.0,
+                    unknown2: 1.0,
+
+                    visor_params: structs::scly_structs::VisorParameters {
+                        unknown0: 0,
+                        target_passthrough: 0,
+                        visor_mask: 15 // Combat|Scan|Thermal|XRay
+                    },
+                    enable_thermal_heat: 1,
+                    unknown3: 0,
+                    unknown4: 1,
+                    unknown5: 1.0
+                },
+
+                unknown1: 5.0,
+                active: 1,
+
+                dcln: ResId::<res_id::DCLN>::new(0xB2D50628),
+            
+                health_info: structs::scly_structs::HealthInfo {
+                    health: 1.0,
+                    knockback_resistance: 1.0,
+                },
+                damage_vulnerability: DoorType::Disabled.vulnerability(),
+            
+                unknown3: 0,
+                unknown4: 1.0,
+                unknown5: 0,
+                unknown6: 200,
+                unknown7: 20,
+            }.into(),
+            connections: vec![].into(),
+        }
+    );
+
+    Ok(())
+}
+
+fn patch_disable_item_loss(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let layer = area.mrea().scly_section_mut().layers.iter_mut().next().unwrap();
+    let camera = layer.objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00050115)
+        .unwrap();
+    for conn in camera.connections.as_mut_vec().iter_mut() {
+        if conn.message == structs::ConnectionMsg::RESET {
+            conn.message = structs::ConnectionMsg::SET_TO_ZERO;
+        }
+    }
+    Ok(())
+}
+
 fn patch_landing_site_cutscene_triggers(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea,
@@ -1517,6 +1797,24 @@ fn patch_ending_scene_straight_to_credits(
         message: structs::ConnectionMsg::ACTION,
         target_object_id: 1241, // "SpecialFunction-edngame"
     });
+    Ok(())
+}
+
+fn patch_arboretum_vines(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    let weeds = layers[1].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00130135)
+        .unwrap().clone();
+    
+    layers[0].objects.as_mut_vec().push(weeds.clone());
+    layers[1].objects.as_mut_vec().retain(|obj|
+        obj.instance_id&0x00FFFFFF != 0x00130135
+    );
+
     Ok(())
 }
 
@@ -3073,6 +3371,35 @@ fn patch_remove_cutscenes(
                         target_object_id,
                     });
                 }
+            } else if obj_id == 0x001A04B8 || obj_id == 0x001A04C5 { // Elite Quarters Pickup(s)
+                let pickup = obj.property_data.as_pickup_mut().unwrap();
+                pickup.position[2] = pickup.position[2] + 2.0; // Move up so it's more obvious
+
+                // The pickup should display hudmemo instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001A0348,
+                });
+                // The pickup should unlock lift instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::DECREMENT,
+                    target_object_id: 0x001A03D9,
+                });
+                // The pickup should unlock doors instead of OP
+                obj.connections.as_mut_vec().push(structs::Connection {
+                    state: structs::ConnectionState::ARRIVED,
+                    message: structs::ConnectionMsg::SET_TO_ZERO,
+                    target_object_id: 0x001A0328,
+                });
+
+            } else if obj_id == 0x001A0126 { // Omega Pirate
+                obj.connections.as_mut_vec().retain(|conn| !vec![
+                    0x001A03D9, // elevator shield
+                    0x001A0328, // door unlock relay
+                    ].contains(&(conn.target_object_id & 0x00FFFFFF))
+                );
             }
 
             // ball triggers can be mean sometimes when not in the saftey of a cutscene, tone it down from 40 to 10
@@ -3113,7 +3440,7 @@ fn patch_remove_cutscenes(
                     obj.property_data.is_camera_filter_keyframe() ||
                     obj.property_data.is_camera_blur_keyframe() ||
                     obj.property_data.is_player_actor() ||
-                    vec![0x0018028E, 0x001802A1, 0x0018025C, 0x001800CC, 0x00180212, 0x00020473, 0x00070521].contains(&(obj.instance_id&0x00FFFFFF)) || // thardus death sounds + thardus corpse + main quarry, security station playerhint
+                    vec![0x0018028E, 0x001802A1, 0x0018025C, 0x001800CC, 0x00180212, 0x00020473, 0x00070521, 0x001A034A, 0x001A04C2, 0x001A034B].contains(&(obj.instance_id&0x00FFFFFF)) || // thardus death sounds + thardus corpse + main quarry, security station playerhint, post OP death timer for hudmemo, Elite Quarters Control Disablers
                     (obj.property_data.is_special_function() && obj.property_data.as_special_function().unwrap().type_ == 0x18) // "show billboard"
                 )
             );
@@ -3426,27 +3753,60 @@ fn patch_save_station_for_warp_to_start<'r>(
     Ok(())
 }
 
-fn patch_memorycard_strg(res: &mut structs::Resource) -> Result<(), String>
+fn patch_memorycard_strg(res: &mut structs::Resource, version: Version) -> Result<(), String>
 {
-    let strings = res.kind.as_strg_mut().unwrap()
-        .string_tables
-        .as_mut_vec()
-        .iter_mut()
-        .find(|table| table.lang == b"ENGL".into())
-        .unwrap()
-        .strings
-        .as_mut_vec();
+    if version == Version::NtscJ {
+        let strings = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
 
-    let s = strings.iter_mut()
-        .find(|s| *s == "Save progress to Memory Card in Slot A?\u{0}")
-        .unwrap();
-    *s = "Save progress to Memory Card in Slot A?\nHold &image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; while choosing No to warp to starting area.\u{0}".to_string().into();
+        let s = strings.iter_mut()
+            .nth(8)
+            .unwrap();
+        *s = "スロットAのメモリーカードに\nデータをセーブしますか？\n&image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; キーを押したまま、「いいえ」を選択して開始ルームにワープします。\u{0}".to_string().into();
+    } else {
+        let strings = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"ENGL".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
+
+        let s = strings.iter_mut()
+            .find(|s| *s == "Save progress to Memory Card in Slot A?\u{0}")
+            .unwrap();
+        *s = "Save progress to Memory Card in Slot A?\nHold &image=SI,0.70,0.68,46434ED3; + &image=SI,0.70,0.68,08A2E4B9; while choosing No to warp to starting room.\u{0}".to_string().into();
+    }
 
     Ok(())
 }
 
-fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
+fn patch_main_strg(res: &mut structs::Resource, version: Version, msg: &str) -> Result<(), String>
 {
+    if version == Version::NtscJ {
+        let strings_jpn = res.kind.as_strg_mut().unwrap()
+            .string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec();
+
+        let s = strings_jpn.iter_mut()
+            .nth(37)
+            .unwrap();
+        *s = "&main-color=#FFFFFF;エクストラ\u{0}".to_string().into();
+        strings_jpn.push(format!("{}\0", msg).into());
+    }
+    
     let strings = res.kind.as_strg_mut().unwrap()
         .string_tables
         .as_mut_vec()
@@ -3460,8 +3820,8 @@ fn patch_main_strg(res: &mut structs::Resource, msg: &str) -> Result<(), String>
         .find(|s| *s == "Metroid Fusion Connection Bonuses\u{0}")
         .unwrap();
     *s = "Extras\u{0}".to_string().into();
-
     strings.push(format!("{}\0", msg).into());
+
     Ok(())
 }
 
@@ -3472,7 +3832,7 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
     let (jpn_font, jpn_point_scale) = if frme.version == 0 {
         (None, None)
     } else {
-        (Some(ResId::new(0x5d696116)), Some([237, 35].into()))
+        (Some(ResId::new(0xC29C51F1)), Some([237, 35].into()))
     };
 
     frme.widgets.as_mut_vec().push(structs::FrmeWidget {
@@ -3536,11 +3896,16 @@ fn patch_main_menu(res: &mut structs::Resource) -> Result<(), String>
 
 fn patch_credits(
     res: &mut structs::Resource,
+    version: Version,
     config: &PatchConfig,
 )
     -> Result<(), String>
 {
     let mut output = "\n\n\n\n\n\n\n".to_string();
+    
+    if version == Version::NtscJ {
+        output = format!("&line-extra-space=16;&font=5D696116;{}", output);
+    }
 
     if config.credits_string.is_some() {
         output = format!("{}{}", output, config.credits_string.as_ref().unwrap());
@@ -3606,6 +3971,17 @@ fn patch_credits(
         }
     }
     output = format!("{}{}", output, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0");
+    if version == Version::NtscJ {
+        let output_jpn = format!("{}", output);
+        res.kind.as_strg_mut().unwrap().string_tables
+            .as_mut_vec()
+            .iter_mut()
+            .find(|table| table.lang == b"JAPN".into())
+            .unwrap()
+            .strings
+            .as_mut_vec()
+            .push(output_jpn.into());
+    }
     res.kind.as_strg_mut().unwrap().string_tables
         .as_mut_vec()
         .iter_mut()
@@ -3739,7 +4115,7 @@ fn patch_dol<'r>(
     remove_ball_color: bool,
 ) -> Result<(), String>
 {
-    if version == Version::NtscJ || version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
+    if version == Version::NtscUTrilogy || version == Version::NtscJTrilogy || version == Version::PalTrilogy {
         return Ok(())
     }
 
@@ -3751,11 +4127,12 @@ fn patch_dol<'r>(
                     Version::NtscU0_00    => s.addr_0_00,
                     Version::NtscU0_01    => unreachable!(),
                     Version::NtscU0_02    => s.addr_0_02,
-                    Version::NtscJ    => unreachable!(),
-                    Version::Pal         => s.addr_pal,
+                    Version::NtscK        => s.addr_kor,
+                    Version::NtscJ        => s.addr_jap,
+                    Version::Pal          => s.addr_pal,
                     Version::NtscUTrilogy => unreachable!(),
                     Version::NtscJTrilogy => unreachable!(),
-                    Version::PalTrilogy => unreachable!(),
+                    Version::PalTrilogy   => unreachable!(),
                 }.unwrap_or_else(|| panic!("Symbol {} unknown for version {}", $sym, $version))
             }
         }
@@ -3767,7 +4144,7 @@ fn patch_dol<'r>(
     };
 
     let mut dol_patcher = DolPatcher::new(reader);
-    if version == Version::Pal {
+    if version == Version::Pal || version == Version::NtscJ {
         dol_patcher
             .patch(symbol_addr!("aMetroidprime", version), b"randomprime\0"[..].into())?;
     } else {
@@ -3809,7 +4186,7 @@ fn patch_dol<'r>(
     }
 
     if config.automatic_crash_screen {
-        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version), {
+        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {
             nop;
         });
         dol_patcher.ppcasm_patch(&automatic_crash_patch)?;
@@ -3821,12 +4198,21 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&cinematic_skip_patch)?;
 
+    // pattern 50801f38 981f???? 881f???? 5080177a 981f???? 83e1
     if version == Version::Pal {
         let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x1dc, {
             li      r6, 100;
             stw     r6, 0x80(r31);
             lis     r6, 0xF7FF;
             stw     r6, 0x84(r31);
+        });
+        dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
+    } else if version == Version::NtscJ {
+        let unlockables_default_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFv", version) + 0x1bc, {
+            li      r6, 100;
+            stw     r6, 0x664(r31);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x668(r31);
         });
         dol_patcher.ppcasm_patch(&unlockables_default_ctor_patch)?;
     } else {
@@ -3849,6 +4235,16 @@ fn patch_dol<'r>(
             li      r4, 2;
         });
         dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
+    } else if version == Version::NtscJ {
+        let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x310, {
+            li      r6, 100;
+            stw     r6, 0x664(r29);
+            lis     r6, 0xF7FF;
+            stw     r6, 0x668(r29);
+            mr      r3, r30;
+            li      r4, 2;
+        });
+        dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
     } else {
         let unlockables_read_ctor_patch = ppcasm!(symbol_addr!("__ct__14CSystemOptionsFRC12CInputStream", version) + 0x308, {
             li      r6, 100;
@@ -3861,7 +4257,7 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&unlockables_read_ctor_patch)?;
     };
 
-    if version != Version::Pal {
+    if version != Version::Pal && version != Version::NtscJ {
         let missile_hud_formating_patch = ppcasm!(symbol_addr!("SetNumMissiles__20CHudMissileInterfaceFiRC13CStateManager", version) + 0x14, {
                 b          skip;
             fmt:
@@ -3909,7 +4305,7 @@ fn patch_dol<'r>(
         dol_patcher.ppcasm_patch(&powerbomb_hud_formating_patch)?;
     }
 
-    if version == Version::Pal {
+    if version == Version::Pal || version == Version::NtscJ {
         let level_select_mlvl_upper_patch = ppcasm!(symbol_addr!("__sinit_CFrontEndUI_cpp", version) + 0x0c, {
                 lis         r3, {spawn_room.mlvl}@h;
         });
@@ -3953,7 +4349,7 @@ fn patch_dol<'r>(
     }
 
     if config.staggered_suit_damage {
-        let (patch_offset, jump_offset) = if version == Version::Pal {
+        let (patch_offset, jump_offset) = if version == Version::Pal || version == Version::NtscJ {
             (0x11c, 0x1b8)
         } else {
             (0x128, 0x1c4)
@@ -3997,7 +4393,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&etank_capacity_base_health_patch)?;
 
-    if version == Version::NtscU0_02 || version == Version::Pal {
+    if version == Version::NtscU0_02 || version == Version::Pal || version == Version::NtscJ {
         let players_choice_scan_dash_patch = ppcasm!(symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x3c, {
                 b       { symbol_addr!("SidewaysDashAllowed__7CPlayerCFffRC11CFinalInputR13CStateManager", version) + 0x54 };
         });
@@ -4085,7 +4481,16 @@ fn patch_dol<'r>(
             let map_str = rel_files::REL_LOADER_102_MAP;
             (loader_bytes, map_str)
         },
-        Version::NtscJ => unreachable!(),
+        Version::NtscK => {
+            let loader_bytes = rel_files::REL_LOADER_KOR;
+            let map_str = rel_files::REL_LOADER_KOR_MAP;
+            (loader_bytes, map_str)
+        },
+        Version::NtscJ => {
+            let loader_bytes = rel_files::REL_LOADER_JAP;
+            let map_str = rel_files::REL_LOADER_JAP_MAP;
+            (loader_bytes, map_str)
+        },
         Version::Pal => {
             let loader_bytes = rel_files::REL_LOADER_PAL;
             let map_str = rel_files::REL_LOADER_PAL_MAP;
@@ -4146,7 +4551,6 @@ fn patch_ctwk_game(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         _ => panic!("Failed to map res=0x{:X} as CtwkGame", res.file_id),
     };
 
-    // println!("before - {:?}", ctwk_game);
     ctwk_game.press_start_delay = 0.001;
 
     if ctwk_config.fov.is_some() {
@@ -4202,7 +4606,6 @@ fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player.lava_ball_jump_factor = 100.0;
     }
 
-    // println!("before - {:?}", ctwk_player);
     if ctwk_config.move_while_scan.unwrap_or(false) {
         ctwk_player.scan_freezes_game = 0;
     }
@@ -4396,17 +4799,22 @@ fn patch_ctwk_player_gun(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player_gun.gun_position[2] = ctwk_player_gun.gun_position[2] + gun_position[2];
     }
 
-    ctwk_player_gun.beams[0].normal.damage = 99999.0;
-    ctwk_player_gun.beams[1].normal.damage = 99999.0;
-    ctwk_player_gun.beams[2].normal.damage = 99999.0;
-    ctwk_player_gun.beams[3].normal.damage = 99999.0;
-    ctwk_player_gun.beams[4].normal.damage = 99999.0;
-    ctwk_player_gun.beams[0].cool_down = 0.00001;
-    ctwk_player_gun.beams[1].cool_down = 0.00001;
-    ctwk_player_gun.beams[2].cool_down = 0.00001;
-    ctwk_player_gun.beams[3].cool_down = 0.00001;
-    ctwk_player_gun.beams[4].cool_down = 0.00001;
-    
+    if ctwk_config.gun_damage.is_some() {
+        let gun_damage = ctwk_config.gun_damage.unwrap();
+        ctwk_player_gun.missile.damage = ctwk_player_gun.missile.damage*gun_damage;
+        for i in 0..ctwk_player_gun.beams.len() {
+            ctwk_player_gun.beams[i].normal.damage = ctwk_player_gun.beams[i].normal.damage*gun_damage;
+            ctwk_player_gun.beams[i].charged.damage = ctwk_player_gun.beams[i].charged.damage*gun_damage;
+            ctwk_player_gun.combos[i].damage = ctwk_player_gun.combos[i].damage*gun_damage;
+        }
+    }
+
+    if ctwk_config.gun_cooldown.is_some() {
+        let gun_cooldown = ctwk_config.gun_cooldown.unwrap();
+        for i in 0..ctwk_player_gun.beams.len() {
+            ctwk_player_gun.beams[i].cool_down = ctwk_player_gun.beams[i].cool_down*gun_cooldown;
+        }
+    }
     Ok(())
 }
 
@@ -4625,6 +5033,56 @@ fn patch_final_boss_permadeath<'r>(
                 connections: _connections.into(),
             }
         );
+    }
+    Ok(()
+}
+
+fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    let mut ctwk = res.kind.as_ctwk_mut().unwrap();
+    let ctwk_gui_colors = match &mut ctwk {
+        structs::Ctwk::CtwkGuiColors(i) => i,
+        _ => panic!("Failed to map res=0x{:X} as CtwkGuiColors", res.file_id),
+    };
+
+    if ctwk_config.hud_color.is_some() {
+        let hud_color = ctwk_config.hud_color.unwrap();
+        for i in 0..148 {
+            // Skip coloring all the energy stuff because it glitches otherwise
+            if vec![112, 141, 142, 143, 144, 145, 146, 147,
+            96,
+            97,
+            112,
+            113,
+            115,
+            116,
+            117,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            129,
+            130,
+            131,
+            132,
+            133,
+            134,
+            135,
+            136,
+            137,
+            138,
+            139,
+            140].contains(&i) {
+                let mut color = ctwk_gui_colors.colors[i as usize].clone();
+                color[3] = color[3]/2.0;
+                ctwk_gui_colors.colors[i as usize] = color.into();
+                continue;
+            }
+            ctwk_gui_colors.colors[i as usize] = [hud_color[0], hud_color[1], hud_color[2], ctwk_gui_colors.colors[i as usize][3]].into();
+        }
     }
 
     Ok(())
@@ -4936,6 +5394,7 @@ enum Version
     NtscU0_00,
     NtscU0_01,
     NtscU0_02,
+    NtscK,
     NtscJ,
     Pal,
     NtscUTrilogy,
@@ -4951,11 +5410,12 @@ impl fmt::Display for Version
             Version::NtscU0_00    => write!(f, "1.00"),
             Version::NtscU0_01    => write!(f, "1.01"),
             Version::NtscU0_02    => write!(f, "1.02"),
-            Version::NtscJ    => write!(f, "jap"),
-            Version::Pal         => write!(f, "pal"),
+			Version::NtscK        => write!(f, "kor"),
+            Version::NtscJ        => write!(f, "jap"),
+            Version::Pal          => write!(f, "pal"),
             Version::NtscUTrilogy => write!(f, "trilogy_ntsc_u"),
             Version::NtscJTrilogy => write!(f, "trilogy_ntsc_j"),
-            Version::PalTrilogy => write!(f, "trilogy_pal"),
+            Version::PalTrilogy   => write!(f, "trilogy_pal"),
         }
     }
 }
@@ -5168,28 +5628,198 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, config: &PatchConfig)
 fn patch_qol_cosmetic(
     patcher: &mut PrimePatcher,
     skip_ending_cinematic: bool,
+    quick_patch: bool,
 )
 {
-    // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
-    // copy and to make compressed ISOs smaller.
-    const FMV_NAMES: &[&[u8]] = &[
-        b"Video/attract0.thp",
-        b"Video/attract1.thp",
-        b"Video/attract2.thp",
-        b"Video/attract3.thp",
-        b"Video/attract4.thp",
-        b"Video/attract5.thp",
-        b"Video/attract6.thp",
-        b"Video/attract7.thp",
-        b"Video/attract8.thp",
-        b"Video/attract9.thp",
-    ];
-    const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
-    for name in FMV_NAMES {
-        patcher.add_file_patch(name, |file| {
-            *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
-            Ok(())
-        });
+    if quick_patch {
+        // Replace all non-critical files with empty ones to speed up patching
+        const FILENAMES: &[&[u8]] = &[
+            b"Video/00_first_start.thp",
+            b"Video/01_startloop.thp",
+            b"Video/02_start_fileselect_A.thp",
+            b"Video/02_start_fileselect_B.thp",
+            b"Video/02_start_fileselect_C.thp",
+            b"Video/03_fileselectloop.thp",
+            b"Video/04_fileselect_playgame_A.thp",
+            b"Video/04_fileselect_playgame_B.thp",
+            b"Video/04_fileselect_playgame_C.thp",
+            b"Video/05_tallonText.thp",
+            b"Video/06_fileselect_GBA.thp",
+            b"Video/07_GBAloop.thp",
+            b"Video/08_GBA_fileselect.thp",
+            b"Video/AfterCredits.thp",
+            b"Video/SpecialEnding.thp",
+            b"Video/attract0.thp",
+            b"Video/attract1.thp",
+            b"Video/attract2.thp",
+            b"Video/attract3.thp",
+            b"Video/attract4.thp",
+            b"Video/attract5.thp",
+            b"Video/attract6.thp",
+            b"Video/attract7.thp",
+            b"Video/attract8.thp",
+            b"Video/attract9.thp",
+            b"Video/creditBG.thp",
+            b"Video/from_gallery.thp",
+            b"Video/losegame.thp",
+            b"Video/to_gallery.thp",
+            b"Video/win_bad_begin.thp",
+            b"Video/win_bad_end.thp",
+            b"Video/win_bad_loop.thp",
+            b"Video/win_good_begin.thp",
+            b"Video/win_good_end.thp",
+            b"Video/win_good_loop.thp",
+            b"Audio/CraterReveal2.dsp",
+            b"Audio/END-escapeL.dsp",
+            b"Audio/END-escapeR.dsp",
+            b"Audio/Ruins-soto-AL.dsp",
+            b"Audio/Ruins-soto-AR.dsp",
+            b"Audio/Ruins-soto-BL.dsp",
+            b"Audio/Ruins-soto-BR.dsp",
+            b"Audio/amb_x_elevator_lp_02.dsp",
+            b"Audio/cra_mainL.dsp",
+            b"Audio/cra_mainR.dsp",
+            b"Audio/cra_mprime1L.dsp",
+            b"Audio/cra_mprime1R.dsp",
+            b"Audio/cra_mprime2L.dsp",
+            b"Audio/cra_mprime2R.dsp",
+            b"Audio/crash-ship-3L.dsp",
+            b"Audio/crash-ship-3R.dsp",
+            b"Audio/crash-ship-maeL.dsp",
+            b"Audio/crash-ship-maeR.dsp",
+            b"Audio/ending3.rsf",
+            b"Audio/evt_x_event_00.dsp",
+            b"Audio/frontend_1.rsf",
+            b"Audio/frontend_2.rsf",
+            b"Audio/gen_SaveStationL.dsp",
+            b"Audio/gen_SaveStationR.dsp",
+            b"Audio/gen_ShortBattle2L.dsp",
+            b"Audio/gen_ShortBattle2R.dsp",
+            b"Audio/gen_ShortBattleL.dsp",
+            b"Audio/gen_ShortBattleR.dsp",
+            b"Audio/gen_elevatorL.dsp",
+            b"Audio/gen_elevatorR.dsp",
+            b"Audio/gen_puzzleL.dsp",
+            b"Audio/gen_puzzleR.dsp",
+            b"Audio/gen_rechargeL.dsp",
+            b"Audio/gen_rechargeR.dsp",
+            b"Audio/ice_chapelL.dsp",
+            b"Audio/ice_chapelR.dsp",
+            b"Audio/ice_connectL.dsp",
+            b"Audio/ice_connectR.dsp",
+            b"Audio/ice_kincyoL.dsp",
+            b"Audio/ice_kincyoR.dsp",
+            b"Audio/ice_shorelinesL.dsp",
+            b"Audio/ice_shorelinesR.dsp",
+            b"Audio/ice_thardusL.dsp",
+            b"Audio/ice_thardusR.dsp",
+            b"Audio/ice_worldmainL.dsp",
+            b"Audio/ice_worldmainR.dsp",
+            b"Audio/ice_x_wind_lp_00L.dsp",
+            b"Audio/ice_x_wind_lp_00R.dsp",
+            b"Audio/int_biohazardL.dsp",
+            b"Audio/int_biohazardR.dsp",
+            b"Audio/int_escapel.dsp",
+            b"Audio/int_escaper.dsp",
+            b"Audio/int_introcinemaL.dsp",
+            b"Audio/int_introcinemaR.dsp",
+            b"Audio/int_introstageL.dsp",
+            b"Audio/int_introstageR.dsp",
+            b"Audio/int_parasitequeenL.dsp",
+            b"Audio/int_parasitequeenR.dsp",
+            b"Audio/int_spaceL.dsp",
+            b"Audio/int_spaceR.dsp",
+            b"Audio/int_toujouL.dsp",
+            b"Audio/int_toujouR.dsp",
+            b"Audio/itm_x_short_02.dsp",
+            b"Audio/jin_artifact.dsp",
+            b"Audio/jin_itemattain.dsp",
+            b"Audio/lav_lavamaeL.dsp",
+            b"Audio/lav_lavamaeR.dsp",
+            b"Audio/lav_lavamainL.dsp",
+            b"Audio/lav_lavamainR.dsp",
+            b"Audio/min_darkL.dsp",
+            b"Audio/min_darkR.dsp",
+            b"Audio/min_mainL.dsp",
+            b"Audio/min_mainR.dsp",
+            b"Audio/min_omegapirateL.dsp",
+            b"Audio/min_omegapirateR.dsp",
+            b"Audio/min_phazonL.dsp",
+            b"Audio/min_phazonR.dsp",
+            b"Audio/min_x_wind_lp_01L.dsp",
+            b"Audio/min_x_wind_lp_01R.dsp",
+            b"Audio/over-craterrevealL.dsp",
+            b"Audio/over-craterrevealR.dsp",
+            b"Audio/over-ridleyL.dsp",
+            b"Audio/over-ridleyR.dsp",
+            b"Audio/over-ridleydeathL.dsp",
+            b"Audio/over-ridleydeathR.dsp",
+            b"Audio/over-stonehengeL.dsp",
+            b"Audio/over-stonehengeR.dsp",
+            b"Audio/over-world-daichiL.dsp",
+            b"Audio/over-world-daichiR.dsp",
+            b"Audio/over-worldL.dsp",
+            b"Audio/over-worldR.dsp",
+            b"Audio/pir_battle3L.dsp",
+            b"Audio/pir_battle3R.dsp",
+            b"Audio/pir_isogiL.dsp",
+            b"Audio/pir_isogiR.dsp",
+            b"Audio/pir_yoinL.dsp",
+            b"Audio/pir_yoinR.dsp",
+            b"Audio/pir_zencyoL.dsp",
+            b"Audio/pir_zencyoR.dsp",
+            b"Audio/pvm01.dsp",
+            b"Audio/rid_r_death_01.dsp",
+            b"Audio/rui_chozobowlingL.dsp",
+            b"Audio/rui_chozobowlingR.dsp",
+            b"Audio/rui_flaaghraL.dsp",
+            b"Audio/rui_flaaghraR.dsp",
+            b"Audio/rui_hivetotemL.dsp",
+            b"Audio/rui_hivetotemR.dsp",
+            b"Audio/rui_monkeylowerL.dsp",
+            b"Audio/rui_monkeylowerR.dsp",
+            b"Audio/rui_samusL.dsp",
+            b"Audio/rui_samusR.dsp",
+            b"Audio/ruins-firstL.dsp",
+            b"Audio/ruins-firstR.dsp",
+            b"Audio/ruins-nakaL.dsp",
+            b"Audio/ruins-nakaR.dsp",
+            b"Audio/sam_samusappear.dsp",
+            b"Audio/samusjak.rsf",
+            b"Audio/tha_b_enraged_00.dsp",
+            b"Audio/tha_r_death_00.dsp",
+        ];
+        const EMPTY: &[u8] = include_bytes!("../extra_assets/attract_mode.thp"); // empty file
+        for name in FILENAMES {
+            patcher.add_file_patch(name, |file| {
+                *file = structs::FstEntryFile::ExternalFile(Box::new(EMPTY));
+                Ok(())
+            });
+        }
+    }
+    else
+    {    
+        // Replace the attract mode FMVs with empty files to reduce the amount of data we need to
+        // copy and to make compressed ISOs smaller.
+        const FMV_NAMES: &[&[u8]] = &[
+            b"Video/attract0.thp",
+            b"Video/attract1.thp",
+            b"Video/attract2.thp",
+            b"Video/attract3.thp",
+            b"Video/attract4.thp",
+            b"Video/attract5.thp",
+            b"Video/attract6.thp",
+            b"Video/attract7.thp",
+            b"Video/attract8.thp",
+            b"Video/attract9.thp",
+        ];
+        const FMV: &[u8] = include_bytes!("../extra_assets/attract_mode.thp");
+        for name in FMV_NAMES {
+            patcher.add_file_patch(name, |file| {
+                *file = structs::FstEntryFile::ExternalFile(Box::new(FMV));
+                Ok(())
+            });
+        }
     }
 
     patcher.add_resource_patch(
@@ -5203,6 +5833,12 @@ fn patch_qol_cosmetic(
             patch_ending_scene_straight_to_credits
         );
     }
+
+
+    patcher.add_scly_patch(
+        resource_info!("08_courtyard.MREA").into(),
+        patch_arboretum_vines
+    );
 
     // not shown here - hudmemos are nonmodal and item aquisition cutscenes are removed
 }
@@ -5758,16 +6394,17 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
     let mut gc_disc: structs::GcDisc = reader.read(());
 
     let version = match (&gc_disc.header.game_identifier(), gc_disc.header.disc_id, gc_disc.header.version) {
-        (b"GM8E01", 0, 0) => Version::NtscU0_00,
-        (b"GM8E01", 0, 1) => Version::NtscU0_01,
-        (b"GM8E01", 0, 2) => Version::NtscU0_02,
-        (b"GM8J01", 0, 0) => Version::NtscJ,
-        (b"GM8P01", 0, 0) => Version::Pal,
-        (b"R3ME01", 0, 0) => Version::NtscUTrilogy,
-        (b"R3IJ01", 0, 0) => Version::NtscJTrilogy,
-        (b"R3MP01", 0, 0) => Version::PalTrilogy,
+        (b"GM8E01", 0, 0)  => Version::NtscU0_00,
+        (b"GM8E01", 0, 1)  => Version::NtscU0_01,
+        (b"GM8E01", 0, 2)  => Version::NtscU0_02,
+        (b"GM8E01", 0, 48) => Version::NtscK,
+        (b"GM8J01", 0, 0)  => Version::NtscJ,
+        (b"GM8P01", 0, 0)  => Version::Pal,
+        (b"R3ME01", 0, 0)  => Version::NtscUTrilogy,
+        (b"R3IJ01", 0, 0)  => Version::NtscJTrilogy,
+        (b"R3MP01", 0, 0)  => Version::PalTrilogy,
         _ => Err(concat!(
-                "The input ISO doesn't appear to be NTSC-US, PAL Metroid Prime, ",
+                "The input ISO doesn't appear to be NTSC-US, NTSC-J, NTSC-K, PAL Metroid Prime, ",
                 "or NTSC-US, NTSC-J, PAL Metroid Prime Trilogy."
             ))?
     };
@@ -5790,7 +6427,8 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
         Version::NtscU0_01    => None,
         Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
         Version::Pal          => Some(rel_files::PATCHES_PAL_REL),
-        Version::NtscJ        => None,
+        Version::NtscK        => Some(rel_files::PATCHES_KOR_REL),
+        Version::NtscJ        => Some(rel_files::PATCHES_JAP_REL),
         Version::NtscUTrilogy => None,
         Version::NtscJTrilogy => None,
         Version::PalTrilogy => None,
@@ -5926,6 +6564,10 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     patcher.add_resource_patch(
         resource_info!("Ball.CTWK").into(),
         |res| patch_ctwk_ball(res, &config.ctwk_config),
+    );
+    patcher.add_resource_patch(
+        resource_info!("GuiColors.CTWK").into(),
+        |res| patch_ctwk_gui_colors(res, &config.ctwk_config),
     );
 
     /* TODO: add more tweaks
@@ -6161,7 +6803,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                     move |_ps, area| patch_add_item(
                         _ps,
                         area,
-                        &pickup, 
+                        &pickup,
                         game_resources,
                         pickup_hudmemos,
                         pickup_scans,
@@ -6249,6 +6891,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         config.ctwk_config.player_size.clone().unwrap_or(1.0),
         config.force_vanilla_layout,
     );
+    let skip_frigate = skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl();
 
     patcher.add_file_patch(
         b"default.dol",
@@ -6263,7 +6906,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let rel_config = create_rel_config_file(starting_room, config.quickplay);
 
-    if skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl(){
+    if skip_frigate {
         // remove frigate data to save time/space
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
     } else {
@@ -6316,10 +6959,9 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             );
         }
     }
-
     patcher.add_resource_patch(
         resource_info!("STRG_Main.STRG").into(),// 0x0552a456
-        |res| patch_main_strg(res, &config.main_menu_message)
+        |res| patch_main_strg(res, version, &config.main_menu_message)
     );
     patcher.add_resource_patch(
         resource_info!("FRME_NewFileSelect.FRME").into(),
@@ -6327,7 +6969,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
     patcher.add_resource_patch(
         resource_info!("STRG_Credits.STRG").into(),
-        |res| patch_credits(res, config)
+        |res| patch_credits(res, version, config)
     );
     patcher.add_scly_patch(
         resource_info!("07_stonehenge.MREA").into(),
@@ -6432,15 +7074,73 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             ),
         );
 
-        // TODO: only works for landing site
+        if config.disable_item_loss {
+            patcher.add_scly_patch(
+                resource_info!("02_intro_elevator.MREA").into(),
+                patch_disable_item_loss
+            );
+        }
+
+        // Patch frigate so that it can be explored any direction without crashing or soft-locking
         patcher.add_scly_patch(
-            (frigate_done_room.pak_name.as_bytes(), frigate_done_room.mrea),
-            move |_ps, area| patch_starting_pickups(
-                area,
-                &config.item_loss_items,
-                false,
-                &game_resources,
-            )
+            resource_info!("01_intro_hanger_connect.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("00h_intro_mechshaft.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("06_intro_freight_lifts.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("06_intro_to_reactor.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("02_intro_elevator.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [43.0, -194.0, -44.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [39.0, -186.0, -41.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [36.0, -181.0, -39.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [36.0, -192.0, -39.0],
+            ),
         );
     }
 
@@ -6482,7 +7182,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     );
 
     if config.qol_cosmetic {
-        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic);
+        patch_qol_cosmetic(&mut patcher, skip_ending_cinematic, config.quickpatch);
 
         // Replace the FMVs that play when you select a file so each ISO always plays the only one.
         const SELECT_GAMES_FMVS: &[&[u8]] = &[
@@ -6510,47 +7210,110 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         patch_qol_logical(&mut patcher, config);
     }
 
-    if let Some(angle) = config.suit_hue_rotate_angle {
-        let iter = PHAZON_SUIT_TEXTURES.iter()
-            .chain(VARIA_SUIT_TEXTURES.iter())
-            .chain(crate::txtr_conversions::POWER_SUIT_TEXTURES.iter())
-            .chain(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES.iter());
-        for varia_texture in iter {
-            patcher.add_resource_patch((*varia_texture).into(), move |res| {
-                let res_data; 
-                let data; 
-                let mut txtr: structs::Txtr = match &res.kind {
-                    structs::ResourceKind::Unknown(_, _) => {
-                        res_data = crate::ResourceData::new(res);
-                        data = res_data.decompress().into_owned();
-                        let mut reader = Reader::new(&data[..]);
-                        reader.read(())
-                    }, 
-                    structs::ResourceKind::External(_, _) => {
-                        res_data = crate::ResourceData::new_external(res);
-                        data = res_data.decompress().into_owned();
-                        let mut reader = Reader::new(&data[..]);
-                        reader.read(())
-                    }, 
-                    _ => panic!("Unsupported resource kind for recoloring."), 
-                };
+    if config.suit_colors.is_some() {
+        let suit_colors = config.suit_colors.as_ref().unwrap();
+        let mut suit_textures = Vec::new();
+        let mut angles = Vec::new();
 
-                let mut w = txtr.width as usize;
-                let mut h = txtr.height as usize;
-                for mipmap in txtr.pixel_data.as_mut_vec() {
-                    let mut decompressed_bytes = vec![0u8; w * h * 4];
-                    cmpr_decompress(&mipmap.as_mut_vec()[..], h, w, &mut decompressed_bytes[..]);
-                    huerotate_in_place(&mut decompressed_bytes[..], w, h, angle);
-                    cmpr_compress(&decompressed_bytes[..], w, h, &mut mipmap.as_mut_vec()[..]);
-                    w /= 2;
-                    h /= 2;
-                }
-                let mut bytes = vec![];
-                txtr.write_to(&mut bytes).unwrap();
-                res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
-                res.compressed = false;
-                Ok(())
-            })
+        if suit_colors.power_deg.is_some() {
+            suit_textures.push(crate::txtr_conversions::POWER_SUIT_TEXTURES);
+            angles.push(suit_colors.power_deg.clone().unwrap());
+        }
+        if suit_colors.varia_deg.is_some() {
+            suit_textures.push(VARIA_SUIT_TEXTURES);
+            angles.push(suit_colors.varia_deg.clone().unwrap());
+        }
+        if suit_colors.gravity_deg.is_some() {
+            suit_textures.push(crate::txtr_conversions::GRAVITY_SUIT_TEXTURES);
+            angles.push(suit_colors.gravity_deg.clone().unwrap());
+        }
+        if suit_colors.phazon_deg.is_some() {
+            suit_textures.push(PHAZON_SUIT_TEXTURES);
+            angles.push(suit_colors.phazon_deg.clone().unwrap());
+        }
+
+        fs::create_dir("cache")
+            .map_err(|e| format!("Failed to create cache dir: {}", e))
+            .ok();
+
+        for i in 0..suit_textures.len() {
+            let angle = angles[i] as f32;
+
+            fs::create_dir(format!("cache/{}", angle))
+                .map_err(|e| format!("Failed to create cache subdir: {}", e))
+                .ok();
+
+            let cosv = (angle * std::f32::consts::PI / 180.0).cos();
+            let sinv = (angle * std::f32::consts::PI / 180.0).sin();
+            let matrix: [f32; 9] = [
+                // Reds
+                0.213 + cosv * 0.787 - sinv * 0.213,
+                0.715 - cosv * 0.715 - sinv * 0.715,
+                0.072 - cosv * 0.072 + sinv * 0.928,
+                // Greens
+                0.213 - cosv * 0.213 + sinv * 0.143,
+                0.715 + cosv * 0.285 + sinv * 0.140,
+                0.072 - cosv * 0.072 - sinv * 0.283,
+                // Blues
+                0.213 - cosv * 0.213 - sinv * 0.787,
+                0.715 - cosv * 0.715 + sinv * 0.715,
+                0.072 + cosv * 0.928 + sinv * 0.072,
+            ];
+            for texture in suit_textures[i] {
+                patcher.add_resource_patch((*texture).into(), move |res| {
+                    let res_data;
+                    let data;
+                    let mut txtr: structs::Txtr = match &res.kind {
+                        structs::ResourceKind::Unknown(_, _) => {
+                            res_data = crate::ResourceData::new(res);
+                            data = res_data.decompress().into_owned();
+                            let mut reader = Reader::new(&data[..]);
+                            reader.read(())
+                        },
+                        structs::ResourceKind::External(_, _) => {
+                            res_data = crate::ResourceData::new_external(res);
+                            data = res_data.decompress().into_owned();
+                            let mut reader = Reader::new(&data[..]);
+                            reader.read(())
+                        },
+                        _ => panic!("Unsupported resource kind for recoloring."),
+                    };
+                    let mut w = txtr.width as usize;
+                    let mut h = txtr.height as usize;
+                    for mipmap in txtr.pixel_data.as_mut_vec() {
+                        let hash: u64 = calculate_hash(&mipmap.as_mut_vec().to_vec());
+                        // Read file contents to RAM
+                        let filename = format!("cache/{}/{}",angle,hash);
+                        let file = File::open(&filename).ok();
+                        if file.is_some() {
+                            let metadata = fs::metadata(&filename).expect("unable to read metadata");
+                            let mut bytes = vec![0; metadata.len() as usize];
+                            file.unwrap().read(&mut bytes)
+                                .map_err(|e| format!("Failed to read cache file: {}", e))?;
+                            *mipmap.as_mut_vec() = bytes;
+                        }
+                        else
+                        {
+                            let mut decompressed_bytes = vec![0u8; w * h * 4];
+                            cmpr_decompress(&mipmap.as_mut_vec()[..], h, w, &mut decompressed_bytes[..]);
+                            huerotate_in_place(&mut decompressed_bytes[..], w, h, matrix);
+                            cmpr_compress(&(decompressed_bytes[..]), w, h, &mut mipmap.as_mut_vec()[..]);
+                            // cache.insert(hash, mipmap.as_mut_vec().to_vec());
+                            let mut file = File::create(filename)
+                                .map_err(|e| format!("Failed to create cache file: {}", e))?;
+                            file.write_all(&mipmap.as_mut_vec().to_vec())
+                                .map_err(|e| format!("Failed to write cache file: {}", e))?;
+                        }
+                        w = w / 2;
+                        h = h / 2;
+                    }
+                    let mut bytes = vec![];
+                    txtr.write_to(&mut bytes).unwrap();
+                    res.kind = structs::ResourceKind::External(bytes, b"TXTR".into());
+                    res.compressed = false;
+                    Ok(())
+                })
+            }
         }
     }
     
@@ -6598,10 +7361,20 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
         patcher.add_resource_patch(
             resource_info!("STRG_MemoryCard.STRG").into(),// 0x19C3F7F7
-            |res| patch_memorycard_strg(res)
+            |res| patch_memorycard_strg(res, version)
         );
     }
 
+    let time = Instant::now();
     patcher.run(gc_disc)?;
+    println!("Created patches in {:?}", time.elapsed());
+
     Ok(())
+}
+
+/* For mipmapcache */
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }

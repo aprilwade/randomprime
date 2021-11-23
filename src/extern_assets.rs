@@ -31,7 +31,7 @@ struct ExternPickupModelJson {
 
 #[derive(Deserialize, Debug, Default, Clone)]
 struct ExternAssetJson {
-    pub old_id: Option<u32>,
+    // pub old_id: Option<u32>,
     pub new_id: u32,
     pub dependencies: Vec<ExternAssetDependencyJson>
 }

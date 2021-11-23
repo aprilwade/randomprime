@@ -463,6 +463,16 @@ pub fn collect_game_resources<'r>(
     looking_for.extend(PickupModel::iter().flat_map(|x| x.dependencies().iter().cloned()));
     looking_for.extend(DoorType::iter().flat_map(|x| x.dependencies()));
     looking_for.extend(BlastShieldType::iter().flat_map(|x| x.dependencies()));
+    let platform_deps: Vec<(u32,FourCC)> = vec![
+        (0x48DF38A3, FourCC::from_bytes(b"CMDL")),
+        (0xB2D50628, FourCC::from_bytes(b"DCLN")),
+        (0x19C17D5C, FourCC::from_bytes(b"TXTR")),
+        (0x0259F5F6, FourCC::from_bytes(b"TXTR")),
+        (0x71190250, FourCC::from_bytes(b"TXTR")),
+        (0xD0BA0FA8, FourCC::from_bytes(b"TXTR")),
+        (0xF1478D6A, FourCC::from_bytes(b"TXTR")),
+    ];
+    looking_for.extend(platform_deps);
 
     let mut deps: Vec<(u32, FourCC)> = Vec::new();
     deps.push((0xDCEC3E77,FourCC::from_bytes(b"FRME")));

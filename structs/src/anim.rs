@@ -117,30 +117,31 @@ pub struct AnimCompressed<'r>
     // bone_channel_descriptor_array: RoArray<BoneChannelDescriptor, 'r>,
 }
 
+// #[auto_struct(Readable, FixedSize)]
+// #[derive(Debug, Clone)]
+// pub struct BoneChannelDescriptor
+// {
+//     bone_id: u32,
+//     rotation_key_count: u16,
+//     intial_rotation_x: i16,
+//     rotation_bits_x: u8,
+//     intial_rotation_y: i16,
+//     rotation_bits_y: u8,
+//     intial_rotation_z: i16,
+//     rotation_bits_z: u8,
+
+//     translation_key_count: u16,
+//     intial_translation_x: i16,
+//     translation_bits_x: u8,
+//     intial_translation_y: i16,
+//     translation_bits_y: u8,
+//     intial_translation_z: i16,
+//     translation_bits_z: u8,
+// }
+
 #[auto_struct(Readable, FixedSize)]
 #[derive(Debug, Clone)]
-pub struct BoneChannelDescriptor
-{
-    bone_id: u32,
-    rotation_key_count: u16,
-    intial_rotation_x: i16,
-    rotation_bits_x: u8,
-    intial_rotation_y: i16,
-    rotation_bits_y: u8,
-    intial_rotation_z: i16,
-    rotation_bits_z: u8,
-
-    translation_key_count: u16,
-    intial_translation_x: i16,
-    translation_bits_x: u8,
-    intial_translation_y: i16,
-    translation_bits_y: u8,
-    intial_translation_z: i16,
-    translation_bits_z: u8,
-}
-
-#[auto_struct(Readable, FixedSize)]
-#[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CharAnimTime
 {
     time: f32,

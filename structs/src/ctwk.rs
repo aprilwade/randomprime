@@ -11,6 +11,7 @@ pub enum Ctwk<'r>
     CtwkPlayer(CtwkPlayer<'r>),
     CtwkPlayerGun(CtwkPlayerGun<'r>),
     CtwkBall(CtwkBall<'r>),
+    CtwkGuiColors(CtwkGuiColors<'r>),
 }
 
 impl<'r> Writable for Ctwk<'r>
@@ -22,6 +23,7 @@ impl<'r> Writable for Ctwk<'r>
             Ctwk::CtwkPlayer(ctwk) => ctwk.write_to(writer),
             Ctwk::CtwkPlayerGun(ctwk) => ctwk.write_to(writer),
             Ctwk::CtwkBall(ctwk) => ctwk.write_to(writer),
+            Ctwk::CtwkGuiColors(ctwk) => ctwk.write_to(writer),
         }
     }
 }
@@ -39,7 +41,8 @@ impl<'r> Readable<'r> for Ctwk<'r>
             800 => Ctwk::CtwkPlayer(reader.read(())),
             512 => Ctwk::CtwkPlayerGun(reader.read(())),
             480 => Ctwk::CtwkBall(reader.read(())),
-            _ => panic!("Unhandled CTWK size - {}", reader.size()),
+            2368 => Ctwk::CtwkGuiColors(reader.read(())),
+            _ => panic!("Unhandled CTWK size - {}", reader.len()),
         }
     }
 
@@ -50,6 +53,7 @@ impl<'r> Readable<'r> for Ctwk<'r>
             Ctwk::CtwkPlayer(ctwk) => ctwk.size(),
             Ctwk::CtwkPlayerGun(ctwk) => ctwk.size(),
             Ctwk::CtwkBall(ctwk) => ctwk.size(),
+            Ctwk::CtwkGuiColors(ctwk) => ctwk.size(),
         }
     }
 }
@@ -350,6 +354,17 @@ pub struct CtwkBall<'r>
     pub boost_incremental_speed1: f32,
     pub boost_incremental_speed2: f32,
     pub filler: GenericArray<u8, U32>,
+
+    #[auto_struct(pad_align = 32)]
+    _pad: (),
+}
+
+#[auto_struct(Readable, Writable)]
+#[derive(Clone, Debug)]
+pub struct CtwkGuiColors<'r>
+{
+    pub start: Reader<'r>,
+    pub colors: GenericArray<GenericArray<f32,U4>, U148>,
 
     #[auto_struct(pad_align = 32)]
     _pad: (),

@@ -340,7 +340,6 @@ struct PickupData
 {
     bytes: Vec<u8>,
     deps: HashSet<ResourceKey>,
-    hudmemo_strg: u32,
     attainment_audio_file_name: Vec<u8>,
 }
 
@@ -423,21 +422,9 @@ fn extract_pickup_data<'r>(
     let mut bytes = vec![];
     pickup.write_to(&mut bytes).unwrap();
 
-    let hudmemo = search_for_scly_object(&obj.connections, &scly_db,
-        |obj| obj.property_data.as_hud_memo()
-            .map(|hm| hm.name.to_str().unwrap().contains("Pickup"))
-            .unwrap_or(false)
-    );
-    let hudmemo_strg = if let Some(hudmemo) = hudmemo {
-        hudmemo.property_data.as_hud_memo().unwrap().strg.to_u32()
-    } else {
-        resource_info!("Phazon Suit acquired!.STRG").res_id
-    };
-
     PickupData {
         bytes,
         deps,
-        hudmemo_strg,
         attainment_audio_file_name,
     }
 }
@@ -876,7 +863,6 @@ fn create_nothing(pickup_table: &mut HashMap<PickupModel, PickupData>)
     assert!(pickup_table.insert(PickupModel::Nothing, PickupData {
         bytes: nothing_bytes,
         deps: nothing_deps,
-        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/itm_x_short_02.dsp\0".to_vec(),
     }).is_none());
 }
@@ -913,7 +899,6 @@ fn create_shiny_missile(pickup_table: &mut HashMap<PickupModel, PickupData>)
     assert!(pickup_table.insert(PickupModel::ShinyMissile, PickupData {
         bytes: shiny_missile_bytes,
         deps: shiny_missile_deps,
-        hudmemo_strg: 0xFFFFFFFF,
         attainment_audio_file_name: b"/audio/jin_itemattain.dsp\0".to_vec(),
     }).is_none());
 }
@@ -1011,7 +996,41 @@ fn main()
                 .unwrap().into_owned();
             let mapa_id = &ResId::<res_id::MAPA>::new(target_mapa.file_id);
 
+            // println!("\n\n");
+            // let mut layer_changers: Vec<(u32,u32,u32)> = Vec::new();
+            // let mut enable_disable: Vec<(u32,bool)> = Vec::new();
             for (layer_num, scly_layer) in scly.layers.iter().enumerate() {
+                // for obj in scly_layer.objects.iter() {
+                //     if obj.property_data.is_pickup() {
+                //         let pickup = obj.property_data.as_pickup().unwrap();
+                //         if pickup.drop_rate == 0.0 {
+                //             continue;
+                //         }
+                //         if pickup.kind == PickupType::HealthRefill.kind() {
+                //             println!("Health     | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         } else if pickup.kind == PickupType::PowerBomb.kind() && pickup.max_increase == 0 {
+                //             println!("Power Bomb | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         } else if pickup.kind == PickupType::Missile.kind() && pickup.max_increase == 0 {
+                //             println!("Missile    | {}% | {}", pickup.drop_rate, pickup.curr_increase);
+                //         }
+                //     }
+                // }
+
+                // for obj in scly_layer.objects.iter() {
+                //     if obj.property_data.is_special_function() {
+                //         let sf = obj.property_data.as_special_function().unwrap();
+                //         if sf.type_ == 16 {
+                //             layer_changers.push((obj.instance_id, sf.layer_change_room_id, sf.layer_change_layer_id));
+                //         }
+                //     }
+                //     for conn in obj.connections.iter() {
+                //         if conn.message == structs::ConnectionMsg::INCREMENT {
+                //             enable_disable.push((conn.target_object_id,true));
+                //         } else if conn.message == structs::ConnectionMsg::DECREMENT {
+                //             enable_disable.push((conn.target_object_id,false));
+                //         }
+                //     }
+                // }
 
                 // trace door resources //
                 for obj in scly_layer.objects.iter() {
@@ -1106,6 +1125,13 @@ fn main()
                     }
                 }
             }
+            // for (id, room_id, layer_num) in layer_changers.iter() {
+            //     for (target_id, is_enable) in enable_disable.iter() {
+            //         if id & 0x0000FFFF == target_id & 0x0000FFFF {
+            //             println!("{}, {}, {}, {:?}", res.file_id, room_id, layer_num, is_enable);
+            //         }
+            //     }
+            // }
 
             {
                 let strg_id = mrea_name_strg_map[&ResId::<res_id::MREA>::new(res.file_id)];
@@ -1116,8 +1142,9 @@ fn main()
                     .strings.iter().next().unwrap()
                     .into_owned().into_string();
 
+                let room_id = ResId::<res_id::MREA>::new(res.file_id);
                 pak_locations.push(RoomInfo {
-                    room_id: ResId::<res_id::MREA>::new(res.file_id),
+                    room_id,
                     name,
                     name_id: strg_id,
                     mapa_id: *mapa_id,

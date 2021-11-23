@@ -83,6 +83,7 @@
 0x80010240 AddObject__11CObjectListFR7CEntity
 0x800102f4 __ct__11CObjectListF15EGameObjectList
 0x800103e8 __ct__Q211CObjectList16SObjectListEntryFv
+0x80010400 __dt__7CPlayerFv
 0x80010d6c IsEnergyLow__7CPlayerCFRC13CStateManager
 0x80010de8 FinishNewScan__7CPlayerFR13CStateManager
 0x80010f1c StartSamusVoiceSfx__7CPlayerFUssi
@@ -4764,6 +4765,7 @@
 0x802d71b4 Wait__Q210CStopwatch7CSWDataCFf
 0x802d7248 rs_debugger_printf__FPCce
 0x802d7318 SetErrorHandlers
+0x802d7494 CrashScreenControllerPollBranch
 0x802d77d4 __ct__10CAnimationFR12CInputStream
 0x802d7860 GetMetaAnimation__17CAnimationManagerCFUi
 0x802d78e0 GetAnimationTree__17CAnimationManagerCFUiRC24CMetaAnimTreeBuildOrders
@@ -7006,4 +7008,3 @@
 0x805a9cd8 g_Main
 0x805a9ce0 g_GameState
 0x805ab8ec g_EtankCapacity
-0x802d7494 CrashScreenControllerPollBranch

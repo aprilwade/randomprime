@@ -250,33 +250,24 @@ pub fn cmpr_compress(uncompressed: &[u8], width: usize, height: usize, compresse
 }
 
 // Adapted from image-rs
-pub fn huerotate_in_place(image: &mut [u8], width: usize, height: usize, value: i32)
+pub fn huerotate_in_place(image: &mut [u8], width: usize, height: usize, matrix: [f32; 9])
 where
 {
-    let angle: f64 = value as f64;
-
-    let cosv = (angle * std::f64::consts::PI / 180.0).cos();
-    let sinv = (angle * std::f64::consts::PI / 180.0).sin();
-    let matrix: [f64; 9] = [
-        // Reds
-        0.213 + cosv * 0.787 - sinv * 0.213,
-        0.715 - cosv * 0.715 - sinv * 0.715,
-        0.072 - cosv * 0.072 + sinv * 0.928,
-        // Greens
-        0.213 - cosv * 0.213 + sinv * 0.143,
-        0.715 + cosv * 0.285 + sinv * 0.140,
-        0.072 - cosv * 0.072 - sinv * 0.283,
-        // Blues
-        0.213 - cosv * 0.213 - sinv * 0.787,
-        0.715 - cosv * 0.715 + sinv * 0.715,
-        0.072 + cosv * 0.928 + sinv * 0.072,
-    ];
+    // let mut cache: HashMap<[u8;4],[u8;4]> = HashMap::new();
     for y in 0..height {
         for x in 0..width {
             let start = (y * width + x) * 4;
             let pixel = &mut image[start..start + 4];
+
+            // let maybe_four_bytes = cache.get(pixel);
+            // if maybe_four_bytes.is_some() {
+            //     let outpixel = maybe_four_bytes.unwrap();
+            //     pixel.copy_from_slice(&outpixel[..]);
+            //     continue;
+            // }
+
             let (k1, k2, k3, k4) = (pixel[0], pixel[1], pixel[2], pixel[3]);
-            let vec: (f64, f64, f64, f64) = (k1 as f64, k2 as f64, k3 as f64, k4 as f64);
+            let vec: (f32, f32, f32, f32) = (k1 as f32, k2 as f32, k3 as f32, k4 as f32);
 
             let r = vec.0;
             let g = vec.1;
@@ -293,6 +284,9 @@ where
             ];
 
            pixel.copy_from_slice(&outpixel[..]);
+        //    let outpixel_cached: [u8;4] = [outpixel[0], outpixel[1], outpixel[2], outpixel[3]];
+        //    let pixel_cached: [u8;4] = [pixel[0], pixel[1], pixel[2], pixel[3]];
+        //    cache.insert(pixel_cached, outpixel_cached);
         }
     }
 }

@@ -119,6 +119,16 @@ pub struct DoorConfig
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SuitColors
+{
+    pub power_deg: Option<i16>,
+    pub varia_deg: Option<i16>,
+    pub gravity_deg: Option<i16>,
+    pub phazon_deg: Option<i16>,
+}
+
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
 {
@@ -182,7 +192,6 @@ pub struct CtwkConfig
     pub hardmode_weapon_mult: Option<f32>,
     pub turn_speed: Option<f32>,
     pub underwater_fog_distance: Option<f32>,
-    pub gun_position: Option<[f32;3]>,
     pub step_up_height: Option<f32>,
     pub allowed_jump_time: Option<f32>,
     pub allowed_space_jump_time: Option<f32>,
@@ -192,6 +201,11 @@ pub struct CtwkConfig
     pub min_space_jump_time: Option<f32>,
     pub falling_space_jump: Option<bool>,
     pub impulse_space_jump: Option<bool>,
+
+    // PlayerGun.CTWK
+    pub gun_position: Option<[f32;3]>, // offset
+    pub gun_damage: Option<f32>,
+    pub gun_cooldown: Option<f32>,
 
     // Ball.CTWK
     pub max_translation_accel: Option<f32>,
@@ -209,6 +223,9 @@ pub struct CtwkConfig
     pub boost_incremental_speed0: Option<f32>,
     pub boost_incremental_speed1: Option<f32>,
     pub boost_incremental_speed2: Option<f32>,
+
+    // GuiColors.CTWK
+    pub hud_color: Option<[f32;3]>, // RGB, 0 - 1.0
 }
 
 #[derive(Debug)]
@@ -258,14 +275,16 @@ pub struct PatchConfig
 
     pub starting_items: StartingItems,
     pub item_loss_items: StartingItems,
+    pub disable_item_loss: bool,
 
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
-    pub suit_hue_rotate_angle: Option<i32>,
+    pub suit_colors: Option<SuitColors>,
 
     pub quickplay: bool,
+    pub quickpatch: bool,
 
     pub game_banner: GameBanner,
     pub comment: String,
@@ -283,9 +302,10 @@ pub struct PatchConfig
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
+    suit_colors: Option<SuitColors>,
+
     qol_game_breaking: Option<bool>,
     qol_cosmetic: Option<bool>,
-    qol_logical: Option<bool>,
     qol_cutscenes: Option<String>,
     qol_pickup_scans: Option<bool>,
 
@@ -294,6 +314,7 @@ struct Preferences
     automatic_crash_screen: Option<bool>,
     trilogy_disc_path: Option<String>,
     quickplay: Option<bool>,
+    quickpatch: Option<bool>,
     quiet: Option<bool>,
 }
 
@@ -315,6 +336,7 @@ struct GameConfig
 
     starting_items: Option<StartingItems>,
     item_loss_items: Option<StartingItems>,
+    disable_item_loss: Option<bool>,
 
     etank_capacity: Option<u32>,
     item_max_capacity: Option<HashMap<String,u32>>,
@@ -446,11 +468,6 @@ impl PatchConfig
                 .help(concat!("Location of a ISO of Metroid Prime Trilogy. If provided the ",
                                 "Flaahgra fight music will be used to replace the original"))
                 .takes_value(true))
-            .arg(Arg::with_name("suit hue rotate angle")
-                .long("suit-hue-rotate-angle")
-                .takes_value(true)
-                .validator(|s| s.parse::<i32>().map(|_| ())
-                                            .map_err(|_| "Expected an integer".to_string())))
             .arg(Arg::with_name("quiet")
                 .long("quiet")
                 .help("Don't print the progress messages"))
@@ -470,6 +487,9 @@ impl PatchConfig
                                             .map_err(|_| "Expected an integer".to_string())))
             .arg(Arg::with_name("quickplay")
                 .long("quickplay")
+                .hidden(true))
+            .arg(Arg::with_name("quickpatch")
+                .long("quickpatch")
                 .hidden(true))
             .arg(Arg::with_name("text file comment")
                 .long("text-file-comment")
@@ -505,6 +525,7 @@ impl PatchConfig
             "qol scans" => patch_config.preferences.qol_pickup_scans,
             "automatic crash screen" => patch_config.preferences.automatic_crash_screen,
             "quickplay" => patch_config.preferences.quickplay,
+            "quickpatch" => patch_config.preferences.quickpatch,
             "quiet" => patch_config.preferences.quiet,
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
@@ -745,9 +766,10 @@ impl PatchConfigPrivate
             automatic_crash_screen: self.preferences.automatic_crash_screen.unwrap_or(true),
             artifact_hint_behavior,
             flaahgra_music_files,
-            suit_hue_rotate_angle: None,
+            suit_colors: self.preferences.suit_colors.clone(),
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
+            quickpatch: self.preferences.quickpatch.unwrap_or(false),
 
             starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
@@ -766,6 +788,7 @@ impl PatchConfigPrivate
             starting_items,
             item_loss_items: self.game_config.item_loss_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
+            disable_item_loss: self.game_config.disable_item_loss.unwrap_or(false),
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             item_max_capacity: item_max_capacity,
