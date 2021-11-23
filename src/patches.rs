@@ -862,19 +862,6 @@ fn modify_pickups_in_mrea<'r>(
             }
         );
         area.add_dependencies(game_resources, new_layer_idx, deps_iter);
-        let model_name = pickup_config.model.as_ref().unwrap();
-        if model_name.contains(&"Translator") {
-            let external_violet_model = extern_models.get(&"VioletTranslator".to_string());
-            let deps = external_violet_model.as_ref().unwrap().dependencies.clone();
-            let deps_iter = deps.iter()
-                .map(|&(file_id, fourcc)| structs::Dependency {
-                    asset_id: file_id,
-                    asset_type: fourcc,
-                }
-            );
-            println!("adding extra deps");
-            area.add_dependencies(game_resources, new_layer_idx, deps_iter);
-        }
     }
     // If we aren't using an external model, use the dependencies traced by resource_tracing
     else {
@@ -1472,6 +1459,252 @@ fn make_elevators_patch<'a>(
     }
 
     (skip_frigate, skip_ending_cinematic)
+}
+
+fn patch_post_pq_frigate(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea,
+) -> Result<(), String>
+{
+    let room_id = area.mlvl_area.mrea.to_u32();
+    let layer_count = area.layer_flags.layer_count as usize;
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    for i in 0..layer_count {
+        layers[i].objects.as_mut_vec().retain(|obj|
+            !vec![
+                0x00010074, 0x00010070, 0x00010072, 0x00010071, 0x00010073, 0x00010009, // Air Lock
+                0x000E003B, 0x000E0025, 0x000E00CF, 0x000E0095, // Biotech 1
+                0x0003000D, 0x0003000C, // Mech Shaft
+                0x000500AF, 0x000500AE, 0x000500B1, 0x0005013F, // Alpha Elevator
+            ].contains(&(obj.instance_id&0x00FFFFFF))
+        );
+    }
+    let hatch = layers[0].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x00010064);
+    if hatch.is_some() {
+        let hatch = hatch.unwrap();
+        for conn in hatch.connections.as_mut_vec().iter_mut() {
+            if conn.message == structs::ConnectionMsg::DEACTIVATE {
+                conn.message = structs::ConnectionMsg::ACTIVATE;
+            }
+        }
+    }
+
+    // Air lock
+    if layer_count > 1 {
+        let trigger = layers[1].objects.iter_mut()
+            .find(|obj| obj.instance_id&0x00FFFFFF == 0x000E003A);
+        if trigger.is_some() {
+            let trigger = trigger.unwrap();
+            for conn in trigger.connections.as_mut_vec().iter_mut() {
+                if vec![
+                    0x000E0122, // 0x000E0079, 0x000E0078,
+                ].contains(&(conn.target_object_id & 0x00FFFFFF)) {
+                    conn.message = structs::ConnectionMsg::ACTIVATE;
+                }
+            }
+        }
+    }
+
+    let cfldg_trigger = layers[0].objects.iter_mut()
+        .find(|obj| obj.instance_id&0x00FFFFFF == 0x001A00B7);
+    if cfldg_trigger.is_some() {
+        let cfldg_trigger = cfldg_trigger.unwrap();
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_MAX,
+                target_object_id: 0x001A011D,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00D3,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00D4,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::INSIDE,
+                message: structs::ConnectionMsg::SET_TO_ZERO,
+                target_object_id: 0x001A00FB,
+            }
+        );
+        cfldg_trigger.connections.as_mut_vec().push(
+            structs::Connection {
+                state: structs::ConnectionState::ENTERED,
+                message: structs::ConnectionMsg::RESET_AND_START,
+                target_object_id: 0x001A005D,
+            }
+        );
+        let trigger_property_data = cfldg_trigger.property_data.as_trigger_mut().unwrap();
+        trigger_property_data.position = [185.410889, -233.339539, -86.378212].into();
+        trigger_property_data.flags = 0x1000; // detect morphed player
+    }
+
+    // reactor core entrance
+    if room_id == 0x3ea190ee {
+        layers[0].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: _ps.fresh_instance_id_range.next().unwrap(),
+                property_data: structs::Trigger {
+                    name: b"Trigger\0".as_cstr(),
+                    position: [184.816299, -263.740845, -86.882622].into(),
+                    scale: [1.5, 1.5, 1.5].into(),
+                    damage_info: structs::scly_structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    force: [0.0, 0.0, 0.0].into(),
+                    flags: 0x1000, // detect morphed
+                    active: 1,
+                    deactivate_on_enter: 0,
+                    deactivate_on_exit: 0
+                }.into(),
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::INSIDE,
+                        message: structs::ConnectionMsg::SET_TO_MAX,
+                        target_object_id: 0x001B0002,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::INSIDE,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x001B0001,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x001B007F,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::RESET_AND_START,
+                        target_object_id: 0x001B0041,
+                    }
+                ].into()
+            }
+        );
+    }
+
+    Ok(())
+}
+
+fn patch_add_circle_platform<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
+    position: [f32;3],
+) -> Result<(), String>
+{
+    let deps = vec![
+        (0x48DF38A3, b"CMDL"),
+        (0xB2D50628, b"DCLN"),
+        (0x19C17D5C, b"TXTR"),
+        (0x0259F5F6, b"TXTR"),
+        (0x71190250, b"TXTR"),
+        (0xD0BA0FA8, b"TXTR"),
+        (0xF1478D6A, b"TXTR"),
+    ];
+    let deps_iter = deps.iter()
+        .map(|&(file_id, fourcc)| structs::Dependency {
+            asset_id: file_id,
+            asset_type: FourCC::from_bytes(fourcc),
+        }
+    );
+    area.add_dependencies(game_resources,0,deps_iter);
+
+    let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+    layers[0].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            property_data: structs::Platform {
+                name: b"myplatform\0".as_cstr(),
+
+                position: position.into(),
+                rotation: [0.0, 0.0, -90.0].into(),
+                scale: [1.0, 1.0, 1.0].into(),
+                unknown0: [0.0, 0.0, 0.0].into(), // extent
+                scan_offset: [0.0, 0.0, 0.0].into(),
+            
+                cmdl: ResId::<res_id::CMDL>::new(0x48DF38A3),
+                ancs: structs::scly_structs::AncsProp {
+                    file_id: ResId::invalid(),
+                    node_index: 0,
+                    default_animation: 0xFFFFFFFF,
+                },
+                actor_params: structs::scly_structs::ActorParameters {
+                    light_params: structs::scly_structs::LightParameters {
+                        unknown0: 1,
+                        unknown1: 1.0,
+                        shadow_tessellation: 0,
+                        unknown2: 1.0,
+                        unknown3: 20.0,
+                        color: [1.0, 1.0, 1.0, 1.0].into(),
+                        unknown4: 1,
+                        world_lighting: 1,
+                        light_recalculation: 1,
+                        unknown5: [0.0, 0.0, 0.0].into(),
+                        unknown6: 4,
+                        unknown7: 4,
+                        unknown8: 0,
+                        light_layer_id: 0
+                    },
+                    scan_params: structs::scly_structs::ScannableParameters {
+                        scan: ResId::invalid(), // None
+                    },
+                    xray_cmdl: ResId::invalid(), // None
+                    xray_cskr: ResId::invalid(), // None
+                    thermal_cmdl: ResId::invalid(), // None
+                    thermal_cskr: ResId::invalid(), // None
+
+                    unknown0: 1,
+                    unknown1: 1.0,
+                    unknown2: 1.0,
+
+                    visor_params: structs::scly_structs::VisorParameters {
+                        unknown0: 0,
+                        target_passthrough: 0,
+                        visor_mask: 15 // Combat|Scan|Thermal|XRay
+                    },
+                    enable_thermal_heat: 1,
+                    unknown3: 0,
+                    unknown4: 1,
+                    unknown5: 1.0
+                },
+
+                unknown1: 5.0,
+                active: 1,
+
+                dcln: ResId::<res_id::DCLN>::new(0xB2D50628),
+            
+                health_info: structs::scly_structs::HealthInfo {
+                    health: 1.0,
+                    knockback_resistance: 1.0,
+                },
+                damage_vulnerability: DoorType::Disabled.vulnerability(),
+            
+                unknown3: 0,
+                unknown4: 1.0,
+                unknown5: 0,
+                unknown6: 200,
+                unknown7: 20,
+            }.into(),
+            connections: vec![].into(),
+        }
+    );
+
+    Ok(())
 }
 
 fn patch_disable_item_loss(
@@ -4318,7 +4551,6 @@ fn patch_ctwk_game(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         _ => panic!("Failed to map res=0x{:X} as CtwkGame", res.file_id),
     };
 
-    // println!("before - {:?}", ctwk_game);
     ctwk_game.press_start_delay = 0.001;
 
     if ctwk_config.fov.is_some() {
@@ -4374,7 +4606,6 @@ fn patch_ctwk_player(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         ctwk_player.lava_ball_jump_factor = 100.0;
     }
 
-    // println!("before - {:?}", ctwk_player);
     if ctwk_config.move_while_scan.unwrap_or(false) {
         ctwk_player.scan_freezes_game = 0;
     }
@@ -6512,6 +6743,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         config.ctwk_config.player_size.clone().unwrap_or(1.0),
         config.force_vanilla_layout,
     );
+    let skip_frigate = skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl();
 
     patcher.add_file_patch(
         b"default.dol",
@@ -6526,7 +6758,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     let rel_config = create_rel_config_file(starting_room, config.quickplay);
 
-    if skip_frigate && starting_room.mlvl != World::FrigateOrpheon.mlvl(){
+    if skip_frigate {
         // remove frigate data to save time/space
         patcher.add_file_patch(b"Metroid1.pak", empty_frigate_pak);
     } else {
@@ -6694,15 +6926,73 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             ),
         );
 
-        // TODO: only works for landing site
+        if config.disable_item_loss {
+            patcher.add_scly_patch(
+                resource_info!("02_intro_elevator.MREA").into(),
+                patch_disable_item_loss
+            );
+        }
+
+        // Patch frigate so that it can be explored any direction without crashing or soft-locking
         patcher.add_scly_patch(
-            (frigate_done_room.pak_name.as_bytes(), frigate_done_room.mrea),
-            move |_ps, area| patch_starting_pickups(
-                area,
-                &config.item_loss_items,
-                false,
-                &game_resources,
-            )
+            resource_info!("01_intro_hanger_connect.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("00h_intro_mechshaft.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("06_intro_freight_lifts.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("06_intro_to_reactor.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("02_intro_elevator.MREA").into(),
+            patch_post_pq_frigate
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [43.0, -194.0, -44.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [39.0, -186.0, -41.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [36.0, -181.0, -39.0],
+            ),
+        );
+        patcher.add_scly_patch(
+            resource_info!("04_intro_specimen_chamber.MREA").into(),
+            move |ps, res| patch_add_circle_platform(
+                ps,
+                res,
+                game_resources,
+                [36.0, -192.0, -39.0],
+            ),
         );
     }
 
@@ -6713,13 +7003,6 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             patcher.add_scly_patch(
                 resource_info!("01_over_mainplaza.MREA").into(),
                 patch_landing_site_cutscene_triggers
-            );
-        }
-
-        if config.disable_item_loss {
-            patcher.add_scly_patch(
-                resource_info!("02_intro_elevator.MREA").into(),
-                patch_disable_item_loss
             );
         }
     }
