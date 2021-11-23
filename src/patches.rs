@@ -4970,9 +4970,9 @@ fn patch_final_boss_permadeath<'r>(
     if mrea_id == 0xA7AC009B || mrea_id == 0x1A666C55 {
         // Allocate list of ids
         let destinations = if mrea_id == 0xA7AC009B {
-            vec![0x67156A0D, 0xDADF06C3, 0x0749DF46, 0x7A3AD91E, 0xA7AC009B]
+            vec![3858868330, 3883549607, 3886867740, 3851260989, 3847959174]
         } else {
-            vec![0x1A666C55]
+            vec![3827358027]
         };
 
         let mut special_function_ids = Vec::<u32>::new();
@@ -4999,7 +4999,6 @@ fn patch_final_boss_permadeath<'r>(
         for layer_idx in 0..layer_count {
             for obj in layers[layer_idx].objects.as_mut_vec() {
                 if obj.instance_id & 0x0000FFFF == 0x00000022 || obj.property_data.object_type() == 0x83 { // post-death relay
-                    println!("adding the relay connections 0x{:X}...", obj.instance_id);
                     for i in 0..destinations.len() {
                         obj.connections.as_mut_vec().push(structs::Connection {
                             state: structs::ConnectionState::ZERO,
@@ -5034,7 +5033,7 @@ fn patch_final_boss_permadeath<'r>(
             }
         );
     }
-    Ok(()
+    Ok(())
 }
 
 fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
