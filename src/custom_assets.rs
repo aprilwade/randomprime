@@ -85,6 +85,7 @@ pub mod custom_asset_ids {
         // Warping to start transition message
         WARPING_TO_START_STRG: STRG,
         WARPING_TO_START_DELAY_STRG: STRG,
+        WARPING_TO_OTHER_STRG: STRG,
 
         // Door Assets //
         MORPH_BALL_BOMB_DOOR_CMDL: CMDL,
@@ -428,6 +429,12 @@ pub fn custom_assets<'r>(
             format!("&just=center;Warping in {}s...\0", warp_to_start_delay_s as u32).to_owned(),
         ])),
     ));
+    assets.push(build_resource(
+        custom_asset_ids::WARPING_TO_OTHER_STRG,
+        structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
+            format!("&just=center;Warping in 6s...\0").to_owned(),
+        ])),
+    ));
 
     // Custom door assets
     for door_type in DoorType::iter() {
@@ -473,6 +480,11 @@ pub fn collect_game_resources<'r>(
         (0xF1478D6A, FourCC::from_bytes(b"TXTR")),
     ];
     looking_for.extend(platform_deps);
+    let glow_ring: Vec<(u32,FourCC)> = vec![ // mapstation_beams.CMDL
+        (0x12771AF0, FourCC::from_bytes(b"CMDL")),
+        (0xA6114429, FourCC::from_bytes(b"TXTR")),
+    ];
+    looking_for.extend(glow_ring);
 
     let mut deps: Vec<(u32, FourCC)> = Vec::new();
     deps.push((0xDCEC3E77,FourCC::from_bytes(b"FRME")));

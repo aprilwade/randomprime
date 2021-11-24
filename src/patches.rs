@@ -3720,7 +3720,7 @@ fn patch_save_station_for_warp_to_start<'r>(
             unknown1: 10, // priority
            }.into(),
            connections: vec![].into(),
-       });
+    });
 
     for obj in layer.objects.iter_mut() {
         if let Some(sp_function) = obj.property_data.as_special_function_mut() {
@@ -4908,33 +4908,289 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 fn patch_final_boss_permadeath<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    game_resources: &HashMap<(u32, FourCC), structs::Resource<'r>>,
 )
 -> Result<(), String>
 {
-    let mrea_id = area.mlvl_area.mrea.to_u32();
+    let mrea_id = area.mlvl_area.mrea.to_u32().clone();
+    if mrea_id == 0x1A666C55 { // lair
+        let deps = vec![
+            (0x12771AF0, b"CMDL"),
+            (0xA6114429, b"TXTR"),
+        ];
+        let deps_iter = deps.iter()
+            .map(|&(file_id, fourcc)| structs::Dependency {
+                asset_id: file_id,
+                asset_type: FourCC::from_bytes(fourcc),
+            }
+        );
+        area.add_dependencies(game_resources, 0, deps_iter);
+        area.add_dependencies(
+            &game_resources, 0,
+            iter::once(custom_asset_ids::WARPING_TO_OTHER_STRG.into())
+        );
+    }
     let layer_count = area.mrea().scly_section_mut().layers.len();
     area.add_layer(b"Disable Bosses Layer\0".as_cstr());
-    area.layer_flags.flags &= !(1 << layer_count); // layer disabled by default
+    if mrea_id != 0x1A666C55
+    {
+        area.layer_flags.flags &= !(1 << layer_count); // layer disabled by default
+    }
     let layers = &mut area.mrea().scly_section_mut().layers.as_mut_vec();
     let mut objs_to_remove = Vec::<u32>::new();
     for i in 0..layer_count {
-        for obj in layers[i].objects.as_mut_vec().clone() {
+        for obj in layers[i].objects.as_mut_vec() {
             if  (
                     obj.property_data.is_actor() ||
                     obj.property_data.is_camera() ||
                     obj.property_data.is_platform() ||
                     obj.property_data.is_trigger() || 
                     obj.property_data.is_spawn_point() ||
-                    obj.property_data.object_type() == 0x83 ||
-                    obj.property_data.object_type() == 0x84
+                    obj.property_data.object_type() == 0x83
                 )
-                && !vec![0x00050014, 0x0005000E].contains(&obj.instance_id)
+                && !vec![
+                    0x00050014, 0x0005000E,
+                    
+                    ].contains(&obj.instance_id)
             {
-                objs_to_remove.push(obj.instance_id);
+                objs_to_remove.push(obj.instance_id.clone());
             }
         }
     }
-   
+
+    // Allocate list of ids
+    let destinations = if mrea_id == 0xA7AC009B {
+        vec![3858868330, 3883549607, 3886867740, 3851260989, 3847959174]
+    } else {
+        vec![3827358027]
+    };
+
+    let mut special_function_ids = Vec::<u32>::new();
+    for _ in 0..destinations.len() {
+        special_function_ids.push(ps.fresh_instance_id_range.next().unwrap());
+    }
+
+    let actor_id = ps.fresh_instance_id_range.next().unwrap();
+    let trigger_id = ps.fresh_instance_id_range.next().unwrap();
+
+    if mrea_id == 0x1A666C55 { // lair
+        let essence = layers[0].objects.as_mut_vec()
+            .iter_mut()
+            .find(|obj| obj.instance_id & 0x00FFFFFF == 0x000B0082)
+            .unwrap()
+            .clone();
+        layers[1].objects.as_mut_vec().push(essence.clone());
+        layers[0].objects.as_mut_vec().retain(|obj| obj.instance_id & 0x00FFFFFF != 0x000B0082);
+        layers[0].objects.as_mut_vec().push(structs::SclyObject {
+            instance_id: actor_id,
+            property_data: structs::Actor {
+                name: b"actor\0".as_cstr(),
+                position: [52.0, -298.0, -375.5].into(),
+                rotation: [0.0, 0.0, 0.0].into(),
+                scale: [1.0, 1.0, 1.0].into(),
+                hitbox: [0.0, 0.0, 0.0].into(),
+                scan_offset: [0.0, 0.0, 0.0].into(),
+                unknown1: 1.0,
+                unknown2: 0.0,
+                health_info: structs::scly_structs::HealthInfo {
+                    health: 5.0,
+                    knockback_resistance: 1.0
+                },
+                damage_vulnerability: DoorType::Blue.vulnerability(),
+                cmdl: ResId::<res_id::CMDL>::new(0x12771AF0),
+                ancs: structs::scly_structs::AncsProp {
+                    file_id: ResId::invalid(), // None
+                    node_index: 0,
+                    default_animation: 0xFFFFFFFF, // -1
+                },
+                actor_params: structs::scly_structs::ActorParameters {
+                    light_params: structs::scly_structs::LightParameters {
+                        unknown0: 1,
+                        unknown1: 1.0,
+                        shadow_tessellation: 0,
+                        unknown2: 1.0,
+                        unknown3: 20.0,
+                        color: [1.0, 1.0, 1.0, 1.0].into(),
+                        unknown4: 1,
+                        world_lighting: 1,
+                        light_recalculation: 1,
+                        unknown5: [0.0, 0.0, 0.0].into(),
+                        unknown6: 4,
+                        unknown7: 4,
+                        unknown8: 0,
+                        light_layer_id: 0
+                    },
+                    scan_params: structs::scly_structs::ScannableParameters {
+                        scan: ResId::invalid(), // None
+                    },
+                    xray_cmdl: ResId::invalid(), // None
+                    xray_cskr: ResId::invalid(), // None
+                    thermal_cmdl: ResId::invalid(), // None
+                    thermal_cskr: ResId::invalid(), // None
+
+                    unknown0: 1,
+                    unknown1: 1.0,
+                    unknown2: 1.0,
+
+                    visor_params: structs::scly_structs::VisorParameters {
+                        unknown0: 0,
+                        target_passthrough: 0,
+                        visor_mask: 15 // Combat|Scan|Thermal|XRay
+                    },
+                    enable_thermal_heat: 1,
+                    unknown3: 0,
+                    unknown4: 1,
+                    unknown5: 1.0
+                },
+                looping: 1,
+                snow: 1,
+                solid: 0,
+                camera_passthrough: 0,
+                active: 1,
+                unknown8: 0,
+                unknown9: 1.0,
+                unknown10: 0,
+                unknown11: 0,
+                unknown12: 0,
+                unknown13: 0
+            }.into(),
+            connections: vec![].into()
+            }
+        );
+
+        let hudmemo_id = ps.fresh_instance_id_range.next().unwrap();
+        let player_hint_id = ps.fresh_instance_id_range.next().unwrap();
+    
+        // Inform the player that they are about to be warped
+        layers[0].objects
+            .as_mut_vec()
+            .push(structs::SclyObject {
+               instance_id: hudmemo_id,
+               property_data: structs::HudMemo {
+                    name: b"Warping hudmemo\0".as_cstr(),
+    
+                    first_message_timer: 6.5,
+                    unknown: 1,
+                    memo_type: 0,
+                    strg: custom_asset_ids::WARPING_TO_OTHER_STRG,
+                    active: 1,
+                }.into(),
+               connections: vec![].into(),
+            }
+        );
+        // Stop the player from moving
+        layers[0].objects
+            .as_mut_vec()
+            .push(structs::SclyObject {
+               instance_id: player_hint_id,
+               property_data: structs::PlayerHint {
+                
+                name: b"Warping playerhint\0".as_cstr(),
+    
+                position: [0.0, 0.0, 0.0].into(),
+                rotation: [0.0, 0.0, 0.0].into(),
+            
+                unknown0: 1, // active
+            
+                inner_struct: structs::PlayerHintStruct {
+                    unknowns: [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1, // disable
+                        1, // disable
+                        1, // disable
+                        1, // disable
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ].into(),
+                }.into(),
+    
+                unknown1: 10, // priority
+               }.into(),
+               connections: vec![].into(),
+        });
+        // Warp the player when entered
+        layers[0].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: trigger_id,
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::RESET_AND_START,
+                        target_object_id: 0x000B0183, // teleport timer
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::INCREMENT,
+                        target_object_id: player_hint_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: hudmemo_id,
+                    },
+                    structs::Connection {
+                        state: structs::ConnectionState::ENTERED,
+                        message: structs::ConnectionMsg::DECREMENT,
+                        target_object_id: special_function_ids[0],
+                    },
+                ].into(),
+                property_data: structs::SclyProperty::Trigger(
+                    Box::new(structs::Trigger {
+                        name: b"warp\0".as_cstr(),
+                        position: [52.0, -298.0, -373.0].into(),
+                        scale: [3.0, 3.0, 6.0].into(),
+                        damage_info: structs::scly_structs::DamageInfo {
+                            weapon_type: 0,
+                            damage: 0.0,
+                            radius: 0.0,
+                            knockback_power: 0.0
+                        },
+                        force: [0.0, 0.0, 0.0].into(),
+                        flags: 1,
+                        active: 1,
+                        deactivate_on_enter: 0,
+                        deactivate_on_exit: 0,
+                    })
+                ),
+            }
+        );
+
+        // Deactivate warp while essence is alive
+        layers[1].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                property_data: structs::Timer {
+                    name: b"remove warp\0".as_cstr(),
+                    start_time: 0.1,
+                    max_random_add: 0.0,
+                    reset_to_zero: 0,
+                    start_immediately: 1,
+                    active: 1,
+                }.into(),
+                connections: vec![
+                    structs::Connection {
+                        message: structs::ConnectionMsg::DEACTIVATE,
+                        state: structs::ConnectionState::ZERO,
+                        target_object_id: actor_id,
+                    },
+                    structs::Connection {
+                        message: structs::ConnectionMsg::DEACTIVATE,
+                        state: structs::ConnectionState::ZERO,
+                        target_object_id: trigger_id,
+                    },
+                ].into(),
+            }
+        );
+    }
+
     let mut connections = Vec::new();
     for target_object_id in objs_to_remove {
         if target_object_id == 0x0006003D {
@@ -4966,20 +5222,8 @@ fn patch_final_boss_permadeath<'r>(
         }
     );
 
-    // Subchamber Four
+    // Boss deaths
     if mrea_id == 0xA7AC009B || mrea_id == 0x1A666C55 {
-        // Allocate list of ids
-        let destinations = if mrea_id == 0xA7AC009B {
-            vec![3858868330, 3883549607, 3886867740, 3851260989, 3847959174]
-        } else {
-            vec![3827358027]
-        };
-
-        let mut special_function_ids = Vec::<u32>::new();
-        for _ in 0..destinations.len() {
-            special_function_ids.push(ps.fresh_instance_id_range.next().unwrap());
-        }
-
         // Add special functions
         for i in 0..destinations.len() {
             layers[0].objects.as_mut_vec().push(
@@ -4998,11 +5242,17 @@ fn patch_final_boss_permadeath<'r>(
         // Add connections to post-death relay
         for layer_idx in 0..layer_count {
             for obj in layers[layer_idx].objects.as_mut_vec() {
-                if obj.instance_id & 0x0000FFFF == 0x00000022 || obj.property_data.object_type() == 0x83 { // post-death relay
+                if obj.instance_id & 0x0000FFFF == 0x00000022 || obj.property_data.object_type() == 0x83 || obj.instance_id & 0x00FFFFFF == 0x000B00EC || obj.instance_id & 0x00FFFFFF == 0x000B01B6 { // post-death relay
                     for i in 0..destinations.len() {
+                        let (state, message) = if mrea_id == 0x1A666C55 { // lair
+                            (structs::ConnectionState::ZERO, structs::ConnectionMsg::DECREMENT)
+                        } else {
+                            (structs::ConnectionState::ZERO, structs::ConnectionMsg::INCREMENT)
+                        };
+
                         obj.connections.as_mut_vec().push(structs::Connection {
-                            state: structs::ConnectionState::ZERO,
-                            message: structs::ConnectionMsg::INCREMENT,
+                            state,
+                            message,
                             target_object_id: special_function_ids[i],
                         });
                     }
@@ -5448,30 +5698,6 @@ fn patch_qol_game_breaking(
     patcher.add_scly_patch(
         resource_info!("00_mines_savestation_b.MREA").into(),
         move |ps, area| patch_spawn_point_position(ps, area, [216.7245, 4.4046, -139.8873], false, true)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03a_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03b_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03c_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03d_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03e_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
-    );
-    patcher.add_scly_patch(
-        resource_info!("03f_crater.MREA").into(),
-        move |ps, area| patch_final_boss_permadeath(ps, area)
     );
     if small_samus {
         patcher.add_scly_patch(
@@ -7172,6 +7398,30 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     if config.qol_game_breaking {
         patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout, config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.9);
+        patcher.add_scly_patch(
+            resource_info!("03a_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03b_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03c_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03d_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03e_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(),
+            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
     }
 
     // not only is this game-breaking, but it's nonsensical and counterintuitive, always fix //
