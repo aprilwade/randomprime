@@ -788,7 +788,7 @@ impl PatchConfigPrivate
             starting_items,
             item_loss_items: self.game_config.item_loss_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
-            disable_item_loss: self.game_config.disable_item_loss.unwrap_or(false),
+            disable_item_loss: self.game_config.disable_item_loss.unwrap_or(true),
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             item_max_capacity: item_max_capacity,
