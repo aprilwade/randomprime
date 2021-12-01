@@ -50,6 +50,9 @@ unsafe extern "C" fn setup_global_state()
            version = Ntsc0_00)]
 #[patch_fn(kind = call,
            target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
+           version = Ntsc0_01)]
+#[patch_fn(kind = call,
+           target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,
            version = Ntsc0_02)]
 #[patch_fn(kind = call,
            target = "FinishedLoading__19SNewFileSelectFrame" + 0x2c,

@@ -28,7 +28,7 @@ macro_rules! build_lookup_macros {
 
 build_lookup_macros! {
     (mp1_100_symbol, MP1_100_SYMBOL_TABLE, "NTSC 1.00"),
-    // (mp1_101_symbol, MP1_101_SYMBOL_TABLE, "NTSC 1.01"),
+    (mp1_101_symbol, MP1_101_SYMBOL_TABLE, "NTSC 1.01"),
     (mp1_102_symbol, MP1_102_SYMBOL_TABLE, "NTSC 1.02"),
     (mp1_pal_symbol, MP1_PAL_SYMBOL_TABLE, "PAL"),
     (mp1_kor_symbol, MP1_KOR_SYMBOL_TABLE, "KOR"),

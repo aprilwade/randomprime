@@ -145,6 +145,7 @@ pub enum GameVersion
 {
     Any,
     Ntsc0_00,
+    Ntsc0_01,
     Ntsc0_02,
     NtscK,
     NtscJ,
@@ -168,6 +169,7 @@ impl GameVersion
         // Skip the common prefix "!#$MetroidBuildInfo!#$Build "
         let v = match &build_info_slice[28..] {
             b"v1.088 1" => GameVersion::Ntsc0_00,
+            b"v1.093 1" => GameVersion::Ntsc0_01,
             b"v1.097 1" => GameVersion::NtscK,
             b"v1.110 2" => GameVersion::Pal,
             b"v1.111 3" => GameVersion::Ntsc0_02,

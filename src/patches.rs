@@ -4125,7 +4125,7 @@ fn patch_dol<'r>(
                 let s = mp1_symbol!($sym);
                 match &$version {
                     Version::NtscU0_00    => s.addr_0_00,
-                    Version::NtscU0_01    => unreachable!(),
+                    Version::NtscU0_01    => s.addr_0_01,
                     Version::NtscU0_02    => s.addr_0_02,
                     Version::NtscK        => s.addr_kor,
                     Version::NtscJ        => s.addr_jap,
@@ -4475,7 +4475,11 @@ fn patch_dol<'r>(
             let map_str = rel_files::REL_LOADER_100_MAP;
             (loader_bytes, map_str)
         },
-        Version::NtscU0_01 => unreachable!(),
+        Version::NtscU0_01 => {
+            let loader_bytes = rel_files::REL_LOADER_101;
+            let map_str = rel_files::REL_LOADER_101_MAP;
+            (loader_bytes, map_str)
+        },
         Version::NtscU0_02 => {
             let loader_bytes = rel_files::REL_LOADER_102;
             let map_str = rel_files::REL_LOADER_102_MAP;
@@ -5659,7 +5663,7 @@ impl fmt::Display for Version
             Version::NtscU0_00    => write!(f, "1.00"),
             Version::NtscU0_01    => write!(f, "1.01"),
             Version::NtscU0_02    => write!(f, "1.02"),
-			Version::NtscK        => write!(f, "kor"),
+            Version::NtscK        => write!(f, "kor"),
             Version::NtscJ        => write!(f, "jap"),
             Version::Pal          => write!(f, "pal"),
             Version::NtscUTrilogy => write!(f, "trilogy_ntsc_u"),
@@ -6638,9 +6642,6 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
                     "You must start from an unmodified ISO every time."
         ))?
     }
-    if version == Version::NtscU0_01 {
-        Err("The NTSC 0-01 version of Metroid Prime is not current supported.")?;
-    }
 
     build_and_run_patches(&mut gc_disc, &config, version)?;
 
@@ -6649,7 +6650,7 @@ pub fn patch_iso<T>(config: PatchConfig, mut pn: T) -> Result<(), String>
 
     let patches_rel_bytes = match version {
         Version::NtscU0_00    => Some(rel_files::PATCHES_100_REL),
-        Version::NtscU0_01    => None,
+        Version::NtscU0_01    => Some(rel_files::PATCHES_101_REL),
         Version::NtscU0_02    => Some(rel_files::PATCHES_102_REL),
         Version::Pal          => Some(rel_files::PATCHES_PAL_REL),
         Version::NtscK        => Some(rel_files::PATCHES_KOR_REL),
