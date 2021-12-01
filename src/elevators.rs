@@ -616,7 +616,9 @@ impl SpawnRoomData
 
         // Handle specific room destinations //
         let vec: Vec<&str> = dest_name.split(":").collect();
-        assert!(vec.len() == 2);
+        if vec.len() != 2 {
+            panic!("Error - Could not find destination '{}'", dest_name);
+        }
         let world_name = vec[0].trim();
         let room_name = vec[1].trim();
 
