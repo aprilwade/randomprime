@@ -364,7 +364,9 @@ pub struct CtwkBall<'r>
 pub struct CtwkGuiColors<'r>
 {
     pub start: Reader<'r>,
-    pub colors: GenericArray<GenericArray<f32,U4>, U148>,
+    pub colors: GenericArray<GenericArray<f32,U4>, U112>, // Set of 112 RGBA values
+    pub visor_count: u32,
+    pub visor_colors: GenericArray<GenericArray<GenericArray<f32,U4>, U7>, U5>, // Set of 7 RGBA values repeated for 5 visors
 
     #[auto_struct(pad_align = 32)]
     _pad: (),

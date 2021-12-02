@@ -5301,40 +5301,25 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 
     if ctwk_config.hud_color.is_some() {
         let hud_color = ctwk_config.hud_color.unwrap();
-        for i in 0..148 {
-            // Skip coloring all the energy stuff because it glitches otherwise
-            if vec![112, 141, 142, 143, 144, 145, 146, 147,
-            96,
-            97,
-            112,
-            113,
-            115,
-            116,
-            117,
-            119,
-            120,
-            121,
-            122,
-            123,
-            124,
-            129,
-            130,
-            131,
-            132,
-            133,
-            134,
-            135,
-            136,
-            137,
-            138,
-            139,
-            140].contains(&i) {
-                let mut color = ctwk_gui_colors.colors[i as usize].clone();
-                color[3] = color[3]/2.0;
-                ctwk_gui_colors.colors[i as usize] = color.into();
-                continue;
+        for i in 0..112 {
+            let original_color = ctwk_gui_colors.colors[i as usize];
+            if original_color == [0.0, 0.0, 0.0, 1.0].into() || vec![52, 54].contains(&i) {
+                continue; // unused/invisible/not a color
             }
-            ctwk_gui_colors.colors[i as usize] = [hud_color[0], hud_color[1], hud_color[2], ctwk_gui_colors.colors[i as usize][3]].into();
+
+            ctwk_gui_colors.colors[i as usize] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
+        }
+
+        for i in 0..5 {
+            let i = i as usize;
+            for j in 0..7 {
+                let j = j as usize;
+                let original_color = ctwk_gui_colors.visor_colors[i][j];
+                if original_color == [0.0, 0.0, 0.0, 1.0].into() {
+                    continue; // unused/invisible/not a color
+                }
+                ctwk_gui_colors.visor_colors[i][j] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
+            }
         }
     }
 
