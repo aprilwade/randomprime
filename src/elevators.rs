@@ -605,7 +605,7 @@ impl SpawnRoomData
             return *SpawnRoom::EndingCinematic.spawn_room_data();
         }
 
-        if dest_name == "frigate" {
+        if dest_name == "frigate" || dest_name == "frigate escape cutscene" {
             return *SpawnRoom::FrigateExteriorDockingHangar.spawn_room_data();
         }
 
