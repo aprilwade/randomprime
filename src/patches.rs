@@ -5360,7 +5360,10 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
         if hud_color[1] > max { max = hud_color[1]; }
         if hud_color[2] > max { max = hud_color[2]; }
         let scale = 1.0 / max;
-        let hud_color = [hud_color[0]*scale, hud_color[1]*scale, hud_color[2]*scale];
+        let mut hud_color = [hud_color[0]*scale, hud_color[1]*scale, hud_color[2]*scale];
+        if max < 0.0001 {
+            hud_color = [1.0, 1.0, 1.0];
+        }
 
         for i in 0..112 {
             let original_color = ctwk_gui_colors.colors[i as usize];
