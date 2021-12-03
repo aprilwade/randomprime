@@ -4153,36 +4153,89 @@ fn patch_dol<'r>(
             .patch(symbol_addr!("aMetroidprimeB", version), b"randomprime B\0"[..].into())?;
     }
 
-    // TODO: missing 1 color (boost ball related)
     if remove_ball_color {
-        let ball_color_patch = ppcasm!(symbol_addr!("skBallInnerGlowColors", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallAuxGlowColors", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallTransFlashColors", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColors", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsJaggy", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallSwooshColorsCharged", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
-        let ball_color_patch = ppcasm!(symbol_addr!("BallGlowColors", version), {
-            .asciiz b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        });
-        dol_patcher.ppcasm_patch(&ball_color_patch)?;
+        let colors = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+        dol_patcher.patch(symbol_addr!("skBallInnerGlowColors"  , version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallAuxGlowColors"      , version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallTransFlashColors"   , version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallSwooshColors"       , version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallSwooshColorsJaggy"  , version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallSwooshColorsCharged", version), colors.clone().into())?;
+        dol_patcher.patch(symbol_addr!("BallGlowColors"         , version), colors.clone().into())?;
+    } else if config.suit_colors.is_some() {
+        let suit_colors = config.suit_colors.as_ref().unwrap();
+        let mut colors: Vec<Vec<u8>> = Vec::new();
+        colors.push(vec![0xc2, 0x7e, 0x10, 0x66, 0xc4, 0xff, 0x60, 0xff, 0x90, 0x33, 0x33, 0xff, 0xff, 0x80, 0x80, 0x00, 0x9d, 0xb6, 0xd3, 0xf1, 0x00, 0x60, 0x33, 0xff, 0xfb, 0x98, 0x21]); // skBallInnerGlowColors
+        colors.push(vec![0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xd5, 0x19, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]); // BallAuxGlowColors
+        colors.push(vec![0xc2, 0x7e, 0x10, 0x66, 0xc4, 0xff, 0x60, 0xff, 0x90, 0x33, 0x33, 0xff, 0xff, 0x20, 0x20, 0x00, 0x9d, 0xb6, 0xd3, 0xf1, 0x00, 0xa6, 0x86, 0xd8, 0xfb, 0x98, 0x21]); // BallTransFlashColors
+        colors.push(vec![0xC2, 0x8F, 0x17, 0x70, 0xD4, 0xFF, 0x6A, 0xFF, 0x8A, 0x3D, 0x4D, 0xFF, 0xC0, 0x00, 0x00, 0x00, 0xBE, 0xDC, 0xDF, 0xFF, 0x00, 0xC4, 0x9E, 0xFF, 0xFF, 0x9A, 0x22]); // BallSwooshColors
+        colors.push(vec![0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00, 0xFF, 0xD5, 0x19, 0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00, 0xFF, 0xCC, 0x00]); // BallSwooshColorsJaggy
+        colors.push(vec![0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00, 0xFF, 0x80, 0x20, 0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00, 0xFF, 0xE6, 0x00]); // BallSwooshColorsCharged
+        colors.push(vec![0xc2, 0x7e, 0x10, 0x66, 0xc4, 0xff, 0x6c, 0xff, 0x61, 0x33, 0x33, 0xff, 0xff, 0x20, 0x20, 0x00, 0x9d, 0xb6, 0xd3, 0xf1, 0x00, 0xa6, 0x86, 0xd8, 0xfb, 0x98, 0x21]); // BallGlowColors
+
+        for i in 0..colors.len() {
+            for j in 0..9 {
+                let angle = if vec![0].contains(&j) && suit_colors.power_deg.is_some() {
+                    suit_colors.power_deg.clone().unwrap()
+                } else if vec![1, 2].contains(&j)  && suit_colors.varia_deg.is_some() {
+                    suit_colors.varia_deg.clone().unwrap()
+                } else if vec![3].contains(&j)  && suit_colors.gravity_deg.is_some() {
+                    suit_colors.gravity_deg.clone().unwrap()
+                } else if vec![4].contains(&j)  && suit_colors.phazon_deg.is_some() {
+                    suit_colors.phazon_deg.clone().unwrap()
+                } else {
+                    0
+                };
+
+                let angle = angle % 360;
+                if angle == 0 {
+                    continue;
+                }
+                let angle = angle as f32;
+
+                let cosv = (angle * std::f32::consts::PI / 180.0).cos();
+                let sinv = (angle * std::f32::consts::PI / 180.0).sin();
+                let matrix: [f32; 9] = [
+                    // Reds
+                    0.213 + cosv * 0.787 - sinv * 0.213,
+                    0.715 - cosv * 0.715 - sinv * 0.715,
+                    0.072 - cosv * 0.072 + sinv * 0.928,
+                    // Greens
+                    0.213 - cosv * 0.213 + sinv * 0.143,
+                    0.715 + cosv * 0.285 + sinv * 0.140,
+                    0.072 - cosv * 0.072 - sinv * 0.283,
+                    // Blues
+                    0.213 - cosv * 0.213 - sinv * 0.787,
+                    0.715 - cosv * 0.715 + sinv * 0.715,
+                    0.072 + cosv * 0.928 + sinv * 0.072,
+                ];
+
+                let r_idx = j*3;
+                let g_idx = r_idx+1;
+                let b_idx = r_idx+2;
+
+                let r = colors[i][r_idx] as f32;
+                let g = colors[i][g_idx] as f32;
+                let b = colors[i][b_idx] as f32;
+
+                let new_r = matrix[0] * r + matrix[1] * g + matrix[2] * b;
+                let new_g = matrix[3] * r + matrix[4] * g + matrix[5] * b;
+                let new_b = matrix[6] * r + matrix[7] * g + matrix[8] * b;
+                
+                colors[i][r_idx] = new_r.clamp(0.0, 255.0) as u8;
+                colors[i][g_idx] = new_g.clamp(0.0, 255.0) as u8;
+                colors[i][b_idx] = new_b.clamp(0.0, 255.0) as u8;
+            }
+        }
+
+        let mut i = 0;
+        dol_patcher.patch(symbol_addr!("skBallInnerGlowColors"  , version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallAuxGlowColors"      , version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallTransFlashColors"   , version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallSwooshColors"       , version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallSwooshColorsJaggy"  , version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallSwooshColorsCharged", version), colors[i].clone().into())?; i+=1;
+        dol_patcher.patch(symbol_addr!("BallGlowColors"         , version), colors[i].clone().into())?;
     }
 
     if config.automatic_crash_screen {
@@ -7472,7 +7525,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             .ok();
 
         for i in 0..suit_textures.len() {
-            let angle = angles[i] as f32;
+            let angle = angles[i] % 360;
+            if angle == 0 {
+                continue;
+            }
+            let angle = angle as f32;
 
             fs::create_dir(format!("cache/{}", angle))
                 .map_err(|e| format!("Failed to create cache subdir: {}", e))
