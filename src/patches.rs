@@ -5382,7 +5382,12 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
                 if original_color == [0.0, 0.0, 0.0, 1.0].into() {
                     continue; // unused/invisible/not a color
                 }
-                ctwk_gui_colors.visor_colors[i][j] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
+                
+                if j == 1 {
+                    ctwk_gui_colors.visor_colors[i][j] = [hud_color[0] / 5.0, hud_color[1] / 5.0, hud_color[2] / 5.0, original_color[3]].into();
+                } else {
+                    ctwk_gui_colors.visor_colors[i][j] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
+                }
             }
         }
     }
