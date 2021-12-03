@@ -5354,6 +5354,14 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 
     if ctwk_config.hud_color.is_some() {
         let hud_color = ctwk_config.hud_color.unwrap();
+
+        // Normalize colors from 0 to 1.0
+        let mut max = hud_color[0];
+        if hud_color[1] > max { max = hud_color[1]; }
+        if hud_color[2] > max { max = hud_color[2]; }
+        let scale = 1.0 / max;
+        let hud_color = [hud_color[0]*scale, hud_color[1]*scale, hud_color[2]*scale];
+
         for i in 0..112 {
             let original_color = ctwk_gui_colors.colors[i as usize];
             if original_color == [0.0, 0.0, 0.0, 1.0].into() || vec![52, 54].contains(&i) {
