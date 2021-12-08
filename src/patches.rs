@@ -4962,6 +4962,49 @@ fn patch_ctwk_ball(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     Ok(())
 }
 
+fn patch_subchamber_five_nintendont_fix<'r>(
+    ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+)
+-> Result<(), String>
+{
+    let layers = &mut area.mrea().scly_section_mut().layers.as_mut_vec();
+    let trigger = layers[0].objects.as_mut_vec()
+        .iter_mut()
+        .find(|obj| obj.instance_id & 0x00FFFFFF == 0x000A0017)
+        .unwrap();
+    let trigger_data = trigger.property_data.as_trigger_mut().unwrap();
+    let position = trigger_data.position.clone();
+    let scale = trigger_data.scale.clone();
+    trigger_data.position[1] = -265.4421;
+    
+    layers[0].objects.as_mut_vec().push(
+        structs::SclyObject {
+            instance_id: ps.fresh_instance_id_range.next().unwrap(),
+            connections: vec![].into(),
+            property_data: structs::SclyProperty::Trigger(
+                Box::new(structs::Trigger {
+                    name: b"push\0".as_cstr(),
+                    position,
+                    scale,
+                    damage_info: structs::scly_structs::DamageInfo {
+                        weapon_type: 0,
+                        damage: 0.0,
+                        radius: 0.0,
+                        knockback_power: 0.0
+                    },
+                    force: [0.0, -1000.0, 0.0].into(),
+                    flags: 0x2001, // apply force, detect player
+                    active: 1,
+                    deactivate_on_enter: 0,
+                    deactivate_on_exit: 0,
+                })
+            ),
+        }
+    );
+    Ok(())
+}
+
 fn patch_final_boss_permadeath<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -5264,23 +5307,29 @@ fn patch_final_boss_permadeath<'r>(
             });
         }
     }
-    layers[1].objects.as_mut_vec().push(
-        structs::SclyObject {
-            instance_id: ps.fresh_instance_id_range.next().unwrap(),
-            property_data: structs::Timer {
-                name: b"remove boss\0".as_cstr(),
-                start_time: 0.1,
-                max_random_add: 0.0,
-                reset_to_zero: 0,
-                start_immediately: 1,
-                active: 1,
-            }.into(),
-            connections: connections.into(),
-        }
-    );
+
+    // if mrea_id != 0x1A666C55
+    {
+        layers[1].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                property_data: structs::Timer {
+                    name: b"remove boss\0".as_cstr(),
+                    start_time: 0.1,
+                    max_random_add: 0.0,
+                    reset_to_zero: 0,
+                    start_immediately: 1,
+                    active: 1,
+                }.into(),
+                connections: connections.into(),
+            }
+        );
+    }
 
     // Boss deaths
-    if mrea_id == 0xA7AC009B || mrea_id == 0x1A666C55 {
+    if mrea_id == 0xA7AC009B
+    || mrea_id == 0x1A666C55 
+    {
         // Add special functions
         for i in 0..destinations.len() {
             layers[0].objects.as_mut_vec().push(
@@ -5299,9 +5348,15 @@ fn patch_final_boss_permadeath<'r>(
         // Add connections to post-death relay
         for layer_idx in 0..layer_count {
             for obj in layers[layer_idx].objects.as_mut_vec() {
-                if obj.instance_id & 0x0000FFFF == 0x00000022 || obj.property_data.object_type() == 0x83 || obj.instance_id & 0x00FFFFFF == 0x000B00EC || obj.instance_id & 0x00FFFFFF == 0x000B01B6 { // post-death relay
-                    for i in 0..destinations.len() {
-                        let (state, message) = if mrea_id == 0x1A666C55 { // lair
+                if 
+                       obj.instance_id & 0x0000FFFF == 0x00000022
+                    || obj.property_data.object_type() == 0x83
+                    || obj.instance_id & 0x00FFFFFF == 0x000B00EC
+                    || obj.instance_id & 0x00FFFFFF == 0x000B01B0
+                    || obj.instance_id & 0x00FFFFFF == 0x000B01B6
+                { // post-death relay
+                    for i in 0..destinations.len() { 
+                        let (state, message) = if (mrea_id == 0x1A666C55) && i == 0 { // lair->lair
                             (structs::ConnectionState::ZERO, structs::ConnectionMsg::DECREMENT)
                         } else {
                             (structs::ConnectionState::ZERO, structs::ConnectionMsg::INCREMENT)
@@ -5319,9 +5374,15 @@ fn patch_final_boss_permadeath<'r>(
 
         let mut _connections = Vec::new();
         for i in 0..destinations.len() {
+            let (state, message) = if (mrea_id == 0x1A666C55) && (i == 0) { // lair->lair
+                (structs::ConnectionState::ZERO, structs::ConnectionMsg::DECREMENT)
+            } else {
+                (structs::ConnectionState::ZERO, structs::ConnectionMsg::INCREMENT)
+            };
+
             _connections.push(structs::Connection {
-                state: structs::ConnectionState::ZERO,
-                message: structs::ConnectionMsg::INCREMENT,
+                state,
+                message,
                 target_object_id: special_function_ids[i],
             });
         }
@@ -5448,6 +5509,7 @@ fn patch_add_dock_teleport<'r>(
     source_position: [f32;3],
     source_scale: [f32;3],
     destination_dock_num: u32,
+    dest_position: Option<[f32;3]>,
 )
 -> Result<(), String>
 {
@@ -5458,22 +5520,27 @@ fn patch_add_dock_teleport<'r>(
     // find the destination dock
     let mut found = false;
     let mut dock_position: GenericArray<f32, U3> = [0.0, 0.0, 0.0].into();
-    for obj in layer.objects.as_mut_vec() {
-        if !obj.property_data.is_dock() {
-            continue;
+    
+    if dest_position.is_some() {
+        dock_position = dest_position.unwrap().into();
+    } else {
+        for obj in layer.objects.as_mut_vec() {
+            if !obj.property_data.is_dock() {
+                continue;
+            }
+    
+            let dock = obj.property_data.as_dock().unwrap();
+            if dock.dock_index != destination_dock_num {
+                continue;
+            }
+            
+            found = true;
+            dock_position = dock.position.clone();
         }
-
-        let dock = obj.property_data.as_dock().unwrap();
-        if dock.dock_index != destination_dock_num {
-            continue;
+    
+        if !found {
+            panic!("failed to find dock #{} in room 0x{:X}", destination_dock_num, mrea_id)
         }
-        
-        found = true;
-        dock_position = dock.position.clone();
-    }
-
-    if !found {
-        panic!("failed to find dock #{} in room 0x{:X}", destination_dock_num, mrea_id)
     }
 
     // Find the nearest door
@@ -7157,6 +7224,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                             door_location.dock_position.clone().unwrap(),
                             door_location.dock_scale.clone().unwrap(),
                             destination.dock_num, // Used to determined where the player is placed in the new room
+                            None,
                         ),
                     );
                 }
@@ -7473,9 +7541,34 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             resource_info!("03e_crater.MREA").into(),
             move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
         );
+        // patcher.add_scly_patch(
+        //     resource_info!("03e_f_crater.MREA").into(), // five
+        //     move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        // );
         patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(),
+            resource_info!("03f_crater.MREA").into(), // lair
             move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03e_f_crater.MREA").into(), // subchamber five
+            move |ps, area| patch_subchamber_five_nintendont_fix(ps, area)
+        );
+        patcher.add_scly_patch(
+            resource_info!("03e_f_crater.MREA").into(), // Subchamber five
+            move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+        );
+        // patcher.add_scly_patch(
+        //     resource_info!("03f_crater.MREA").into(), // lair
+        //     move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+        // );
+        patcher.add_scly_patch(
+            resource_info!("03f_crater.MREA").into(), // lair
+            move |ps, area| patch_add_dock_teleport(ps, area,
+                [42.955109, -287.172638, -278.084354], // source position
+                [75.0, 75.0, 50.0], // source scale
+                0, // destination dock #
+                Some([41.5365,-287.8581,-284.6025]),
+            )
         );
     }
 
