@@ -661,7 +661,7 @@ impl PatchConfigPrivate
             .map(|path| extract_flaahgra_music_files(path))
             .transpose()?;
 
-        let item_max_capacity = match &self.game_config.item_max_capacity {
+        let mut item_max_capacity = match &self.game_config.item_max_capacity {
             Some(max_capacity) => {
                 max_capacity.iter()
                     .map(|(name, capacity) | (PickupType::from_str(name), *capacity))
@@ -669,6 +669,9 @@ impl PatchConfigPrivate
             },
             None => HashMap::new(),
         };
+        if !item_max_capacity.contains_key(&PickupType::EnergyTank) {
+            item_max_capacity.insert(PickupType::EnergyTank, 200);
+        }
 
         let qol_game_breaking   = {
             if force_vanilla_layout {
