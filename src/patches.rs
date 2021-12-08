@@ -7519,57 +7519,73 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         );
     }
 
+    let mut boss_permadeath = false;
+    if config.level_data.contains_key(World::ImpactCrater.to_json_key())
+    {
+        let transports = &config.level_data.get(World::ImpactCrater.to_json_key()).unwrap().transports;
+        if transports.contains_key("Essence Dead Cutscene")
+        {
+            let destination = &transports.get("Essence Dead Cutscene").unwrap();
+            if destination.trim().to_lowercase() != "credits"
+            {
+                boss_permadeath = true;
+            }
+        }
+    }
+
     if config.qol_game_breaking {
         patch_qol_game_breaking(&mut patcher, version, config.force_vanilla_layout, config.ctwk_config.player_size.clone().unwrap_or(1.0) < 0.9);
-        patcher.add_scly_patch(
-            resource_info!("03a_crater.MREA").into(),
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03b_crater.MREA").into(),
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03c_crater.MREA").into(),
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03d_crater.MREA").into(),
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03e_crater.MREA").into(),
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        // patcher.add_scly_patch(
-        //     resource_info!("03e_f_crater.MREA").into(), // five
-        //     move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        // );
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(), // lair
-            move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03e_f_crater.MREA").into(), // subchamber five
-            move |ps, area| patch_subchamber_five_nintendont_fix(ps, area)
-        );
-        patcher.add_scly_patch(
-            resource_info!("03e_f_crater.MREA").into(), // Subchamber five
-            move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
-        );
-        // patcher.add_scly_patch(
-        //     resource_info!("03f_crater.MREA").into(), // lair
-        //     move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
-        // );
-        patcher.add_scly_patch(
-            resource_info!("03f_crater.MREA").into(), // lair
-            move |ps, area| patch_add_dock_teleport(ps, area,
-                [42.955109, -287.172638, -278.084354], // source position
-                [75.0, 75.0, 50.0], // source scale
-                0, // destination dock #
-                Some([41.5365,-287.8581,-284.6025]),
-            )
-        );
+        if boss_permadeath {
+            patcher.add_scly_patch(
+                resource_info!("03a_crater.MREA").into(),
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03b_crater.MREA").into(),
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03c_crater.MREA").into(),
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03d_crater.MREA").into(),
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03e_crater.MREA").into(),
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            // patcher.add_scly_patch(
+            //     resource_info!("03e_f_crater.MREA").into(), // five
+            //     move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            // );
+            patcher.add_scly_patch(
+                resource_info!("03f_crater.MREA").into(), // lair
+                move |ps, area| patch_final_boss_permadeath(ps, area, game_resources)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03e_f_crater.MREA").into(), // subchamber five
+                move |ps, area| patch_subchamber_five_nintendont_fix(ps, area)
+            );
+            patcher.add_scly_patch(
+                resource_info!("03e_f_crater.MREA").into(), // Subchamber five
+                move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], true),
+            );
+            // patcher.add_scly_patch(
+            //     resource_info!("03f_crater.MREA").into(), // lair
+            //     move |ps, area| patch_remove_cutscenes(ps, area, vec![], vec![], false),
+            // );
+            patcher.add_scly_patch(
+                resource_info!("03f_crater.MREA").into(), // lair
+                move |ps, area| patch_add_dock_teleport(ps, area,
+                    [42.955109, -287.172638, -278.084354], // source position
+                    [75.0, 75.0, 50.0], // source scale
+                    0, // destination dock #
+                    Some([41.5365,-287.8581,-284.6025]),
+                )
+            );
+        }
     }
 
     // not only is this game-breaking, but it's nonsensical and counterintuitive, always fix //
