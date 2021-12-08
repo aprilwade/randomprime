@@ -5263,6 +5263,38 @@ fn patch_final_boss_permadeath<'r>(
             }
         );
 
+        // unload the previous room when entered
+        layers[0].objects.as_mut_vec().push(
+            structs::SclyObject {
+                instance_id: ps.fresh_instance_id_range.next().unwrap(),
+                connections: vec![
+                    structs::Connection {
+                        state: structs::ConnectionState::INSIDE,
+                        message: structs::ConnectionMsg::SET_TO_ZERO,
+                        target_object_id: 0x000B0173, // dock
+                    },
+                ].into(),
+                property_data: structs::SclyProperty::Trigger(
+                    Box::new(structs::Trigger {
+                        name: b"unload subchamber five\0".as_cstr(),
+                        position: [44.219898, -286.196686, -350.0].into(),
+                        scale: [100.0, 100.0, 130.0].into(),
+                        damage_info: structs::scly_structs::DamageInfo {
+                            weapon_type: 0,
+                            damage: 0.0,
+                            radius: 0.0,
+                            knockback_power: 0.0
+                        },
+                        force: [0.0, 0.0, 0.0].into(),
+                        flags: 1,
+                        active: 1,
+                        deactivate_on_enter: 0,
+                        deactivate_on_exit: 0,
+                    })
+                ),
+            }
+        );
+
         // Deactivate warp while essence is alive
         layers[1].objects.as_mut_vec().push(
             structs::SclyObject {
