@@ -6928,44 +6928,67 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
     }
 
     // Patch Tweaks.pak
-    patcher.add_resource_patch(
-        resource_info!("Game.CTWK").into(),
-        |res| patch_ctwk_game(res, &config.ctwk_config),
-    );
-    patcher.add_resource_patch(
-        resource_info!("Player.CTWK").into(),
-        |res| patch_ctwk_player(res, &config.ctwk_config),
-    );
-    patcher.add_resource_patch(
-        resource_info!("PlayerGun.CTWK").into(),
-        |res| patch_ctwk_player_gun(res, &config.ctwk_config),
-    );
-    patcher.add_resource_patch(
-        resource_info!("Ball.CTWK").into(),
-        |res| patch_ctwk_ball(res, &config.ctwk_config),
-    );
-    patcher.add_resource_patch(
-        resource_info!("GuiColors.CTWK").into(),
-        |res| patch_ctwk_gui_colors(res, &config.ctwk_config),
-    );
+    if version == Version::NtscK {
+        patcher.add_resource_patch(
+            (&[ b"Tweaks.Pak" ], 0x37CE7FD6, FourCC::from_bytes(b"CTWK")), // Game.CTWK
+            |res| patch_ctwk_game(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            (&[ b"Tweaks.Pak" ], 0x26F1E0C1, FourCC::from_bytes(b"CTWK")), // Player.CTWK
+            |res| patch_ctwk_player(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            (&[ b"Tweaks.Pak" ], 0x8D698EC0, FourCC::from_bytes(b"CTWK")), // PlayerGun.CTWK
+            |res| patch_ctwk_player_gun(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            (&[ b"Tweaks.Pak" ], 0xFC2160E5, FourCC::from_bytes(b"CTWK")), // Ball.CTWK
+            |res| patch_ctwk_ball(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            (&[ b"Tweaks.Pak" ], 0x2DFB63BB, FourCC::from_bytes(b"CTWK")), // GuiColors.CTWK
+            |res| patch_ctwk_gui_colors(res, &config.ctwk_config),
+        );
+    } else {
+        patcher.add_resource_patch(
+            resource_info!("Game.CTWK").into(),
+            |res| patch_ctwk_game(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            resource_info!("Player.CTWK").into(),
+            |res| patch_ctwk_player(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            resource_info!("PlayerGun.CTWK").into(),
+            |res| patch_ctwk_player_gun(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            resource_info!("Ball.CTWK").into(),
+            |res| patch_ctwk_ball(res, &config.ctwk_config),
+        );
+        patcher.add_resource_patch(
+            resource_info!("GuiColors.CTWK").into(),
+            |res| patch_ctwk_gui_colors(res, &config.ctwk_config),
+        );
 
-    /* TODO: add more tweaks
-    953a7c63.CTWK -> Game.CTWK
-    264a4972.CTWK -> Player.CTWK
-    f1ed8fd7.CTWK -> PlayerControls.CTWK
-    3faec012.CTWK -> PlayerControls2.CTWK
-    85ca11e9.CTWK -> PlayerRes.CTWK
-    6907a32d.CTWK -> PlayerGun.CTWK
-    33b3323a.CTWK -> GunRes.CTWK
-    5ed56350.CTWK -> Ball.CTWK
-    94c76ecd.CTWK -> Targeting.CTWK
-    39ad28d3.CTWK -> CameraBob.CTWK
-    5f24eff8.CTWK -> SlideShow.CTWK
-    ed2e48a9.CTWK -> Gui.CTWK
-    c9954e56.CTWK -> GuiColors.CTWK
-    e66a4f86.CTWK -> AutoMapper.CTWK
-    1d180d7c.CTWK -> Particle.CTWK
-    */
+        /* TODO: add more tweaks
+        953a7c63.CTWK -> Game.CTWK
+        264a4972.CTWK -> Player.CTWK
+        f1ed8fd7.CTWK -> PlayerControls.CTWK
+        3faec012.CTWK -> PlayerControls2.CTWK
+        85ca11e9.CTWK -> PlayerRes.CTWK
+        6907a32d.CTWK -> PlayerGun.CTWK
+        33b3323a.CTWK -> GunRes.CTWK
+        5ed56350.CTWK -> Ball.CTWK
+        94c76ecd.CTWK -> Targeting.CTWK
+        39ad28d3.CTWK -> CameraBob.CTWK
+        5f24eff8.CTWK -> SlideShow.CTWK
+        ed2e48a9.CTWK -> Gui.CTWK
+        c9954e56.CTWK -> GuiColors.CTWK
+        e66a4f86.CTWK -> AutoMapper.CTWK
+        1d180d7c.CTWK -> Particle.CTWK
+        */
+    }
 
     // Patch end sequence (player size)
     if config.ctwk_config.player_size.is_some() {
