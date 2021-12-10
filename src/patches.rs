@@ -5446,41 +5446,69 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
     };
 
     if ctwk_config.hud_color.is_some() {
-        let hud_color = ctwk_config.hud_color.unwrap();
-
-        // Normalize colors from 0 to 1.0
-        let mut max = hud_color[0];
-        if hud_color[1] > max { max = hud_color[1]; }
-        if hud_color[2] > max { max = hud_color[2]; }
-        let scale = 1.0 / max;
-        let mut hud_color = [hud_color[0]*scale, hud_color[1]*scale, hud_color[2]*scale];
-        if max < 0.0001 {
-            hud_color = [1.0, 1.0, 1.0];
+        let mut new_color = ctwk_config.hud_color.unwrap();
+        let mut max_new = new_color[0];
+        if new_color[1] > max_new { max_new = new_color[1]; }
+        if new_color[2] > max_new { max_new = new_color[2]; }
+        if max_new < 0.0001 {
+            new_color = [1.0, 1.0, 1.0];
         }
 
         for i in 0..112 {
-            let original_color = ctwk_gui_colors.colors[i as usize];
-            if original_color == [0.0, 0.0, 0.0, 1.0].into() || vec![52, 54].contains(&i) {
-                continue; // unused/invisible/not a color
+            // Skip black/white/gray
+            let old_color = ctwk_gui_colors.colors[i as usize];
+            if old_color[0]-old_color[1] > -0.1 && old_color[0]-old_color[1] < 0.1
+                && old_color[0]-old_color[2] > -0.1 && old_color[0]-old_color[2] < 0.1
+                && old_color[1]-old_color[2] > -0.1 && old_color[1]-old_color[2] < 0.1
+                && i != 10 && i != 11 // Visor/Beam menu
+            {
+                continue;
             }
 
-            ctwk_gui_colors.colors[i as usize] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
+            let mut max_original = old_color[0];
+            if old_color[1] > max_original { max_original = old_color[1]; }
+            if old_color[2] > max_original { max_original = old_color[2]; }
+            let scale = max_original / max_new;
+            
+            // Scale new color up or down to approximate original, preserve alpha
+            if i == 10 || i == 11 {
+                let new_color_scaled = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale];
+                let diff = [
+                    old_color[0] - new_color_scaled[0],
+                    old_color[1] - new_color_scaled[1],
+                    old_color[2] - new_color_scaled[2]
+                ];
+                let diff_scale = 0.65;
+                ctwk_gui_colors.colors[i as usize] = [
+                    new_color_scaled[0] + diff[0]*diff_scale,
+                    new_color_scaled[1] + diff[1]*diff_scale,
+                    new_color_scaled[2] + diff[2]*diff_scale,
+                    old_color[3],
+                ].into();
+            } else {
+                ctwk_gui_colors.colors[i as usize] = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]].into();
+            }
         }
 
         for i in 0..5 {
             let i = i as usize;
             for j in 0..7 {
                 let j = j as usize;
-                let original_color = ctwk_gui_colors.visor_colors[i][j];
-                if original_color == [0.0, 0.0, 0.0, 1.0].into() {
-                    continue; // unused/invisible/not a color
+                let old_color = ctwk_gui_colors.visor_colors[i][j];
+                if old_color[0]-old_color[1] > -0.1 && old_color[0]-old_color[1] < 0.1
+                    && old_color[0]-old_color[2] > -0.1 && old_color[0]-old_color[2] < 0.1
+                    && old_color[1]-old_color[2] > -0.1 && old_color[1]-old_color[2] < 0.1
+                {
+                    continue;
                 }
-                
-                if j == 1 {
-                    ctwk_gui_colors.visor_colors[i][j] = [hud_color[0] / 5.0, hud_color[1] / 5.0, hud_color[2] / 5.0, original_color[3]].into();
-                } else {
-                    ctwk_gui_colors.visor_colors[i][j] = [hud_color[0], hud_color[1], hud_color[2], original_color[3]].into();
-                }
+
+                let mut max_original = old_color[0];
+                if old_color[1] > max_original { max_original = old_color[1]; }
+                if old_color[2] > max_original { max_original = old_color[2]; }
+                let scale = max_original / max_new;
+
+                // Scale new color up or down to approximate original, preserve alpha
+                ctwk_gui_colors.visor_colors[i][j] = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]].into();
             }
         }
     }
