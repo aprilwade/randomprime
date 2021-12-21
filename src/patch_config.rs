@@ -128,6 +128,26 @@ pub struct SuitColors
     pub phazon_deg: Option<i16>,
 }
 
+
+#[derive(Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DefaultGameOptions
+{
+    pub screen_brightness: Option<u32>,
+    pub screen_offset_x: Option<i32>,
+    pub screen_offset_y: Option<i32>,
+    pub screen_stretch: Option<i32>,
+    pub sound_mode: Option<u32>,
+    pub sfx_volume: Option<u32>,
+    pub music_volume: Option<u32>,
+    pub visor_opacity: Option<u32>,
+    pub helmet_opacity: Option<u32>,
+    pub hud_lag: Option<bool>,
+    pub reverse_y_axis: Option<bool>,
+    pub rumble: Option<bool>,
+    pub swap_beam_controls: Option<bool>,
+}
+
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
@@ -281,6 +301,7 @@ pub struct PatchConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
+    pub default_game_options: Option<DefaultGameOptions>,
     pub suit_colors: Option<SuitColors>,
 
     pub quickplay: bool,
@@ -302,6 +323,7 @@ pub struct PatchConfig
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
+    default_game_options: Option<DefaultGameOptions>,
     suit_colors: Option<SuitColors>,
 
     qol_game_breaking: Option<bool>,
@@ -770,6 +792,7 @@ impl PatchConfigPrivate
             artifact_hint_behavior,
             flaahgra_music_files,
             suit_colors: self.preferences.suit_colors.clone(),
+            default_game_options: self.preferences.default_game_options.clone(),
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),
             quickpatch: self.preferences.quickpatch.unwrap_or(false),

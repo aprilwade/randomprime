@@ -4465,24 +4465,43 @@ fn patch_dol<'r>(
 
     // Update default game options to match user's prefrence
     {
-        let screen_brightness: u32 = 4;
-        let screen_offset_x: i32 = 0;
-        let screen_offset_y: i32 = 0;
-        let screen_stretch: i32 = 0;
+        /* define default defaults (lol) */
+        let mut screen_brightness : u32  = 4    ;
+        let mut screen_offset_x   : i32  = 0    ;
+        let mut screen_offset_y   : i32  = 0    ;
+        let mut screen_stretch    : i32  = 0    ;
+        let mut sound_mode        : u32  = 1    ;
+        let mut sfx_volume        : u32  = 0x7f ;
+        let mut music_volume      : u32  = 0x7f ;
+        let mut visor_opacity     : u32  = 0xff ;
+        let mut helmet_opacity    : u32  = 0xff ;
+        let mut hud_lag           : bool = true ;
+        let mut reverse_y_axis    : bool = false;
+        let mut rumble            : bool = true ;
+        let mut swap_beam_controls: bool = false;
+        let hints                 : bool = false;
 
-        let sound_mode: u32 = 1;
-        let sfx_volume: u32 = 0x7f;
-        let music_volume: u32 = 0x7f;
+        /* Update with user-defined defaults */
+        if config.default_game_options.is_some()
+        {
+            let default_game_options = config.default_game_options.clone().unwrap();
+            if default_game_options.screen_brightness  .is_some() { screen_brightness  = default_game_options.screen_brightness  .unwrap(); }
+            if default_game_options.screen_offset_x    .is_some() { screen_offset_x    = default_game_options.screen_offset_x    .unwrap(); }
+            if default_game_options.screen_offset_y    .is_some() { screen_offset_y    = default_game_options.screen_offset_y    .unwrap(); }
+            if default_game_options.screen_stretch     .is_some() { screen_stretch     = default_game_options.screen_stretch     .unwrap(); }
+            if default_game_options.sound_mode         .is_some() { sound_mode         = default_game_options.sound_mode         .unwrap(); }
+            if default_game_options.sfx_volume         .is_some() { sfx_volume         = default_game_options.sfx_volume         .unwrap(); }
+            if default_game_options.music_volume       .is_some() { music_volume       = default_game_options.music_volume       .unwrap(); }
+            if default_game_options.visor_opacity      .is_some() { visor_opacity      = default_game_options.visor_opacity      .unwrap(); }
+            if default_game_options.helmet_opacity     .is_some() { helmet_opacity     = default_game_options.helmet_opacity     .unwrap(); }
+            if default_game_options.hud_lag            .is_some() { hud_lag            = default_game_options.hud_lag            .unwrap(); }
+            if default_game_options.reverse_y_axis     .is_some() { reverse_y_axis     = default_game_options.reverse_y_axis     .unwrap(); }
+            if default_game_options.rumble             .is_some() { rumble             = default_game_options.rumble             .unwrap(); }
+            if default_game_options.swap_beam_controls .is_some() { swap_beam_controls = default_game_options.swap_beam_controls .unwrap(); }
+            // Users may not change default hint state
+        }
 
-        let visor_opacity: u32 = 0xff;
-        let helmet_opacity: u32 = 0xff;
-
-        let hud_lag: bool = true;
-        let reverse_y_axis: bool = false;
-        let rumble: bool = true;
-        let swap_beam_controls: bool = false;
-        let hints: bool = false;
-
+        /* Aggregate bit fields */
         let mut bit_flags: u32 =  0x00;
         if  hud_lag            { bit_flags |= 1    << 7; }
         if  reverse_y_axis     { bit_flags |= 1    << 6; }
@@ -4490,6 +4509,7 @@ fn patch_dol<'r>(
         if  swap_beam_controls { bit_flags |= 1    << 4; }
         if  hints              { bit_flags |= 1    << 3; }
 
+        /* Replace reset to default function */
         let default_game_options_patch = ppcasm!(symbol_addr!("ResetToDefaults__12CGameOptionsFv", version) + 9 * 4, {
             li         r0, screen_brightness;
             stw        r0, 0x48(r3);
