@@ -4385,11 +4385,6 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&level_select_mrea_idx_patch)?;
 
-    let disable_hints_setting_patch = ppcasm!(symbol_addr!("ResetToDefaults__12CGameOptionsFv", version) + 0x80, {
-            rlwimi      r0, r6, 3, 28, 28;
-    });
-    dol_patcher.ppcasm_patch(&disable_hints_setting_patch)?;
-
     if config.nonvaria_heat_damage {
         let heat_damage_patch = ppcasm!(symbol_addr!("ThinkAreaDamage__22CScriptSpecialFunctionFfR13CStateManager", version) + 0x4c, {
                 lwz     r4, 0xdc(r4);
@@ -4466,6 +4461,98 @@ fn patch_dol<'r>(
             });
             dol_patcher.ppcasm_patch(&is_area_visited_patch)?;
         }
+    }
+
+    // Update default game options to match user's prefrence
+    {
+        let screen_brightness: u32 = 4;
+        let screen_offset_x: i32 = 0;
+        let screen_offset_y: i32 = 0;
+        let screen_stretch: i32 = 0;
+
+        let sound_mode: u32 = 1;
+        let sfx_volume: u32 = 0x7f;
+        let music_volume: u32 = 0x7f;
+
+        let visor_opacity: u32 = 0xff;
+        let helmet_opacity: u32 = 0xff;
+
+        let hud_lag: bool = true;
+        let reverse_y_axis: bool = false;
+        let rumble: bool = true;
+        let swap_beam_controls: bool = false;
+        let hints: bool = false;
+
+        let mut bit_flags: u32 =  0x00;
+        if  hud_lag            { bit_flags |= 1    << 8; }
+        if  reverse_y_axis     { bit_flags |= 1    << 9; }
+        if  rumble             { bit_flags |= 1    << 10; }
+        if  swap_beam_controls { bit_flags |= 1    << 11; }
+        if  hints              { bit_flags |= 1    << 12; }
+
+        let default_game_options_patch = ppcasm!(symbol_addr!("ResetToDefaults__12CGameOptionsFv", version) + 9 * 4, {
+            li         r0, screen_brightness;
+            stw        r0, 0x48(r3);
+            li         r0, screen_offset_x;
+            stw        r0, 0x4C(r3);
+            li         r0, screen_offset_y;
+            stw        r0, 0x50(r3);
+            li         r0, screen_stretch;
+            stw        r0, 0x54(r3);
+            li         r0, sfx_volume;
+            stw        r0, 0x58(r3);
+            li         r0, music_volume;
+            stw        r0, 0x5C(r3);
+            li         r0, sound_mode;
+            stw        r0, 0x44(r3);
+            li         r0, visor_opacity;
+            stw        r0, 0x60(r3);
+            li         r0, helmet_opacity;
+            stw        r0, 0x64(r3);
+            li         r0, bit_flags;
+            stw        r0, 0x6A(r3);
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+
+            /*
+            li         r0, screen_brightness;
+            stw        r0, 0x48(r3);
+            li         r0, screen_offset_x;
+            stw        r0, 0x4C(r3);
+            li         r0, screen_offset_y;
+            stw        r0, 0x50(r3);
+            li         r0, screen_stretch;
+            stw        r0, 0x54(r3);
+            li         r0, sfx_volume;
+            stw        r0, 0x58(r3);
+            li         r0, music_volume;
+            stw        r0, 0x5C(r3);
+            li         r0, sound_mode;
+            stw        r0, 0x44(r3);
+            li         r0, visor_opacity;
+            stw        r0, 0x60(r3);
+            li         r0, helmet_opacity;
+            stw        r0, 0x64(r3);
+            li         r0, bit_flags;
+            stw        r0, 0x6A(r3);
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            nop;
+            */
+        });
+        dol_patcher.ppcasm_patch(&default_game_options_patch)?;
     }
 
     // Multiworld focused patches
