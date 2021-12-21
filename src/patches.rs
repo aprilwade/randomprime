@@ -2109,23 +2109,6 @@ fn patch_essence_cinematic_skip_nomusic(
     Ok(())
 }
 
-fn make_elite_research_fight_prereq_patches(patcher: &mut PrimePatcher)
-{
-    patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |_ps, area| {
-        let flags = &mut area.layer_flags.flags;
-        *flags |= 1 << 1; // Turn on "3rd pass elite bustout"
-        *flags &= !(1 << 5); // Turn off the "dummy elite"
-        Ok(())
-    });
-
-    patcher.add_scly_patch(resource_info!("07_mines_electric.MREA").into(), |_ps, area| {
-        let scly = area.mrea().scly_section_mut();
-        scly.layers.as_mut_vec()[0].objects.as_mut_vec()
-            .retain(|obj| obj.instance_id != 0x1B0525 && obj.instance_id != 0x1B0522);
-        Ok(())
-    });
-}
-
 fn patch_research_lab_hydra_barrier<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -6059,7 +6042,92 @@ fn patch_qol_logical(patcher: &mut PrimePatcher, config: &PatchConfig)
     }
 
     if config.phazon_elite_without_dynamo {
-        make_elite_research_fight_prereq_patches(patcher);
+        patcher.add_scly_patch(resource_info!("03_mines.MREA").into(), |ps, area| {
+                let room_id = area.mlvl_area.internal_id.clone();
+
+                let flags = &mut area.layer_flags.flags;
+                *flags &= !(1 << 5); // Turn off the "dummy elite"
+
+                let name = CString::new(format!("mylayer")).unwrap();
+                area.add_layer(Cow::Owned(name));
+                let new_layer_idx = area.layer_flags.layer_count as usize - 1;
+                let layers = area.mrea().scly_section_mut().layers.as_mut_vec();
+                
+                let layer_change_fn_id = ps.fresh_instance_id_range.next().unwrap();
+                layers[new_layer_idx].objects.as_mut_vec().push(structs::SclyObject {
+                    instance_id: layer_change_fn_id,
+                    connections: vec![].into(),
+                    property_data: structs::SpecialFunction::layer_change_fn(
+                        b"disable fight\0".as_cstr(),
+                        room_id,
+                        new_layer_idx as u32,
+                    ).into(),
+                });
+
+                let pickup = layers[0].objects.iter_mut()
+                    .find(|obj| obj.instance_id&0x000FFFFF == 0x000D0340)
+                    .unwrap();
+                pickup.connections.as_mut_vec().push(
+                    structs::Connection {
+                        state: structs::ConnectionState::ARRIVED,
+                        message: structs::ConnectionMsg::DECREMENT,
+                        target_object_id: layer_change_fn_id,
+                    }
+                );
+
+                for move_obj_id in vec![
+                    0x000D0405,
+                    0x000D01A7,
+                    0x000D0169,
+                    0x000D017C,
+                    0x000D01A2,
+                    0x000D042F,
+                    0x000D01C3,
+                    0x000D01ED,
+                    0x000D04C9,
+                    0x000D04CA,
+                    0x000D04CB,
+                    0x000D04CC,
+                    0x000D04C8,
+                    0x000D01EB,
+                    0x000D021B,
+                    0x000D01A4,
+                    0x000D01D1,
+                    0x000D04E6,
+                    0x000D00F6,
+                    0x000D040C,
+                    0x000D041B,
+                    0x000D0407,
+                    0x000D0406,
+                    0x000D04E5,
+                    0x000D01C4,
+                    0x000D0408,
+                    0x000D0409,
+                    0x000D01EC,
+                    0x000D0047,
+                    0x000D01CF,
+                    0x000D04D1,
+                    0x000D04DB,
+                    0x000D04DA,
+                    0x000D040A,
+                    0x000D04CE,
+                    0x000D01C2,
+                    0x000D04D2,
+                    0x000D04EB,
+                    0x000D01A9,
+                    0x000D01F0,
+                ] {
+                    let move_obj = layers[1].objects.iter_mut()
+                        .find(|obj| obj.instance_id&0x000FFFFF == move_obj_id)
+                        .unwrap().clone();
+                    layers[new_layer_idx].objects.as_mut_vec().push(move_obj.clone());
+                    layers[1].objects.as_mut_vec().retain(|obj|
+                        obj.instance_id&0x000FFFFF != move_obj_id
+                    );
+                }
+                Ok(())
+            }
+        );
     }
 
     if config.backwards_frigate {
