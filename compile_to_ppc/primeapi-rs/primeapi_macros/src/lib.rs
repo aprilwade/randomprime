@@ -238,6 +238,8 @@ impl syn::parse::Parse for CppBaseType
             (WChar, wchar_t),
             (Short, short),
             (Int, int),
+            (Float, float),
+            (Double, double),
         }
     }
 }
@@ -262,6 +264,8 @@ impl fmt::Display for CppBaseType
                     CppBuiltinType::Int => 'i',
                     CppBuiltinType::Long => 'l',
                     CppBuiltinType::LongLong => 'x',
+                    CppBuiltinType::Float => 'f',
+                    CppBuiltinType::Double => 'd',
                 };
                 write!(f, "{}", c)?;
             },
@@ -281,6 +285,8 @@ enum CppBuiltinType
     Int,
     Long,
     LongLong,
+    Float,
+    Double,
 }
 
 struct CppPtrQualifier(Token![*], Option<Token![const]>);
