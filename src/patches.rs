@@ -3536,6 +3536,20 @@ fn patch_research_core_access_soft_lock(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
+
+fn patch_hive_totem_softlock<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
+    -> Result<(), String>
+{
+    let scly = area.mrea().scly_section_mut();
+    let layer = &mut scly.layers.as_mut_vec()[0];
+    let trigger = layer.objects.as_mut_vec().iter_mut()
+        .find(|obj| obj.instance_id & 0x00FFFFFF == 0x002400CA)
+        .unwrap();
+    trigger.property_data.as_trigger_mut().unwrap().scale[1] = 60.0;
+
+    Ok(())
+}
+
 fn patch_gravity_chamber_stalactite_grapple_point<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -6030,6 +6044,10 @@ fn patch_qol_game_breaking(
     patcher.add_scly_patch(
         resource_info!("18_ice_gravity_chamber.MREA").into(),
         patch_gravity_chamber_stalactite_grapple_point
+    );
+    patcher.add_scly_patch(
+        resource_info!("19_hive_totem.MREA").into(),
+        patch_hive_totem_softlock
     );
 }
 
