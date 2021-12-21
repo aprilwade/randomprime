@@ -416,6 +416,7 @@ decl_instrs! {
     stfs,       (f:d), (r:a:dis)        => (6;52) | d | a | (16;dis);
     stw,        (r:s), (r:a:dis)        => (6;36) | s | a | (16;dis);
     stwu,       (r:s), (r:a:dis)        => (6;37) | s | a | (16;dis);
+    stb,        (r:s), (r:a:dis)        => (6;38) | s | a | (16;dis);
     subf[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;40) | (?.);
 }
 
