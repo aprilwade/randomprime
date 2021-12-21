@@ -4484,11 +4484,11 @@ fn patch_dol<'r>(
         let hints: bool = false;
 
         let mut bit_flags: u32 =  0x00;
-        if  hud_lag            { bit_flags |= 1    << 8; }
-        if  reverse_y_axis     { bit_flags |= 1    << 9; }
-        if  rumble             { bit_flags |= 1    << 10; }
-        if  swap_beam_controls { bit_flags |= 1    << 11; }
-        if  hints              { bit_flags |= 1    << 12; }
+        if  hud_lag            { bit_flags |= 1    << 7; }
+        if  reverse_y_axis     { bit_flags |= 1    << 6; }
+        if  rumble             { bit_flags |= 1    << 5; }
+        if  swap_beam_controls { bit_flags |= 1    << 4; }
+        if  hints              { bit_flags |= 1    << 3; }
 
         let default_game_options_patch = ppcasm!(symbol_addr!("ResetToDefaults__12CGameOptionsFv", version) + 9 * 4, {
             li         r0, screen_brightness;
@@ -4510,47 +4510,12 @@ fn patch_dol<'r>(
             li         r0, helmet_opacity;
             stw        r0, 0x64(r3);
             li         r0, bit_flags;
-            stw        r0, 0x6A(r3);
+            stb        r0, 0x68(r3);
             nop;
             nop;
             nop;
             nop;
             nop;
-
-            /*
-            li         r0, screen_brightness;
-            stw        r0, 0x48(r3);
-            li         r0, screen_offset_x;
-            stw        r0, 0x4C(r3);
-            li         r0, screen_offset_y;
-            stw        r0, 0x50(r3);
-            li         r0, screen_stretch;
-            stw        r0, 0x54(r3);
-            li         r0, sfx_volume;
-            stw        r0, 0x58(r3);
-            li         r0, music_volume;
-            stw        r0, 0x5C(r3);
-            li         r0, sound_mode;
-            stw        r0, 0x44(r3);
-            li         r0, visor_opacity;
-            stw        r0, 0x60(r3);
-            li         r0, helmet_opacity;
-            stw        r0, 0x64(r3);
-            li         r0, bit_flags;
-            stw        r0, 0x6A(r3);
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            nop;
-            */
         });
         dol_patcher.ppcasm_patch(&default_game_options_patch)?;
     }
