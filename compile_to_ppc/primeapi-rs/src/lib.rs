@@ -145,7 +145,10 @@ pub enum GameVersion
 {
     Any,
     Ntsc0_00,
+    Ntsc0_01,
     Ntsc0_02,
+    NtscK,
+    NtscJ,
     Pal,
 }
 
@@ -162,12 +165,15 @@ impl GameVersion
                 return v
             }
         }
-        let build_info_slice = unsafe { core::slice::from_raw_parts(&__build_info, 34) };
+        let build_info_slice = unsafe { core::slice::from_raw_parts(&__build_info, 36) };
         // Skip the common prefix "!#$MetroidBuildInfo!#$Build "
         let v = match &build_info_slice[28..] {
-            b"v1.088" => GameVersion::Ntsc0_00,
-            b"v1.110" => GameVersion::Pal,
-            b"v1.111" => GameVersion::Ntsc0_02,
+            b"v1.088 1" => GameVersion::Ntsc0_00,
+            b"v1.093 1" => GameVersion::Ntsc0_01,
+            b"v1.097 1" => GameVersion::NtscK,
+            b"v1.110 2" => GameVersion::Pal,
+            b"v1.111 3" => GameVersion::Ntsc0_02,
+            b"v1.111 2" => GameVersion::NtscJ,
             _ => unreachable!(),
         };
         unsafe {

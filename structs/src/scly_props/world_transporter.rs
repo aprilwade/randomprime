@@ -1,11 +1,20 @@
 use auto_struct_macros::auto_struct;
 
-use reader_writer::CStr;
-use reader_writer::typenum::*;
-use reader_writer::generic_array::GenericArray;
-use crate::{ResId, SclyPropertyData};
-use crate::res_id::*;
-use crate::scly_props::structs::AncsProp;
+use reader_writer::{
+    CStr,
+    CStrConversionExtension,
+    typenum::*,
+    generic_array::GenericArray,
+};
+use crate::{
+    {ResId, SclyPropertyData},
+    res_id::*,
+    scly_props::structs::AncsProp
+};
+use std::{
+    borrow::Cow,
+    ffi::CString
+};
 
 #[auto_struct(Readable, Writable)]
 #[derive(Debug, Clone)]
@@ -56,4 +65,51 @@ pub struct WorldTransporterPalAdditions<'r>
 impl<'r> SclyPropertyData for WorldTransporter<'r>
 {
     const OBJECT_TYPE: u8 = 0x062;
+}
+
+impl<'r> WorldTransporter<'r>
+{
+    pub fn warp(mlvl: u32, mrea: u32, teleporter_name: &str, font: ResId<FONT>, strg: ResId<STRG>, is_pal: bool) -> Self
+    {
+        let pal_additions = if is_pal {
+            Some(WorldTransporterPalAdditions {
+                audio_stream: b"\0".as_cstr(),
+                unknown0: 0,
+                unknown1: 0.,
+                unknown2: 0.,
+                unknown3: 0.,
+            })
+        } else {
+            None
+        };
+        
+        WorldTransporter {
+            name: Cow::Owned(CString::new(teleporter_name).unwrap()),
+            active: 1,
+            mlvl: ResId::new(mlvl),
+            mrea: ResId::new(mrea),
+            ancs: AncsProp {
+                file_id: ResId::invalid(),
+                node_index: 0,
+                default_animation: 0xFFFFFFFF,
+            },
+            player_scale: [1., 1., 1.].into(),
+            platform_model: ResId::invalid(),
+            platform_scale: [1., 1., 1.].into(),
+            background_model: ResId::invalid(),
+            background_scale: [1., 1., 1.].into(),
+            up_elevator: 0,
+            elevator_sound: 0xFFFFFFFF,
+            volume: 0,
+            panning: 0,
+            show_text: 1,
+            font,
+            strg,
+            fade_white: 0,
+            char_fade_in_time: 1.,
+            chars_per_second: 20.,
+            show_delay: 1.,
+            pal_additions,
+        }
+    }
 }

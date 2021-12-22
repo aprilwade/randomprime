@@ -59,6 +59,26 @@ pub enum MapaObjectType
     DoorIceFloor2      = 13,
     DoorWaveFloor2     = 14,
     DoorPlasmaFloor2   = 15,
+    DownArrowYellow    = 27, /* Maintenance Tunnel */
+    UpArrowYellow      = 28, /* Phazon Processing Center */
+    DownArrowGreen     = 29, /* Elevator A */
+    UpArrowGreen       = 30, /* Elite Control Access */
+    DownArrowRed       = 31, /* Elevator B */
+    UpArrowRed         = 32,
+    Elevator           = 33,
+    SaveStation        = 34,
+    Pickup             = 35, /* Reserved for pickup dots */
+    MissileStation     = 37,
+}
+
+#[derive(Debug, Clone)]
+pub enum MapaObjectVisibilityMode
+{
+    Always             = 0,
+    MapStationOrVisit  = 1,
+    Visit              = 2,
+    Never              = 3,
+    MapStationOrVisit2 = 4,
 }
 
 #[auto_struct(Readable, Writable, FixedSize)]
@@ -136,4 +156,29 @@ pub struct MapaBorder<'r>
 
     #[auto_struct(pad_align = 4)]
     pub _pad: (),
+}
+
+impl<'r> Mapa<'r>
+{
+    pub fn add_pickup(&mut self, editor_id : u32, pickup_pos : GenericArray<f32, U3>)
+    {
+        let mappable_objects = &mut self.objects;
+        let transform_matrix = [
+                                 1.0f32, 0.0f32, 0.0f32, pickup_pos[0],
+                                 0.0f32, 1.0f32, 0.0f32, pickup_pos[1],
+                                 0.0f32, 0.0f32, 1.0f32, pickup_pos[2],
+                               ].into();
+        mappable_objects
+            .as_mut_vec()
+            .push(
+                MapaObject {
+                    type_: MapaObjectType::Pickup as u32,
+                    visibility_mode: MapaObjectVisibilityMode::Always as u32,
+                    editor_id,
+                    seed1: 0xFFFFFFFF,
+                    transform_matrix,
+                    seek2: [0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF].into()
+                }
+            );
+    }
 }

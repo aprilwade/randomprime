@@ -138,7 +138,7 @@ impl<K: ResIdKind> fmt::Debug for ResId<K>
 {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result
     {
-        write!(formatter, "ResId<{:?}>({:08x})", K::FOURCC, self.0)
+        write!(formatter, "ResId::<res_id::{:?}>::new(0x{:08x})", K::FOURCC, self.0)
     }
 }
 

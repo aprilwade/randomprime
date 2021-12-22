@@ -249,15 +249,11 @@ pub fn cmpr_compress(uncompressed: &[u8], width: usize, height: usize, compresse
     }
 }
 
-// Adapted from image-rs
-pub fn huerotate_in_place(image: &mut [u8], width: usize, height: usize, value: i32)
-where
+pub fn huerotate_matrix(angle: f32) -> [f32; 9]
 {
-    let angle: f64 = value as f64;
-
-    let cosv = (angle * std::f64::consts::PI / 180.0).cos();
-    let sinv = (angle * std::f64::consts::PI / 180.0).sin();
-    let matrix: [f64; 9] = [
+    let cosv = (angle * std::f32::consts::PI / 180.0).cos();
+    let sinv = (angle * std::f32::consts::PI / 180.0).sin();
+    [
         // Reds
         0.213 + cosv * 0.787 - sinv * 0.213,
         0.715 - cosv * 0.715 - sinv * 0.715,
@@ -270,26 +266,38 @@ where
         0.213 - cosv * 0.213 - sinv * 0.787,
         0.715 - cosv * 0.715 + sinv * 0.715,
         0.072 + cosv * 0.928 + sinv * 0.072,
-    ];
+    ]
+}
+
+pub fn huerotate_color(matrix: [f32; 9], r: u8, g: u8, b: u8) -> [u8; 3]
+{
+    let r = r as f32;
+    let g = g as f32;
+    let b = b as f32;
+
+    [
+        (matrix[0] * r + matrix[1] * g + matrix[2] * b).clamp(0.0, 255.0) as u8, 
+        (matrix[3] * r + matrix[4] * g + matrix[5] * b).clamp(0.0, 255.0) as u8,
+        (matrix[6] * r + matrix[7] * g + matrix[8] * b).clamp(0.0, 255.0) as u8,
+    ]
+}
+
+// Adapted from image-rs
+pub fn huerotate_in_place(image: &mut [u8], width: usize, height: usize, matrix: [f32; 9])
+where
+{
     for y in 0..height {
         for x in 0..width {
             let start = (y * width + x) * 4;
             let pixel = &mut image[start..start + 4];
-            let (k1, k2, k3, k4) = (pixel[0], pixel[1], pixel[2], pixel[3]);
-            let vec: (f64, f64, f64, f64) = (k1 as f64, k2 as f64, k3 as f64, k4 as f64);
 
-            let r = vec.0;
-            let g = vec.1;
-            let b = vec.2;
+            let new_rgb = huerotate_color(matrix, pixel[0], pixel[1], pixel[2]);
 
-            let new_r = matrix[0] * r + matrix[1] * g + matrix[2] * b;
-            let new_g = matrix[3] * r + matrix[4] * g + matrix[5] * b;
-            let new_b = matrix[6] * r + matrix[7] * g + matrix[8] * b;
             let outpixel = [
-                new_r.clamp(0.0, 255.0) as u8,
-                new_g.clamp(0.0, 255.0) as u8,
-                new_b.clamp(0.0, 255.0) as u8,
-                vec.3.clamp(0.0, 255.0) as u8,
+                new_rgb[0],
+                new_rgb[1],
+                new_rgb[2],
+                pixel[3],
             ];
 
            pixel.copy_from_slice(&outpixel[..]);

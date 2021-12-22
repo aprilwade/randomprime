@@ -96,7 +96,6 @@ impl<'r, 's> PrimePatcher<'r, 's>
         let files = gc_disc.file_system_root.dir_files_iter_mut()
             .filter(|(path, _)| files_to_patch.contains(&path[..]));
 
-
         for (name, fst_entry) in files {
             if let Some(patch) = self.file_patches.get_mut(&name[..]) {
                 fst_entry.guess_kind();

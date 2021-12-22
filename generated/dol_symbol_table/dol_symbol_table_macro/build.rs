@@ -10,10 +10,11 @@ fn main()
 
     const GAME_VERSIONS: &[(&str, &str)] = &[
         ("1.00.txt", "MP1_100_SYMBOL_TABLE"),
-        // ("1.01.txt", "MP1_101_SYMBOL_TABLE"),
+        ("1.01.txt", "MP1_101_SYMBOL_TABLE"),
         ("1.02.txt", "MP1_102_SYMBOL_TABLE"),
         ("pal.txt", "MP1_PAL_SYMBOL_TABLE"),
-        // ("jap.txt", "MP1_JAP_SYMBOL_TABLE"),
+        ("kor.txt", "MP1_KOR_SYMBOL_TABLE"),
+        ("jap.txt", "MP1_JAP_SYMBOL_TABLE"),
         // ("trilogy_ntsc_j.txt", "MP1_TRILOGY_NTSC_J_SYMBOL_TABLE"),
         // ("trilogy_ntsc_u.txt", "MP1_TRILOGY_NTSC_U_SYMBOL_TABLE"),
         // ("trilogy_pal.txt", "MP1_TRILOGY_PAL_SYMBOL_TABLE"),

@@ -10743,6 +10743,7 @@
 0x802D6798 Wait__Q210CStopwatch7CSWDataCFf
 0x802D682C rs_debugger_printf__FPCce
 0x802D68FC SetErrorHandlers
+0x802D6958 CrashScreenControllerPollBranch
 0x802D6D84 __ct__10CAnimationFR12CInputStream
 0x802D6DF0 NonConstCopy__28TToken<18CAnimationDatabase>CFv
 0x802D6E10 GetMetaAnimation__17CAnimationManagerCFUi
@@ -14334,6 +14335,9 @@
 0x803ceb78 skBallInnerGlowColors
 0x803d47cc aMetroidprimeA
 0x803d47db aMetroidprimeB
+0x803dad40 IncrPickUpSwitchCaseData
+0x8045a1a8 g_StateManager
 0x805a8c34 g_MainStringTable
+0x805a8c38 g_Main
 0x805a8c40 g_GameState
 0x805aa82c g_EtankCapacity

@@ -152,6 +152,10 @@ struct AsmInstr
     parts: Vec<(u8, AsmOp)>,
 }
 
+const CR_NAMES: &[&str] = &[
+    "cr0", "cr1", "cr2", "cr3", "cr4", "cr5", "cr6", "cr7",
+];
+
 const GPR_NAMES: &[&str] = &[
     "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9",
     "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19",
@@ -250,6 +254,15 @@ macro_rules! parse_operand {
             (5, AsmOp::Expr(parse_quote_spanned! {ident.span()=> #i }))
         } else {
             Err(Error::new(ident.span(), format!("Expected FP register name, got {}", ident)))?
+        };
+    };
+    ($input:ident, (cr:$i:ident)) => {
+        let ident: Ident = $input.parse()?;
+        let $i = if let Some(i) = CR_NAMES.iter().position(|n| ident == n) {
+            let i = i as i64;
+            (3, AsmOp::Expr(parse_quote_spanned! {ident.span()=> #i }))
+        } else {
+            Err(Error::new(ident.span(), format!("Expected UMM register name, got {}", ident)))?
         };
     };
     ($input:ident, (i:$i:ident)) => {
@@ -376,6 +389,7 @@ decl_instrs! {
     addc[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;10) | (?.);
     addi,       (r:d), (r:a), (i:imm)   => (6;14) | d | a | (16;imm);
     addic[.],   (r:d), (r:a), (i:imm)   => (5;6) | (?.) | d | a | (16;imm);
+    andi,       (r:d), (r:a), (i:imm)   => (6;28) | d | a | (16;imm);
     b[l][a],    (l:li)                  => (6;18) | (24;li) | (?a) | (?l);
     blr                                 => (32;0x4e800020);
     blt[l][a],  (l:li)                  => (6;16) | (5;12) | (5;0) | (14;li) | (?a) | (?l);
@@ -387,9 +401,14 @@ decl_instrs! {
     bso[l][a],  (l:li)                  => (6;16) | (5;12) | (5;3) | (14;li) | (?a) | (?l);
     bns[l][a],  (l:li)                  => (6;16) | (5;4)  | (5;3) | (14;li) | (?a) | (?l);
     cmplwi,     (r:a), (i:imm)          => (6;10) | (3;0) | (1;0) | (1;0) | a | (16;imm);
+    cmpwi,      (r:a), (i:imm)          => (6;11) | (3;0) | (1;0) | (1;0) | a | (16;imm);
     cntlzw[.],  (r:a), (r:s)            => (6;31) | s | a | (5;0) | (10;26) | (?.);
+    fcmpu,      (cr:a), (f:d), (f:s)    => (6;63) | a | (2;0) | d | s | (11;0);
+    fmr,        (f:a), (f:s)            => (6;63) | a | (5;0) | s | (11;144);
     lbz,        (r:d), (r:a:dis)        => (6;34) | d | a | (16;dis);
+    lfd,        (f:d), (r:a:dis)        => (6;50) | d | a | (16;dis);
     lfs,        (f:d), (r:a:dis)        => (6;48) | d | a | (16;dis);
+    lfsu,       (f:d), (r:a:dis)        => (6;49) | d | a | (16;dis);
     lfsx,       (f:d), (r:a), (r:b)     => (6;31) | d | a | b | (10;535) | (1;0);
     li,         (r:d), (i:imm)          => (6;14) | d | (5;0) | (16;imm);
     lis,        (r:d), (i:imm)          => (6;15) | d | (5;0) | (16;imm);
@@ -402,6 +421,8 @@ decl_instrs! {
     mtlr,       (r:d)                   => (6;31) | d | (10;0x100) | (10;467) | (1;0);
     mullw[o][.],(r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;235) | (?.);
     nop                                 => (32;0x60000000);
+    ori,        (r:d), (r:a), (i:imm)   => (6;24) | d | a | (16;imm);
+    oris,       (r:d), (r:a), (i:imm)   => (6;25) | d | a | (16;imm);
     slwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{#n}) | (5;0) |(5;{31 - #n}) | (1;0);
     srwi,       (r:a), (r:s), (i:n)     => (6;21) | s | a | (5;{32 - #n}) | (5;n) |(5;31) | (1;0);
     rlwimi[.],  (r:a), (r:s), (i:sh), (i:mb), (i:me) =>
@@ -409,8 +430,10 @@ decl_instrs! {
     rlwinm[.],  (r:a), (r:s), (i:sh), (i:mb), (i:me) =>
         (6;21) | s | a | (5;sh) | (5;mb) |(5;me) | (?.);
     stfs,       (f:d), (r:a:dis)        => (6;52) | d | a | (16;dis);
+    stfd,       (f:d), (r:a:dis)        => (6;54) | d | a | (16;dis);
     stw,        (r:s), (r:a:dis)        => (6;36) | s | a | (16;dis);
     stwu,       (r:s), (r:a:dis)        => (6;37) | s | a | (16;dis);
+    stb,        (r:s), (r:a:dis)        => (6;38) | s | a | (16;dis);
     subf[o][.], (r:d), (r:a), (r:b)     => (6;31) | d | a | b | (?o) | (9;40) | (?.);
 }
 
