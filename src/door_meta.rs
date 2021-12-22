@@ -938,7 +938,6 @@ impl DoorType {
     }
 }
 
-
 impl BlastShieldType {
     pub fn from_str(string: &str) -> Option<Self> {
         match string.trim().to_lowercase().replace(" ","").replace("_", "").as_str() {

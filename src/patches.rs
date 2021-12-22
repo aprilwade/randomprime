@@ -458,7 +458,7 @@ fn patch_door<'r>(
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], door_shield.rotation[2]].into();
                 scale       = [1.0, 1.5, 1.5].into();
                 hitbox      = [5.0, 0.5, 4.0].into();
-                scan_offset = [0.0, 0.438, 2.0].into();
+                scan_offset = [0.0, 0.7, 2.0].into();
                 
             } else if (door_shield.rotation[2] >= 135.0 && door_shield.rotation[2] < 225.0) || (door_shield.rotation[2] < -135.0 && door_shield.rotation[2] > -225.0) {
                 // Leads East
@@ -466,7 +466,7 @@ fn patch_door<'r>(
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], 0.0].into();
                 scale       = [1.0, 1.5, 1.5].into();
                 hitbox      = [0.5, 5.0, 4.0].into();
-                scan_offset = [-0.438, 0.0, 2.0].into();
+                scan_offset = [-0.7, 0.0, 2.0].into();
 
             } else if door_shield.rotation[2] >= -135.0 && door_shield.rotation[2] < -45.0 {
                 // Leads South
@@ -474,7 +474,7 @@ fn patch_door<'r>(
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], door_shield.rotation[2]].into();
                 scale       = [1.0, 1.5, 1.5].into();
                 hitbox      = [5.0, 0.5, 4.0].into();
-                scan_offset = [0.0, 0.438, 2.0].into();
+                scan_offset = [0.0, 0.7, 2.0].into();
 
             } else if door_shield.rotation[2] >= -45.0 && door_shield.rotation[2] < 45.0 {
                 // Leads West
@@ -482,7 +482,7 @@ fn patch_door<'r>(
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], -179.99].into();
                 scale       = [1.0, 1.5, 1.5].into();
                 hitbox      = [0.5, 5.0, 4.0].into();
-                scan_offset = [0.438, 0.0, 2.0].into();
+                scan_offset = [0.7, 0.0, 2.0].into();
 
             } else {
                 assert!(false);
@@ -547,7 +547,7 @@ fn patch_door<'r>(
                                 light_layer_id: 0,
                             },
                             scan_params: structs::scly_structs::ScannableParameters {
-                                scan: ResId::invalid(),
+                                scan: blast_shield_type.scan(),
                             },
                             xray_cmdl: ResId::invalid(),
                             xray_cskr: ResId::invalid(),
