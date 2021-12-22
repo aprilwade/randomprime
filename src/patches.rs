@@ -724,6 +724,28 @@ fn patch_add_item<'r>(
     Ok(())
 }
 
+fn patch_remove_tangle_weed_scan_point<'r>(
+    _ps: &mut PatcherState,
+    area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
+    tangle_weed_ids: Vec<u32>,
+) -> Result<(), String>
+{
+    let layer_count = area.layer_flags.layer_count as usize;
+    let scly = area.mrea().scly_section_mut();
+    let layers = scly.layers.as_mut_vec();
+    
+    for i in 0..layer_count {
+        for obj in layers[i].objects.as_mut_vec().iter_mut() {
+            if tangle_weed_ids.contains(&obj.instance_id) {
+                let tangle_weed = obj.property_data.as_snake_weed_swarm_mut().unwrap();
+                tangle_weed.actor_params.scan_params.scan = ResId::invalid();
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 fn patch_add_poi<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -7363,6 +7385,13 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
 
     // Add hard-coded POI
     if config.qol_pickup_scans {
+        patcher.add_scly_patch(
+            resource_info!("01_over_mainplaza.MREA").into(), // Tallon Landing Site - Behind ship item
+            move |ps, area| patch_remove_tangle_weed_scan_point(
+                ps, area,
+                vec![0x0000027E, 0x0000027F],
+            ),
+        );
         patcher.add_scly_patch(
             resource_info!("01_ice_plaza.MREA").into(), // Phen Shorelines - Scannable in tower
             move |ps, area| patch_add_poi(

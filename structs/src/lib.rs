@@ -44,6 +44,7 @@ pub mod scly_props
     pub mod player_actor;
     pub mod player_hint;
     pub mod relay;
+    pub mod snake_weed_swarm;
     pub mod sound;
     pub mod spawn_point;
     pub mod special_function;
@@ -73,6 +74,7 @@ pub mod scly_props
     pub use self::player_actor::*;
     pub use self::player_hint::*;
     pub use self::relay::*;
+    pub use self::snake_weed_swarm::*;
     pub use self::sound::*;
     pub use self::spawn_point::*;
     pub use self::special_function::*;
@@ -102,6 +104,7 @@ pub use scly_props::point_of_interest::*;
 pub use scly_props::player_actor::*;
 pub use scly_props::player_hint::*;
 pub use scly_props::relay::*;
+pub use scly_props::snake_weed_swarm::*;
 pub use scly_props::sound::*;
 pub use scly_props::spawn_point::*;
 pub use scly_props::special_function::*;
