@@ -134,7 +134,8 @@ pub struct DoorDestination
 pub struct DoorConfig
 {
     // #[serde(alias  = "type")]
-    // pub door_type: Option<String>,
+    // pub shield_type: Option<String>,
+    // pub blast_shield_type: Option<String>,
     pub destination: Option<DoorDestination>, // Must be in same area. Ex: "destination":"Main Plaza"
 }
 
@@ -147,7 +148,6 @@ pub struct SuitColors
     pub gravity_deg: Option<i16>,
     pub phazon_deg: Option<i16>,
 }
-
 
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -172,18 +172,13 @@ pub struct DefaultGameOptions
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RoomConfig
 {
-    // pub remove_locks: Option<bool>,
-    // pub superheated: Option<i8>,
+    // pub superheated: Option<bool>,
     // pub remove_water: Option<bool>,
     // pub submerge: Option<bool>,
-    // pub extra_water: Option<Vec<WaterConfig>>,
-    // pub doors: Option<Vec<String>>,
-    // pub blast_shields: Option<Vec<String>>,
+    // pub liquids: Option<Vec<WaterConfig>>,
     pub pickups: Option<Vec<PickupConfig>>,
-    // pub extra_pickups: Option<Vec<PickupConfig>>,
     pub extra_scans: Option<Vec<ScanConfig>>,
     pub doors: Option<HashMap<u32, DoorConfig>>,
-    // pub aether_transform: Option<Vec<AetherTransformConfig>>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -193,7 +188,6 @@ pub struct LevelConfig
     pub transports: HashMap<String, String>,
     pub rooms: HashMap<String, RoomConfig>,
 }
-
 
 #[derive(Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
