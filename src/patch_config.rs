@@ -133,8 +133,8 @@ pub struct DoorDestination
 #[serde(rename_all = "camelCase")]
 pub struct DoorConfig
 {
-    // #[serde(alias  = "type")]
-    // pub shield_type: Option<String>,
+    #[serde(alias  = "type")]
+    pub shield_type: Option<String>,
     // pub blast_shield_type: Option<String>,
     pub destination: Option<DoorDestination>, // Must be in same area. Ex: "destination":"Main Plaza"
 }
