@@ -4548,7 +4548,7 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&default_visor_patch)?;
 
-    let default_visor_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + (0x80092330 - 0x800922C8), {
+    let default_visor_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + 0x68, {
             li      r0, visor; 
             // stw     r0, 0x14(r31); // currentVisor
             nop;
@@ -4556,20 +4556,26 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&default_visor_patch)?;
 
-    let default_visor_patch = ppcasm!(symbol_addr!("EnterMorphBallState__7CPlayerFR13CStateManager", version) + (0x80282ff8 - 0x80282ef0), {
+    let patch_offset = if version == Version::Pal || version == Version::NtscJ {
+        0xb0
+    } else {
+        0x108
+    };
+
+    let default_visor_patch = ppcasm!(symbol_addr!("EnterMorphBallState__7CPlayerFR13CStateManager", version) + patch_offset, {
             li      r4, visor;
     });
     dol_patcher.ppcasm_patch(&default_visor_patch)?;
 
     let beam = config.starting_beam as u16;
-    let default_beam_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + (0x80092320 - 0x800922C8), {
+    let default_beam_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + 0x58, {
             li      r0, beam;
             stw     r0, 0x8(r31); // currentBeam
     });
     dol_patcher.ppcasm_patch(&default_beam_patch)?;
 
-    let default_beam_patch = ppcasm!(symbol_addr!("__ct__13CSplashScreenFQ213CSplashScreen13ESplashScreen", version) + (0x8002926c - 0x800291FC), {
-        nop;
+    let default_beam_patch = ppcasm!(symbol_addr!("__ct__13CSplashScreenFQ213CSplashScreen13ESplashScreen", version) + 0x70, {
+            nop;
     });
     dol_patcher.ppcasm_patch(&default_beam_patch)?;
 
@@ -4582,7 +4588,7 @@ fn patch_dol<'r>(
             0x120
         };
         let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + patch_offset, {
-            nop;
+                nop;
         });
         dol_patcher.ppcasm_patch(&automatic_crash_patch)?;
     }
