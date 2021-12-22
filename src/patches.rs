@@ -435,7 +435,9 @@ fn patch_door<'r>(
             .find(|obj| obj.instance_id == door_loc.door_shield_location.unwrap().instance_id)
             .and_then(|obj| obj.property_data.as_actor_mut())
             .unwrap();
-        
+
+        let is_vertical = DoorType::from_cmdl(&door_shield.cmdl.to_u32()).unwrap().is_vertical();
+
         if door_type.is_some() {
             door_shield.cmdl = door_type.as_ref().unwrap().shield_cmdl();
         }
@@ -455,7 +457,7 @@ fn patch_door<'r>(
                 position    = [door_shield.position[0], door_shield.position[1] - 0.1, door_shield.position[2] - 1.8017].into();
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], door_shield.rotation[2]].into();
                 scale       = [1.0, 1.5, 1.5].into();
-                hitbox      = [5.0, 0.875, 4.0].into();
+                hitbox      = [5.0, 0.5, 4.0].into();
                 scan_offset = [0.0, 0.438, 2.0].into();
                 
             } else if (door_shield.rotation[2] >= 135.0 && door_shield.rotation[2] < 225.0) || (door_shield.rotation[2] < -135.0 && door_shield.rotation[2] > -225.0) {
@@ -463,7 +465,7 @@ fn patch_door<'r>(
                 position    = [door_shield.position[0] + 0.1, door_shield.position[1], door_shield.position[2] - 1.8017].into();
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], 0.0].into();
                 scale       = [1.0, 1.5, 1.5].into();
-                hitbox      = [0.875, 5.0, 4.0].into();
+                hitbox      = [0.5, 5.0, 4.0].into();
                 scan_offset = [-0.438, 0.0, 2.0].into();
 
             } else if door_shield.rotation[2] >= -135.0 && door_shield.rotation[2] < -45.0 {
@@ -471,7 +473,7 @@ fn patch_door<'r>(
                 position    = [door_shield.position[0], door_shield.position[1] + 0.1, door_shield.position[2] - 1.8017].into();
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], door_shield.rotation[2]].into();
                 scale       = [1.0, 1.5, 1.5].into();
-                hitbox      = [5.0, 0.875, 4.0].into();
+                hitbox      = [5.0, 0.5, 4.0].into();
                 scan_offset = [0.0, 0.438, 2.0].into();
 
             } else if door_shield.rotation[2] >= -45.0 && door_shield.rotation[2] < 45.0 {
@@ -479,7 +481,7 @@ fn patch_door<'r>(
                 position    = [door_shield.position[0] - 0.1, door_shield.position[1], door_shield.position[2] - 1.8017].into();
                 rotation    = [door_shield.rotation[0], door_shield.rotation[1], -179.99].into();
                 scale       = [1.0, 1.5, 1.5].into();
-                hitbox      = [0.875, 5.0, 4.0].into();
+                hitbox      = [0.5, 5.0, 4.0].into();
                 scan_offset = [0.438, 0.0, 2.0].into();
 
             } else {
@@ -489,6 +491,10 @@ fn patch_door<'r>(
                 scale       = [0.0, 0.0, 0.0].into();
                 hitbox      = [0.0, 0.0, 0.0].into();
                 scan_offset = [0.0, 0.0, 0.0].into();
+            }
+
+            if is_vertical {
+                panic!("Custom Blast Shields cannot be placed on vertical doors");
             }
 
             // Create new blast shield actor //

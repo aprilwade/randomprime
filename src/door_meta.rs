@@ -920,6 +920,9 @@ impl DoorType {
             0x33188D1B => Some(DoorType::Purple),
             0x59649E9D => Some(DoorType::White),
             0xBBBA1EC7 => Some(DoorType::Red),
+            0x18D0AEE6 => Some(DoorType::VerticalBlue),
+            0x095B0B93 => Some(DoorType::VerticalPurple),
+            0xB7A8A4C9 => Some(DoorType::VerticalWhite),
             _ => None,
         }
     }
@@ -949,7 +952,7 @@ impl BlastShieldType {
             "wavebuster"    => Some(BlastShieldType::Wavebuster   ),
             "icespreader"   => Some(BlastShieldType::Icespreader  ),
             "flamethrower"  => Some(BlastShieldType::Flamethrower ),
-            _               => None                                ,
+            _               => None                              ,
         }
     }
 
