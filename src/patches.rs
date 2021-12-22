@@ -7993,45 +7993,71 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
             // Edit doors
             for (dock_num, door_config) in doors {
                 // Find the corresponding traced info for this dock
-                let mut door_location: Option<DoorLocation> = None;
+                let mut maybe_door_location: Option<DoorLocation> = None;
                 for dl in room_info.door_locations {
                     if dl.dock_number.is_some() && dl.dock_number.clone().unwrap() == dock_num {
-                        door_location = Some(dl.clone());
-                        break;
+                        let door_location = dl.clone();
+                        maybe_door_location = Some(door_location.clone());
+                        
+                        // Change the color/vulnerability of the door shield
+                        if door_config.shield_type.is_some()
+                        {
+                            let shield_name = door_config.shield_type.as_ref().unwrap();
+                            let door_type = DoorType::from_string(shield_name.to_string());
+                            if door_type.is_none() {
+                                panic!("Unexpected Shield Type - {}", shield_name);
+                            }
+                            let mut door_type = door_type.unwrap();
+
+                            if vec![
+                                (0x11BD63B7, 0), // Tower Chamber
+                                (0x0D72F1F7, 1), // Tower of Light
+                                (0xFB54A0CB, 4), // Hall of the Elders 
+                                (0xE1981EFC, 0), // Elder Chamber
+                                (0x43E4CC25, 1), // Research Lab Hydra
+                                (0x37BBB33C, 1), // Observatory Access
+                                (0xD8E905DD, 1), // Research Core Access
+                                (0x21B4BFF6, 1), // Research Lab Aether
+                                (0x3F375ECC, 2), // Omega Research
+                                (0xF517A1EA, 1), // Dynamo Access (Careful of Chozo room w/ same name)
+                                (0x8A97BB54, 1), // Elite Research
+                                (0xA20201D4, 0), // Security Access B (both doors)
+                                (0xA20201D4, 1), // Security Access B (both doors)
+                                (0x956F1552, 1), // Mine Security Station
+                                (0xC50AF17A, 2), // Elite Control
+                                (0x90709AAC, 1), // Ventilation Shaft
+                            ].contains(&(room_info.room_id.to_u32(), dock_num))
+                            {
+                                door_type = door_type.to_vertical();
+                            }
+
+                            patcher.add_scly_patch(
+                                (pak_name.as_bytes(), room_info.room_id.to_u32()),
+                                move |ps, area| patch_door(
+                                    ps, area,
+                                    door_location,
+                                    door_type,
+                                    game_resources,
+                                    // BlastShieldType::None,
+                                )
+                            );
+
+                            /*
+                            if room_info.mapa_id != 0 {
+                                patcher.add_resource_patch(
+                                    (&[name.as_bytes()], room_info.mapa_id,b"MAPA".into()),
+                                    move |res| patch_map_door_icon(res,door_location,door_type)
+                                );
+                            }
+                            */
+                        }
                     }
                 }
-                if door_location.is_none() {
+
+                if maybe_door_location.is_none() {
                     panic!("Could not find dock #{} in '{}'", dock_num, room_info.name);
                 }
-                let door_location = door_location.unwrap();
-                
-                // Change the color/vulnerability of the door shield
-                if door_config.shield_type.is_some() {
-                    let shield_name = door_config.shield_type.as_ref().unwrap();
-                    let door_type = DoorType::from_string(shield_name.to_string());
-                    if door_type.is_none() {
-                        panic!("Unexpected Shield Type - {}", shield_name);
-                    }
-                    patcher.add_scly_patch(
-                        (pak_name.as_bytes(), room_info.room_id.to_u32()),
-                        move |ps, area| patch_door(
-                            ps, area,
-                            door_location,
-                            door_type.unwrap(),
-                            game_resources,
-                            // BlastShieldType::None,
-                        )
-                    );
-
-                    /*
-                    if room_info.mapa_id != 0 {
-                        patcher.add_resource_patch(
-                            (&[name.as_bytes()], room_info.mapa_id,b"MAPA".into()),
-                            move |res| patch_map_door_icon(res,door_location,door_type)
-                        );
-                    }
-                    */
-                }
+                let door_location = maybe_door_location.unwrap();
 
                 // If specified, patch this door's connection
                 if door_config.destination.is_some() {
