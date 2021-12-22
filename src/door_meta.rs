@@ -175,16 +175,26 @@ impl DoorType {
 
     pub const fn map_object_type(&self) -> u32 {
         match self {
-            DoorType::Blue          => structs::MapaObjectType::DoorNormal as u32,
-            DoorType::PowerOnly     => structs::MapaObjectType::DoorNormal as u32,
-            DoorType::Charge        => structs::MapaObjectType::DoorNormal as u32,
-            DoorType::Bomb          => structs::MapaObjectType::DoorNormal as u32,
-            DoorType::Purple        => structs::MapaObjectType::DoorWave as u32,
-            DoorType::Wavebuster    => structs::MapaObjectType::DoorWave as u32,
-            DoorType::White         => structs::MapaObjectType::DoorIce as u32,
-            DoorType::Icespreader   => structs::MapaObjectType::DoorIce as u32,
-            DoorType::Red           => structs::MapaObjectType::DoorPlasma as u32,
-            DoorType::Flamethrower  => structs::MapaObjectType::DoorPlasma as u32,
+            DoorType::Blue                 => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::PowerOnly            => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::Charge               => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::Bomb                 => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::Purple               => structs::MapaObjectType::DoorWave          as u32,
+            DoorType::Wavebuster           => structs::MapaObjectType::DoorWave          as u32,
+            DoorType::White                => structs::MapaObjectType::DoorIce           as u32,
+            DoorType::Icespreader          => structs::MapaObjectType::DoorIce           as u32,
+            DoorType::Red                  => structs::MapaObjectType::DoorPlasma        as u32,
+            DoorType::Flamethrower         => structs::MapaObjectType::DoorPlasma        as u32,
+            DoorType::VerticalBlue         => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::VerticalPowerOnly    => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::VerticalCharge       => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::VerticalBomb         => structs::MapaObjectType::DoorNormal        as u32,
+            DoorType::VerticalPurple       => structs::MapaObjectType::DoorWaveCeiling   as u32,
+            DoorType::VerticalWavebuster   => structs::MapaObjectType::DoorWaveCeiling   as u32,
+            DoorType::VerticalWhite        => structs::MapaObjectType::DoorIceCeiling    as u32,
+            DoorType::VerticalIcespreader  => structs::MapaObjectType::DoorIceCeiling    as u32,
+            DoorType::VerticalRed          => structs::MapaObjectType::DoorPlasmaCeiling as u32,
+            DoorType::VerticalFlamethrower => structs::MapaObjectType::DoorPlasmaCeiling as u32,
             _ => structs::MapaObjectType::DoorShield as u32, // everything else is non-vanilla and thus shield
         }
     }

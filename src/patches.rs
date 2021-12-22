@@ -368,6 +368,22 @@ fn patch_add_scans_to_savw(res: &mut structs::Resource, savw_scans_to_add: &Vec<
     Ok(())
 }
 
+fn patch_map_door_icon(
+    res: &mut structs::Resource,
+    door: DoorLocation,
+    door_type: DoorType,
+) -> Result<(), String>
+{
+    let mapa = res.kind.as_mapa_mut().unwrap();
+
+    let door_icon = mapa.objects.iter_mut()
+        .find(|obj| obj.editor_id == door.door_location.instance_id)
+        .unwrap();
+    door_icon.type_ = door_type.map_object_type();
+
+    Ok(())
+}
+
 fn patch_door<'r>(
     ps: &mut PatcherState,
     area: &mut mlvl_wrapper::MlvlArea<'r, '_, '_, '_>,
@@ -8042,14 +8058,12 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                                 )
                             );
 
-                            /*
                             if room_info.mapa_id != 0 {
                                 patcher.add_resource_patch(
-                                    (&[name.as_bytes()], room_info.mapa_id,b"MAPA".into()),
-                                    move |res| patch_map_door_icon(res,door_location,door_type)
+                                    (&[pak_name.as_bytes()], room_info.mapa_id.to_u32(), b"MAPA".into()),
+                                    move |res| patch_map_door_icon(res, door_location, door_type)
                                 );
                             }
-                            */
                         }
                     }
                 }
