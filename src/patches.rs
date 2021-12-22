@@ -5698,6 +5698,43 @@ fn patch_final_boss_permadeath<'r>(
     Ok(())
 }
 
+fn patch_combat_hud_color(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
+-> Result<(), String>
+{
+    if ctwk_config.hud_color.is_none() {
+        return Ok(());
+    }
+
+    let mut new_color: [f32;3] = ctwk_config.hud_color.as_ref().unwrap().clone();
+    let mut max_new = new_color[0];
+    if new_color[1] > max_new { max_new = new_color[1]; }
+    if new_color[2] > max_new { max_new = new_color[2]; }
+    if max_new < 0.0001 {
+        new_color = [1.0, 1.0, 1.0];
+    }
+
+    let frme = res.kind.as_frme_mut().unwrap();
+    for widget in frme.widgets.as_mut_vec().iter_mut()
+    {
+        let old_color = widget.color.clone();
+        if old_color[0]-old_color[1] > -0.1 && old_color[0]-old_color[1] < 0.1
+            && old_color[0]-old_color[2] > -0.1 && old_color[0]-old_color[2] < 0.1
+            && old_color[1]-old_color[2] > -0.1 && old_color[1]-old_color[2] < 0.1
+        {
+            continue;
+        }
+
+        let mut max_original = old_color[0];
+        if old_color[1] > max_original { max_original = old_color[1]; }
+        if old_color[2] > max_original { max_original = old_color[2]; }
+        let scale = max_original / max_new;
+        let new_color_scaled = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]];
+        widget.color = new_color_scaled.into();
+    }
+
+    Ok(())
+}
+
 fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
 -> Result<(), String>
 {
@@ -5731,7 +5768,7 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
             if old_color[1] > max_original { max_original = old_color[1]; }
             if old_color[2] > max_original { max_original = old_color[2]; }
             let scale = max_original / max_new;
-            
+
             // Scale new color up or down to approximate original, preserve alpha
             let mut new_color_scaled = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]];
             if i == 10 || i == 11 { // beam/visor menus should be partially colored
@@ -7374,6 +7411,11 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
         1d180d7c.CTWK -> Particle.CTWK
         */
     }
+
+    patcher.add_resource_patch(
+        resource_info!("FRME_CombatHud.FRME").into(),
+        move |res| patch_combat_hud_color(res, &config.ctwk_config),
+    );
 
     // Patch end sequence (player size)
     if config.ctwk_config.player_size.is_some() {
