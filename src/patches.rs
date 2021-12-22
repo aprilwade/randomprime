@@ -4243,7 +4243,8 @@ fn patch_dol<'r>(
 
     let default_visor_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + (0x80092330 - 0x800922C8), {
             li      r0, visor; 
-            stw     r0, 0x14(r31); // currentVisor
+            // stw     r0, 0x14(r31); // currentVisor
+            nop;
             stw     r0, 0x18(r31); // transitioningVisor
     });
     dol_patcher.ppcasm_patch(&default_visor_patch)?;
@@ -4252,6 +4253,13 @@ fn patch_dol<'r>(
             li      r4, visor;
     });
     dol_patcher.ppcasm_patch(&default_visor_patch)?;
+
+    let beam = config.starting_beam as u16;
+    let default_beam_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + (0x80092320 - 0x800922C8), {
+            li      r0, beam;
+            stw     r0, 0x8(r31); // currentBeam
+    });
+    dol_patcher.ppcasm_patch(&default_beam_patch)?;
 
     if config.automatic_crash_screen {
         let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {

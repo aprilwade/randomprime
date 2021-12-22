@@ -74,6 +74,16 @@ pub enum Visor
     Thermal,
 }
 
+#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum Beam
+{
+    Power,
+    Ice,
+    Wave,
+    Plasma,
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -307,6 +317,7 @@ pub struct PatchConfig
     pub item_loss_items: StartingItems,
     pub disable_item_loss: bool,
     pub starting_visor: Visor,
+    pub starting_beam: Beam,
 
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
@@ -371,6 +382,7 @@ struct GameConfig
     item_loss_items: Option<StartingItems>,
     disable_item_loss: Option<bool>,
     starting_visor: Option<String>,
+    starting_beam: Option<String>,
 
     etank_capacity: Option<u32>,
     item_max_capacity: Option<HashMap<String,u32>>,
@@ -741,7 +753,15 @@ impl PatchConfigPrivate
             "scan" => Visor::Scan,
             "thermal" => Visor::Thermal,
             "xray" => Visor::XRay,
-            _ => panic!("Unknown startin visor {}", self.game_config.starting_visor.as_ref().unwrap()),
+            _ => panic!("Unknown starting visor {}", self.game_config.starting_visor.as_ref().unwrap()),
+        };
+
+        let starting_beam =match self.game_config.starting_beam.as_ref().unwrap_or(&"power".to_string()).to_lowercase().trim() {
+            "power" => Beam::Power,
+            "ice" => Beam::Ice,
+            "wave" => Beam::Wave,
+            "plasma" => Beam::Plasma,
+            _ => panic!("Unknown starting beam {}", self.game_config.starting_beam.as_ref().unwrap()),
         };
 
         let starting_room = {
@@ -836,6 +856,7 @@ impl PatchConfigPrivate
             .unwrap_or_else(|| StartingItems::from_u64(1)),
             disable_item_loss: self.game_config.disable_item_loss.unwrap_or(true),
             starting_visor,
+            starting_beam,
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             item_max_capacity: item_max_capacity,
