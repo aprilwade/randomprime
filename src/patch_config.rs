@@ -324,6 +324,7 @@ pub struct PatchConfig
 
     pub flaahgra_music_files: Option<[nod_wrapper::FileWrapper; 2]>,
 
+    pub skip_splash_screens: bool,
     pub default_game_options: Option<DefaultGameOptions>,
     pub suit_colors: Option<SuitColors>,
 
@@ -346,6 +347,7 @@ pub struct PatchConfig
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Preferences
 {
+    skip_splash_screens: Option<bool>,
     default_game_options: Option<DefaultGameOptions>,
     suit_colors: Option<SuitColors>,
 
@@ -846,6 +848,7 @@ impl PatchConfigPrivate
             artifact_hint_behavior,
             flaahgra_music_files,
             suit_colors: self.preferences.suit_colors.clone(),
+            skip_splash_screens: self.preferences.skip_splash_screens.unwrap_or(false),
             default_game_options: self.preferences.default_game_options.clone(),
             quiet: self.preferences.quiet.unwrap_or(false),
             quickplay: self.preferences.quickplay.unwrap_or(false),

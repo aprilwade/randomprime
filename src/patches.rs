@@ -4261,6 +4261,13 @@ fn patch_dol<'r>(
     });
     dol_patcher.ppcasm_patch(&default_beam_patch)?;
 
+    let default_beam_patch = ppcasm!(symbol_addr!("__ct__13CSplashScreenFQ213CSplashScreen13ESplashScreen", version) + (0x8002926c - 0x800291FC), {
+        nop;
+    });
+    dol_patcher.ppcasm_patch(&default_beam_patch)?;
+
+    // 
+
     if config.automatic_crash_screen {
         let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {
             nop;
