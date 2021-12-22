@@ -296,19 +296,23 @@ pub fn custom_assets<'r>(
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::SHORELINES_POI_SCAN,
         custom_asset_ids::SHORELINES_POI_STRG,
-        "task failed successfully\0",
+        "task failed successfully\0".to_string(),
     ));
     savw_scans_to_add.push(custom_asset_ids::SHORELINES_POI_SCAN);
     assets.extend_from_slice(&create_item_scan_strg_pair(
         custom_asset_ids::MQA_POI_SCAN,
         custom_asset_ids::MQA_POI_STRG,
-        "Scan Visor is a Movement System.\0",
+        "Scan Visor is a Movement System.\0".to_string(),
     ));
     savw_scans_to_add.push(custom_asset_ids::MQA_POI_SCAN);
-    assets.extend_from_slice(&create_item_scan_strg_pair(
+    assets.extend_from_slice(&create_item_scan_strg_pair_2(
         custom_asset_ids::CFLDG_POI_SCAN,
         custom_asset_ids::CFLDG_POI_STRG,
-        "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi, BajaBlood, hammergoboom, Firemetroid, Lokir, MeriKatt, Cosmonawt, Haldadrin\0",
+        vec![
+            "Toaster's Champions: Awp82, DiggleWrath, Yeti2000, freak532486, AlphaRage, Csabi,\0".to_string(),
+            "BajaBlood, hammergoboom, Firemetroid, Lokir, MeriKatt, Cosmonawt, Haldadrin\0".to_string(),
+        ],
+        1,
     ));
     savw_scans_to_add.push(custom_asset_ids::CFLDG_POI_SCAN);
 
@@ -327,7 +331,7 @@ pub fn custom_assets<'r>(
         assets.extend_from_slice(&create_item_scan_strg_pair(
             pt.scan(),
             pt.scan_strg(),
-            &format!("{}\0", name),
+            format!("{}\0", name),
         ));
         savw_scans_to_add.push(pt.scan());
 
@@ -362,10 +366,22 @@ pub fn custom_assets<'r>(
                         }
                     };
 
+                    let mut strings: Vec<String> = vec![];
+                    let contents = &custom_scan.text;
+                    if contents.len() > 92 {
+                        let string1:String = (contents.clone().to_string())[..92].to_string();
+                        let remainder = (contents.clone().to_string())[92..].to_string();
+                        strings.push(string1 + "\0");
+                        strings.push("\0".to_string());
+                        strings.push(remainder);
+                    } else {
+                        strings.push(contents.clone().to_string());
+                    }
+
                     assets.extend_from_slice(&create_item_scan_strg_pair_2(
                         scan_id,
                         strg_id,
-                        format!("{}\0", custom_scan.text).as_str(),
+                        strings,
                         is_red,
                     ));
 
@@ -424,7 +440,7 @@ pub fn custom_assets<'r>(
                         assets.extend_from_slice(&create_item_scan_strg_pair_2(
                             scan_id,
                             strg_id,
-                            format!("{}\0", scan_text).as_str(),
+                            vec![format!("{}\0", scan_text)],
                             1,
                         ));
                     }
@@ -433,7 +449,7 @@ pub fn custom_assets<'r>(
                         assets.extend_from_slice(&create_item_scan_strg_pair(
                             scan_id,
                             strg_id,
-                            format!("{}\0", scan_text).as_str(),
+                            format!("{}\0", scan_text),
                         ));
                     }
 
@@ -452,7 +468,7 @@ pub fn custom_assets<'r>(
     assets.push(build_resource(
         custom_asset_ids::WARPING_TO_START_STRG,
         structs::ResourceKind::Strg(structs::Strg::from_strings(vec![
-            "&just=center;Returning to starting room...\0".to_owned(),
+            "&just=center;Returning to starting room...\0".to_string().to_owned(),
         ])),
     ));
 
@@ -475,21 +491,22 @@ pub fn custom_assets<'r>(
 
     // Custom door assets
     for door_type in DoorType::iter() {
-        if door_type.shield_cmdl().to_u32() >= 0xDEAF0000 && door_type.shield_cmdl().to_u32() <= custom_asset_ids::END.to_u32() { // only if it doesn't exist in-game already
+        if door_type.shield_cmdl().to_u32() >= 0xDEAF0000 && door_type.shield_cmdl().to_u32() <= custom_asset_ids::EXTRA_IDS_START.to_u32() + 50 { // only if it doesn't exist in-game already
             assets.push(create_custom_door_cmdl(resources, door_type));
         }
     }
 
     // Custom blast shield assets
     for blast_shield in BlastShieldType::iter() {
-        if blast_shield.cmdl().to_u32() >= 0xDEAF0000 && blast_shield.cmdl().to_u32() <= custom_asset_ids::END.to_u32() { // only if it doesn't exist in-game already
+        if blast_shield.cmdl().to_u32() >= 0xDEAF0000 && blast_shield.cmdl().to_u32() <= custom_asset_ids::EXTRA_IDS_START.to_u32() + 50 { // only if it doesn't exist in-game already
             assets.push(create_custom_blast_shield_cmdl(resources, blast_shield));
 
             if blast_shield.scan() != ResId::invalid() && blast_shield.strg() != ResId::invalid() {
-                assets.extend_from_slice(&create_item_scan_strg_pair(
+                assets.extend_from_slice(&create_item_scan_strg_pair_2(
                     blast_shield.scan(),
                     blast_shield.strg(),
                     blast_shield.scan_text(),
+                    1,
                 ));
             }
         } else {
@@ -497,7 +514,7 @@ pub fn custom_assets<'r>(
             assert!(
                 blast_shield.dependencies()
                 .iter()
-                .find(|d| d.0 >= 0xDEAF0000 && d.0 <= custom_asset_ids::END.to_u32())
+                .find(|d| d.0 >= 0xDEAF0000 && d.0 <= custom_asset_ids::EXTRA_IDS_START.to_u32() + 50)
                 .is_none()
             );
         }
@@ -857,16 +874,16 @@ fn create_shiny_missile_assets<'r>(
 fn create_item_scan_strg_pair<'r>(
     new_scan: ResId<res_id::SCAN>,
     new_strg: ResId<res_id::STRG>,
-    content: Vec<String>
+    contents: String,
 ) -> [structs::Resource<'r>; 2]
 {
-    create_item_scan_strg_pair_2(new_scan, new_strg, contents, 0)
+    create_item_scan_strg_pair_2(new_scan, new_strg, vec![contents], 0)
 }
 
 fn create_item_scan_strg_pair_2<'r>(
     new_scan: ResId<res_id::SCAN>,
     new_strg: ResId<res_id::STRG>,
-    contents: &str,
+    contents: Vec<String>,
     is_important: u8,
 ) -> [structs::Resource<'r>; 2]
 {
@@ -921,21 +938,9 @@ fn create_item_scan_strg_pair_2<'r>(
         }),
     );
 
-    let mut strings: Vec<String> = vec![];
-
-    if contents.len() > 92 {
-        let string1:String = (contents.clone().to_string())[..92].to_string();
-        let remainder = (contents.clone().to_string())[92..].to_string();
-        strings.push(string1 + "\0");
-        strings.push("\0".to_string());
-        strings.push(remainder);
-    } else {
-        strings.push(contents.clone().to_string());
-    }
-
     let strg = build_resource(
         new_strg,
-        structs::ResourceKind::Strg(structs::Strg::from_strings(strings)),
+        structs::ResourceKind::Strg(structs::Strg::from_strings(contents)),
     );
 
     [scan, strg]
