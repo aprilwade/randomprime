@@ -3536,7 +3536,6 @@ fn patch_research_core_access_soft_lock(_ps: &mut PatcherState, area: &mut mlvl_
     Ok(())
 }
 
-
 fn patch_hive_totem_softlock<'r>(_ps: &mut PatcherState, area: &mut mlvl_wrapper::MlvlArea)
     -> Result<(), String>
 {
@@ -4235,6 +4234,24 @@ fn patch_dol<'r>(
         dol_patcher.patch(symbol_addr!("BallSwooshColorsCharged", version), colors[i].clone().into())?; i+=1;
         dol_patcher.patch(symbol_addr!("BallGlowColors"         , version), colors[i].clone().into())?;
     }
+
+    let visor = config.starting_visor as u16;
+    let default_visor_patch = ppcasm!(symbol_addr!("ResetVisor__12CPlayerStateFv", version), {
+            li      r0, visor;
+    });
+    dol_patcher.ppcasm_patch(&default_visor_patch)?;
+
+    let default_visor_patch = ppcasm!(symbol_addr!("__ct__12CPlayerStateFv", version) + (0x80092330 - 0x800922C8), {
+            li      r0, visor; 
+            stw     r0, 0x14(r31); // currentVisor
+            stw     r0, 0x18(r31); // transitioningVisor
+    });
+    dol_patcher.ppcasm_patch(&default_visor_patch)?;
+
+    let default_visor_patch = ppcasm!(symbol_addr!("EnterMorphBallState__7CPlayerFR13CStateManager", version) + (0x80282ff8 - 0x80282ef0), {
+            li      r4, visor;
+    });
+    dol_patcher.ppcasm_patch(&default_visor_patch)?;
 
     if config.automatic_crash_screen {
         let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {

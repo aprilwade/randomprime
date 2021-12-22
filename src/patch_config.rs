@@ -64,6 +64,16 @@ pub enum CutsceneMode
     Major,
 }
 
+#[derive(PartialEq, Debug, Deserialize, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum Visor
+{
+    Combat,
+    XRay,
+    Scan,
+    Thermal,
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameBanner
@@ -296,6 +306,7 @@ pub struct PatchConfig
     pub starting_items: StartingItems,
     pub item_loss_items: StartingItems,
     pub disable_item_loss: bool,
+    pub starting_visor: Visor,
 
     pub artifact_hint_behavior: ArtifactHintBehavior,
 
@@ -359,6 +370,7 @@ struct GameConfig
     starting_items: Option<StartingItems>,
     item_loss_items: Option<StartingItems>,
     disable_item_loss: Option<bool>,
+    starting_visor: Option<String>,
 
     etank_capacity: Option<u32>,
     item_max_capacity: Option<HashMap<String,u32>>,
@@ -724,6 +736,14 @@ impl PatchConfigPrivate
             _ => panic!("Unknown cutscene mode {}", self.preferences.qol_cutscenes.as_ref().unwrap()),
         };
 
+        let starting_visor =match self.game_config.starting_visor.as_ref().unwrap_or(&"combat".to_string()).to_lowercase().trim() {
+            "combat" => Visor::Combat,
+            "scan" => Visor::Scan,
+            "thermal" => Visor::Thermal,
+            "xray" => Visor::XRay,
+            _ => panic!("Unknown startin visor {}", self.game_config.starting_visor.as_ref().unwrap()),
+        };
+
         let starting_room = {
             if force_vanilla_layout {
                 "Frigate:Exterior Docking Hangar".to_string()
@@ -815,6 +835,7 @@ impl PatchConfigPrivate
             item_loss_items: self.game_config.item_loss_items.clone()
             .unwrap_or_else(|| StartingItems::from_u64(1)),
             disable_item_loss: self.game_config.disable_item_loss.unwrap_or(true),
+            starting_visor,
 
             etank_capacity: self.game_config.etank_capacity.unwrap_or(100),
             item_max_capacity: item_max_capacity,
