@@ -298,6 +298,7 @@ pub struct PatchConfig
 
     pub starting_room: String,
     pub starting_memo: Option<String>,
+    pub spring_ball: bool,
     pub warp_to_start: bool,
     pub warp_to_start_delay_s: f32,
 
@@ -368,6 +369,7 @@ struct GameConfig
 {
     starting_room: Option<String>,
     starting_memo: Option<String>,
+    spring_ball: Option<bool>,
     warp_to_start: Option<bool>,
     warp_to_start_delay_s: Option<f32>,
 
@@ -477,6 +479,9 @@ impl PatchConfig
                 .long("starting-memo")
                 .help("String which is shown to the player after they start a new save file")
                 .takes_value(true))
+            .arg(Arg::with_name("spring ball")
+                .long("spring-ball")
+                .help("Allows player to use spring ball when bombs are acquired"))
             .arg(Arg::with_name("warp to start")
                 .long("warp-to-start")
                 .help("Allows player to warp to start from any save station"))
@@ -576,6 +581,7 @@ impl PatchConfig
             "nonvaria heat damage" => patch_config.game_config.nonvaria_heat_damage,
             "staggered suit damage" => patch_config.game_config.staggered_suit_damage,
             "auto enabled elevators" => patch_config.game_config.auto_enabled_elevators,
+            "spring ball" => patch_config.game_config.spring_ball,
             "warp to start" => patch_config.game_config.warp_to_start,
         );
 
@@ -780,6 +786,14 @@ impl PatchConfigPrivate
             }
         };
         
+        let spring_ball   = {
+            if force_vanilla_layout {
+                false
+            } else {
+                self.game_config.spring_ball.unwrap_or(false)
+            }
+        };
+        
         let warp_to_start   = {
             if force_vanilla_layout {
                 false
@@ -839,6 +853,7 @@ impl PatchConfigPrivate
 
             starting_room,
             starting_memo: self.game_config.starting_memo.clone(),
+            spring_ball,
             warp_to_start,
             warp_to_start_delay_s: self.game_config.warp_to_start_delay_s.unwrap_or(0.0),
 

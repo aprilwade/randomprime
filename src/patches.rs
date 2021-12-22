@@ -4616,6 +4616,166 @@ fn patch_dol<'r>(
         dol_patcher.add_text_segment(0x80002200, Cow::Owned(warp_to_start_patch.encoded_bytes()))?;
     }
 
+    if config.spring_ball {
+        // call compute spring ball movement
+        let call_compute_spring_ball_movement_patch = ppcasm!(symbol_addr!("ComputeBallMovement__10CMorphBallFRC11CFinalInputR13CStateManagerf", version) + 0x2c, {
+                bl         0x80002400;
+        });
+        dol_patcher.ppcasm_patch(&call_compute_spring_ball_movement_patch)?;
+        
+        let movement_state_offset = match version {
+            Version::NtscU0_00 => 0x258,
+            Version::NtscU0_01 => 0x258,
+            Version::NtscU0_02 => 0x268,
+            Version::NtscK => 0x258,
+            Version::NtscJ => 0x268,
+            Version::Pal => 0x268,
+            _ => unreachable!(),
+        };
+        
+        let attached_actor_offset = match version {
+            Version::NtscU0_00 => 0x26c,
+            Version::NtscU0_01 => 0x26c,
+            Version::NtscU0_02 => 0x27c,
+            Version::NtscK => 0x26c,
+            Version::NtscJ => 0x27c,
+            Version::Pal => 0x27c,
+            _ => unreachable!(),
+        };
+        
+        let energy_drain_offset = match version {
+            Version::NtscU0_00 => 0x274,
+            Version::NtscU0_01 => 0x274,
+            Version::NtscU0_02 => 0x284,
+            Version::NtscK => 0x274,
+            Version::NtscJ => 0x284,
+            Version::Pal => 0x284,
+            _ => unreachable!(),
+        };
+        
+        let out_of_water_ticks_offset = match version {
+            Version::NtscU0_00 => 0x2b0,
+            Version::NtscU0_01 => 0x2b0,
+            Version::NtscU0_02 => 0x2c0,
+            Version::NtscK => 0x2b0,
+            Version::NtscJ => 0x2c0,
+            Version::Pal => 0x2c0,
+            _ => unreachable!(),
+        };
+        
+        let surface_restraint_type_offset = match version {
+            Version::NtscU0_00 => 0x2ac,
+            Version::NtscU0_01 => 0x2ac,
+            Version::NtscU0_02 => 0x2bc,
+            Version::NtscK => 0x2ac,
+            Version::NtscJ => 0x2bc,
+            Version::Pal => 0x2bc,
+            _ => unreachable!(),
+        };
+        
+        let spring_ball_patch = ppcasm!(0x80002400, {
+                // stack init
+                stwu      r1, -0x20(r1);
+                mflr      r0;
+                stw       r0, 0x20(r1);
+                fmr       f15, f1;
+                stw       r31, 0x1c(r1);
+                stw       r30, 0x18(r1);
+                mr        r30, r5;
+                stw       r29, 0x14(r1);
+                mr        r29, r4;
+                stw       r28, 0x10(r1);
+                mr        r28, r3;
+                
+                // function body
+                lwz       r14, 0x84c(r30);
+                lwz       r15, 0x8b8(r30);
+                lis       r16, data@h;
+                addi      r16, r16, data@l;
+                lfs       f1, 0x40(r14);
+                lfs       f2, 0x50(r14);
+                lfs       f3, 0x60(r14);
+                stfs      f1, 0x00(r16);
+                stfs      f2, 0x04(r16);
+                stfs      f3, 0x08(r16);
+                lwz       r0, { movement_state_offset }(r14);
+                cmplwi    r0, 0;
+                beq       0x8000246c;
+                b         0x80002504;
+                cmplwi    r0, 4;
+                bne       0x80002504;
+                lwz       r0, { out_of_water_ticks_offset }(r14);
+                cmplwi    r0, 2;
+                bne       0x80002480;
+                lwz       r0, { surface_restraint_type_offset }(r14);
+                b         0x80002484;
+                li        r0, 4;
+                cmplwi    r0, 7;
+                beq       0x80002504;
+                mr        r3, r28;
+                bl        { symbol_addr!("IsMovementAllowed__10CMorphBallCFv", version) };
+                cmplwi    r3, 0;
+                beq       0x80002504;
+                lwz       r3, 0x0(r15);
+                li        r4, 6;
+                bl        { symbol_addr!("HasPowerUp__12CPlayerStateCFQ212CPlayerState9EItemType", version) };
+                cmplwi    r3, 0;
+                beq       0x80002504;
+                lhz       r0, { attached_actor_offset }(r14);
+                cmplwi    r0, 65535;
+                bne       0x80002504;
+                addi      r3, r14, { energy_drain_offset };
+                bl        { symbol_addr!("GetEnergyDrainIntensity__18CPlayerEnergyDrainCFv", version) };
+                fcmpu     cr0, f1, f14;
+                bgt       0x80002504;
+                lwz       r0, 0x187c(r28);
+                cmplwi    r0, 0;
+                bne       0x80002504;
+                lfs       f1, 0x140(r14);
+                lfs       f16, 0x0c(r16);
+                fcmpu     cr0, f1, f16;
+                bgt       0x80002504;
+                lfs       f1, 0x14(r29);
+                fcmpu     cr0, f1, f14;
+                ble       0x80002504;
+                mr        r3, r14;
+                mr        r4, r16;
+                mr        r5, r30;
+                bl        { symbol_addr!("BombJump__7CPlayerFRC9CVector3fR13CStateManager", version) };
+
+                // call compute boost ball movement
+                mr        r3, r28;
+                mr        r4, r29;
+                mr        r5, r30;
+                fmr       f1, f15;
+                bl        { symbol_addr!("ComputeBoostBallMovement__10CMorphBallFRC11CFinalInputRC13CStateManagerf", version) };
+
+                // stack deinit
+                lwz       r0, 0x20(r1);
+                fmr       f1, f15;
+                fmr       f15, f14;
+                lwz       r31, 0x1c(r1);
+                lwz       r30, 0x18(r1);
+                lwz       r29, 0x14(r1);
+                lwz       r28, 0x10(r1);
+                mtlr      r0;
+                addi      r1, r1, 0x20;
+                blr;
+                
+                // padding
+                nop;
+                nop;
+                nop;
+                nop;
+            data:
+                .float 0.0;
+                .float 0.0;
+                .float 0.0;
+                .float 1.0;
+        });
+        dol_patcher.add_text_segment(0x80002400, Cow::Owned(spring_ball_patch.encoded_bytes()))?;
+    }
+
     // Add rel loader to the binary
     let (rel_loader_bytes, rel_loader_map_str) = match version {
         Version::NtscU0_00 => {
