@@ -4372,9 +4372,9 @@ fn patch_starting_pickups<'r>(
         }
     }
 
-    let timer_starting_items_popup_id = (next_object_id + 1) + (layer_count << 26);
-    let hud_memo_starting_items_popup_id = (next_object_id + 2) + (layer_count << 26);
-    let special_function_starting_items_popup_id = (next_object_id + 3) + (layer_count << 26);
+    let timer_starting_items_popup_id = next_object_id + 1;
+    let hud_memo_starting_items_popup_id = next_object_id + 2;
+    let special_function_starting_items_popup_id = 1next_object_id + 3;
 
     for layer in scly.layers.iter_mut() {
         for obj in layer.objects.iter_mut() {
