@@ -368,6 +368,7 @@ pub fn custom_assets<'r>(
 
                     let mut strings: Vec<String> = vec![];
                     let contents = &custom_scan.text;
+                    let contents = contents.to_string() + "\0";
                     if contents.len() > 92 {
                         let string1:String = (contents.clone().to_string())[..92].to_string();
                         let remainder = (contents.clone().to_string())[92..].to_string();
