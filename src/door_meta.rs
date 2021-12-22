@@ -938,20 +938,18 @@ impl DoorType {
 
 impl BlastShieldType {
     pub fn from_str(string: &str) -> Option<Self> {
-        match string.trim().to_lowercase().as_str() {
-            "missile"          => Some(BlastShieldType::Missile      ),
-            "missiles"         => Some(BlastShieldType::Missile      ),
-            "missile_launcher" => Some(BlastShieldType::Missile      ),
-            "power_bomb"       => Some(BlastShieldType::PowerBomb    ),
-            "powerbomb"        => Some(BlastShieldType::PowerBomb    ),
-            "super"            => Some(BlastShieldType::Super        ),
-            "super_missile"    => Some(BlastShieldType::Super        ),
-            "wavebuster"       => Some(BlastShieldType::Wavebuster   ),
-            "wave_buster"      => Some(BlastShieldType::Wavebuster   ),
-            "icespreader"      => Some(BlastShieldType::Icespreader  ),
-            "ice_spreader"     => Some(BlastShieldType::Icespreader  ),
-            "flamethrower"     => Some(BlastShieldType::Flamethrower ),
-            _                  => None                                ,
+        match string.trim().to_lowercase().replace(" ","").replace("_", "").as_str() {
+            "missile"       => Some(BlastShieldType::Missile      ),
+            "missiles"      => Some(BlastShieldType::Missile      ),
+            "powerbomb"     => Some(BlastShieldType::PowerBomb    ),
+            "powerbombs"    => Some(BlastShieldType::PowerBomb    ),
+            "super"         => Some(BlastShieldType::Super        ),
+            "supermissile"  => Some(BlastShieldType::Super        ),
+            "supermissiles" => Some(BlastShieldType::Super        ),
+            "wavebuster"    => Some(BlastShieldType::Wavebuster   ),
+            "icespreader"   => Some(BlastShieldType::Icespreader  ),
+            "flamethrower"  => Some(BlastShieldType::Flamethrower ),
+            _               => None                                ,
         }
     }
 
@@ -1098,6 +1096,18 @@ impl BlastShieldType {
             BlastShieldType::Wavebuster     => DoorType::Wavebuster.vulnerability(),
             BlastShieldType::Icespreader    => DoorType::Icespreader.vulnerability(),
             BlastShieldType::Flamethrower   => DoorType::Flamethrower.vulnerability(),
+            
+        }
+    }
+
+    pub const fn door_type_counterpart(&self) -> DoorType {
+        match self {
+            BlastShieldType::Missile        => DoorType::Missile,
+            BlastShieldType::PowerBomb      => DoorType::PowerBomb,
+            BlastShieldType::Super          => DoorType::Super,
+            BlastShieldType::Wavebuster     => DoorType::Wavebuster,
+            BlastShieldType::Icespreader    => DoorType::Icespreader,
+            BlastShieldType::Flamethrower   => DoorType::Flamethrower,
         }
     }
 }
