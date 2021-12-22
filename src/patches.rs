@@ -42,6 +42,8 @@ use crate::{
     txtr_conversions::{
         cmpr_compress,
         cmpr_decompress,
+        huerotate_color,
+        huerotate_matrix,
         huerotate_in_place,
         VARIA_SUIT_TEXTURES,
         PHAZON_SUIT_TEXTURES,
@@ -4188,40 +4190,16 @@ fn patch_dol<'r>(
                 if angle == 0 {
                     continue;
                 }
-                let angle = angle as f32;
-
-                let cosv = (angle * std::f32::consts::PI / 180.0).cos();
-                let sinv = (angle * std::f32::consts::PI / 180.0).sin();
-                let matrix: [f32; 9] = [
-                    // Reds
-                    0.213 + cosv * 0.787 - sinv * 0.213,
-                    0.715 - cosv * 0.715 - sinv * 0.715,
-                    0.072 - cosv * 0.072 + sinv * 0.928,
-                    // Greens
-                    0.213 - cosv * 0.213 + sinv * 0.143,
-                    0.715 + cosv * 0.285 + sinv * 0.140,
-                    0.072 - cosv * 0.072 - sinv * 0.283,
-                    // Blues
-                    0.213 - cosv * 0.213 - sinv * 0.787,
-                    0.715 - cosv * 0.715 + sinv * 0.715,
-                    0.072 + cosv * 0.928 + sinv * 0.072,
-                ];
+                let matrix = huerotate_matrix(angle as f32);
 
                 let r_idx = j*3;
                 let g_idx = r_idx+1;
                 let b_idx = r_idx+2;
 
-                let r = colors[i][r_idx] as f32;
-                let g = colors[i][g_idx] as f32;
-                let b = colors[i][b_idx] as f32;
-
-                let new_r = matrix[0] * r + matrix[1] * g + matrix[2] * b;
-                let new_g = matrix[3] * r + matrix[4] * g + matrix[5] * b;
-                let new_b = matrix[6] * r + matrix[7] * g + matrix[8] * b;
-                
-                colors[i][r_idx] = new_r.clamp(0.0, 255.0) as u8;
-                colors[i][g_idx] = new_g.clamp(0.0, 255.0) as u8;
-                colors[i][b_idx] = new_b.clamp(0.0, 255.0) as u8;
+                let new_rgb = huerotate_color(matrix, colors[i][r_idx], colors[i][g_idx], colors[i][b_idx]);
+                colors[i][r_idx] = new_rgb[0];
+                colors[i][g_idx] = new_rgb[1];
+                colors[i][b_idx] = new_rgb[2];
             }
         }
 
@@ -8094,22 +8072,7 @@ fn build_and_run_patches(gc_disc: &mut structs::GcDisc, config: &PatchConfig, ve
                 .map_err(|e| format!("Failed to create cache subdir: {}", e))
                 .ok();
 
-            let cosv = (angle * std::f32::consts::PI / 180.0).cos();
-            let sinv = (angle * std::f32::consts::PI / 180.0).sin();
-            let matrix: [f32; 9] = [
-                // Reds
-                0.213 + cosv * 0.787 - sinv * 0.213,
-                0.715 - cosv * 0.715 - sinv * 0.715,
-                0.072 - cosv * 0.072 + sinv * 0.928,
-                // Greens
-                0.213 - cosv * 0.213 + sinv * 0.143,
-                0.715 + cosv * 0.285 + sinv * 0.140,
-                0.072 - cosv * 0.072 - sinv * 0.283,
-                // Blues
-                0.213 - cosv * 0.213 - sinv * 0.787,
-                0.715 - cosv * 0.715 + sinv * 0.715,
-                0.072 + cosv * 0.928 + sinv * 0.072,
-            ];
+            let matrix = huerotate_matrix(angle);
             for texture in suit_textures[i] {
                 patcher.add_resource_patch((*texture).into(), move |res| {
                     let res_data;

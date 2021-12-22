@@ -249,44 +249,58 @@ pub fn cmpr_compress(uncompressed: &[u8], width: usize, height: usize, compresse
     }
 }
 
+pub fn huerotate_matrix(angle: f32) -> [f32; 9]
+{
+    let cosv = (angle * std::f32::consts::PI / 180.0).cos();
+    let sinv = (angle * std::f32::consts::PI / 180.0).sin();
+    [
+        // Reds
+        0.213 + cosv * 0.787 - sinv * 0.213,
+        0.715 - cosv * 0.715 - sinv * 0.715,
+        0.072 - cosv * 0.072 + sinv * 0.928,
+        // Greens
+        0.213 - cosv * 0.213 + sinv * 0.143,
+        0.715 + cosv * 0.285 + sinv * 0.140,
+        0.072 - cosv * 0.072 - sinv * 0.283,
+        // Blues
+        0.213 - cosv * 0.213 - sinv * 0.787,
+        0.715 - cosv * 0.715 + sinv * 0.715,
+        0.072 + cosv * 0.928 + sinv * 0.072,
+    ]
+}
+
+pub fn huerotate_color(matrix: [f32; 9], r: u8, g: u8, b: u8) -> [u8; 3]
+{
+    let r = r as f32;
+    let g = g as f32;
+    let b = b as f32;
+
+    [
+        (matrix[0] * r + matrix[1] * g + matrix[2] * b).clamp(0.0, 255.0) as u8, 
+        (matrix[3] * r + matrix[4] * g + matrix[5] * b).clamp(0.0, 255.0) as u8,
+        (matrix[6] * r + matrix[7] * g + matrix[8] * b).clamp(0.0, 255.0) as u8,
+    ]
+}
+
 // Adapted from image-rs
 pub fn huerotate_in_place(image: &mut [u8], width: usize, height: usize, matrix: [f32; 9])
 where
 {
-    // let mut cache: HashMap<[u8;4],[u8;4]> = HashMap::new();
     for y in 0..height {
         for x in 0..width {
             let start = (y * width + x) * 4;
             let pixel = &mut image[start..start + 4];
 
-            // let maybe_four_bytes = cache.get(pixel);
-            // if maybe_four_bytes.is_some() {
-            //     let outpixel = maybe_four_bytes.unwrap();
-            //     pixel.copy_from_slice(&outpixel[..]);
-            //     continue;
-            // }
+            let new_rgb = huerotate_color(matrix, pixel[0], pixel[1], pixel[2]);
 
-            let (k1, k2, k3, k4) = (pixel[0], pixel[1], pixel[2], pixel[3]);
-            let vec: (f32, f32, f32, f32) = (k1 as f32, k2 as f32, k3 as f32, k4 as f32);
-
-            let r = vec.0;
-            let g = vec.1;
-            let b = vec.2;
-
-            let new_r = matrix[0] * r + matrix[1] * g + matrix[2] * b;
-            let new_g = matrix[3] * r + matrix[4] * g + matrix[5] * b;
-            let new_b = matrix[6] * r + matrix[7] * g + matrix[8] * b;
             let outpixel = [
-                new_r.clamp(0.0, 255.0) as u8,
-                new_g.clamp(0.0, 255.0) as u8,
-                new_b.clamp(0.0, 255.0) as u8,
-                vec.3.clamp(0.0, 255.0) as u8,
+                new_rgb[0],
+                new_rgb[1],
+                new_rgb[2],
+                pixel[3],
             ];
 
            pixel.copy_from_slice(&outpixel[..]);
-        //    let outpixel_cached: [u8;4] = [outpixel[0], outpixel[1], outpixel[2], outpixel[3]];
-        //    let pixel_cached: [u8;4] = [pixel[0], pixel[1], pixel[2], pixel[3]];
-        //    cache.insert(pixel_cached, outpixel_cached);
         }
     }
 }
