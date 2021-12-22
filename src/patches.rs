@@ -4269,7 +4269,12 @@ fn patch_dol<'r>(
     // 
 
     if config.automatic_crash_screen {
-        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + 0x120, {
+        let patch_offset = if version == Version::NtscU0_00 {
+            0xEC
+        } else {
+            0x120
+        };
+        let automatic_crash_patch = ppcasm!(symbol_addr!("CrashScreenControllerPollBranch", version) + patch_offset, {
             nop;
         });
         dol_patcher.ppcasm_patch(&automatic_crash_patch)?;
