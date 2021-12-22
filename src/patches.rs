@@ -5711,23 +5711,29 @@ fn patch_ctwk_gui_colors(res: &mut structs::Resource, ctwk_config: &CtwkConfig)
             let scale = max_original / max_new;
             
             // Scale new color up or down to approximate original, preserve alpha
-            if i == 10 || i == 11 {
-                let new_color_scaled = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale];
+            let mut new_color_scaled = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]];
+            if i == 10 || i == 11 { // beam/visor menus should be partially colored
                 let diff = [
                     old_color[0] - new_color_scaled[0],
                     old_color[1] - new_color_scaled[1],
-                    old_color[2] - new_color_scaled[2]
+                    old_color[2] - new_color_scaled[2],
                 ];
                 let diff_scale = 0.65;
-                ctwk_gui_colors.colors[i as usize] = [
-                    new_color_scaled[0] + diff[0]*diff_scale,
-                    new_color_scaled[1] + diff[1]*diff_scale,
-                    new_color_scaled[2] + diff[2]*diff_scale,
-                    old_color[3],
-                ].into();
-            } else {
-                ctwk_gui_colors.colors[i as usize] = [new_color[0]*scale, new_color[1]*scale, new_color[2]*scale, old_color[3]].into();
+                new_color_scaled[0] = new_color_scaled[0] + diff[0]*diff_scale;
+                new_color_scaled[1] = new_color_scaled[1] + diff[1]*diff_scale;
+                new_color_scaled[2] = new_color_scaled[2] + diff[2]*diff_scale;
+            } else if i == 96 || i == 97 { // critical scans should be distinguishable
+                let diff = [
+                    (1.0 - new_color_scaled[0]) - new_color_scaled[0],
+                    (1.0 - new_color_scaled[1]) - new_color_scaled[1],
+                    (1.0 - new_color_scaled[2]) - new_color_scaled[2],
+                ];
+                let diff_scale = 0.65;
+                new_color_scaled[0] = new_color_scaled[0] + diff[0]*diff_scale;
+                new_color_scaled[1] = new_color_scaled[1] + diff[1]*diff_scale;
+                new_color_scaled[2] = new_color_scaled[2] + diff[2]*diff_scale;
             }
+            ctwk_gui_colors.colors[i as usize] = new_color_scaled.into();
         }
 
         for i in 0..5 {
