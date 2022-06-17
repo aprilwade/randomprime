@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2"
-enum-map = "0.6"
+enum-map = "2.0"
 goblin = "0.1"
 memmap = "0.7"
 scroll = { version = "0.10", features = ["derive"] }
