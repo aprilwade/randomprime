@@ -5,7 +5,7 @@ authors = ["April Wade <wayedt@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-linkme = "0.1"
+linkme = "0.3"
 generic-array = "0.13"
 # pin-utils = "0.1.0-alpha.4"
 paste = "0.1"

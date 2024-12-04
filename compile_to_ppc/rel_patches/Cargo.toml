@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 generic-array = "0.13"
-linkme = "0.1"
+linkme = "0.3"
 
 primeapi = { path = "../primeapi-rs", features = ["rel_prolog"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
